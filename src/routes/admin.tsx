@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 import { getAdminSnapshot, deleteAdminUser, deleteBatch, deleteEnquiry, deletePost, deleteStory, exportEnquiries, saveAdminUser, saveBatch, savePost, saveStory, updateEnquiry, updateSettings } from '@/lib/admin-functions'
 import type { AdminPost, AdminRole, AdminSnapshot, AdminStory, AdminUser, CoachingBatch, Enquiry, EnquiryStatus } from '@/lib/content-types'
 
@@ -99,9 +100,11 @@ function AdminAuthCard({ onLoginSuccess }: { onLoginSuccess: () => Promise<void>
   const [mode, setMode] = useState<'login' | 'forgot'>('login')
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
+  const [showLoginPass, setShowLoginPass] = useState(false)
   const [recoveryEmail, setRecoveryEmail] = useState('')
   const [recoveryKey, setRecoveryKey] = useState('')
   const [newPassword, setNewPassword] = useState('')
+  const [showResetPass, setShowResetPass] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null)
 
@@ -147,7 +150,18 @@ function AdminAuthCard({ onLoginSuccess }: { onLoginSuccess: () => Promise<void>
       {mode === 'login' ? (
         <form onSubmit={handleLogin} className="mt-6 space-y-4">
           <div><label className="block text-xs font-bold text-forest-100/70 mb-1.5">Username or Email</label><input type="text" required value={identifier} onChange={(e) => setIdentifier(e.target.value)} className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:bg-white/20 focus:outline-none focus:ring-coral-400" placeholder="Enter username or email" /></div>
-          <div><div className="flex items-center justify-between mb-1.5"><label className="text-xs font-bold text-forest-100/70">Password</label><button type="button" onClick={() => { setMode('forgot'); setMessage(null) }} className="text-[11px] font-bold text-coral-400 hover:underline">Forgot?</button></div><input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:bg-white/20 focus:outline-none focus:ring-coral-400" placeholder="Enter password" /></div>
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-bold text-forest-100/70">Password</label>
+              <button type="button" onClick={() => { setMode('forgot'); setMessage(null) }} className="text-[11px] font-bold text-coral-400 hover:underline">Forgot?</button>
+            </div>
+            <div className="relative">
+              <input type={showLoginPass ? 'text' : 'password'} required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-2xl bg-white/10 px-4 py-3 pr-11 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:bg-white/20 focus:outline-none focus:ring-coral-400" placeholder="Enter password" />
+              <button type="button" onClick={() => setShowLoginPass(!showLoginPass)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/60 hover:text-white p-1">
+                {showLoginPass ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
+          </div>
           <button type="submit" disabled={busy} className="w-full mt-2 rounded-full bg-coral-500 py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-coral-600 disabled:opacity-50">{busy ? 'Verifying…' : 'Sign in to Dashboard →'}</button>
         </form>
       ) : (
@@ -155,7 +169,15 @@ function AdminAuthCard({ onLoginSuccess }: { onLoginSuccess: () => Promise<void>
           <p className="text-xs leading-relaxed text-forest-100/70">Enter your registered admin email, master Recovery Key, and new password.</p>
           <div><label className="block text-xs font-bold text-forest-100/70 mb-1.5">Admin Email</label><input type="email" required value={recoveryEmail} onChange={(e) => setRecoveryEmail(e.target.value)} className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:outline-none focus:ring-coral-400" placeholder="Enter your email" /></div>
           <div><label className="block text-xs font-bold text-forest-100/70 mb-1.5">Master Recovery Key (Security PIN)</label><input type="password" required value={recoveryKey} onChange={(e) => setRecoveryKey(e.target.value)} className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:outline-none focus:ring-coral-400" placeholder="Enter secret recovery PIN" /></div>
-          <div><label className="block text-xs font-bold text-forest-100/70 mb-1.5">New Password (minimum 6 characters)</label><input type="password" required minLength={6} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:outline-none focus:ring-coral-400" placeholder="Enter new password" /></div>
+          <div>
+            <label className="block text-xs font-bold text-forest-100/70 mb-1.5">New Password (minimum 6 characters)</label>
+            <div className="relative">
+              <input type={showResetPass ? 'text' : 'password'} required minLength={6} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full rounded-2xl bg-white/10 px-4 py-3 pr-11 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:outline-none focus:ring-coral-400" placeholder="Enter new password" />
+              <button type="button" onClick={() => setShowResetPass(!showResetPass)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/60 hover:text-white p-1">
+                {showResetPass ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
+          </div>
           <button type="submit" disabled={busy} className="w-full mt-2 rounded-full bg-coral-500 py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-coral-600 disabled:opacity-50">{busy ? 'Updating…' : 'Reset & Save Password'}</button>
           <button type="button" onClick={() => { setMode('login'); setMessage(null) }} className="w-full text-center text-xs font-bold text-forest-100/60 hover:text-white">← Back to sign in</button>
         </form>
@@ -169,6 +191,8 @@ function ChangePasswordModal({ onClose, onNotice }: { onClose: () => void; onNot
   const [oldPassword, setOldPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [showOldPass, setShowOldPass] = useState(false)
+  const [showNewPass, setShowNewPass] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -192,9 +216,28 @@ function ChangePasswordModal({ onClose, onNotice }: { onClose: () => void; onNot
         <div className="flex items-center justify-between pb-3 border-b border-forest-900/10"><h3 className="text-lg font-extrabold text-forest-900">Change Password</h3><button type="button" onClick={onClose} className="text-sm font-bold text-forest-900/40 hover:text-forest-900">✕</button></div>
         {error && <p className="mt-4 rounded-xl bg-red-100 p-3 text-xs font-bold text-red-800">{error}</p>}
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          <div><label className="block text-xs font-bold text-forest-900/70 mb-1">Current Password</label><input type="password" required value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} className="field" placeholder="Enter current password" /></div>
-          <div><label className="block text-xs font-bold text-forest-900/70 mb-1">New Password (min 6 chars)</label><input type="password" required minLength={6} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="field" placeholder="Enter new password" /></div>
-          <div><label className="block text-xs font-bold text-forest-900/70 mb-1">Confirm New Password</label><input type="password" required minLength={6} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="field" placeholder="Re-type new password" /></div>
+          <div>
+            <label className="block text-xs font-bold text-forest-900/70 mb-1">Current Password</label>
+            <div className="relative">
+              <input type={showOldPass ? 'text' : 'password'} required value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} className="field !pr-11" placeholder="Enter current password" />
+              <button type="button" onClick={() => setShowOldPass(!showOldPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-forest-900/50 hover:text-forest-900 p-1">
+                {showOldPass ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-forest-900/70 mb-1">New Password (min 6 chars)</label>
+            <div className="relative">
+              <input type={showNewPass ? 'text' : 'password'} required minLength={6} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="field !pr-11" placeholder="Enter new password" />
+              <button type="button" onClick={() => setShowNewPass(!showNewPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-forest-900/50 hover:text-forest-900 p-1">
+                {showNewPass ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-forest-900/70 mb-1">Confirm New Password</label>
+            <input type="password" required minLength={6} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="field" placeholder="Re-type new password" />
+          </div>
           <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={onClose} className="rounded-full border border-forest-900/15 px-5 py-2.5 text-xs font-bold text-forest-900">Cancel</button><button type="submit" disabled={busy} className="rounded-full bg-forest-900 px-5 py-2.5 text-xs font-bold text-white hover:bg-forest-800 disabled:opacity-50">{busy ? 'Updating…' : 'Update Password'}</button></div>
         </form>
       </div>
@@ -204,12 +247,7 @@ function ChangePasswordModal({ onClose, onNotice }: { onClose: () => void; onNot
 
 function BatchPanel({ items, selected, onSelect, onReload, onNotice }: { items: CoachingBatch[]; selected: CoachingBatch | null; onSelect: (item: CoachingBatch | null) => void; onReload: () => Promise<void>; onNotice: (message: string) => void }) {
   function handleSelect(item: CoachingBatch | null) {
-    if (selected && selected.id !== item?.id) {
-      // Direct smooth switch
-      onSelect(item)
-    } else {
-      onSelect(item)
-    }
+    onSelect(item)
   }
 
   return (
@@ -480,19 +518,21 @@ function UsersPanel({ users, currentEmail, onReload, onNotice }: { users: AdminU
   const [name, setName] = useState('')
   const [role, setRole] = useState<AdminRole>('content_editor')
   const [password, setPassword] = useState('')
+  const [showPass, setShowPass] = useState(false)
   const [busy, setBusy] = useState(false)
   const [resetModalUser, setResetModalUser] = useState<AdminUser | null>(null)
   const [newStaffPassword, setNewStaffPassword] = useState('')
+  const [showResetPass, setShowResetPass] = useState(false)
 
   async function save() {
     if (!email || !password) { onNotice('Email and initial password are required'); return }
     if (password.length < 6) { onNotice('Password must be at least 6 characters'); return }
     setBusy(true)
     try {
-      await saveAdminUser({ data: { email, name, role, password } })
-      setEmail(''); setName(''); setPassword('')
+      await saveAdminUser({ data: { email: email.trim().toLowerCase(), name: name.trim() || email.trim(), role, password: password.trim() } })
+      setEmail(''); setName(''); setPassword(''); setShowPass(false)
       await onReload()
-      onNotice('New user created! They can now sign in with this email and password.')
+      onNotice('New staff user created! They can now sign in with this email and password.')
     } catch (cause) { onNotice(cause instanceof Error ? cause.message : 'Could not save user.') }
     finally { setBusy(false) }
   }
@@ -502,9 +542,9 @@ function UsersPanel({ users, currentEmail, onReload, onNotice }: { users: AdminU
     if (!resetModalUser || newStaffPassword.length < 6) return
     setBusy(true)
     try {
-      await saveAdminUser({ data: { email: resetModalUser.email, name: resetModalUser.name, role: resetModalUser.role, password: newStaffPassword } })
+      await saveAdminUser({ data: { email: resetModalUser.email, name: resetModalUser.name, role: resetModalUser.role, password: newStaffPassword.trim() } })
       onNotice(`Password for ${resetModalUser.email} has been updated!`)
-      setResetModalUser(null); setNewStaffPassword('')
+      setResetModalUser(null); setNewStaffPassword(''); setShowResetPass(false)
       await onReload()
     } catch (err) { onNotice('Failed to update password') }
     finally { setBusy(false) }
@@ -524,20 +564,37 @@ function UsersPanel({ users, currentEmail, onReload, onNotice }: { users: AdminU
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">Access control</p>
         <h2 className="mt-2 text-3xl font-extrabold">Add New Staff / User</h2>
         <p className="mt-2 text-sm leading-relaxed text-forest-900/65">Create an account for your counsellors or editors. They sign in using this email and password, and only see the sections allowed by their role.</p>
-        <div className="mt-6 grid gap-3 rounded-3xl bg-white p-5 ring-1 ring-forest-900/10">
-          <input className="field" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Staff email (User ID)" required />
-          <input className="field" value={name} onChange={(e) => setName(e.target.value)} placeholder="Display name (e.g. Counsellor Priya)" />
-          <input className="field" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Initial password (min 6 chars)" required />
-          <select className="field" value={role} onChange={(e) => setRole(e.target.value as AdminRole)}>
-            <option value="content_editor">Content Editor (Only News, Stories & Batches)</option>
-            <option value="enquiry_manager">Enquiry Manager (Only Leads & Inquiries)</option>
-            <option value="super_admin">Super Admin (Everything)</option>
-          </select>
+        <div className="mt-6 grid gap-4 rounded-3xl bg-white p-6 ring-1 ring-forest-900/10">
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-forest-900/70 mb-1.5">Staff Email (Login ID) *</label>
+            <input className="field" type="email" autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="e.g. rahul@gmail.com" required />
+          </div>
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-forest-900/70 mb-1.5">Staff Full Name</label>
+            <input className="field" type="text" autoComplete="off" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Rahul Sharma" />
+          </div>
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-forest-900/70 mb-1.5">Initial Password (min 6 chars) *</label>
+            <div className="relative">
+              <input className="field !pr-11" type={showPass ? 'text' : 'password'} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="e.g. Rahul@2026" required minLength={6} />
+              <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-forest-900/50 hover:text-forest-900 p-1" title={showPass ? 'Hide password' : 'Show password'}>
+                {showPass ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-forest-900/70 mb-1.5">Role & Permissions</label>
+            <select className="field" value={role} onChange={(e) => setRole(e.target.value as AdminRole)}>
+              <option value="content_editor">Content Editor (Only News, Stories & Batches)</option>
+              <option value="enquiry_manager">Enquiry Manager (Only Leads & Inquiries)</option>
+              <option value="super_admin">Super Admin (Everything)</option>
+            </select>
+          </div>
           <div className="rounded-2xl bg-cream p-4 text-xs text-forest-900/70">
             <strong className="text-forest-900">{roleLabels[role]}</strong>
             <p className="mt-1">{role === 'super_admin' ? 'Full control over leads, content, settings and staff users.' : role === 'content_editor' ? 'Can manage News, IELTS/PTE Batches and Success Stories. Cannot see student enquiries.' : 'Can view leads, update follow-up status, add counsellor notes and export to Excel.'}</p>
           </div>
-          <button type="button" disabled={busy || !email || !password} onClick={() => void save()} className="w-fit rounded-full bg-forest-900 px-6 py-3 text-sm font-bold text-white disabled:opacity-50">{busy ? 'Creating…' : 'Create Staff Account'}</button>
+          <button type="button" disabled={busy || !email || !password} onClick={() => void save()} className="w-fit rounded-full bg-forest-900 px-6 py-3 text-sm font-bold text-white hover:bg-forest-800 disabled:opacity-50">{busy ? 'Creating…' : 'Create Staff Account'}</button>
         </div>
       </div>
       <div>
@@ -551,7 +608,7 @@ function UsersPanel({ users, currentEmail, onReload, onNotice }: { users: AdminU
                 <span className="mt-1.5 inline-flex rounded-full bg-coral-50 px-3 py-0.5 text-xs font-bold text-coral-700">{roleLabels[user.role]}</span>
               </div>
               <div className="flex items-center gap-2">
-                <button type="button" onClick={() => { setResetModalUser(user); setNewStaffPassword('') }} className="rounded-full border border-forest-900/20 px-3.5 py-1.5 text-xs font-bold text-forest-900 hover:bg-forest-50">Reset Password</button>
+                <button type="button" onClick={() => { setResetModalUser(user); setNewStaffPassword(''); setShowResetPass(false) }} className="rounded-full border border-forest-900/20 px-3.5 py-1.5 text-xs font-bold text-forest-900 hover:bg-forest-50">Reset Password</button>
                 <button type="button" disabled={busy || user.email.toLowerCase() === currentEmail.toLowerCase()} onClick={() => void remove(user.openId)} className="rounded-full border border-red-200 px-3.5 py-1.5 text-xs font-bold text-red-700 hover:bg-red-50 disabled:opacity-30">{user.email.toLowerCase() === currentEmail.toLowerCase() ? 'You' : 'Remove'}</button>
               </div>
             </article>
@@ -566,10 +623,16 @@ function UsersPanel({ users, currentEmail, onReload, onNotice }: { users: AdminU
             <h4 className="text-lg font-bold">Reset Password for Staff</h4>
             <p className="text-xs text-forest-900/60 mt-1">{resetModalUser.email}</p>
             <form onSubmit={handleResetStaffPass} className="mt-4 space-y-3">
-              <input type="password" required minLength={6} value={newStaffPassword} onChange={(e) => setNewStaffPassword(e.target.value)} className="field" placeholder="Enter new password (min 6 chars)" />
+              <label className="block text-xs font-bold uppercase tracking-wider text-forest-900/70 mb-1">New Password (min 6 chars)</label>
+              <div className="relative">
+                <input type={showResetPass ? 'text' : 'password'} required minLength={6} value={newStaffPassword} onChange={(e) => setNewStaffPassword(e.target.value)} className="field !pr-11" placeholder="Enter new password (min 6 chars)" autoComplete="new-password" />
+                <button type="button" onClick={() => setShowResetPass(!showResetPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-forest-900/50 hover:text-forest-900 p-1" title={showResetPass ? 'Hide password' : 'Show password'}>
+                  {showResetPass ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
               <div className="flex justify-end gap-2 pt-2">
                 <button type="button" onClick={() => setResetModalUser(null)} className="rounded-full border px-4 py-2 text-xs font-bold">Cancel</button>
-                <button type="submit" disabled={busy || newStaffPassword.length < 6} className="rounded-full bg-forest-900 text-white px-4 py-2 text-xs font-bold disabled:opacity-50">Save Password</button>
+                <button type="submit" disabled={busy || newStaffPassword.length < 6} className="rounded-full bg-forest-900 text-white px-4 py-2 text-xs font-bold disabled:opacity-50">{busy ? 'Saving…' : 'Save Password'}</button>
               </div>
             </form>
           </div>
