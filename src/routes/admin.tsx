@@ -47,7 +47,7 @@ function AdminPage() {
     }
   }
 
-  // Initial load + Auto-refresh every 15 seconds
+  // Load + Auto-refresh every 15 seconds
   useEffect(() => {
     void reload()
     const timer = setInterval(() => {
@@ -58,7 +58,6 @@ function AdminPage() {
 
   useEffect(() => { if (snapshot?.user.role === 'content_editor' && tab === 'enquiries') setTab('news') }, [snapshot?.user.role, tab])
 
-  // Loading spinner instead of flashing login card
   if (loading && !snapshot) {
     return (
       <section className="grid min-h-screen place-items-center bg-cream px-6 py-16">
@@ -136,10 +135,14 @@ function AdminAuthCard({ onLoginSuccess }: { onLoginSuccess: () => Promise<void>
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [showLoginPass, setShowLoginPass] = useState(false)
-  const [recoveryEmail, setRecoveryEmail] = useState('')
-  const [recoveryKey, setRecoveryKey] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [showResetPass, setShowResetPass] = useState(false)
+
+  // 2-Step OTP State
+  const [otpEmail, setOtpEmail] = useState('')
+  const [otpStep, setOtpStep] = useState<'enter_email' | 'enter_otp'>('enter_email')
+  const [otpCode, setOtpCode] = useState('')
+  const [newOtpPassword, setNewOtpPassword] = useState('')
+  const [showOtpPass, setShowOtpPass] = useState(false)
+
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null)
 
@@ -157,18 +160,39 @@ function AdminAuthCard({ onLoginSuccess }: { onLoginSuccess: () => Promise<void>
     } finally { setBusy(false) }
   }
 
-  async function handleReset(e: FormEvent) {
+  // 1. Request OTP to Email via Resend
+  async function handleSendOtp(e: FormEvent) {
     e.preventDefault()
     setBusy(true)
     setMessage(null)
     try {
-      const res = await fetch('/admin/oauth/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'forgot', email: recoveryEmail, recoveryKey, newPassword }) })
+      const res = await fetch('/admin/oauth/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'send-otp', email: otpEmail }) })
       const data = (await res.json()) as { ok?: boolean; message?: string; error?: string }
-      if (!res.ok || !data.ok) throw new Error(data.error || 'Password reset failed')
-      setMessage({ text: data.message || 'Password reset successful! Sign in with your new password.', type: 'success' })
-      setMode('login'); setPassword('')
+      if (!res.ok || !data.ok) throw new Error(data.error || 'Failed to send OTP')
+      setMessage({ text: data.message || 'OTP sent! Please check your email inbox or spam folder.', type: 'success' })
+      setOtpStep('enter_otp')
     } catch (err) {
-      setMessage({ text: err instanceof Error ? err.message : 'Reset failed', type: 'error' })
+      setMessage({ text: err instanceof Error ? err.message : 'Failed to send OTP', type: 'error' })
+    } finally { setBusy(false) }
+  }
+
+  // 2. Verify OTP and Save New Password
+  async function handleVerifyOtp(e: FormEvent) {
+    e.preventDefault()
+    setBusy(true)
+    setMessage(null)
+    try {
+      const res = await fetch('/admin/oauth/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'verify-otp', email: otpEmail, otp: otpCode, newPassword: newOtpPassword }) })
+      const data = (await res.json()) as { ok?: boolean; message?: string; error?: string }
+      if (!res.ok || !data.ok) throw new Error(data.error || 'Failed to verify OTP')
+      setMessage({ text: 'Password reset successful! Sign in with your new password.', type: 'success' })
+      setMode('login')
+      setPassword('')
+      setOtpStep('enter_email')
+      setOtpCode('')
+      setNewOtpPassword('')
+    } catch (err) {
+      setMessage({ text: err instanceof Error ? err.message : 'OTP verification failed', type: 'error' })
     } finally { setBusy(false) }
   }
 
@@ -179,16 +203,17 @@ function AdminAuthCard({ onLoginSuccess }: { onLoginSuccess: () => Promise<void>
       </div>
       <div className="mt-6 flex rounded-full bg-forest-950 p-1 text-xs font-bold">
         <button type="button" onClick={() => { setMode('login'); setMessage(null) }} className={`flex-1 rounded-full py-2.5 transition ${mode === 'login' ? 'bg-coral-500 text-white shadow' : 'text-forest-100/60 hover:text-white'}`}>Sign in</button>
-        <button type="button" onClick={() => { setMode('forgot'); setMessage(null) }} className={`flex-1 rounded-full py-2.5 transition ${mode === 'forgot' ? 'bg-coral-500 text-white shadow' : 'text-forest-100/60 hover:text-white'}`}>Forgot password?</button>
+        <button type="button" onClick={() => { setMode('forgot'); setMessage(null); setOtpStep('enter_email') }} className={`flex-1 rounded-full py-2.5 transition ${mode === 'forgot' ? 'bg-coral-500 text-white shadow' : 'text-forest-100/60 hover:text-white'}`}>Forgot password?</button>
       </div>
       {message && <div className={`mt-5 rounded-2xl p-4 text-xs font-bold leading-relaxed ${message.type === 'success' ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/40' : 'bg-red-500/20 text-red-300 ring-1 ring-red-500/40'}`}>{message.text}</div>}
+      
       {mode === 'login' ? (
         <form onSubmit={handleLogin} className="mt-6 space-y-4">
           <div><label className="block text-xs font-bold text-forest-100/70 mb-1.5">Username or Email</label><input type="text" required value={identifier} onChange={(e) => setIdentifier(e.target.value)} className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:bg-white/20 focus:outline-none focus:ring-coral-400" placeholder="Enter username or email" /></div>
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-bold text-forest-100/70">Password</label>
-              <button type="button" onClick={() => { setMode('forgot'); setMessage(null) }} className="text-[11px] font-bold text-coral-400 hover:underline">Forgot?</button>
+              <button type="button" onClick={() => { setMode('forgot'); setMessage(null); setOtpStep('enter_email') }} className="text-[11px] font-bold text-coral-400 hover:underline">Forgot?</button>
             </div>
             <div className="relative">
               <input type={showLoginPass ? 'text' : 'password'} required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-2xl bg-white/10 px-4 py-3 pr-11 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:bg-white/20 focus:outline-none focus:ring-coral-400" placeholder="Enter password" />
@@ -199,22 +224,40 @@ function AdminAuthCard({ onLoginSuccess }: { onLoginSuccess: () => Promise<void>
           </div>
           <button type="submit" disabled={busy} className="w-full mt-2 rounded-full bg-coral-500 py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-coral-600 disabled:opacity-50">{busy ? 'Verifying…' : 'Sign in to Dashboard →'}</button>
         </form>
-      ) : (
-        <form onSubmit={handleReset} className="mt-6 space-y-4">
-          <p className="text-xs leading-relaxed text-forest-100/70">Enter your registered admin email, master Recovery Key, and new password.</p>
-          <div><label className="block text-xs font-bold text-forest-100/70 mb-1.5">Admin Email</label><input type="email" required value={recoveryEmail} onChange={(e) => setRecoveryEmail(e.target.value)} className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:outline-none focus:ring-coral-400" placeholder="Enter your email" /></div>
-          <div><label className="block text-xs font-bold text-forest-100/70 mb-1.5">Master Recovery Key (Security PIN)</label><input type="password" required value={recoveryKey} onChange={(e) => setRecoveryKey(e.target.value)} className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:outline-none focus:ring-coral-400" placeholder="Enter secret recovery PIN" /></div>
+      ) : otpStep === 'enter_email' ? (
+        <form onSubmit={handleSendOtp} className="mt-6 space-y-4">
+          <p className="text-xs leading-relaxed text-forest-100/70">Enter your registered email address. We will send a 6-digit OTP code to your inbox.</p>
           <div>
-            <label className="block text-xs font-bold text-forest-100/70 mb-1.5">New Password (minimum 6 characters)</label>
+            <label className="block text-xs font-bold text-forest-100/70 mb-1.5">Registered Email</label>
+            <input type="email" required value={otpEmail} onChange={(e) => setOtpEmail(e.target.value)} className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:outline-none focus:ring-coral-400" placeholder="e.g. sswami270@gmail.com" />
+          </div>
+          <button type="submit" disabled={busy || !otpEmail} className="w-full mt-2 rounded-full bg-coral-500 py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-coral-600 disabled:opacity-50">{busy ? 'Sending OTP…' : 'Send 6-Digit OTP to Email →'}</button>
+          <button type="button" onClick={() => { setMode('login'); setMessage(null) }} className="w-full text-center text-xs font-bold text-forest-100/60 hover:text-white">← Back to sign in</button>
+        </form>
+      ) : (
+        <form onSubmit={handleVerifyOtp} className="mt-6 space-y-4">
+          <div className="flex items-center justify-between text-xs text-forest-100/70">
+            <span>Sent to: <b>{otpEmail}</b></span>
+            <button type="button" onClick={() => setOtpStep('enter_email')} className="text-coral-400 hover:underline">Change</button>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-forest-100/70 mb-1.5">Enter 6-Digit OTP</label>
+            <input type="text" required maxLength={6} pattern="[0-9]{6}" value={otpCode} onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))} className="w-full rounded-2xl bg-white/10 px-4 py-3 text-center text-xl font-mono font-bold tracking-widest text-white ring-1 ring-white/10 focus:outline-none focus:ring-coral-400" placeholder="123456" />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-forest-100/70 mb-1.5">New Password (min 6 chars)</label>
             <div className="relative">
-              <input type={showResetPass ? 'text' : 'password'} required minLength={6} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full rounded-2xl bg-white/10 px-4 py-3 pr-11 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:outline-none focus:ring-coral-400" placeholder="Enter new password" />
-              <button type="button" onClick={() => setShowResetPass(!showResetPass)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/60 hover:text-white p-1">
-                {showResetPass ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              <input type={showOtpPass ? 'text' : 'password'} required minLength={6} value={newOtpPassword} onChange={(e) => setNewOtpPassword(e.target.value)} className="w-full rounded-2xl bg-white/10 px-4 py-3 pr-11 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:outline-none focus:ring-coral-400" placeholder="Enter new password" />
+              <button type="button" onClick={() => setShowOtpPass(!showOtpPass)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/60 hover:text-white p-1">
+                {showOtpPass ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </button>
             </div>
           </div>
-          <button type="submit" disabled={busy} className="w-full mt-2 rounded-full bg-coral-500 py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-coral-600 disabled:opacity-50">{busy ? 'Updating…' : 'Reset & Save Password'}</button>
-          <button type="button" onClick={() => { setMode('login'); setMessage(null) }} className="w-full text-center text-xs font-bold text-forest-100/60 hover:text-white">← Back to sign in</button>
+          <button type="submit" disabled={busy || otpCode.length < 6 || newOtpPassword.length < 6} className="w-full mt-2 rounded-full bg-coral-500 py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-coral-600 disabled:opacity-50">{busy ? 'Verifying OTP…' : 'Verify OTP & Reset Password'}</button>
+          <div className="flex justify-between items-center text-xs pt-1">
+            <button type="button" onClick={handleSendOtp} disabled={busy} className="font-bold text-coral-400 hover:underline">Resend OTP</button>
+            <button type="button" onClick={() => { setMode('login'); setMessage(null) }} className="font-bold text-forest-100/60 hover:text-white">Cancel</button>
+          </div>
         </form>
       )}
       <div className="mt-6 border-t border-white/10 pt-4 text-center"><a href="/" className="text-xs font-semibold text-forest-100/60 hover:text-white">← Return to public website</a></div>
