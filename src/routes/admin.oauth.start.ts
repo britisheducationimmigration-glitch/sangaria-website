@@ -12,10 +12,11 @@ export const Route = createFileRoute('/admin/oauth/start')({
           const body = (await request.json()) as Record<string, unknown>
           const action = String(body.action || 'login')
 
+          // 1. Forgot Password Request
           if (action === 'forgot') {
-            const email = String(body.email || '')
-            const recoveryKey = String(body.recoveryKey || '')
-            const newPassword = String(body.newPassword || '')
+            const email = String(body.email || '').trim()
+            const recoveryKey = String(body.recoveryKey || '').trim()
+            const newPassword = String(body.newPassword || '').trim()
             const result = await resetAdminPassword(email, recoveryKey, newPassword)
             return new Response(JSON.stringify(result), {
               status: result.ok ? 200 : 400,
@@ -23,16 +24,17 @@ export const Route = createFileRoute('/admin/oauth/start')({
             })
           }
 
+          // 2. Change Password Request (Logged-in User)
           if (action === 'change') {
             const user = await getSessionUser(request.headers)
             if (!user) {
-              return new Response(JSON.stringify({ ok: false, error: 'Unauthorized' }), {
+              return new Response(JSON.stringify({ ok: false, error: 'Unauthorized: Session expired' }), {
                 status: 401,
                 headers: { 'Content-Type': 'application/json' },
               })
             }
-            const oldPassword = String(body.oldPassword || '')
-            const newPassword = String(body.newPassword || '')
+            const oldPassword = String(body.oldPassword || '').trim()
+            const newPassword = String(body.newPassword || '').trim()
             const result = await changeAdminPassword(user, oldPassword, newPassword)
             return new Response(JSON.stringify(result), {
               status: result.ok ? 200 : 400,
@@ -40,13 +42,13 @@ export const Route = createFileRoute('/admin/oauth/start')({
             })
           }
 
-          // Default: Login
-          const identifier = String(body.identifier || '')
-          const password = String(body.password || '')
+          // 3. Login Request
+          const identifier = String(body.identifier || body.email || '').trim()
+          const password = String(body.password || '').trim()
           const result = await loginAdmin(identifier, password)
 
-          if (!result.ok || !result.token) {
-            return new Response(JSON.stringify({ ok: false, error: result.error || 'Invalid credentials' }), {
+          if (!result || !result.ok || !result.token) {
+            return new Response(JSON.stringify({ ok: false, error: result?.error || 'Invalid credentials' }), {
               status: 400,
               headers: { 'Content-Type': 'application/json' },
             })
