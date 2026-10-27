@@ -1,5 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { changeAdminPassword, getSessionUser, loginAdmin, resetAdminPassword } from '@/lib/auth.server'
+import {
+  changeAdminPassword,
+  getSessionUser,
+  loginAdmin,
+  resetAdminPassword,
+  sendResetOtp,
+  verifyOtpAndResetPassword,
+} from '@/lib/auth.server'
 
 export const Route = createFileRoute('/admin/oauth/start')({
   server: {
@@ -12,7 +19,29 @@ export const Route = createFileRoute('/admin/oauth/start')({
           const body = (await request.json()) as Record<string, unknown>
           const action = String(body.action || 'login')
 
-          // 1. Forgot Password Request
+          // 1. Send 6-Digit OTP to Email via Resend
+          if (action === 'send-otp') {
+            const email = String(body.email || '').trim()
+            const result = await sendResetOtp(email)
+            return new Response(JSON.stringify(result), {
+              status: result.ok ? 200 : 400,
+              headers: { 'Content-Type': 'application/json' },
+            })
+          }
+
+          // 2. Verify OTP & Set New Password
+          if (action === 'verify-otp') {
+            const email = String(body.email || '').trim()
+            const otp = String(body.otp || '').trim()
+            const newPassword = String(body.newPassword || '').trim()
+            const result = await verifyOtpAndResetPassword(email, otp, newPassword)
+            return new Response(JSON.stringify(result), {
+              status: result.ok ? 200 : 400,
+              headers: { 'Content-Type': 'application/json' },
+            })
+          }
+
+          // 3. Fallback: Master Recovery PIN
           if (action === 'forgot') {
             const email = String(body.email || '').trim()
             const recoveryKey = String(body.recoveryKey || '').trim()
@@ -24,7 +53,7 @@ export const Route = createFileRoute('/admin/oauth/start')({
             })
           }
 
-          // 2. Change Password Request (Logged-in User)
+          // 4. Change Password for Logged-in Staff
           if (action === 'change') {
             const user = await getSessionUser(request.headers)
             if (!user) {
@@ -42,7 +71,7 @@ export const Route = createFileRoute('/admin/oauth/start')({
             })
           }
 
-          // 3. Login Request
+          // 5. Default: Login
           const identifier = String(body.identifier || body.email || '').trim()
           const password = String(body.password || '').trim()
           const result = await loginAdmin(identifier, password)
@@ -56,7 +85,7 @@ export const Route = createFileRoute('/admin/oauth/start')({
 
           const headers = new Headers({
             'Content-Type': 'application/json',
-            'Set-Cookie': `bei_admin_session=${result.token}; HttpOnly; Secure; SameSite=Lax; Max-Age=604800; Path=/`,
+            'Set-Cookie': `bei_admin_session=${result.token}; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000; Path=/`,
           })
 
           return new Response(JSON.stringify({ ok: true, user: result.user }), {
