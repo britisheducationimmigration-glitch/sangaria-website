@@ -9,7 +9,7 @@ export function Logo({ light = false, className }: { light?: boolean; className?
     <span className={cn('flex min-w-0 items-center gap-2 sm:gap-2.5', className)}>
       {!imgError ? (
         <img
-          src="/img/logo.png"
+          src="https://files.manuscdn.com/user_upload_by_module/session_file/310519664045228795/VqtFGwaGtbWyvcCS"
           onError={() => setImgError(true)}
           alt="British Education & Immigration"
           className="size-10 shrink-0 rounded-xl bg-white object-contain p-0.5 shadow-[3px_3px_0_0] shadow-forest-950/50 sm:size-11"
