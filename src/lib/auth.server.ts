@@ -44,7 +44,7 @@ export function verifyPassword(password: string, stored: string): boolean {
 export function createSessionToken(user: { openId: string; email: string; name: string; role: string }): string {
   const secret = getSessionSecret()
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url')
-  const exp = Math.floor(Date.now() / 1000) + 7 * 86400 // 7 days
+  const exp = Math.floor(Date.now() / 1000) + 30 * 86400 // 30 days session
   const body = Buffer.from(
     JSON.stringify({
       sub: user.openId,
@@ -82,7 +82,13 @@ function cookiesFrom(headers: Headers) {
       .split(';')
       .map((part) => part.trim().split('='))
       .filter(([key, value]) => key && value)
-      .map(([key, value]) => [key, decodeURIComponent(value)]),
+      .map(([key, value]) => {
+        try {
+          return [key, decodeURIComponent(value)]
+        } catch {
+          return [key, value]
+        }
+      }),
   ) as Record<string, string>
 }
 
@@ -214,6 +220,136 @@ export async function loginAdmin(
   return { ok: false, error: 'Invalid username/email or password' }
 }
 
+// Resend Email Sender
+async function sendEmailViaResend({ to, subject, html }: { to: string; subject: string; html: string }): Promise<void> {
+  const apiKey = (process.env.RESEND_API_KEY || '').trim()
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY is not set in Vercel settings.')
+  }
+
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: 'British Education & Immigration <onboarding@resend.dev>',
+      to: [to],
+      subject,
+      html,
+    }),
+  })
+
+  const data: any = await res.json()
+  if (!res.ok) {
+    throw new Error(data.message || 'Failed to send email via Resend')
+  }
+}
+
+// 1. Send OTP to any user's email
+export async function sendResetOtp(emailInput: string): Promise<{ ok: boolean; message?: string; error?: string }> {
+  const email = emailInput.trim().toLowerCase()
+  if (!email || !email.includes('@')) {
+    return { ok: false, error: 'Please enter a valid email address' }
+  }
+
+  // Check if user exists
+  const masterEmail = (process.env.ADMIN_EMAIL || DEFAULT_ADMIN_EMAIL).toLowerCase()
+  const rows = await queryRows('SELECT * FROM admin_users WHERE LOWER(email) = ? LIMIT 1', [email])
+  if (email !== masterEmail && rows.length === 0) {
+    return { ok: false, error: 'No admin account found with this email' }
+  }
+
+  // Ensure table exists
+  await execute(`
+    CREATE TABLE IF NOT EXISTS admin_password_resets (
+      email VARCHAR(255) PRIMARY KEY,
+      otp VARCHAR(10) NOT NULL,
+      expires_at TIMESTAMP NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
+
+  // 6-digit OTP (10 mins valid)
+  const otp = String(Math.floor(100000 + Math.random() * 900000))
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
+
+  await execute(
+    'INSERT INTO admin_password_resets (email, otp, expires_at) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE otp = VALUES(otp), expires_at = VALUES(expires_at)',
+    [email, otp, expiresAt],
+  )
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 28px; border: 1px solid #e2e8f0; border-radius: 20px; background-color: #ffffff;">
+      <h2 style="color: #0b3326; margin: 0 0 6px 0; font-size: 22px;">British Education & Immigration</h2>
+      <p style="color: #64748b; font-size: 13px; margin: 0;">Sangaria, Rajasthan · Admin Security</p>
+      <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 20px 0;" />
+      <p style="color: #1e293b; font-size: 15px; margin: 0 0 16px 0;">Hello,</p>
+      <p style="color: #334155; font-size: 14px; line-height: 1.6; margin: 0 0 24px 0;">
+        You requested a password reset for your admin dashboard account. Use the following 6-digit OTP code to reset your password:
+      </p>
+      <div style="background: #0b3326; color: #ffffff; font-size: 32px; font-weight: bold; letter-spacing: 8px; text-align: center; padding: 18px; border-radius: 14px; margin-bottom: 24px;">
+        ${otp}
+      </div>
+      <p style="color: #64748b; font-size: 12px; line-height: 1.5; margin: 0;">
+        ⏰ This OTP is valid for <strong>10 minutes</strong>. If you did not request this, you can safely ignore this email.
+      </p>
+    </div>
+  `
+
+  try {
+    await sendEmailViaResend({
+      to: email,
+      subject: `Your OTP is ${otp} · British Education & Immigration`,
+      html,
+    })
+    return { ok: true, message: `OTP sent to ${email}. Check your inbox or spam folder.` }
+  } catch (err: any) {
+    console.error('Resend OTP error:', err)
+    return { ok: false, error: err.message || 'Failed to send OTP email. Please check your RESEND_API_KEY.' }
+  }
+}
+
+// 2. Verify OTP and Reset Password
+export async function verifyOtpAndResetPassword(
+  emailInput: string,
+  otpInput: string,
+  newPassword: string,
+): Promise<{ ok: boolean; message?: string; error?: string }> {
+  const email = emailInput.trim().toLowerCase()
+  const otp = otpInput.trim()
+  const cleanPass = newPassword.trim()
+
+  if (!email || !otp || !cleanPass) {
+    return { ok: false, error: 'Email, OTP, and New Password are required' }
+  }
+  if (cleanPass.length < 6) {
+    return { ok: false, error: 'New password must be at least 6 characters' }
+  }
+
+  try {
+    const rows = await queryRows(
+      'SELECT * FROM admin_password_resets WHERE LOWER(email) = ? AND expires_at > CURRENT_TIMESTAMP() LIMIT 1',
+      [email],
+    )
+
+    if (rows.length === 0 || String(rows[0].otp).trim() !== otp) {
+      return { ok: false, error: 'Invalid or expired OTP. Please try again.' }
+    }
+
+    const newHash = hashPassword(cleanPass)
+    await execute('UPDATE admin_users SET password_hash = ? WHERE LOWER(email) = ?', [newHash, email])
+    await execute('DELETE FROM admin_password_resets WHERE LOWER(email) = ?', [email])
+
+    return { ok: true, message: 'Password reset successful! You can now log in.' }
+  } catch (err: any) {
+    console.error('Verify OTP error:', err)
+    return { ok: false, error: 'Failed to verify OTP' }
+  }
+}
+
+// Fallback: Master Recovery Key reset
 export async function resetAdminPassword(
   email: string,
   recoveryKey: string,
@@ -232,7 +368,7 @@ export async function resetAdminPassword(
 
   const expectedKey = getRecoveryKey()
   if (cleanKey !== expectedKey) {
-    return { ok: false, error: 'Invalid Recovery Key / Security PIN. Please check your setup key.' }
+    return { ok: false, error: 'Invalid Master Recovery Key (Security PIN)' }
   }
 
   const newHash = hashPassword(cleanPass)
@@ -245,7 +381,7 @@ export async function resetAdminPassword(
     console.error('Reset password error:', err)
   }
 
-  return { ok: true, message: 'Password has been reset successfully! You can now log in.' }
+  return { ok: true, message: 'Password reset successfully!' }
 }
 
 export async function changeAdminPassword(
