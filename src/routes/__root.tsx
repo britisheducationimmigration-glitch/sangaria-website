@@ -1,5 +1,6 @@
 import { HeadContent, Link, Scripts, createRootRoute, useRouterState } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 import { SiteFooter } from '@/components/SiteFooter'
 import { SiteHeader } from '@/components/SiteHeader'
 import { WhatsAppButton } from '@/components/WhatsAppButton'
@@ -49,6 +50,7 @@ function RootDocument({ children }: { children: ReactNode }) {
         {!isAdmin && <SiteFooter />}
         {!isAdmin && <WhatsAppButton />}
         {!isAdmin && <EnquiryPopup />}
+        <Analytics />
         <Scripts />
       </body>
     </html>
