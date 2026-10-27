@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, RefreshCw } from 'lucide-react'
 import { getAdminSnapshot, deleteAdminUser, deleteBatch, deleteEnquiry, deletePost, deleteStory, exportEnquiries, saveAdminUser, saveBatch, savePost, saveStory, updateEnquiry, updateSettings } from '@/lib/admin-functions'
 import type { AdminPost, AdminRole, AdminSnapshot, AdminStory, AdminUser, CoachingBatch, Enquiry, EnquiryStatus } from '@/lib/content-types'
 
@@ -17,6 +17,8 @@ const blankStory: Omit<AdminStory, 'id'> = { kind: 'testimonial', name: '', city
 
 function AdminPage() {
   const [snapshot, setSnapshot] = useState<AdminSnapshot | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
   const [tab, setTab] = useState<Tab>('enquiries')
   const [query, setQuery] = useState('')
@@ -29,22 +31,49 @@ function AdminPage() {
   const [notice, setNotice] = useState('')
   const [showChangePass, setShowChangePass] = useState(false)
 
-  async function reload() {
+  async function reload(silent = false) {
+    if (!silent) setRefreshing(true)
     try {
       setError('')
-      setSnapshot(await getAdminSnapshot())
+      const data = await getAdminSnapshot()
+      setSnapshot(data)
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Admin access is not configured yet.')
+      if (!snapshot) {
+        setError(cause instanceof Error ? cause.message : 'Admin access is not configured yet.')
+      }
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
     }
   }
 
-  useEffect(() => { void reload() }, [])
+  // Initial load + Auto-refresh every 15 seconds
+  useEffect(() => {
+    void reload()
+    const timer = setInterval(() => {
+      void reload(true)
+    }, 15000)
+    return () => clearInterval(timer)
+  }, [])
+
   useEffect(() => { if (snapshot?.user.role === 'content_editor' && tab === 'enquiries') setTab('news') }, [snapshot?.user.role, tab])
+
+  // Loading spinner instead of flashing login card
+  if (loading && !snapshot) {
+    return (
+      <section className="grid min-h-screen place-items-center bg-cream px-6 py-16">
+        <div className="flex flex-col items-center gap-3">
+          <div className="size-10 animate-spin rounded-full border-4 border-forest-900 border-t-transparent" />
+          <p className="font-mono text-xs uppercase tracking-widest text-forest-900/60">Loading Admin Dashboard...</p>
+        </div>
+      </section>
+    )
+  }
 
   if (!snapshot) {
     return (
       <section className="grid min-h-screen place-items-center bg-cream px-6 py-16">
-        <AdminAuthCard onLoginSuccess={reload} />
+        <AdminAuthCard onLoginSuccess={() => reload()} />
       </section>
     )
   }
@@ -72,8 +101,14 @@ function AdminPage() {
           <div><p className="font-mono text-[10px] uppercase tracking-[0.2em] text-coral-600">Owner dashboard</p><h1 className="text-2xl font-extrabold">British Education & Immigration</h1></div>
           <div className="text-right text-xs text-forest-900/60">
             <p>{snapshot.user.name}</p><p>{snapshot.user.email}</p><p className="font-bold text-coral-600">{roleLabels[snapshot.user.role]}</p>
-            <div className="mt-1 flex items-center justify-end gap-3">
+            <div className="mt-2 flex items-center justify-end gap-3">
+              <button type="button" onClick={() => void reload()} disabled={refreshing} className="flex items-center gap-1.5 font-bold text-forest-900 hover:text-coral-600 disabled:opacity-50">
+                <RefreshCw className={`size-3.5 ${refreshing ? 'animate-spin text-coral-600' : ''}`} />
+                {refreshing ? 'Syncing…' : 'Live Sync'}
+              </button>
+              <span>·</span>
               <button type="button" onClick={() => setShowChangePass(true)} className="font-bold text-forest-900 hover:text-coral-600">Change password</button>
+              <span>·</span>
               <a href="/admin/oauth/logout" className="font-bold text-coral-600">Log out</a>
             </div>
           </div>
