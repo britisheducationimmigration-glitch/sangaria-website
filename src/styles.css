@@ -5,22 +5,19 @@
   --font-sans: 'Figtree', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  --color-forest-950: #0a1b2d;
-  --color-forest-900: #123752;
-  --color-forest-800: #1d4d6b;
-  --color-forest-700: #2b637f;
-  --color-forest-600: #3c7d96;
-  --color-forest-100: #e6eff4;
-  --color-forest-50: #f3f7fa;
+  /* Main Brand Dark Colors (Header, Footer, Buttons) */
+--color-forest-950: #0a1b2d;
+--color-forest-900: #123752;
+--color-forest-800: #1d4d6b;
 
-  --color-coral-600: #a93645;
-  --color-coral-500: #c4515d;
-  --color-coral-400: #d77a83;
-  --color-coral-100: #f6e5e8;
+/* Accent Colors (CTA Buttons, Badges, Highlights) */
+--color-coral-600: #a93645;
+--color-coral-500: #c4515d;
+--color-coral-400: #d77a83;
 
-  --color-cream: #f7f8fa;
-  --color-sand: #e7edf2;
-  --color-ink: #152333;
+/* Background Colors */
+--color-cream: #f7f8fa;
+--color-sand: #e7edf2;
 
   --animate-rise: rise 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both;
   --animate-marquee: marquee 40s linear infinite;
