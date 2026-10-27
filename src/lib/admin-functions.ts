@@ -66,7 +66,7 @@ export const getAdminSnapshot = createServerFn({ method: 'GET' })
       context.role === 'enquiry_manager' ? Promise.resolve([]) : queryRows('SELECT * FROM content_posts ORDER BY publish_date DESC, id DESC LIMIT 100'),
       context.role === 'enquiry_manager' ? Promise.resolve([]) : queryRows('SELECT * FROM success_stories ORDER BY story_date DESC, id DESC LIMIT 100'),
       context.role === 'super_admin' ? queryRows('SELECT popup_enabled, popup_delay_seconds, whatsapp_enabled, approvals_marquee_enabled FROM site_settings WHERE id = 1 LIMIT 1') : Promise.resolve([]),
-      context.role === 'super_admin' ? queryRows('SELECT open_id, email, name, role FROM admin_users ORDER BY email ASC') : Promise.resolve([]),
+      context.role === 'super_admin' ? queryRows('SELECT * FROM admin_users ORDER BY email ASC') : Promise.resolve([]),
       context.role === 'content_editor' ? Promise.resolve([]) : queryRows(`SELECT COUNT(*) AS total, SUM(status = 'New') AS new_count, SUM(status IN ('Follow-up', 'Documents Pending', 'Applied')) AS follow_ups, SUM(status = 'Converted') AS converted, SUM(next_follow_up_at IS NOT NULL AND DATE(next_follow_up_at) = CURRENT_DATE() AND status NOT IN ('Converted', 'Closed')) AS due_today FROM enquiries`),
       context.role === 'enquiry_manager' ? Promise.resolve([]) : queryRows('SELECT id, program, batch_name, time_slot, seats, starts, published FROM coaching_batches ORDER BY id ASC'),
     ])
@@ -74,7 +74,7 @@ export const getAdminSnapshot = createServerFn({ method: 'GET' })
     return {
       user: { name: context.user.name, email: context.user.email, role: context.role },
       enquiries: enquiryRows.map(mapEnquiry), posts: postRows.map(mapAdminPost), stories: storyRows.map(mapAdminStory), settings: mapSettings(settingsRows[0]),
-      users: userRows.map((row) => ({ openId: String(row.open_id), email: String(row.email), name: String(row.name), role: (row.role === 'admin' ? 'super_admin' : String(row.role)) as AdminRole })),
+      users: userRows.map((row) => ({ openId: String(row.open_id || row.id || row.email), email: String(row.email), name: String(row.name || row.email), role: (row.role === 'admin' ? 'super_admin' : String(row.role)) as AdminRole })),
       enquiryStats: { total: Number(stats.total ?? 0), newCount: Number(stats.new_count ?? 0), followUps: Number(stats.follow_ups ?? 0), dueToday: Number(stats.due_today ?? 0), converted: Number(stats.converted ?? 0) },
       batches: batchRows.map(mapBatch),
     }
@@ -210,20 +210,40 @@ export const saveAdminUser = createServerFn({ method: 'POST' }).middleware([admi
   const input = (data ?? {}) as Record<string, unknown>
   const email = stringValue(input.email, 190).toLowerCase()
   const role = stringValue(input.role, 30) as AdminRole
+  const password = stringValue(input.password, 200)
   if (!/^\S+@\S+\.\S+$/.test(email)) throw new Error('Enter a valid email')
   if (!['super_admin', 'content_editor', 'enquiry_manager'].includes(role)) throw new Error('Choose a valid role')
-  return { email, role, name: stringValue(input.name, 160) || email }
+  return { email, role, name: stringValue(input.name, 160) || email, password }
 }).handler(async ({ data, context }) => {
   assertCapability(context.role, 'users')
-  const existing = await queryRows('SELECT open_id FROM admin_users WHERE LOWER(email) = ? LIMIT 1', [data.email])
-  if (existing[0]?.open_id) await execute('UPDATE admin_users SET email = ?, name = ?, role = ? WHERE open_id = ?', [data.email, data.name, data.role, String(existing[0].open_id)])
-  else await execute('INSERT INTO admin_users (open_id, email, name, role) VALUES (?, ?, ?, ?)', [`email:${data.email}`, data.email, data.name, data.role])
+  const { hashPassword } = await import('./auth.server')
+  const passHash = data.password ? hashPassword(data.password) : null
+
+  const existing = await queryRows('SELECT * FROM admin_users WHERE LOWER(email) = ? LIMIT 1', [data.email])
+  if (existing.length > 0) {
+    if (passHash) {
+      await execute('UPDATE admin_users SET name = ?, role = ?, password_hash = ? WHERE LOWER(email) = ?', [data.name, data.role, passHash, data.email])
+    } else {
+      await execute('UPDATE admin_users SET name = ?, role = ? WHERE LOWER(email) = ?', [data.name, data.role, data.email])
+    }
+  } else {
+    if (!passHash) throw new Error('Password is required for new staff account')
+    try {
+      await execute('INSERT INTO admin_users (open_id, email, name, role, password_hash) VALUES (?, ?, ?, ?, ?)', [`email:${data.email}`, data.email, data.name, data.role, passHash])
+    } catch {
+      await execute('INSERT INTO admin_users (email, name, role, password_hash) VALUES (?, ?, ?, ?)', [data.email, data.name, data.role, passHash])
+    }
+  }
   return { ok: true }
 })
 
 export const deleteAdminUser = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => ({ openId: stringValue((data as Record<string, unknown>)?.openId, 190) })).handler(async ({ data, context }) => {
   assertCapability(context.role, 'users')
   if (data.openId === context.user.openId || data.openId === `email:${context.user.email}`) throw new Error('You cannot remove your own active account')
-  await execute('DELETE FROM admin_users WHERE open_id = ?', [data.openId])
+  try {
+    await execute('DELETE FROM admin_users WHERE open_id = ? OR LOWER(email) = ?', [data.openId, data.openId.replace('email:', '').toLowerCase()])
+  } catch {
+    await execute('DELETE FROM admin_users WHERE LOWER(email) = ?', [data.openId.replace('email:', '').toLowerCase()])
+  }
   return { ok: true }
 })
