@@ -1,4 +1,4 @@
-import { CheckCircle2, Loader2, Send } from 'lucide-react'
+import { CheckCircle2, Loader2, MessageCircle, Send } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { countries, visaServices } from '@/data/fixtures'
 import { cn } from '@/lib/utils'
@@ -27,27 +27,63 @@ export function EnquiryForm({
   onSuccess?: () => void
 }) {
   const [state, setState] = useState<'idle' | 'sending' | 'done' | 'error'>('idle')
+  const [whatsappUrl, setWhatsappUrl] = useState('')
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setState('sending')
     const data = new FormData(e.currentTarget)
+
+    const name = String(data.get('name') ?? '').trim()
+    const phone = String(data.get('phone') ?? '').trim()
+    const email = String(data.get('email') ?? '').trim()
+    const city = String(data.get('city') ?? '').trim()
+    const interest = String(data.get('interest') ?? '').trim()
+    const country = String(data.get('country') ?? '').trim()
+    const message = String(data.get('message') ?? '').trim()
+
+    // 1. Build Pre-filled WhatsApp Message
+    const textLines = [
+      '🎓 *New Website Enquiry - British Education & Immigration*',
+      '',
+      `👤 *Name:* ${name || 'N/A'}`,
+      `📞 *Phone:* ${phone || 'N/A'}`,
+      email ? `📧 *Email:* ${email}` : '',
+      city ? `📍 *City:* ${city}` : '',
+      interest ? `🎯 *Interest:* ${interest}` : '',
+      country ? `🌍 *Preferred Country:* ${country}` : '',
+      message ? `💬 *Message:* ${message}` : '',
+      summary ? `📋 *Details:* ${summary}` : '',
+      '',
+      'Please guide me further. Thank you!',
+    ].filter(Boolean).join('\n')
+
+    const waUrl = `https://wa.me/919772570478?text=${encodeURIComponent(textLines)}`
+    setWhatsappUrl(waUrl)
+
     try {
+      // 2. Save in Database & Admin Panel
       await submitEnquiry({
         data: {
-          name: String(data.get('name') ?? ''),
-          phone: String(data.get('phone') ?? ''),
-          email: String(data.get('email') ?? ''),
-          city: String(data.get('city') ?? ''),
-          interest: String(data.get('interest') ?? ''),
-          country: String(data.get('country') ?? ''),
-          message: String(data.get('message') ?? ''),
+          name,
+          phone,
+          email,
+          city,
+          interest,
+          country,
+          message,
           source,
           summary: summary ?? '',
         },
       })
+
       setState('done')
       onSuccess?.()
+
+      // 3. Automatically open WhatsApp in new tab/app with pre-filled details
+      if (typeof window !== 'undefined') {
+        window.open(waUrl, '_blank')
+      }
     } catch {
       setState('error')
     }
@@ -55,19 +91,20 @@ export function EnquiryForm({
 
   if (state === 'done') {
     return (
-      <div className={cn('rounded-3xl p-10 text-center', dark ? 'bg-white/10 text-white' : 'bg-forest-50 text-forest-900')}>
-        <CheckCircle2 className="mx-auto size-14 text-coral-500" />
-        <h3 className="mt-4 text-2xl font-extrabold">Enquiry received!</h3>
-        <p className={cn('mt-2', dark ? 'text-forest-100/80' : 'text-forest-900/70')}>
-          Our counsellor will call you within one working day. For instant help, click below to chat on WhatsApp.
+      <div className={cn('rounded-3xl p-8 sm:p-10 text-center', dark ? 'bg-white/10 text-white' : 'bg-forest-50 text-forest-900')}>
+        <CheckCircle2 className="mx-auto size-14 text-emerald-500 animate-bounce" />
+        <h3 className="mt-4 text-2xl font-extrabold">Enquiry Submitted!</h3>
+        <p className={cn('mt-2 text-sm leading-relaxed max-w-md mx-auto', dark ? 'text-forest-100/80' : 'text-forest-900/70')}>
+          Your details are saved. WhatsApp has been opened with your pre-filled enquiry. If it didn't open automatically, tap below:
         </p>
         <a
-          href="https://wa.me/919772570478?text=Hello%20British%20Education%2C%20I%20just%20submitted%20an%20enquiry%20on%20your%20website%20and%20would%20like%20to%20connect."
+          href={whatsappUrl}
           target="_blank"
           rel="noreferrer"
-          className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#25D366] px-6 py-3.5 text-sm font-bold text-white shadow-lg transition hover:brightness-105"
+          className="mt-6 inline-flex items-center justify-center gap-2.5 rounded-full bg-[#25D366] px-8 py-4 text-sm font-bold text-white shadow-xl transition hover:brightness-105 active:scale-95"
         >
-          Chat with Counsellor on WhatsApp →
+          <MessageCircle className="size-5 fill-white text-white" />
+          Send Details on WhatsApp Now →
         </a>
       </div>
     )
