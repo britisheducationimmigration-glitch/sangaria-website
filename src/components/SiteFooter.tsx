@@ -71,7 +71,13 @@ export function SiteFooter() {
               </a>
             ))}
             {site.emails.map((email) => (
-              <a key={email} href={`mailto:${email}`} className="mt-3 flex items-start gap-3 break-all text-sm hover:text-white">
+              <a
+                key={email}
+                href={`https://mail.google.com/mail/?view=cm&fs=1&to=${email}`}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 flex items-start gap-3 break-all text-sm hover:text-white"
+              >
                 <Mail className="mt-0.5 size-4 shrink-0 text-coral-400" /> {email}
               </a>
             ))}
