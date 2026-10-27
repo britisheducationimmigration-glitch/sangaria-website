@@ -243,7 +243,7 @@ function AdminAuthCard({ onLoginSuccess }: { onLoginSuccess: () => Promise<void>
               value={recoveryKey}
               onChange={(e) => setRecoveryKey(e.target.value)}
               className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:outline-none focus:ring-coral-400"
-              placeholder="e.g. Sangaria@Reset2026"
+              placeholder="Enter your secret recovery key"
             />
           </div>
           <div>
