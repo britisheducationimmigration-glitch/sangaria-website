@@ -64,7 +64,17 @@ function ContactPage() {
                 <Mail className="mt-1 size-5 shrink-0 text-coral-400" />
                 <span>
                   <span className="block font-bold">Email us</span>
-                  {site.emails.map((email) => <a key={email} href={`mailto:${email}`} className="block break-all text-sm text-forest-100/75 hover:text-white">{email}</a>)}
+                  {site.emails.map((email) => (
+                    <a
+                      key={email}
+                      href={`https://mail.google.com/mail/?view=cm&fs=1&to=${email}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block break-all text-sm text-forest-100/75 hover:text-white"
+                    >
+                      {email}
+                    </a>
+                  ))}
                 </span>
               </li>
             </ul>
