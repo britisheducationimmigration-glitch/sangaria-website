@@ -1,0 +1,23 @@
+import { MessageCircle } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { site } from '@/data/site'
+import { getPublicContent } from '@/lib/public-functions'
+
+export function WhatsAppButton() {
+  const [enabled, setEnabled] = useState(true)
+  useEffect(() => { getPublicContent().then((content) => setEnabled(content.settings.whatsappEnabled)).catch(() => undefined) }, [])
+  if (!enabled) return null
+  const text = encodeURIComponent('Hello British Education and Immigration, I would like to know more about visas.')
+  return (
+    <a
+      href={`https://wa.me/${site.whatsapp}?text=${text}`}
+      target="_blank"
+      rel="noreferrer"
+      aria-label="Chat on WhatsApp"
+      className="fixed right-5 bottom-5 z-50 flex items-center gap-2 rounded-full bg-[#25D366] py-3.5 pr-5 pl-4 font-bold text-white shadow-xl shadow-black/20 transition hover:scale-105"
+    >
+      <MessageCircle className="size-5" />
+      <span className="hidden sm:inline">WhatsApp us</span>
+    </a>
+  )
+}

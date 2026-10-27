@@ -1,0 +1,76 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-display: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Figtree', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --color-forest-950: #0a1b2d;
+  --color-forest-900: #123752;
+  --color-forest-800: #1d4d6b;
+  --color-forest-700: #2b637f;
+  --color-forest-600: #3c7d96;
+  --color-forest-100: #e6eff4;
+  --color-forest-50: #f3f7fa;
+
+  --color-coral-600: #a93645;
+  --color-coral-500: #c4515d;
+  --color-coral-400: #d77a83;
+  --color-coral-100: #f6e5e8;
+
+  --color-cream: #f7f8fa;
+  --color-sand: #e7edf2;
+  --color-ink: #152333;
+
+  --animate-rise: rise 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-marquee: marquee 40s linear infinite;
+  --animate-stamp: stamp 0.6s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes stamp {
+  from { opacity: 0; transform: scale(1.8) rotate(-18deg); }
+  to { opacity: 1; transform: scale(1) rotate(-8deg); }
+}
+
+html { scroll-behavior: smooth; }
+body {
+  @apply bg-cream font-sans text-ink antialiased;
+}
+h1, h2, h3, h4 { @apply font-display tracking-tight; }
+
+/* Subtle topographic grain used on dark sections */
+.bg-grain {
+  background-image:
+    radial-gradient(circle at 20% 10%, rgb(196 81 93 / 0.14), transparent 40%),
+    radial-gradient(circle at 90% 80%, rgb(60 125 150 / 0.32), transparent 45%),
+    repeating-radial-gradient(circle at 70% 30%, rgb(255 255 255 / 0.035) 0 1px, transparent 1px 22px);
+}
+.bg-dots {
+  background-image: radial-gradient(rgb(18 73 123 / 0.12) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+/* Ticket perforation edge */
+.ticket-edge {
+  background-image: radial-gradient(circle at 0 50%, transparent 9px, currentColor 9.5px);
+}
+.field {
+  @apply w-full rounded-xl border border-forest-900/15 bg-white px-4 py-3 text-[15px] text-forest-900 outline-none transition placeholder:text-forest-900/45 focus:border-forest-600 focus:ring-4 focus:ring-forest-600/15;
+}
+select.field {
+  color: #0b3326;
+  background-color: #ffffff;
+  color-scheme: light;
+}
+select.field option {
+  color: #0b3326;
+  background-color: #ffffff;
+}
+.label { @apply mb-1.5 block text-xs font-semibold uppercase tracking-[0.12em] text-forest-800/70; }
