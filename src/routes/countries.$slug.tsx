@@ -4,6 +4,7 @@ import { EnquiryForm } from '@/components/EnquiryForm'
 import { Eyebrow } from '@/components/Section'
 import { countries } from '@/data/fixtures'
 import { visaGuidance } from '@/data/visa-guidance'
+import { CountryFlag } from '@/components/CountryFlag'
 
 export const Route = createFileRoute('/countries/$slug')({
   loader: ({ params }) => {
