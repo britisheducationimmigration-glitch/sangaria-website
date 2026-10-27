@@ -217,11 +217,7 @@ function AdminAuthCard({ onLoginSuccess }: { onLoginSuccess: () => Promise<void>
           >
             {busy ? 'Verifying…' : 'Sign in to Dashboard →'}
           </button>
-          <div className="rounded-2xl bg-white/5 p-4 text-[11px] text-forest-100/60 leading-relaxed border border-white/5">
-            <p className="font-bold text-forest-100/80 mb-1">Default Master Login:</p>
-            <p>Username: <code className="text-coral-300">admin@britisheducationandimmigration.com</code></p>
-            <p>Password: <code className="text-coral-300">Admin@Sangaria2026</code></p>
-          </div>
+          
         </form>
       ) : (
         <form onSubmit={handleReset} className="mt-6 space-y-4">
@@ -249,7 +245,6 @@ function AdminAuthCard({ onLoginSuccess }: { onLoginSuccess: () => Promise<void>
               className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:outline-none focus:ring-coral-400"
               placeholder="e.g. Sangaria@Reset2026"
             />
-            <p className="mt-1 text-[10px] text-forest-100/50">Default setup key: <code>Sangaria@Reset2026</code> (or from ADMIN_RECOVERY_KEY env)</p>
           </div>
           <div>
             <label className="block text-xs font-bold text-forest-100/70 mb-1.5">New Password (minimum 6 characters)</label>
