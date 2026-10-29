@@ -32,7 +32,7 @@ function Home() {
     <>
       {/* HERO SECTION */}
       <section className="relative overflow-hidden bg-forest-900 bg-grain text-white">
-        <div className="mx-auto grid max-w-7xl items-center gap-10 px-5 pt-12 pb-16 sm:gap-14 sm:px-6 sm:pt-16 sm:pb-24 lg:grid-cols-[1.15fr_1fr] lg:pt-20">
+        <div className="mx-auto grid max-w-7xl items-center gap-10 px-5 pt-12 pb-20 sm:gap-14 sm:px-6 sm:pt-16 sm:pb-24 lg:grid-cols-[1.15fr_1fr] lg:pt-20">
           <div>
             <div className="animate-rise">
               <Eyebrow light>Sangaria · Hanumangarh · Since day one</Eyebrow>
@@ -49,7 +49,7 @@ function Home() {
               <br />
               the visa.
             </h1>
-            <p className="mt-6 max-w-xl animate-rise text-sm leading-relaxed text-forest-100/80 [animation-delay:160ms] sm:text-lg">
+            <p className="mt-5 max-w-xl animate-rise text-sm leading-relaxed text-forest-100/80 [animation-delay:160ms] sm:mt-6 sm:text-lg">
               Study visas, PR, work permits, tourist visas and IELTS / PTE coaching for Canada, UK, Australia, USA, New Zealand, Germany and Europe —
               all under one roof at {site.name}.
             </p>
@@ -83,8 +83,15 @@ function Home() {
               height={860}
               className="relative aspect-[6/7] w-full rounded-[2rem] object-cover shadow-2xl"
             />
-            {/* boarding pass */}
-            <div className="absolute -bottom-6 -left-2 w-[85%] rounded-2xl bg-cream p-3 text-forest-900 shadow-2xl sm:-bottom-10 sm:-left-10 sm:w-[78%] sm:p-4">
+            {/* STAMP BADGE (Top Right - Zero Collision) */}
+            <div className="absolute top-4 right-4 z-10 grid size-20 animate-stamp place-items-center rounded-full border-[2.5px] border-dashed border-coral-500 bg-forest-950/90 text-center font-mono text-[9px] font-bold uppercase leading-tight tracking-widest text-coral-400 backdrop-blur [animation-delay:600ms] sm:top-6 sm:-right-6 sm:size-28 sm:border-[3px] sm:text-[11px]">
+              Visa
+              <br />
+              Approved
+              <br />✓
+            </div>
+            {/* BOARDING PASS (Bottom Centered - Clean Spacing) */}
+            <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 z-10 w-[92%] rounded-2xl bg-cream p-3 text-forest-900 shadow-2xl sm:-bottom-10 sm:left-4 sm:translate-x-0 sm:w-[78%] sm:p-4">
               <div className="flex items-center justify-between font-mono text-[9px] uppercase tracking-widest text-forest-900/60 sm:text-[10px]">
                 <span>Boarding pass</span>
                 <span>BEI · 2026</span>
@@ -101,20 +108,13 @@ function Home() {
                 </div>
               </div>
             </div>
-            {/* stamp badge */}
-            <div className="absolute -top-3 -right-2 grid size-20 animate-stamp place-items-center rounded-full border-[2.5px] border-dashed border-coral-500 bg-forest-950/90 text-center font-mono text-[9px] font-bold uppercase leading-tight tracking-widest text-coral-400 backdrop-blur [animation-delay:600ms] sm:top-6 sm:-right-6 sm:size-28 sm:border-[3px] sm:text-[11px]">
-              Visa
-              <br />
-              Approved
-              <br />✓
-            </div>
           </div>
         </div>
       </section>
 
       {/* APPROVALS MARQUEE */}
       {settings.approvalsMarqueeEnabled && (
-        <section className="overflow-hidden border-y border-forest-900/10 bg-coral-500 py-3 text-white sm:py-4">
+        <section className="overflow-hidden border-b border-forest-900/10 bg-coral-500 py-3 text-white sm:py-4">
           <div className="flex w-max animate-marquee gap-8 whitespace-nowrap font-display text-sm font-bold sm:gap-10 sm:text-lg">
             {[...approvals, ...approvals].map((a, i) => (
               <span key={i} className="flex items-center gap-2.5">
@@ -125,46 +125,51 @@ function Home() {
         </section>
       )}
 
-      {/* SERVICES */}
-      <section id="services" className="mx-auto max-w-7xl px-5 py-14 sm:px-6 sm:py-20 lg:py-24">
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+      {/* SERVICES (Compact Flipkart Style: 2-Cols on Mobile, 3-Cols on Desktop) */}
+      <section id="services" className="mx-auto max-w-7xl px-5 py-12 sm:px-6 sm:py-16 lg:py-24">
+        <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
           <div>
             <Eyebrow>What we do</Eyebrow>
-            <h2 className="mt-3 max-w-2xl text-2xl font-extrabold text-forest-900 sm:text-4xl md:text-5xl">Every kind of visa, handled by one trusted team.</h2>
+            <h2 className="mt-2.5 max-w-2xl text-2xl font-extrabold text-forest-900 sm:text-4xl md:text-5xl">Every kind of visa, handled by one trusted team.</h2>
           </div>
-          <Link to="/visas" className="font-bold text-coral-600 hover:underline">
+          <Link to="/visas" className="text-sm font-bold text-coral-600 hover:underline">
             All visa services →
           </Link>
         </div>
-        <div className="mt-8 grid gap-4 sm:mt-12 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:mt-10 sm:gap-5 lg:grid-cols-3">
           {visaServices.map((s, i) => (
             <Link
               key={s.slug}
               to="/visas"
               hash={s.slug}
               className={
-                'group relative overflow-hidden rounded-3xl p-6 sm:p-8 transition hover:-translate-y-1 ' +
-                (i === 0 ? 'bg-forest-900 text-white' : 'bg-white ring-1 ring-forest-900/10 hover:ring-forest-900')
+                'group relative flex flex-col justify-between rounded-2xl p-4 sm:rounded-3xl sm:p-7 transition hover:-translate-y-1 ' +
+                (i === 0 ? 'bg-forest-900 text-white col-span-2 sm:col-span-1' : 'bg-white ring-1 ring-forest-900/10 hover:ring-forest-900')
               }
             >
-              <span className={'grid size-12 sm:size-14 place-items-center rounded-2xl ' + (i === 0 ? 'bg-coral-500' : 'bg-forest-50 text-forest-700')}>
-                <ServiceIcon name={s.icon} className="size-5 sm:size-6" />
-              </span>
-              <h3 className="mt-5 text-xl font-bold sm:text-2xl">{s.title}</h3>
-              <p className={'mt-2 text-xs sm:text-base ' + (i === 0 ? 'text-forest-100/75' : 'text-forest-900/65')}>{s.summary}</p>
-              <span className="absolute top-5 right-5 font-mono text-xs opacity-40 sm:top-8 sm:right-8">0{i + 1}</span>
+              <div>
+                <span className={'grid size-10 sm:size-12 place-items-center rounded-xl sm:rounded-2xl ' + (i === 0 ? 'bg-coral-500 text-white' : 'bg-forest-50 text-forest-700')}>
+                  <ServiceIcon name={s.icon} className="size-4 sm:size-5" />
+                </span>
+                <h3 className="mt-3 text-base font-bold sm:mt-5 sm:text-2xl">{s.title}</h3>
+                <p className={'mt-1 text-[11px] leading-relaxed sm:text-sm line-clamp-2 sm:line-clamp-none ' + (i === 0 ? 'text-forest-100/75' : 'text-forest-900/65')}>{s.summary}</p>
+              </div>
+              <div className="mt-3 flex items-center justify-between text-xs font-bold sm:mt-5">
+                <span className={i === 0 ? 'text-coral-400' : 'text-forest-900/40'}>View details</span>
+                <ArrowRight className="size-3.5 transition group-hover:translate-x-1 sm:size-4" />
+              </div>
             </Link>
           ))}
         </div>
       </section>
 
-      {/* DESTINATIONS / COUNTRIES (Flipkart Style: 2 Clean Columns on Mobile, 4 Columns on Desktop) */}
-      <section id="destinations" className="bg-sand/60 bg-dots py-14 sm:py-20 lg:py-24">
+      {/* DESTINATIONS / COUNTRIES (2-Columns on Mobile, 4-Columns on Desktop) */}
+      <section id="destinations" className="bg-sand/60 bg-dots py-12 sm:py-16 lg:py-24">
         <div className="mx-auto max-w-7xl px-5 sm:px-6">
           <Eyebrow>Destinations</Eyebrow>
-          <h2 className="mt-3 max-w-3xl text-2xl font-extrabold text-forest-900 sm:text-4xl md:text-5xl">Choose where your next chapter begins.</h2>
+          <h2 className="mt-2.5 max-w-3xl text-2xl font-extrabold text-forest-900 sm:text-4xl md:text-5xl">Choose where your next chapter begins.</h2>
           
-          <div className="mt-8 grid grid-cols-2 gap-3 sm:mt-12 sm:gap-5 lg:grid-cols-4">
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:mt-10 sm:gap-5 lg:grid-cols-4">
             {countries.map((c) => (
               <Link
                 key={c.slug}
@@ -174,55 +179,56 @@ function Home() {
               >
                 <div>
                   <div className="flex items-center justify-between">
-                    <CountryFlag code={c.code} flag={c.flag} country={c.name} className="h-7 w-10 shrink-0 shadow-xs sm:h-10 sm:w-14" />
-                    <span className="font-mono text-base font-bold text-forest-900/20 group-hover:text-white/20 sm:text-2xl">{c.code}</span>
+                    <CountryFlag code={c.code} flag={c.flag} country={c.name} className="h-7 w-10 shrink-0 shadow-xs sm:h-9 sm:w-13" />
+                    <span className="font-mono text-sm font-bold text-forest-900/20 group-hover:text-white/20 sm:text-2xl">{c.code}</span>
                   </div>
-                  <h3 className="mt-3 text-lg font-bold sm:mt-6 sm:text-2xl">{c.name}</h3>
+                  <h3 className="mt-3 text-base font-bold sm:mt-5 sm:text-2xl">{c.name}</h3>
                   <p className="mt-1 text-[11px] leading-tight opacity-70 line-clamp-2 sm:text-sm">{c.headline}</p>
                 </div>
                 <div>
-                  <div className="my-3 border-t border-dashed border-forest-900/15 group-hover:border-white/20 sm:my-5 sm:border-t-2" />
+                  <div className="my-2.5 border-t border-dashed border-forest-900/15 group-hover:border-white/20 sm:my-4 sm:border-t-2" />
                   <div className="flex items-end justify-between text-xs sm:text-sm">
                     <div>
                       <span className="block text-[8px] uppercase tracking-widest opacity-60 sm:text-[10px]">{c.stats[0].label}</span>
                       <span className="font-bold text-xs sm:text-base">{c.stats[0].value}</span>
                     </div>
-                    <ArrowRight className="size-4 text-coral-500 transition group-hover:translate-x-1 sm:size-5" />
+                    <ArrowRight className="size-3.5 text-coral-500 transition group-hover:translate-x-1 sm:size-4" />
                   </div>
                 </div>
               </Link>
             ))}
-            <Link to="/eligibility" className="col-span-2 sm:col-span-1 flex flex-col justify-between rounded-2xl bg-coral-500 p-5 text-white transition hover:-translate-y-1 sm:rounded-3xl sm:p-6">
-              <span className="font-mono text-[10px] uppercase tracking-widest sm:text-xs">Not sure?</span>
-              <span className="mt-3 font-display text-lg font-extrabold leading-tight sm:mt-6 sm:text-2xl">Find the country that fits your profile in 60 seconds →</span>
+            <Link to="/eligibility" className="col-span-2 sm:col-span-1 flex flex-col justify-between rounded-2xl bg-coral-500 p-4 text-white transition hover:-translate-y-1 sm:rounded-3xl sm:p-6">
+              <span className="font-mono text-[9px] uppercase tracking-widest sm:text-xs">Not sure?</span>
+              <span className="mt-2 font-display text-base font-extrabold leading-tight sm:mt-5 sm:text-2xl">Find the country that fits your profile in 60 seconds →</span>
             </Link>
           </div>
         </div>
       </section>
 
-      {/* COACHING */}
-      <section id="coaching" className="mx-auto grid max-w-7xl items-center gap-10 px-5 py-14 sm:px-6 sm:gap-14 sm:py-20 lg:grid-cols-2 lg:py-24">
-        <div className="relative">
+      {/* COACHING SECTION (With Safe Margins - Zero Overlap) */}
+      <section id="coaching" className="mx-auto grid max-w-7xl items-center gap-8 px-5 py-12 sm:px-6 sm:gap-14 sm:py-16 lg:grid-cols-2 lg:py-24">
+        <div className="relative mb-6 sm:mb-8 lg:mb-0">
           <img
             src={img('/img/coaching.webp', 760, 560)}
             alt="IELTS and PTE coaching classroom in Sangaria"
             width={760}
             height={560}
             loading="lazy"
-            className="aspect-[19/14] w-full rounded-[2rem] object-cover"
+            className="aspect-[19/14] w-full rounded-[1.8rem] object-cover shadow-lg"
           />
-          <div className="absolute -bottom-4 right-3 rounded-2xl bg-forest-900 p-3.5 text-white shadow-xl sm:-bottom-6 sm:-right-4 sm:p-5">
+          {/* Badge Placed Safely inside bottom right corner */}
+          <div className="absolute -bottom-4 right-3 z-10 rounded-2xl bg-forest-900 p-3 text-white shadow-xl sm:-bottom-6 sm:-right-3 sm:p-5">
             <p className="font-display text-2xl font-extrabold text-coral-500 sm:text-4xl">79+</p>
-            <p className="text-[10px] uppercase tracking-wider text-forest-100/70 sm:text-xs">Top PTE score this month</p>
+            <p className="text-[9px] uppercase tracking-wider text-forest-100/70 sm:text-xs">Top PTE score this month</p>
           </div>
         </div>
         <div className="pt-2 sm:pt-0">
           <Eyebrow>IELTS & PTE Coaching</Eyebrow>
-          <h2 className="mt-3 text-2xl font-extrabold text-forest-900 sm:text-4xl md:text-5xl">Your score is your passport. Let’s raise it.</h2>
+          <h2 className="mt-2.5 text-2xl font-extrabold text-forest-900 sm:text-4xl md:text-5xl">Your score is your passport. Let’s raise it.</h2>
           <p className="mt-3 text-sm text-forest-900/70 sm:mt-5 sm:text-lg">
             Small batches, experienced trainers, a dedicated PTE computer lab and weekly mock tests — right here in Sangaria.
           </p>
-          <ul className="mt-6 grid grid-cols-2 gap-2.5 sm:mt-8 sm:gap-4">
+          <ul className="mt-5 grid grid-cols-2 gap-2.5 sm:mt-8 sm:gap-4">
             {[
               { icon: Headphones, t: 'Real PTE lab' },
               { icon: Timer, t: 'Timed mocks' },
@@ -240,17 +246,17 @@ function Home() {
         </div>
       </section>
 
-      {/* PROCESS */}
-      <section className="bg-forest-900 bg-grain py-14 text-white sm:py-20 lg:py-24">
+      {/* PROCESS (2-Columns on Mobile - 50% Shorter) */}
+      <section className="bg-forest-900 bg-grain py-12 text-white sm:py-16 lg:py-24">
         <div className="mx-auto max-w-7xl px-5 sm:px-6">
           <Eyebrow light>How it works</Eyebrow>
-          <h2 className="mt-3 max-w-2xl text-2xl font-extrabold sm:text-4xl md:text-5xl">Four steps from Sangaria to your dream destination.</h2>
-          <ol className="mt-8 grid gap-4 sm:mt-14 sm:grid-cols-2 sm:gap-6 md:grid-cols-4">
+          <h2 className="mt-2.5 max-w-2xl text-2xl font-extrabold sm:text-4xl md:text-5xl">Four steps from Sangaria to your dream destination.</h2>
+          <ol className="mt-6 grid grid-cols-2 gap-3 sm:mt-12 sm:gap-6 md:grid-cols-4">
             {steps.map((s) => (
-              <li key={s.n} className="relative rounded-2xl border border-white/10 bg-white/5 p-5 sm:rounded-3xl sm:p-7">
-                <span className="font-display text-4xl font-extrabold text-coral-500/90 sm:text-6xl">{s.n}</span>
-                <h3 className="mt-3 text-base font-bold sm:mt-4 sm:text-xl">{s.title}</h3>
-                <p className="mt-1 text-xs leading-relaxed text-forest-100/70 sm:mt-2 sm:text-sm">{s.text}</p>
+              <li key={s.n} className="relative rounded-2xl border border-white/10 bg-white/5 p-4 sm:rounded-3xl sm:p-6">
+                <span className="font-display text-3xl font-extrabold text-coral-500/90 sm:text-5xl">{s.n}</span>
+                <h3 className="mt-2 text-sm font-bold sm:mt-4 sm:text-lg">{s.title}</h3>
+                <p className="mt-1 text-[11px] leading-relaxed text-forest-100/70 sm:mt-2 sm:text-xs">{s.text}</p>
               </li>
             ))}
           </ol>
@@ -258,17 +264,17 @@ function Home() {
       </section>
 
       {/* RECENT APPROVALS */}
-      <section id="approvals" className="mx-auto max-w-7xl px-5 py-14 sm:px-6 sm:py-20 lg:py-24">
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+      <section id="approvals" className="mx-auto max-w-7xl px-5 py-12 sm:px-6 sm:py-16 lg:py-24">
+        <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
           <div>
             <Eyebrow>Fresh approvals</Eyebrow>
-            <h2 className="mt-3 text-2xl font-extrabold text-forest-900 sm:text-4xl md:text-5xl">Visas that landed this month.</h2>
+            <h2 className="mt-2.5 text-2xl font-extrabold text-forest-900 sm:text-4xl md:text-5xl">Visas that landed this month.</h2>
           </div>
-          <Link to="/success-stories" className="font-bold text-coral-600 hover:underline">
+          <Link to="/success-stories" className="text-sm font-bold text-coral-600 hover:underline">
             See all success stories →
           </Link>
         </div>
-        <div className="mt-8 grid gap-4 sm:mt-12 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
+        <div className="mt-6 grid gap-3 sm:mt-10 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
           {approvals.slice(0, 4).map((a, i) => (
             <ApprovalCard key={a.name} a={a} i={i} />
           ))}
@@ -276,11 +282,11 @@ function Home() {
       </section>
 
       {/* TESTIMONIALS */}
-      <section id="testimonials" className="bg-sand/60 py-14 sm:py-20 lg:py-24">
+      <section id="testimonials" className="bg-sand/60 py-12 sm:py-16 lg:py-24">
         <div className="mx-auto max-w-7xl px-5 sm:px-6">
           <Eyebrow>Testimonials</Eyebrow>
-          <h2 className="mt-3 max-w-2xl text-2xl font-extrabold text-forest-900 sm:text-4xl md:text-5xl">Real students. Real families. Real visas.</h2>
-          <div className="mt-8 grid gap-4 sm:mt-12 sm:gap-5 md:grid-cols-3">
+          <h2 className="mt-2.5 max-w-2xl text-2xl font-extrabold text-forest-900 sm:text-4xl md:text-5xl">Real students. Real families. Real visas.</h2>
+          <div className="mt-6 grid gap-3 sm:mt-10 sm:gap-5 md:grid-cols-3">
             {testimonials.slice(0, 3).map((t, i) => (
               <TestimonialCard key={t.name} t={t} featured={i === 1} />
             ))}
@@ -289,17 +295,17 @@ function Home() {
       </section>
 
       {/* UPDATES */}
-      <section className="mx-auto max-w-7xl px-5 py-14 sm:px-6 sm:py-20 lg:py-24">
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+      <section className="mx-auto max-w-7xl px-5 py-12 sm:px-6 sm:py-16 lg:py-24">
+        <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
           <div>
             <Eyebrow>News & Blog</Eyebrow>
-            <h2 className="mt-3 text-2xl font-extrabold text-forest-900 sm:text-4xl md:text-5xl">Latest visa updates.</h2>
+            <h2 className="mt-2.5 text-2xl font-extrabold text-forest-900 sm:text-4xl md:text-5xl">Latest visa updates.</h2>
           </div>
-          <Link to="/updates" className="font-bold text-coral-600 hover:underline">
+          <Link to="/updates" className="text-sm font-bold text-coral-600 hover:underline">
             All articles →
           </Link>
         </div>
-        <div className="mt-8 grid gap-4 sm:mt-12 sm:gap-5 md:grid-cols-3">
+        <div className="mt-6 grid gap-3 sm:mt-10 sm:gap-5 md:grid-cols-3">
           {posts.slice(0, 3).map((p) => (
             <PostCard key={p.slug} p={p} />
           ))}
@@ -307,13 +313,13 @@ function Home() {
       </section>
 
       {/* FAQ + ENQUIRY */}
-      <section id="enquiry" className="mx-auto grid max-w-7xl gap-8 px-5 pb-20 sm:gap-12 sm:px-6 sm:pb-28 lg:grid-cols-[1fr_1.1fr]">
+      <section id="enquiry" className="mx-auto grid max-w-7xl gap-8 px-5 pb-16 sm:gap-12 sm:px-6 sm:pb-24 lg:grid-cols-[1fr_1.1fr]">
         <div>
           <Eyebrow>FAQs</Eyebrow>
-          <h2 className="mt-3 text-2xl font-extrabold text-forest-900 sm:text-4xl">Questions we hear every day.</h2>
+          <h2 className="mt-2.5 text-2xl font-extrabold text-forest-900 sm:text-4xl">Questions we hear every day.</h2>
           <div className="mt-6 divide-y divide-forest-900/10 rounded-2xl bg-white ring-1 ring-forest-900/10 sm:mt-8 sm:rounded-3xl">
             {faqs.map((f) => (
-              <details key={f.q} className="group p-5 sm:p-6 [&_summary::-webkit-details-marker]:hidden">
+              <details key={f.q} className="group p-4 sm:p-6 [&_summary::-webkit-details-marker]:hidden">
                 <summary className="flex cursor-pointer items-center justify-between gap-4 font-display text-base font-bold text-forest-900 sm:text-lg">
                   {f.q}
                   <span className="grid size-7 shrink-0 place-items-center rounded-full bg-forest-50 text-coral-600 transition group-open:rotate-45 sm:size-8">+</span>
@@ -322,7 +328,7 @@ function Home() {
               </details>
             ))}
           </div>
-          <p className="mt-5 flex items-center gap-2 text-xs text-forest-900/60 sm:mt-6 sm:text-sm">
+          <p className="mt-4 flex items-center gap-2 text-xs text-forest-900/60 sm:mt-6 sm:text-sm">
             <MapPin className="size-4 shrink-0 text-coral-500" /> {site.address}
           </p>
         </div>
