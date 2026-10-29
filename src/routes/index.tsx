@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { ArrowRight, Award, BadgeCheck, Headphones, MapPin, Timer } from 'lucide-react'
 import { ApprovalCard, PostCard, TestimonialCard } from '@/components/Cards'
@@ -27,12 +27,33 @@ const steps = [
   { n: '04', title: 'Visa & departure', text: 'Biometrics, interview prep, forex, tickets and pre-departure briefing.' },
 ]
 
+const rotatingWords = [
+  { text: 'the visa.', icon: '✈️' },
+  { text: 'Canada PR.', icon: '🇨🇦' },
+  { text: 'Study Permits.', icon: '🎓' },
+  { text: 'UK Degrees.', icon: '🇬🇧' },
+  { text: 'IELTS 7.5+.', icon: '📚' },
+]
+
 function Home() {
   const { approvals, posts, testimonials, settings } = Route.useLoaderData()
   const [selectedCountry, setSelectedCountry] = useState('canada')
   const [selectedVisa, setSelectedVisa] = useState('study')
   const [showAllTestimonials, setShowAllTestimonials] = useState(false)
   const [showAllTestimonialsMobile, setShowAllTestimonialsMobile] = useState(false)
+  const [wordIndex, setWordIndex] = useState(0)
+  const [fade, setFade] = useState(true)
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setFade(false)
+      setTimeout(() => {
+        setWordIndex((i) => (i + 1) % rotatingWords.length)
+        setFade(true)
+      }, 250)
+    }, 2800)
+    return () => clearInterval(timer)
+  }, [])
 
   const visibleTestimonialsDesktop = showAllTestimonials ? testimonials : testimonials.slice(0, 3)
   const visibleTestimonialsMobile = showAllTestimonialsMobile ? testimonials : testimonials.slice(0, 2)
@@ -51,17 +72,32 @@ function Home() {
               📍 Sangaria · Hanumangarh · Since Day 1
             </span>
 
+            {/* 3-in-1 Animated Headline (Mobile) */}
             <h1 className="mt-5 text-[2.75rem] font-extrabold leading-[1.03] tracking-tight">
-              Pack your bags.
+              <span className="inline-block animate-rise">Pack your bags.</span>
               <br />
-              <span className="relative inline-block text-coral-500">
-                We’ll handle
-                <svg viewBox="0 0 300 20" className="absolute -bottom-1.5 left-0 w-full" aria-hidden>
-                  <path d="M2 15 Q 75 2 150 10 T 298 6" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
+              <span className="relative inline-block animate-rise [animation-delay:100ms]">
+                <span className="bg-gradient-to-r from-coral-400 via-amber-200 to-coral-400 bg-clip-text text-transparent">
+                  We’ll handle
+                </span>
+                <svg viewBox="0 0 300 20" className="absolute -bottom-1.5 left-0 w-full animate-pulse" aria-hidden>
+                  <path d="M2 15 Q 75 2 150 10 T 298 6" fill="none" stroke="#c4515d" strokeWidth="5" strokeLinecap="round" />
                 </svg>
               </span>
               <br />
-              the visa.
+              <span className="inline-flex items-center gap-2 h-[1.15em] overflow-hidden">
+                <span
+                  className={
+                    'inline-flex items-center gap-2 transition-all duration-300 transform ' +
+                    (fade ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2')
+                  }
+                >
+                  <span className="text-white">{rotatingWords[wordIndex].text}</span>
+                  <span className="inline-block text-2xl animate-bounce">
+                    {rotatingWords[wordIndex].icon}
+                  </span>
+                </span>
+              </span>
             </h1>
 
             <p className="mt-4 text-sm leading-relaxed text-forest-100/85">
@@ -82,10 +118,11 @@ function Home() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="min-w-0">
                   <label htmlFor="mobile-country" className="block text-[10px] font-bold text-white/80 mb-1">Country</label>
-<div className="relative">
-  <select
-    id="mobile-country"
-    value={selectedCountry}
+                  <div className="relative">
+                    <select
+                      id="mobile-country"
+                      aria-label="Select Country"
+                      value={selectedCountry}
                       onChange={(e) => setSelectedCountry(e.target.value)}
                       className="w-full rounded-xl bg-white text-forest-900 text-xs font-bold py-2.5 pl-2.5 pr-7 shadow-sm outline-none border border-forest-900/15 appearance-none truncate"
                     >
@@ -94,9 +131,9 @@ function Home() {
                       <option value="australia">🇦🇺 Australia</option>
                       <option value="usa">🇺🇸 USA</option>
                       <option value="new-zealand">🇳🇿 NZ</option>
-                     <option value="germany">🇩🇪 Germany</option>
+                      <option value="germany">🇩🇪 Germany</option>
                       <option value="europe">🇪🇺 Europe</option>
-                      <option value=""> Other</option>
+                      <option value="">Other</option>
                     </select>
                     <span className="pointer-events-none absolute right-2.5 top-2.5 text-[10px] text-forest-900/60">▼</span>
                   </div>
@@ -104,10 +141,11 @@ function Home() {
 
                 <div className="min-w-0">
                   <label htmlFor="mobile-visa" className="block text-[10px] font-bold text-white/80 mb-1">Visa Type</label>
-<div className="relative">
-  <select
-    id="mobile-visa"
-    value={selectedVisa}
+                  <div className="relative">
+                    <select
+                      id="mobile-visa"
+                      aria-label="Select Visa Type"
+                      value={selectedVisa}
                       onChange={(e) => setSelectedVisa(e.target.value)}
                       className="w-full rounded-xl bg-white text-forest-900 text-xs font-bold py-2.5 pl-2.5 pr-7 shadow-sm outline-none border border-forest-900/15 appearance-none truncate"
                     >
@@ -523,18 +561,35 @@ function Home() {
               <div className="animate-rise">
                 <Eyebrow light>Sangaria · Hanumangarh · Since day one</Eyebrow>
               </div>
+
+              {/* 3-in-1 Animated Headline (Desktop) */}
               <h1 className="mt-7 animate-rise text-[3.4rem] font-extrabold leading-[0.92] [animation-delay:80ms] sm:text-7xl xl:text-[5.6rem]">
-                Pack your bags.
+                <span className="inline-block">Pack your bags.</span>
                 <br />
-                <span className="relative inline-block text-coral-500">
-                  We’ll handle
-                  <svg viewBox="0 0 300 20" className="absolute -bottom-2 left-0 w-full" aria-hidden>
-                    <path d="M2 15 Q 75 2 150 10 T 298 6" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
+                <span className="relative inline-block">
+                  <span className="bg-gradient-to-r from-coral-400 via-amber-200 to-coral-400 bg-clip-text text-transparent">
+                    We’ll handle
+                  </span>
+                  <svg viewBox="0 0 300 20" className="absolute -bottom-2 left-0 w-full animate-pulse" aria-hidden>
+                    <path d="M2 15 Q 75 2 150 10 T 298 6" fill="none" stroke="#c4515d" strokeWidth="5" strokeLinecap="round" />
                   </svg>
                 </span>
                 <br />
-                the visa.
+                <span className="inline-flex items-center gap-3 h-[1.15em] overflow-hidden">
+                  <span
+                    className={
+                      'inline-flex items-center gap-3 transition-all duration-300 transform ' +
+                      (fade ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2')
+                    }
+                  >
+                    <span className="text-white">{rotatingWords[wordIndex].text}</span>
+                    <span className="inline-block text-4xl xl:text-5xl animate-bounce">
+                      {rotatingWords[wordIndex].icon}
+                    </span>
+                  </span>
+                </span>
               </h1>
+
               <p className="mt-8 max-w-xl animate-rise text-lg leading-relaxed text-forest-100/80 [animation-delay:160ms]">
                 Study visas, PR, work permits, tourist visas and IELTS / PTE coaching for Canada, UK, Australia, USA, New Zealand, Germany and Europe —
                 all under one roof at {site.name}.
@@ -551,10 +606,11 @@ function Home() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label htmlFor="desktop-country" className="block text-xs font-semibold text-white/80 mb-1">Target Country</label>
-<div className="relative">
-  <select
-    id="desktop-country"
-    value={selectedCountry}
+                    <div className="relative">
+                      <select
+                        id="desktop-country"
+                        aria-label="Select Country"
+                        value={selectedCountry}
                         onChange={(e) => setSelectedCountry(e.target.value)}
                         className="w-full rounded-xl bg-white text-forest-900 text-sm font-bold py-2.5 pl-3 pr-8 shadow-sm outline-none border border-forest-900/15 appearance-none cursor-pointer"
                       >
@@ -565,18 +621,19 @@ function Home() {
                         <option value="new-zealand">🇳🇿 New Zealand</option>
                         <option value="germany">🇩🇪 Germany</option>
                         <option value="europe">🇪🇺 Europe / Schengen</option>
-                        <option value="">  Other</option>
+                        <option value="">Other</option>
                       </select>
                       <span className="pointer-events-none absolute right-3 top-3 text-xs text-forest-900/60">▼</span>
                     </div>
                   </div>
 
                   <div>
-                   <label htmlFor="desktop-visa" className="block text-xs font-semibold text-white/80 mb-1">Visa Category</label>
-<div className="relative">
-  <select
-    id="desktop-visa"
-    value={selectedVisa}
+                    <label htmlFor="desktop-visa" className="block text-xs font-semibold text-white/80 mb-1">Visa Category</label>
+                    <div className="relative">
+                      <select
+                        id="desktop-visa"
+                        aria-label="Select Visa Category"
+                        value={selectedVisa}
                         onChange={(e) => setSelectedVisa(e.target.value)}
                         className="w-full rounded-xl bg-white text-forest-900 text-sm font-bold py-2.5 pl-3 pr-8 shadow-sm outline-none border border-forest-900/15 appearance-none cursor-pointer"
                       >
@@ -777,7 +834,7 @@ function Home() {
               width={760}
               height={560}
               loading="lazy"
-              className="aspect-[19/14] w-full rounded-[2rem] object-cover"
+              className="aspect-[19/14] w-full rounded-[2rem] object-cover shadow-2xl"
             />
             <div className="absolute -right-4 -bottom-6 rounded-2xl bg-forest-900 p-5 text-white shadow-xl">
               <p className="font-display text-4xl font-extrabold text-coral-500">79+</p>
@@ -794,7 +851,7 @@ function Home() {
               {[
                 { icon: Headphones, t: 'Real-exam PTE lab' },
                 { icon: Timer, t: 'Weekly timed mocks' },
-                { icon: Award, t: 'Band-score feedback' },
+                { icon: Award, t: 'Band feedback' },
                 { icon: BadgeCheck, t: 'Free demo class' },
               ].map(({ icon: Icon, t }) => (
                 <li key={t} className="flex items-center gap-3 rounded-2xl bg-white p-4 font-semibold ring-1 ring-forest-900/10">
