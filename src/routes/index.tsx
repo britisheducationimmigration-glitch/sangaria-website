@@ -563,19 +563,19 @@ function Home() {
               </div>
 
               {/* 3-in-1 Animated Headline (Desktop) */}
-              <h1 className="mt-7 animate-rise text-[3.4rem] font-extrabold leading-[0.92] [animation-delay:80ms] sm:text-7xl xl:text-[5.6rem]">
+              <h1 className="mt-7 animate-rise text-4xl sm:text-6xl lg:text-[4.2rem] xl:text-[4.8rem] font-extrabold leading-[1.08] [animation-delay:80ms]">
                 <span className="inline-block">Pack your bags.</span>
                 <br />
                 <span className="relative inline-block">
                   <span className="bg-gradient-to-r from-coral-400 via-amber-200 to-coral-400 bg-clip-text text-transparent">
                     We’ll handle
                   </span>
-                  <svg viewBox="0 0 300 20" className="absolute -bottom-2 left-0 w-full animate-pulse" aria-hidden>
+                  <svg viewBox="0 0 300 20" className="absolute -bottom-2.5 left-0 w-full animate-pulse" aria-hidden>
                     <path d="M2 15 Q 75 2 150 10 T 298 6" fill="none" stroke="#c4515d" strokeWidth="5" strokeLinecap="round" />
                   </svg>
                 </span>
                 <br />
-                <span className="inline-flex items-center gap-3 h-[1.15em] overflow-hidden">
+                <span className="inline-flex items-center gap-3 whitespace-nowrap min-h-[1.25em] pb-1 overflow-visible">
                   <span
                     className={
                       'inline-flex items-center gap-3 transition-all duration-300 transform ' +
@@ -583,7 +583,7 @@ function Home() {
                     }
                   >
                     <span className="text-white">{rotatingWords[wordIndex].text}</span>
-                    <span className="inline-block text-4xl xl:text-5xl animate-bounce">
+                    <span className="inline-block text-3xl lg:text-4xl xl:text-5xl animate-bounce">
                       {rotatingWords[wordIndex].icon}
                     </span>
                   </span>
