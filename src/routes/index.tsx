@@ -73,18 +73,32 @@ function Home() {
             </span>
 
             {/* 3-in-1 Animated Headline (Mobile) */}
-            <h1 className="mt-5 text-[2.75rem] font-extrabold leading-[1.03] tracking-tight">
+           <h1 className="mt-5 text-[2.75rem] font-extrabold leading-[1.03] tracking-tight">
               <span className="inline-block animate-rise">Pack your bags.</span>
               <br />
               <span className="relative inline-block animate-rise [animation-delay:100ms]">
-                <span className="bg-gradient-to-r from-coral-400 via-amber-200 to-coral-400 bg-clip-text text-transparent">
+                {/* 🌟 Shining Golden-Coral Gradient */}
+                <span className="bg-gradient-to-r from-amber-300 via-amber-100 to-coral-400 bg-clip-text text-transparent [-webkit-background-clip:text] font-extrabold">
                   We’ll handle
                 </span>
-                <svg viewBox="0 0 300 20" className="absolute -bottom-1.5 left-0 w-full animate-pulse" aria-hidden>
-                  <path d="M2 15 Q 75 2 150 10 T 298 6" fill="none" stroke="#c4515d" strokeWidth="5" strokeLinecap="round" />
+                {/* ✍️ Pen-Draw Marker Animation */}
+                <svg viewBox="0 0 300 20" className="absolute -bottom-2 left-0 w-full overflow-visible" aria-hidden>
+                  <path
+                    d="M2 15 Q 75 2 150 10 T 298 6"
+                    fill="none"
+                    stroke="#c4515d"
+                    strokeWidth="5"
+                    strokeLinecap="round"
+                    style={{
+                      strokeDasharray: 320,
+                      strokeDashoffset: 0,
+                      animation: 'penDraw 1.3s cubic-bezier(0.2, 0.7, 0.2, 1) forwards',
+                    }}
+                  />
                 </svg>
               </span>
               <br />
+              {/* ✈️ Smooth Rotating Text */}
               <span className="inline-flex items-center gap-2 h-[1.15em] overflow-hidden">
                 <span
                   className={
