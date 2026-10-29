@@ -103,3 +103,7 @@ select.field option {
   letter-spacing: 0.12em;
   color: rgba(29, 77, 107, 0.7);
 }
+@keyframes penDraw {
+  0% { stroke-dashoffset: 320; }
+  100% { stroke-dashoffset: 0; }
+}
