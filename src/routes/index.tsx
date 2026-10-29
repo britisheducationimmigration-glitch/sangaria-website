@@ -1,6 +1,6 @@
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ArrowRight, Award, BadgeCheck, CheckCircle2, ChevronRight, Globe2, Headphones, MapPin, Sparkles, Star, Timer } from 'lucide-react'
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { ApprovalCard, PostCard, TestimonialCard } from '@/components/Cards'
 import { CountryFlag } from '@/components/CountryFlag'
 import { EnquiryForm } from '@/components/EnquiryForm'
@@ -29,8 +29,9 @@ const steps = [
 
 function Home() {
   const { approvals, posts, testimonials, settings } = Route.useLoaderData()
+  const navigate = useNavigate()
 
-  // Interactive Country State (Works for ALL countries: Canada, UK, Australia, USA, NZ, Germany, Europe)
+  // Interactive Country State (Canada, UK, Australia, USA, NZ, Germany, Europe)
   const [activeCountrySlug, setActiveCountrySlug] = useState('canada')
   const activeCountry = countries.find((c) => c.slug === activeCountrySlug) || countries[0]
 
@@ -38,58 +39,93 @@ function Home() {
   const [showAllReviews, setShowAllReviews] = useState(false)
   const visibleTestimonials = showAllReviews ? testimonials : testimonials.slice(0, 3)
 
+  // Sleek Hero Quick Matcher State
+  const [quickCountry, setQuickCountry] = useState('Canada')
+  const [quickVisa, setQuickVisa] = useState('Study Visa')
+
+  function handleQuickMatch(e: FormEvent) {
+    e.preventDefault()
+    void navigate({ to: '/eligibility' })
+  }
+
   return (
     <div className="min-h-screen bg-sand/30 text-forest-900">
-      {/* 1. HERO SECTION (Clean, Premium, Zero Awkward Dropdown) */}
-      <section className="relative overflow-hidden bg-forest-900 bg-grain text-white pt-12 pb-16 sm:pt-16 sm:pb-24 lg:pt-20">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+      {/* 1. HERO SECTION (Sleek Country & Visa Selector + Zero Collision Photo) */}
+      <section className="relative overflow-hidden bg-forest-900 bg-grain text-white pt-10 pb-16 sm:pt-16 sm:pb-24 lg:pt-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-8">
           <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-xs font-bold text-coral-400 ring-1 ring-white/15 backdrop-blur">
-                <Sparkles className="size-3.5" /> Sangaria · Hanumangarh · Since Day One
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3.5 py-1 text-xs font-bold text-coral-400 ring-1 ring-white/15 backdrop-blur">
+                <Sparkles className="size-3.5" /> Sangaria & Hanumangarh's Leading Visa Centre
               </div>
 
-              <h1 className="mt-5 text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-6xl sm:leading-[0.98] xl:text-[4.8rem]">
+              <h1 className="mt-4 text-3xl font-extrabold leading-[1.08] tracking-tight sm:text-5xl sm:leading-[1.0] xl:text-[4.6rem]">
                 Pack your bags.
                 <br />
                 <span className="text-coral-500">We’ll handle the visa.</span>
               </h1>
 
-              <p className="mt-4 max-w-xl text-sm leading-relaxed text-forest-100/80 sm:text-lg">
-                Study visas, PR, work permits, tourist visas and IELTS / PTE coaching for Canada, UK, Australia, USA, New Zealand, Germany and Europe.
+              <p className="mt-3.5 max-w-xl text-xs leading-relaxed text-forest-100/80 sm:text-base">
+                Study visas, PR, work permits and IELTS / PTE coaching for Canada, UK, Australia, USA, New Zealand & Europe.
               </p>
 
-              {/* CLEAN 2-BUTTON HERO CTA (No Awkward Clunky Dropdowns) */}
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Link
-                  to="/eligibility"
-                  className="flex items-center gap-2 rounded-full bg-coral-500 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-black/30 transition hover:-translate-y-0.5"
-                >
-                  Check My Eligibility <ArrowRight className="size-4" />
-                </Link>
-                <Link
-                  to="/contact"
-                  className="rounded-full border border-white/25 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-white hover:text-forest-900"
-                >
-                  Talk to a Counsellor
-                </Link>
-              </div>
+              {/* SLEEK COMPACT MATCHER WIDGET (Clean App-Like Styling) */}
+              <form onSubmit={handleQuickMatch} className="mt-6 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/20 backdrop-blur-md sm:rounded-full sm:p-2 sm:pl-5">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                  <div className="flex-1 px-1">
+                    <span className="block text-[9px] font-extrabold uppercase tracking-wider text-coral-400">Target Country</span>
+                    <select
+                      value={quickCountry}
+                      onChange={(e) => setQuickCountry(e.target.value)}
+                      className="w-full bg-transparent text-xs sm:text-sm font-bold text-white focus:outline-none [&>option]:bg-forest-900 [&>option]:text-white cursor-pointer"
+                    >
+                      <option>Canada 🇨🇦</option>
+                      <option>United Kingdom 🇬🇧</option>
+                      <option>Australia 🇦🇺</option>
+                      <option>United States 🇺🇸</option>
+                      <option>New Zealand 🇳🇿</option>
+                      <option>Germany 🇩🇪</option>
+                    </select>
+                  </div>
+                  <div className="h-5 w-px bg-white/20 hidden sm:block" />
+                  <div className="flex-1 px-1">
+                    <span className="block text-[9px] font-extrabold uppercase tracking-wider text-coral-400">Service</span>
+                    <select
+                      value={quickVisa}
+                      onChange={(e) => setQuickVisa(e.target.value)}
+                      className="w-full bg-transparent text-xs sm:text-sm font-bold text-white focus:outline-none [&>option]:bg-forest-900 [&>option]:text-white cursor-pointer"
+                    >
+                      <option>Study Visa</option>
+                      <option>IELTS / PTE Coaching</option>
+                      <option>Permanent Residency (PR)</option>
+                      <option>Spouse / Dependent</option>
+                      <option>Tourist Visa</option>
+                    </select>
+                  </div>
+                  <button
+                    type="submit"
+                    className="flex items-center justify-center gap-2 rounded-xl bg-coral-500 px-5 py-2.5 text-xs font-bold text-white shadow-lg transition hover:bg-coral-600 sm:rounded-full sm:py-3 sm:text-sm"
+                  >
+                    Check Eligibility <ArrowRight className="size-3.5" />
+                  </button>
+                </div>
+              </form>
 
               {/* 4 STATS BOXES */}
-              <div className="mt-10 grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-4">
+              <div className="mt-7 grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-4">
                 {stats.map(({ value, label, icon: Icon }) => (
-                  <div key={label} className="rounded-xl bg-white/5 p-3 ring-1 ring-white/10 backdrop-blur-xs">
-                    <Icon className="size-3.5 text-coral-400 mb-1" />
-                    <span className="font-display text-xl font-extrabold text-white sm:text-3xl">{value}</span>
-                    <span className="block text-[9px] uppercase tracking-wider text-forest-100/60 sm:text-[10px]">{label}</span>
+                  <div key={label} className="rounded-xl bg-white/5 p-2.5 text-center sm:p-3 sm:text-left ring-1 ring-white/10 backdrop-blur-xs">
+                    <Icon className="size-3.5 text-coral-400 mb-1 mx-auto sm:mx-0" />
+                    <span className="font-display text-xl font-extrabold text-white sm:text-2xl">{value}</span>
+                    <span className="block text-[8px] uppercase tracking-wider text-forest-100/60 sm:text-[10px]">{label}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* HERO PHOTO (Zero Collision: Stamp at Top-Right, Boarding Pass at Bottom) */}
-            <div className="relative mx-auto w-full max-w-sm sm:max-w-md lg:max-w-none mb-6 sm:mb-8 lg:mb-0">
-              <div className="relative overflow-hidden rounded-[2.2rem] ring-1 ring-white/15 shadow-2xl">
+            {/* HERO PHOTO (Zero Collision: Stamp on Top-Right, Boarding Pass Cleanly at Bottom) */}
+            <div className="relative mx-auto w-full max-w-xs sm:max-w-md lg:max-w-none mt-2 sm:mt-0">
+              <div className="relative overflow-hidden rounded-[2rem] ring-1 ring-white/15 shadow-2xl">
                 <img
                   src={img('/img/hero.webp', 720, 860)}
                   alt="Student with passport and acceptance letter"
@@ -100,29 +136,29 @@ function Home() {
                 <div className="absolute inset-0 bg-gradient-to-t from-forest-950/70 via-transparent to-transparent" />
               </div>
 
-              {/* STAMP BADGE (Locked at TOP-RIGHT, safely away from boarding pass) */}
-              <div className="absolute top-4 right-4 z-10 grid size-20 sm:size-28 place-items-center rounded-full border-[2.5px] border-dashed border-coral-500 bg-forest-950/90 text-center font-mono text-[9px] sm:text-[11px] font-bold uppercase leading-tight tracking-widest text-coral-400 backdrop-blur shadow-xl">
+              {/* STAMP BADGE (Top-Right Locked) */}
+              <div className="absolute top-3 right-3 z-10 grid size-18 sm:size-24 place-items-center rounded-full border-[2px] border-dashed border-coral-500 bg-forest-950/90 text-center font-mono text-[8px] sm:text-[10px] font-bold uppercase leading-tight tracking-widest text-coral-400 backdrop-blur shadow-xl">
                 Visa
                 <br />
                 Approved
                 <br />✓
               </div>
 
-              {/* BOARDING PASS (Centered at BOTTOM, separated from stamp) */}
-              <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 z-10 w-[90%] sm:w-[80%] rounded-2xl bg-cream p-3 sm:p-4 text-forest-900 shadow-2xl ring-1 ring-black/10">
-                <div className="flex items-center justify-between font-mono text-[8px] sm:text-[9px] uppercase tracking-widest text-forest-900/60">
+              {/* BOARDING PASS (Bottom Centered with Breathing Room) */}
+              <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 z-10 w-[88%] rounded-xl bg-cream p-3 text-forest-900 shadow-2xl ring-1 ring-black/10">
+                <div className="flex items-center justify-between font-mono text-[8px] uppercase tracking-widest text-forest-900/60">
                   <span>Boarding pass</span>
                   <span>BEI · 2026</span>
                 </div>
                 <div className="mt-1 flex items-center justify-between font-display">
                   <div>
-                    <p className="text-lg font-extrabold sm:text-2xl text-forest-900">SNG</p>
-                    <p className="text-[8px] sm:text-[9px] text-forest-900/60">Sangaria</p>
+                    <p className="text-base font-extrabold sm:text-xl text-forest-900">SNG</p>
+                    <p className="text-[8px] text-forest-900/60">Sangaria</p>
                   </div>
                   <div className="px-2 text-center text-xs font-bold text-coral-500">- - ✈ - -</div>
                   <div className="text-right">
-                    <p className="text-lg font-extrabold sm:text-2xl text-forest-900">YYZ</p>
-                    <p className="text-[8px] sm:text-[9px] text-forest-900/60">Toronto</p>
+                    <p className="text-base font-extrabold sm:text-xl text-forest-900">YYZ</p>
+                    <p className="text-[8px] text-forest-900/60">Toronto</p>
                   </div>
                 </div>
               </div>
@@ -131,7 +167,7 @@ function Home() {
         </div>
       </section>
 
-      {/* APPROVALS MARQUEE */}
+      {/* MARQUEE TICKER */}
       {settings.approvalsMarqueeEnabled && (
         <div className="overflow-hidden border-b border-forest-900/10 bg-coral-500 py-2.5 text-white">
           <div className="flex w-max animate-marquee gap-8 whitespace-nowrap font-display text-xs font-bold sm:text-sm">
@@ -144,13 +180,13 @@ function Home() {
         </div>
       )}
 
-      {/* 2. COUNTRY SPOTLIGHT (Fixed 48x32px Size for ALL Countries) */}
+      {/* 2. COUNTRY SPOTLIGHT (Strictly Locked Flag 44x28px - Zero Overflow for ALL Countries) */}
       <section id="destinations" className="py-12 sm:py-16">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <div className="mx-auto max-w-7xl px-4 sm:px-8">
           <div className="text-center max-w-2xl mx-auto">
             <Eyebrow>Top Study Destinations</Eyebrow>
             <h2 className="mt-2 text-2xl font-extrabold sm:text-4xl text-forest-900">Explore Countries & Work Rights</h2>
-            <p className="mt-1.5 text-xs text-forest-900/60">Tap any country to view work permits, fee estimates and top intakes.</p>
+            <p className="mt-1 text-xs text-forest-900/60">Tap any country to view work permits, fee estimates and top intakes.</p>
           </div>
 
           {/* Country Tabs */}
@@ -160,38 +196,40 @@ function Home() {
                 type="button"
                 key={c.slug}
                 onClick={() => setActiveCountrySlug(c.slug)}
-                className={`flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition whitespace-nowrap ${
+                className={`flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-bold transition whitespace-nowrap ${
                   activeCountrySlug === c.slug
                     ? 'bg-forest-900 text-white shadow-md'
                     : 'bg-white text-forest-900/80 ring-1 ring-forest-900/10 hover:bg-forest-50'
                 }`}
               >
-                <CountryFlag code={c.code} flag={c.flag} country={c.name} className="h-3.5 w-5 shrink-0" />
+                <span style={{ width: '20px', height: '14px' }} className="shrink-0 inline-block overflow-hidden rounded-xs">
+                  <CountryFlag code={c.code} flag={c.flag} country={c.name} className="w-full h-full object-cover" />
+                </span>
                 <span>{c.name}</span>
               </button>
             ))}
           </div>
 
-          {/* Spotlight Card with STRICTLY LOCKED Flag Size for all countries */}
+          {/* Spotlight Card with Strictly Constrained Flag Badge */}
           <div className="mt-5 rounded-2xl bg-white p-5 sm:p-8 shadow-sm ring-1 ring-forest-900/10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr] items-start">
             <div>
-              {/* Flag + Country Header: Strict 48x32px container so NO flag ever blows up! */}
+              {/* Header: Flag is strictly locked to 44px by 28px! */}
               <div className="flex items-center gap-3">
-                <div className="w-12 h-8 shrink-0 min-w-[48px] max-w-[48px] overflow-hidden rounded shadow-xs border border-forest-900/10 flex items-center justify-center bg-forest-50">
-                  <CountryFlag code={activeCountry.code} flag={activeCountry.flag} country={activeCountry.name} className="w-full h-full object-cover" />
+                <div style={{ width: '44px', height: '28px', minWidth: '44px', maxWidth: '44px' }} className="shrink-0 overflow-hidden rounded border border-forest-900/15 shadow-xs bg-forest-50 flex items-center justify-center">
+                  <CountryFlag code={activeCountry.code} flag={activeCountry.flag} country={activeCountry.name} className="w-full h-full object-cover block" />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="text-xl font-extrabold text-forest-900 sm:text-2xl">{activeCountry.name}</h3>
-                  <p className="text-xs font-bold text-coral-600 truncate">{activeCountry.headline}</p>
+                  <h3 className="text-xl font-extrabold text-forest-900 sm:text-2xl leading-none">{activeCountry.name}</h3>
+                  <p className="text-xs font-bold text-coral-600 truncate mt-1">{activeCountry.headline}</p>
                 </div>
               </div>
 
               <p className="mt-3 text-xs sm:text-sm leading-relaxed text-forest-900/70">{activeCountry.intro}</p>
 
-              {/* 3 Key Specs */}
-              <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
+              {/* 3 Specs Grid */}
+              <div className="mt-4 grid grid-cols-3 gap-2 text-center">
                 {activeCountry.stats.map((st) => (
-                  <div key={st.label} className="rounded-xl bg-forest-50/70 p-2.5 sm:p-3 border border-forest-900/5 text-center">
+                  <div key={st.label} className="rounded-xl bg-forest-50/70 p-2 sm:p-3 border border-forest-900/5">
                     <span className="block text-[8px] sm:text-[10px] font-bold uppercase tracking-wider text-forest-900/50">{st.label}</span>
                     <span className="font-bold text-xs sm:text-sm text-forest-900">{st.value}</span>
                   </div>
@@ -215,10 +253,10 @@ function Home() {
               </div>
             </div>
 
-            {/* Quick Requirements Box */}
-            <div className="rounded-xl bg-sand/40 p-4 sm:p-5 border border-forest-900/10">
-              <h4 className="text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-forest-900/60">Quick Requirements</h4>
-              <ul className="mt-3 space-y-2 text-xs text-forest-900/80">
+            {/* Quick Requirements */}
+            <div className="rounded-xl bg-sand/40 p-4 border border-forest-900/10">
+              <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-forest-900/60">Quick Requirements</h4>
+              <ul className="mt-2.5 space-y-2 text-xs text-forest-900/80">
                 <li className="flex items-start gap-2">
                   <span className="text-emerald-600 font-bold">✓</span>
                   <span><b>Intakes:</b> {activeCountry.intakes.join(', ')}</span>
@@ -239,9 +277,9 @@ function Home() {
         </div>
       </section>
 
-      {/* 3. SERVICES (Compact 2-Cols on Mobile, 3-Cols on Desktop) */}
+      {/* 3. SERVICES (Flipkart 2-Column Responsive Tiles) */}
       <section id="services" className="bg-white py-12 sm:py-16 border-y border-forest-900/10">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <div className="mx-auto max-w-7xl px-4 sm:px-8">
           <div className="flex flex-col justify-between gap-2 md:flex-row md:items-end">
             <div>
               <Eyebrow>Comprehensive Visa Solutions</Eyebrow>
@@ -252,24 +290,24 @@ function Home() {
             </Link>
           </div>
 
-          <div className="mt-6 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="mt-6 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4">
             {visaServices.map((s, i) => (
               <Link
                 key={s.slug}
                 to="/visas"
                 hash={s.slug}
-                className="group relative flex flex-col justify-between rounded-xl bg-cream p-4 ring-1 ring-forest-900/10 transition hover:-translate-y-1 hover:bg-forest-900 hover:text-white"
+                className="group relative flex flex-col justify-between rounded-xl bg-cream p-3.5 sm:p-5 ring-1 ring-forest-900/10 transition hover:-translate-y-1 hover:bg-forest-900 hover:text-white"
               >
                 <div>
-                  <span className="grid size-9 place-items-center rounded-lg bg-forest-900 text-white group-hover:bg-coral-500 transition">
+                  <span className="grid size-8 sm:size-10 place-items-center rounded-lg bg-forest-900 text-white group-hover:bg-coral-500 transition">
                     <ServiceIcon name={s.icon} className="size-4" />
                   </span>
-                  <h3 className="mt-3 text-sm font-bold sm:text-lg">{s.title}</h3>
-                  <p className="mt-1 text-[11px] opacity-70 line-clamp-2">{s.summary}</p>
+                  <h3 className="mt-2.5 text-xs font-bold sm:text-lg">{s.title}</h3>
+                  <p className="mt-1 text-[10px] sm:text-xs opacity-70 line-clamp-2">{s.summary}</p>
                 </div>
-                <div className="mt-3 flex items-center justify-between text-[11px] font-bold text-coral-600 group-hover:text-coral-400">
-                  <span>View Details</span>
-                  <ChevronRight className="size-3.5" />
+                <div className="mt-2.5 flex items-center justify-between text-[10px] sm:text-xs font-bold text-coral-600 group-hover:text-coral-400">
+                  <span>Details</span>
+                  <ChevronRight className="size-3" />
                 </div>
               </Link>
             ))}
@@ -277,10 +315,10 @@ function Home() {
         </div>
       </section>
 
-      {/* 4. COACHING (Proper Breathing Room: PTE Badge Never Overlaps Text) */}
+      {/* 4. COACHING (Safe Spacing - PTE Badge Never Overlaps Text) */}
       <section id="coaching" className="py-12 sm:py-16">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8 grid gap-8 lg:grid-cols-2 items-center">
-          <div className="relative mb-6 sm:mb-8 lg:mb-0">
+        <div className="mx-auto max-w-7xl px-4 sm:px-8 grid gap-8 lg:grid-cols-2 items-center">
+          <div className="relative mb-4 sm:mb-6 lg:mb-0">
             <img
               src={img('/img/coaching.webp', 760, 560)}
               alt="IELTS and PTE coaching lab Sangaria"
@@ -288,25 +326,25 @@ function Home() {
               height={560}
               className="aspect-[16/11] w-full rounded-2xl object-cover shadow-md"
             />
-            <div className="absolute -bottom-3 right-3 rounded-xl bg-forest-900 p-3 text-white shadow-xl">
-              <span className="font-display text-2xl font-extrabold text-coral-500">79+</span>
+            <div className="absolute -bottom-3 right-3 rounded-xl bg-forest-900 p-2.5 sm:p-3 text-white shadow-xl">
+              <span className="font-display text-xl sm:text-2xl font-extrabold text-coral-500">79+</span>
               <span className="block text-[8px] uppercase tracking-wider text-forest-100/70">Top PTE Score</span>
             </div>
           </div>
-          <div className="pt-2 sm:pt-0">
+          <div>
             <Eyebrow>In-House Computer Lab</Eyebrow>
             <h2 className="mt-2 text-2xl font-extrabold text-forest-900 sm:text-3xl">IELTS & PTE Coaching in Sangaria</h2>
             <p className="mt-2 text-xs sm:text-sm text-forest-900/70 leading-relaxed">
               Dedicated test software, headphone labs, daily speaking interviews, and small batches of 15 students.
             </p>
-            <div className="mt-4 grid grid-cols-2 gap-2.5">
+            <div className="mt-4 grid grid-cols-2 gap-2">
               {[
                 { icon: Headphones, t: 'Real PTE Lab' },
                 { icon: Timer, t: 'Timed Mock Tests' },
                 { icon: Award, t: 'Certified Trainers' },
                 { icon: BadgeCheck, t: 'Free 2-Day Demo' },
               ].map(({ icon: Icon, t }) => (
-                <div key={t} className="flex items-center gap-2 rounded-xl bg-white p-2.5 text-xs font-bold text-forest-900 ring-1 ring-forest-900/10">
+                <div key={t} className="flex items-center gap-2 rounded-xl bg-white p-2.5 text-[11px] font-bold text-forest-900 ring-1 ring-forest-900/10">
                   <Icon className="size-3.5 text-coral-500 shrink-0" />
                   <span>{t}</span>
                 </div>
@@ -323,17 +361,17 @@ function Home() {
 
       {/* 5. PROCESS ROADMAP (Compact 2x2 Grid) */}
       <section className="bg-forest-900 bg-grain py-12 sm:py-16 text-white">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <div className="mx-auto max-w-7xl px-4 sm:px-8">
           <div className="text-center max-w-xl mx-auto">
             <Eyebrow light>How It Works</Eyebrow>
             <h2 className="mt-1 text-2xl font-extrabold sm:text-3xl">Four Steps to Your Visa</h2>
           </div>
-          <div className="mt-6 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="mt-6 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
             {steps.map((s) => (
-              <div key={s.n} className="rounded-xl bg-white/5 p-4 ring-1 ring-white/10">
+              <div key={s.n} className="rounded-xl bg-white/5 p-3.5 ring-1 ring-white/10">
                 <span className="font-display text-2xl sm:text-4xl font-extrabold text-coral-500">{s.n}</span>
-                <h3 className="mt-1 text-sm font-bold">{s.title}</h3>
-                <p className="mt-0.5 text-[11px] text-forest-100/70 leading-snug">{s.text}</p>
+                <h3 className="mt-1 text-xs sm:text-base font-bold">{s.title}</h3>
+                <p className="mt-0.5 text-[10px] sm:text-xs text-forest-100/70 leading-snug">{s.text}</p>
               </div>
             ))}
           </div>
@@ -342,7 +380,7 @@ function Home() {
 
       {/* 6. RECENT APPROVALS */}
       <section id="approvals" className="py-12 sm:py-16">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <div className="mx-auto max-w-7xl px-4 sm:px-8">
           <div className="flex justify-between items-end">
             <div>
               <Eyebrow>Proven Results</Eyebrow>
@@ -362,7 +400,7 @@ function Home() {
 
       {/* 7. STUDENT REVIEWS WITH "SHOW MORE" BUTTON */}
       <section id="testimonials" className="bg-sand/60 py-12 sm:py-16">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <div className="mx-auto max-w-7xl px-4 sm:px-8">
           <div className="text-center max-w-xl mx-auto">
             <Eyebrow>Student Feedback</Eyebrow>
             <h2 className="mt-1 text-2xl font-extrabold text-forest-900 sm:text-3xl">What Sangaria Students Say</h2>
@@ -374,13 +412,12 @@ function Home() {
             ))}
           </div>
 
-          {/* DYNAMIC SHOW MORE BUTTON */}
-          <div className="mt-7 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
             {testimonials.length > 3 && (
               <button
                 type="button"
                 onClick={() => setShowAllReviews(!showAllReviews)}
-                className="rounded-full border border-forest-900/20 bg-white px-6 py-2.5 text-xs font-bold text-forest-900 shadow-sm transition hover:bg-forest-900 hover:text-white"
+                className="rounded-full border border-forest-900/20 bg-white px-5 py-2 text-xs font-bold text-forest-900 shadow-xs transition hover:bg-forest-900 hover:text-white"
               >
                 {showAllReviews ? 'Show Fewer Reviews ↑' : `Show More Reviews (${testimonials.length - 3}+ और देखें) ↓`}
               </button>
@@ -392,9 +429,9 @@ function Home() {
         </div>
       </section>
 
-      {/* 8. NEWS & BLOG SECTION (Restored with clean cards) */}
+      {/* 8. NEWS & BLOG SECTION */}
       <section className="bg-white py-12 sm:py-16 border-t border-forest-900/10">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <div className="mx-auto max-w-7xl px-4 sm:px-8">
           <div className="flex justify-between items-end">
             <div>
               <Eyebrow>News & Blog</Eyebrow>
@@ -413,16 +450,16 @@ function Home() {
       </section>
 
       {/* 9. FAQ + FREE PROFILE EVALUATION */}
-      <section id="enquiry" className="mx-auto max-w-7xl px-5 py-12 sm:px-8 grid gap-8 lg:grid-cols-[1fr_1.1fr] items-start">
+      <section id="enquiry" className="mx-auto max-w-7xl px-4 sm:px-8 py-12 grid gap-8 lg:grid-cols-[1fr_1.1fr] items-start">
         <div>
           <Eyebrow>Got Questions?</Eyebrow>
           <h2 className="mt-1 text-2xl font-extrabold text-forest-900">Frequently Asked Questions</h2>
           <div className="mt-5 divide-y divide-forest-900/10 rounded-2xl bg-white ring-1 ring-forest-900/10">
             {faqs.map((f) => (
               <details key={f.q} className="group p-4 sm:p-5 [&_summary::-webkit-details-marker]:hidden">
-                <summary className="flex cursor-pointer items-center justify-between gap-3 text-sm font-bold text-forest-900">
+                <summary className="flex cursor-pointer items-center justify-between gap-3 text-xs sm:text-sm font-bold text-forest-900">
                   {f.q}
-                  <span className="grid size-6 shrink-0 place-items-center rounded-full bg-forest-50 text-coral-600 transition group-open:rotate-45">+</span>
+                  <span className="grid size-5 shrink-0 place-items-center rounded-full bg-forest-50 text-coral-600 transition group-open:rotate-45">+</span>
                 </summary>
                 <p className="mt-2 text-xs leading-relaxed text-forest-900/70">{f.a}</p>
               </details>
@@ -433,9 +470,9 @@ function Home() {
           </p>
         </div>
 
-        <div className="rounded-3xl bg-forest-900 bg-grain p-6 sm:p-8 text-white shadow-xl">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-coral-400">Fast Assessment</span>
-          <h3 className="mt-1 text-2xl font-extrabold">Free Profile Evaluation</h3>
+        <div className="rounded-2xl sm:rounded-3xl bg-forest-900 bg-grain p-5 sm:p-8 text-white shadow-xl">
+          <span className="text-[9px] font-bold uppercase tracking-wider text-coral-400">Fast Assessment</span>
+          <h3 className="mt-1 text-xl sm:text-2xl font-extrabold">Free Profile Evaluation</h3>
           <p className="mt-1 mb-5 text-xs text-forest-100/70">Fill details — our counsellor will call or WhatsApp you.</p>
           <EnquiryForm source="home" dark />
         </div>
