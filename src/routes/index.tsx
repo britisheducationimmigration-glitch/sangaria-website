@@ -41,7 +41,7 @@ function Home() {
     <>
       {/* ========================================================================= */}
       {/* MOBILE-ONLY VIEW (Phones / Small screens: visible on md:hidden)          */}
-      {/* Generous section gaps (py-20) just like PC, zero crowding, floating cards */}
+      {/* Independent floating cards, side gutters, no text overflow, generous gaps */}
       {/* ========================================================================= */}
       <div className="block md:hidden">
         {/* MOBILE HERO */}
@@ -68,46 +68,47 @@ function Home() {
               Study visas, PR, work permits, tourist visas & IELTS/PTE coaching for Canada, UK, Australia, USA, NZ & Europe — right here in Sangaria.
             </p>
 
-            {/* QUICK COUNTRY & VISA FINDER (Mobile) */}
+            {/* QUICK COUNTRY & VISA FINDER (Mobile: Full-width button, no text overflow) */}
             <div className="mt-7 rounded-2xl bg-forest-950/90 border border-white/20 p-4.5 shadow-2xl">
               <div className="flex items-center justify-between mb-3">
                 <span className="font-mono text-[10px] font-extrabold uppercase tracking-wider text-coral-400">
                   Quick Visa & Country Finder
                 </span>
-                <span className="text-[10px] text-white/60">Free Profile Check</span>
+                <span className="text-[10px] text-white/60">Free Evaluation</span>
               </div>
+
               <div className="grid grid-cols-2 gap-3">
-                <div>
+                <div className="min-w-0">
                   <label className="block text-[10px] font-bold text-white/80 mb-1">Target Country</label>
                   <div className="relative">
                     <select
                       value={selectedCountry}
                       onChange={(e) => setSelectedCountry(e.target.value)}
-                      className="w-full rounded-xl bg-white text-forest-900 text-xs font-bold py-2.5 pl-2.5 pr-6 shadow-sm outline-none border border-forest-900/15 appearance-none"
+                      className="w-full rounded-xl bg-white text-forest-900 text-xs font-bold py-2.5 pl-2.5 pr-7 shadow-sm outline-none border border-forest-900/15 appearance-none truncate"
                     >
                       <option value="canada">🇨🇦 Canada</option>
                       <option value="uk">🇬🇧 UK</option>
                       <option value="australia">🇦🇺 Australia</option>
                       <option value="usa">🇺🇸 USA</option>
-                      <option value="new-zealand">🇳🇿 New Zealand</option>
+                      <option value="new-zealand">🇳🇿 NZ</option>
                       <option value="germany">🇩🇪 Germany</option>
                       <option value="europe">🇪🇺 Europe</option>
-                       <option value="europe">Other</option>
+                       <option value="germany">  Other</option>
                     </select>
                     <span className="pointer-events-none absolute right-2.5 top-2.5 text-[10px] text-forest-900/60">▼</span>
                   </div>
                 </div>
 
-                <div>
+                <div className="min-w-0">
                   <label className="block text-[10px] font-bold text-white/80 mb-1">Visa Type</label>
                   <div className="relative">
                     <select
                       value={selectedVisa}
                       onChange={(e) => setSelectedVisa(e.target.value)}
-                      className="w-full rounded-xl bg-white text-forest-900 text-xs font-bold py-2.5 pl-2.5 pr-6 shadow-sm outline-none border border-forest-900/15 appearance-none"
+                      className="w-full rounded-xl bg-white text-forest-900 text-xs font-bold py-2.5 pl-2.5 pr-7 shadow-sm outline-none border border-forest-900/15 appearance-none truncate"
                     >
                       <option value="study">🎓 Study Visa</option>
-                      <option value="pr">🏛️ PR / Immigration</option>
+                      <option value="pr">🏛️ PR / Immig.</option>
                       <option value="work">💼 Work Permit</option>
                       <option value="tourist">✈️ Tourist Visa</option>
                       <option value="coaching">📚 IELTS / PTE</option>
@@ -117,20 +118,30 @@ function Home() {
                 </div>
               </div>
 
-              <div className="mt-4 flex gap-2.5">
+              {/* Action Buttons: Full width main button so long country names NEVER overflow */}
+              <div className="mt-4 flex flex-col gap-2.5">
                 <Link
                   to="/countries/$slug"
                   params={{ slug: selectedCountry }}
-                  className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-coral-500 py-3 px-3 text-xs font-extrabold text-white shadow-md active:scale-95 transition"
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-coral-500 py-3 px-4 text-xs font-extrabold text-white shadow-md active:scale-98 transition text-center"
                 >
-                  View {countries.find((c) => c.slug === selectedCountry)?.name ?? 'Country'} Guide <ArrowRight className="size-3.5" />
+                  <span className="truncate">Explore {countries.find((c) => c.slug === selectedCountry)?.name ?? 'Country'} Guide</span>
+                  <ArrowRight className="size-3.5 shrink-0" />
                 </Link>
-                <Link
-                  to="/eligibility"
-                  className="rounded-xl border border-white/30 bg-white/10 py-3 px-4 text-xs font-bold text-white text-center active:bg-white/20 transition"
-                >
-                  Eligibility
-                </Link>
+                <div className="flex gap-2">
+                  <Link
+                    to="/eligibility"
+                    className="flex-1 rounded-xl border border-white/30 bg-white/10 py-2.5 px-3 text-xs font-bold text-white text-center active:bg-white/20 transition truncate"
+                  >
+                    Check Eligibility Free →
+                  </Link>
+                  <Link
+                    to="/contact"
+                    className="rounded-xl border border-white/30 bg-white/10 py-2.5 px-3.5 text-xs font-bold text-white text-center active:bg-white/20 transition"
+                  >
+                    Contact
+                  </Link>
+                </div>
               </div>
             </div>
 
@@ -212,7 +223,7 @@ function Home() {
         )}
 
         {/* ============================================================== */}
-        {/* SERVICES SECTION (MOBILE: py-20 for clear separation)          */}
+        {/* SERVICES SECTION (MOBILE: 6 clean boxes, proper gaps & padding)*/}
         {/* ============================================================== */}
         <section id="services-m" className="px-5 py-20 border-b border-forest-900/10 bg-white">
           <div className="flex items-end justify-between mb-8">
@@ -225,14 +236,14 @@ function Home() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 gap-x-3.5 gap-y-5">
+          <div className="grid grid-cols-2 gap-4">
             {visaServices.map((s, i) => (
               <Link
                 key={s.slug}
                 to="/visas"
                 hash={s.slug}
                 className={
-                  'flex flex-col justify-between rounded-2xl p-4 shadow-sm border border-forest-900/10 transition min-h-[150px] ' +
+                  'flex flex-col justify-between rounded-2xl p-4.5 shadow-sm border border-forest-900/10 transition min-h-[155px] ' +
                   (i === 0
                     ? 'bg-forest-900 text-white shadow-md border-transparent'
                     : 'bg-white text-forest-900 active:bg-forest-50')
@@ -254,7 +265,7 @@ function Home() {
         </section>
 
         {/* ============================================================== */}
-        {/* DESTINATIONS SECTION (MOBILE: py-20 for clear separation)      */}
+        {/* DESTINATIONS SECTION (MOBILE: 8 clean cards, proper gaps)      */}
         {/* ============================================================== */}
         <section id="destinations-m" className="bg-sand/60 bg-dots px-5 py-20 border-b border-forest-900/10">
           <div className="mb-8">
@@ -263,13 +274,13 @@ function Home() {
             <p className="mt-2 text-xs text-forest-900/70">Top study abroad countries with full guidance in Sangaria.</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-x-3.5 gap-y-5">
+          <div className="grid grid-cols-2 gap-4">
             {countries.map((c) => (
               <Link
                 key={c.slug}
                 to="/countries/$slug"
                 params={{ slug: c.slug }}
-                className="flex flex-col justify-between rounded-2xl bg-white p-4 shadow-sm border border-forest-900/10 active:bg-forest-900 active:text-white transition group min-h-[155px]"
+                className="flex flex-col justify-between rounded-2xl bg-white p-4.5 shadow-sm border border-forest-900/10 active:bg-forest-900 active:text-white transition group min-h-[160px]"
               >
                 <div>
                   <div className="flex items-center justify-between">
@@ -295,7 +306,7 @@ function Home() {
             {/* 8th Slot: NOT SURE? Card */}
             <Link
               to="/eligibility"
-              className="flex flex-col justify-between rounded-2xl bg-coral-500 p-4 text-white shadow-md active:bg-coral-600 transition min-h-[155px]"
+              className="flex flex-col justify-between rounded-2xl bg-coral-500 p-4.5 text-white shadow-md active:bg-coral-600 transition min-h-[160px]"
             >
               <div>
                 <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-white/80">NOT SURE?</span>
@@ -337,7 +348,7 @@ function Home() {
               Small batches, experienced trainers, a dedicated PTE computer lab and weekly mock tests — right here in Sangaria.
             </p>
 
-            <ul className="mt-6 grid grid-cols-2 gap-3">
+            <ul className="mt-6 grid grid-cols-2 gap-3.5">
               {[
                 { icon: Headphones, t: 'Real PTE lab' },
                 { icon: Timer, t: 'Timed mocks' },
@@ -369,7 +380,7 @@ function Home() {
             <h2 className="mt-2 text-2xl font-extrabold">Four steps to your destination.</h2>
           </div>
 
-          <ol className="grid grid-cols-2 gap-x-3.5 gap-y-5">
+          <ol className="grid grid-cols-2 gap-4">
             {steps.map((s) => (
               <li key={s.n} className="rounded-2xl border border-white/15 bg-white/5 p-4.5 shadow-sm min-h-[140px] flex flex-col justify-between">
                 <div>
@@ -396,7 +407,7 @@ function Home() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 gap-x-3.5 gap-y-5">
+          <div className="grid grid-cols-2 gap-4">
             {approvals.slice(0, 4).map((a, i) => (
               <ApprovalCard key={a.name} a={a} i={i} />
             ))}
@@ -452,25 +463,36 @@ function Home() {
           </div>
         </section>
 
-        {/* ============================================================== */}
-        {/* FAQ + ENQUIRY (MOBILE: py-20 for clear separation)            */}
-        {/* ============================================================== */}
+        {/* ==================================================================== */}
+        {/* FAQ + ENQUIRY (MOBILE: Independent floating FAQ cards, generous gap) */}
+        {/* ==================================================================== */}
         <section id="enquiry-m" className="px-5 py-20">
           <div className="mb-10">
             <Eyebrow>FAQs</Eyebrow>
             <h2 className="mt-2 text-2xl font-extrabold text-forest-900">Questions we hear every day.</h2>
-            <div className="mt-6 divide-y divide-forest-900/10 rounded-2xl bg-white shadow-sm border border-forest-900/10">
+            <p className="mt-2 text-xs text-forest-900/70">Tap any question below to see full answer.</p>
+
+            {/* Independent Floating FAQ Cards with 14px space between them */}
+            <div className="mt-6 space-y-3.5">
               {faqs.map((f) => (
-                <details key={f.q} className="group p-4.5 [&_summary::-webkit-details-marker]:hidden">
-                  <summary className="flex cursor-pointer items-center justify-between gap-3 font-display text-sm font-bold text-forest-900">
-                    {f.q}
-                    <span className="grid size-6 shrink-0 place-items-center rounded-full bg-forest-50 text-coral-600 transition group-open:rotate-45 text-xs">+</span>
+                <details
+                  key={f.q}
+                  className="group rounded-2xl bg-white p-5 shadow-sm border border-forest-900/10 transition [&_summary::-webkit-details-marker]:hidden"
+                >
+                  <summary className="flex cursor-pointer items-center justify-between gap-3 font-display text-[15px] font-bold text-forest-900 leading-snug">
+                    <span>{f.q}</span>
+                    <span className="grid size-8 shrink-0 place-items-center rounded-full bg-forest-50 text-coral-600 transition group-open:rotate-45 text-sm font-bold shadow-xs">
+                      +
+                    </span>
                   </summary>
-                  <p className="mt-2.5 text-xs leading-relaxed text-forest-900/70">{f.a}</p>
+                  <p className="mt-3.5 border-t border-forest-900/10 pt-3 text-xs leading-relaxed text-forest-900/75">
+                    {f.a}
+                  </p>
                 </details>
               ))}
             </div>
-            <p className="mt-5 flex items-center gap-2 text-xs text-forest-900/60">
+
+            <p className="mt-6 flex items-center gap-2 text-xs text-forest-900/60">
               <MapPin className="size-3.5 text-coral-500 shrink-0" /> {site.address}
             </p>
           </div>
@@ -536,7 +558,7 @@ function Home() {
                         <option value="new-zealand">🇳🇿 New Zealand</option>
                         <option value="germany">🇩🇪 Germany</option>
                         <option value="europe">🇪🇺 Europe / Schengen</option>
-                        <option value="europe">OTHERS</option>
+                         <option value="germany"> Other</option>
                       </select>
                       <span className="pointer-events-none absolute right-3 top-3 text-xs text-forest-900/60">▼</span>
                     </div>
