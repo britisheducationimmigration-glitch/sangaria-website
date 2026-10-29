@@ -562,7 +562,7 @@ function Home() {
                         <option value="new-zealand">🇳🇿 New Zealand</option>
                         <option value="germany">🇩🇪 Germany</option>
                         <option value="europe">🇪🇺 Europe / Schengen</option>
-                        <option value="germany">  Other</option>
+                        <option value="">  Other</option>
                       </select>
                       <span className="pointer-events-none absolute right-3 top-3 text-xs text-forest-900/60">▼</span>
                     </div>
