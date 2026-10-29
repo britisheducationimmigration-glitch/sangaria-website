@@ -81,10 +81,11 @@ function Home() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="min-w-0">
-                  <label className="block text-[10px] font-bold text-white/80 mb-1">Country</label>
-                  <div className="relative">
-                    <select
-                      value={selectedCountry}
+                  <label htmlFor="mobile-country" className="block text-[10px] font-bold text-white/80 mb-1">Country</label>
+<div className="relative">
+  <select
+    id="mobile-country"
+    value={selectedCountry}
                       onChange={(e) => setSelectedCountry(e.target.value)}
                       className="w-full rounded-xl bg-white text-forest-900 text-xs font-bold py-2.5 pl-2.5 pr-7 shadow-sm outline-none border border-forest-900/15 appearance-none truncate"
                     >
@@ -102,10 +103,11 @@ function Home() {
                 </div>
 
                 <div className="min-w-0">
-                  <label className="block text-[10px] font-bold text-white/80 mb-1">Visa Type</label>
-                  <div className="relative">
-                    <select
-                      value={selectedVisa}
+                  <label htmlFor="mobile-visa" className="block text-[10px] font-bold text-white/80 mb-1">Visa Type</label>
+<div className="relative">
+  <select
+    id="mobile-visa"
+    value={selectedVisa}
                       onChange={(e) => setSelectedVisa(e.target.value)}
                       className="w-full rounded-xl bg-white text-forest-900 text-xs font-bold py-2.5 pl-2.5 pr-7 shadow-sm outline-none border border-forest-900/15 appearance-none truncate"
                     >
@@ -548,10 +550,11 @@ function Home() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-white/80 mb-1">Target Country</label>
-                    <div className="relative">
-                      <select
-                        value={selectedCountry}
+                    <label htmlFor="desktop-country" className="block text-xs font-semibold text-white/80 mb-1">Target Country</label>
+<div className="relative">
+  <select
+    id="desktop-country"
+    value={selectedCountry}
                         onChange={(e) => setSelectedCountry(e.target.value)}
                         className="w-full rounded-xl bg-white text-forest-900 text-sm font-bold py-2.5 pl-3 pr-8 shadow-sm outline-none border border-forest-900/15 appearance-none cursor-pointer"
                       >
@@ -569,10 +572,11 @@ function Home() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-white/80 mb-1">Visa Category</label>
-                    <div className="relative">
-                      <select
-                        value={selectedVisa}
+                   <label htmlFor="desktop-visa" className="block text-xs font-semibold text-white/80 mb-1">Visa Category</label>
+<div className="relative">
+  <select
+    id="desktop-visa"
+    value={selectedVisa}
                         onChange={(e) => setSelectedVisa(e.target.value)}
                         className="w-full rounded-xl bg-white text-forest-900 text-sm font-bold py-2.5 pl-3 pr-8 shadow-sm outline-none border border-forest-900/15 appearance-none cursor-pointer"
                       >
