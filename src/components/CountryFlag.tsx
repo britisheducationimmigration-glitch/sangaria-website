@@ -43,9 +43,22 @@ export function resolveCountryCode(input?: string): string {
   if (!input) return ''
   const trimmed = input.trim()
   if (EMOJI_TO_CODE[trimmed]) return EMOJI_TO_CODE[trimmed]
+  
   const lower = trimmed.toLowerCase()
   if (NAME_TO_CODE[lower]) return NAME_TO_CODE[lower]
   if (trimmed.length === 2 && /^[a-zA-Z]{2}$/.test(trimmed)) return trimmed.toUpperCase()
+
+  // Fuzzy match: Database me "Canada · Study Permit" hone par bhi asli flag hi aayega
+  if (lower.includes('canad') || lower === 'ca') return 'CA'
+  if (lower.includes('uk') || lower.includes('brit') || lower.includes('kingdom') || lower.includes('england')) return 'UK'
+  if (lower.includes('aus')) return 'AU'
+  if (lower.includes('usa') || lower.includes('united states') || lower.includes('america') || lower === 'us') return 'US'
+  if (lower.includes('zeal') || lower === 'nz') return 'NZ'
+  if (lower.includes('germ') || lower.includes('deutsch') || lower === 'de') return 'DE'
+  if (lower.includes('eur') || lower.includes('schen') || lower === 'eu') return 'EU'
+  if (lower.includes('ind')) return 'IN'
+  if (lower.includes('fran') || lower.includes('ital')) return 'EU'
+
   return ''
 }
 
