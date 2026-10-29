@@ -10,6 +10,8 @@ import { countries, faqs, visaServices } from '@/data/fixtures'
 import { site } from '@/data/site'
 import { img } from '@/lib/utils'
 import { getPublicContent } from '@/lib/public-functions'
+import { CountryFlag } from '@/components/CountryFlag'
+import { BoardingPassGenerator } from '@/components/BoardingPassGenerator'
 
 export const Route = createFileRoute('/')({ loader: () => getPublicContent(), component: Home })
 
@@ -378,7 +380,16 @@ function Home() {
             </Link>
           </div>
         </section>
+</div>
+        </section>
 
+        {/* 🎫 VIRTUAL BOARDING PASS (Mobile) */}
+        <BoardingPassGenerator />
+
+        {/* ============================================================== */}
+        {/* COACHING SECTION (MOBILE: py-20 for clear separation)          */}
+        {/* ============================================================== */}
+        <section id="coaching-m" className="px-5 py-20 border-b border-forest-900/10 bg-white">
         {/* ============================================================== */}
         {/* COACHING SECTION (MOBILE: py-20 for clear separation)          */}
         {/* ============================================================== */}
@@ -838,6 +849,15 @@ function Home() {
             </div>
           </div>
         </section>
+        </div>
+          </div>
+        </section>
+
+        {/* 🎫 VIRTUAL BOARDING PASS (Desktop) */}
+        <BoardingPassGenerator />
+
+        {/* DESKTOP COACHING */}
+        <section id="coaching-desktop" className="mx-auto grid max-w-7xl items-center gap-14 px-6 py-24 lg:grid-cols-2">
 
         {/* DESKTOP COACHING */}
         <section id="coaching-desktop" className="mx-auto grid max-w-7xl items-center gap-14 px-6 py-24 lg:grid-cols-2">
