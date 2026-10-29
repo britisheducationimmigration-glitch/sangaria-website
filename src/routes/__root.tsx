@@ -44,7 +44,7 @@ const localBusinessSchema = {
     '@type': 'OpeningHoursSpecification',
     dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
     opens: '09:30',
-    closes: '18:30',
+    closes: '19:30',
   },
 }
 
@@ -99,7 +99,7 @@ export const Route = createRootRoute({
       { rel: 'apple-touch-icon', href: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519664045228795/VqtFGwaGtbWyvcCS' },
       {
         rel: 'stylesheet',
-        href: 'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap',
+        href: 'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=Figtree:wght@400;600;700&display=swap',
       },
       { rel: 'stylesheet', href: appCss },
       { rel: 'manifest', href: '/manifest.json' },
