@@ -1,5 +1,5 @@
 import { useState, useId } from 'react'
-import { Plane, Share2, MapPin, Target, Calendar, Check, X, RotateCcw, ArrowRight, Sparkles, Copy } from 'lucide-react'
+import { Plane, MapPin, Check, X, RotateCcw, ArrowRight, MessageCircle } from 'lucide-react'
 
 interface CityOption {
   code: string
@@ -196,7 +196,7 @@ export function BoardingPassGenerator() {
 
             <div>
               <label htmlFor={goalId} className="block text-xs font-bold text-white/85 mb-1.5 flex items-center gap-1.5">
-                <Target className="size-3.5 text-coral-400" /> Visa Category / Goal
+                <span className="text-coral-400">🎯</span> Visa Category / Goal
               </label>
               <select
                 id={goalId}
@@ -223,7 +223,7 @@ export function BoardingPassGenerator() {
 
             <div>
               <label htmlFor={intakeId} className="block text-xs font-bold text-white/85 mb-1.5 flex items-center gap-1.5">
-                <Calendar className="size-3.5 text-coral-400" /> Target Intake (2027 Planning)
+                <span className="text-coral-400">📅</span> Target Intake (2027 Planning)
               </label>
               <select
                 id={intakeId}
@@ -255,7 +255,7 @@ export function BoardingPassGenerator() {
               onClick={() => setShowModal(true)}
               className="w-full flex items-center justify-center gap-3 rounded-2xl bg-coral-500 hover:bg-coral-600 py-4 px-6 text-sm sm:text-base font-extrabold text-white shadow-xl transition active:scale-[0.98] cursor-pointer"
             >
-              <Sparkles className="size-5 text-amber-200" />
+              <span>✨</span>
               <span>Generate My Boarding Pass ➔</span>
             </button>
             <p className="text-center text-[11px] text-forest-100/60 mt-2.5">
@@ -265,13 +265,12 @@ export function BoardingPassGenerator() {
         </div>
       </div>
 
-      {/* POPUP MODAL OVERLAY */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-forest-950/85 backdrop-blur-md animate-fadeIn">
           <div className="relative w-full max-w-lg rounded-3xl bg-forest-900 border border-white/20 p-5 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
               <div className="flex items-center gap-2">
-                <Sparkles className="size-4 text-coral-400" />
+                <span className="text-coral-400 text-base">✨</span>
                 <span className="text-sm font-extrabold text-white">Your Boarding Pass is Ready!</span>
               </div>
               <button
@@ -392,7 +391,7 @@ export function BoardingPassGenerator() {
                 onClick={handleShareWhatsApp}
                 className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 py-3.5 px-4 text-xs font-bold text-white shadow-lg transition active:scale-[0.98] cursor-pointer"
               >
-                <Share2 className="size-4" />
+                <MessageCircle className="size-4" />
                 <span>Share Pass on WhatsApp Status</span>
               </button>
 
@@ -417,10 +416,7 @@ export function BoardingPassGenerator() {
                       <span>Copied!</span>
                     </>
                   ) : (
-                    <>
-                      <Copy className="size-3.5 text-white/70" />
-                      <span>Copy Details</span>
-                    </>
+                    <span>📋 Copy Details</span>
                   )}
                 </button>
               </div>
@@ -440,3 +436,4 @@ export function BoardingPassGenerator() {
     </section>
   )
 }
+
