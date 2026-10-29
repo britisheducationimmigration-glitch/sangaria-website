@@ -41,7 +41,7 @@ function Home() {
     <>
       {/* ========================================================================= */}
       {/* MOBILE-ONLY VIEW (Phones / Small screens: visible on md:hidden)          */}
-      {/* Independent floating cards, side gutters, no text overflow, generous gaps */}
+      {/* Real p-4 padding on all cards, zero overflow, generous gaps & margins     */}
       {/* ========================================================================= */}
       <div className="block md:hidden">
         {/* MOBILE HERO */}
@@ -68,18 +68,20 @@ function Home() {
               Study visas, PR, work permits, tourist visas & IELTS/PTE coaching for Canada, UK, Australia, USA, NZ & Europe — right here in Sangaria.
             </p>
 
-            {/* QUICK COUNTRY & VISA FINDER (Mobile: Full-width button, no text overflow) */}
-            <div className="mt-7 rounded-2xl bg-forest-950/90 border border-white/20 p-4.5 shadow-2xl">
+            {/* QUICK COUNTRY & VISA FINDER (Mobile: Clean labels, no text overflow) */}
+            <div className="mt-7 rounded-2xl bg-forest-950/90 border border-white/20 p-4 shadow-2xl overflow-hidden">
               <div className="flex items-center justify-between mb-3">
-                <span className="font-mono text-[10px] font-extrabold uppercase tracking-wider text-coral-400">
-                  Quick Visa & Country Finder
+                <span className="font-mono text-[11px] font-bold uppercase tracking-wide text-coral-400">
+                  Visa & Country Finder
                 </span>
-                <span className="text-[10px] text-white/60">Free Evaluation</span>
+                <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[9px] font-semibold text-white/70">
+                  Free Check
+                </span>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="min-w-0">
-                  <label className="block text-[10px] font-bold text-white/80 mb-1">Target Country</label>
+                  <label className="block text-[10px] font-bold text-white/80 mb-1">Country</label>
                   <div className="relative">
                     <select
                       value={selectedCountry}
@@ -91,9 +93,9 @@ function Home() {
                       <option value="australia">🇦🇺 Australia</option>
                       <option value="usa">🇺🇸 USA</option>
                       <option value="new-zealand">🇳🇿 NZ</option>
-                      <option value="germany">🇩🇪 Germany</option>
+                     <option value="germany">🇩🇪 Germany</option>
                       <option value="europe">🇪🇺 Europe</option>
-                       <option value="germany">  Other</option>
+                      <option value=""> Other</option>
                     </select>
                     <span className="pointer-events-none absolute right-2.5 top-2.5 text-[10px] text-forest-900/60">▼</span>
                   </div>
@@ -118,8 +120,8 @@ function Home() {
                 </div>
               </div>
 
-              {/* Action Buttons: Full width main button so long country names NEVER overflow */}
-              <div className="mt-4 flex flex-col gap-2.5">
+              {/* Action Buttons */}
+              <div className="mt-4 flex flex-col gap-2">
                 <Link
                   to="/countries/$slug"
                   params={{ slug: selectedCountry }}
@@ -133,7 +135,7 @@ function Home() {
                     to="/eligibility"
                     className="flex-1 rounded-xl border border-white/30 bg-white/10 py-2.5 px-3 text-xs font-bold text-white text-center active:bg-white/20 transition truncate"
                   >
-                    Check Eligibility Free →
+                    Eligibility Check →
                   </Link>
                   <Link
                     to="/contact"
@@ -223,7 +225,7 @@ function Home() {
         )}
 
         {/* ============================================================== */}
-        {/* SERVICES SECTION (MOBILE: 6 clean boxes, proper gaps & padding)*/}
+        {/* SERVICES SECTION (MOBILE: 6 clean boxes, p-4, zero overflow)   */}
         {/* ============================================================== */}
         <section id="services-m" className="px-5 py-20 border-b border-forest-900/10 bg-white">
           <div className="flex items-end justify-between mb-8">
@@ -243,29 +245,31 @@ function Home() {
                 to="/visas"
                 hash={s.slug}
                 className={
-                  'flex flex-col justify-between rounded-2xl p-4.5 shadow-sm border border-forest-900/10 transition min-h-[155px] ' +
+                  'flex flex-col justify-between rounded-2xl p-4 shadow-sm border border-forest-900/10 transition overflow-hidden ' +
                   (i === 0
                     ? 'bg-forest-900 text-white shadow-md border-transparent'
                     : 'bg-white text-forest-900 active:bg-forest-50')
                 }
               >
                 <div>
-                  <span className={'grid size-9 place-items-center rounded-xl ' + (i === 0 ? 'bg-coral-500 text-white' : 'bg-forest-50 text-forest-700')}>
-                    <ServiceIcon name={s.icon} className="size-4" />
-                  </span>
-                  <h3 className="mt-3.5 text-sm font-extrabold leading-tight">{s.title}</h3>
-                  <p className={'mt-1.5 text-[11px] leading-tight line-clamp-2 ' + (i === 0 ? 'text-forest-100/75' : 'text-forest-900/65')}>
+                  <div className="flex items-center justify-between">
+                    <span className={'grid size-9 shrink-0 place-items-center rounded-xl ' + (i === 0 ? 'bg-coral-500 text-white' : 'bg-forest-50 text-forest-700')}>
+                      <ServiceIcon name={s.icon} className="size-4" />
+                    </span>
+                    <span className={'font-mono text-xs font-bold ' + (i === 0 ? 'text-white/40' : 'text-forest-900/30')}>0{i + 1}</span>
+                  </div>
+                  <h3 className="mt-3 text-sm font-extrabold leading-snug">{s.title}</h3>
+                  <p className={'mt-1.5 text-[11px] leading-relaxed line-clamp-3 ' + (i === 0 ? 'text-forest-100/75' : 'text-forest-900/65')}>
                     {s.summary}
                   </p>
                 </div>
-                <div className="mt-3 text-right font-mono text-[10px] opacity-40">0{i + 1}</div>
               </Link>
             ))}
           </div>
         </section>
 
         {/* ============================================================== */}
-        {/* DESTINATIONS SECTION (MOBILE: 8 clean cards, proper gaps)      */}
+        {/* DESTINATIONS SECTION (MOBILE: 8 clean cards, p-4, no bottom bleed) */}
         {/* ============================================================== */}
         <section id="destinations-m" className="bg-sand/60 bg-dots px-5 py-20 border-b border-forest-900/10">
           <div className="mb-8">
@@ -280,7 +284,7 @@ function Home() {
                 key={c.slug}
                 to="/countries/$slug"
                 params={{ slug: c.slug }}
-                className="flex flex-col justify-between rounded-2xl bg-white p-4.5 shadow-sm border border-forest-900/10 active:bg-forest-900 active:text-white transition group min-h-[160px]"
+                className="flex flex-col justify-between rounded-2xl bg-white p-4 shadow-sm border border-forest-900/10 active:bg-forest-900 active:text-white transition group overflow-hidden"
               >
                 <div>
                   <div className="flex items-center justify-between">
@@ -293,10 +297,10 @@ function Home() {
                     />
                     <span className="font-mono text-xs font-bold text-forest-900/40 group-active:text-white/40">{c.code}</span>
                   </div>
-                  <h3 className="mt-2.5 text-[15px] font-extrabold text-forest-900 group-active:text-white leading-tight">{c.name}</h3>
+                  <h3 className="mt-2.5 text-sm font-extrabold text-forest-900 group-active:text-white leading-tight">{c.name}</h3>
                   <p className="mt-1 text-[11px] text-forest-900/65 group-active:text-white/70 line-clamp-2 leading-tight">{c.headline}</p>
                 </div>
-                <div className="mt-3 pt-2.5 border-t border-forest-900/10 group-active:border-white/15 flex items-center justify-between">
+                <div className="mt-3.5 pt-2 border-t border-forest-900/10 group-active:border-white/15 flex items-center justify-between">
                   <span className="text-[10px] font-bold text-coral-600 group-active:text-coral-300">{c.stats[0].value}</span>
                   <ArrowRight className="size-3.5 text-coral-500 group-active:text-coral-300" />
                 </div>
@@ -306,14 +310,14 @@ function Home() {
             {/* 8th Slot: NOT SURE? Card */}
             <Link
               to="/eligibility"
-              className="flex flex-col justify-between rounded-2xl bg-coral-500 p-4.5 text-white shadow-md active:bg-coral-600 transition min-h-[160px]"
+              className="flex flex-col justify-between rounded-2xl bg-coral-500 p-4 text-white shadow-md active:bg-coral-600 transition overflow-hidden"
             >
               <div>
                 <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-white/80">NOT SURE?</span>
-                <h3 className="mt-2 text-[15px] font-extrabold leading-tight">Find Your Fit</h3>
+                <h3 className="mt-2 text-sm font-extrabold leading-tight">Find Your Fit</h3>
                 <p className="mt-1 text-[11px] text-white/85 leading-tight">Free 60-second profile assessment</p>
               </div>
-              <div className="mt-3 pt-2.5 border-t border-white/20 flex items-center justify-between font-bold text-xs">
+              <div className="mt-3.5 pt-2 border-t border-white/20 flex items-center justify-between font-bold text-xs">
                 <span>Check now</span>
                 <ArrowRight className="size-3.5" />
               </div>
@@ -372,7 +376,7 @@ function Home() {
         </section>
 
         {/* ============================================================== */}
-        {/* PROCESS SECTION (MOBILE: py-20 for clear separation)           */}
+        {/* PROCESS SECTION (MOBILE: p-4, zero overflow)                   */}
         {/* ============================================================== */}
         <section className="bg-forest-900 bg-grain px-5 py-20 text-white">
           <div className="mb-8">
@@ -382,7 +386,7 @@ function Home() {
 
           <ol className="grid grid-cols-2 gap-4">
             {steps.map((s) => (
-              <li key={s.n} className="rounded-2xl border border-white/15 bg-white/5 p-4.5 shadow-sm min-h-[140px] flex flex-col justify-between">
+              <li key={s.n} className="rounded-2xl border border-white/15 bg-white/5 p-4 shadow-sm flex flex-col justify-between overflow-hidden">
                 <div>
                   <span className="font-display text-2xl font-extrabold text-coral-400">{s.n}</span>
                   <h3 className="mt-1.5 text-sm font-bold text-white leading-tight">{s.title}</h3>
@@ -558,7 +562,7 @@ function Home() {
                         <option value="new-zealand">🇳🇿 New Zealand</option>
                         <option value="germany">🇩🇪 Germany</option>
                         <option value="europe">🇪🇺 Europe / Schengen</option>
-                         <option value="germany"> Other</option>
+                        <option value="germany">  Other</option>
                       </select>
                       <span className="pointer-events-none absolute right-3 top-3 text-xs text-forest-900/60">▼</span>
                     </div>
