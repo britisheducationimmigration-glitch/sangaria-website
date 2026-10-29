@@ -265,6 +265,7 @@ export function BoardingPassGenerator() {
         </div>
       </div>
 
+      {/* POPUP MODAL OVERLAY */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-forest-950/85 backdrop-blur-md animate-fadeIn">
           <div className="relative w-full max-w-lg rounded-3xl bg-forest-900 border border-white/20 p-5 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
