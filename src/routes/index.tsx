@@ -10,7 +10,6 @@ import { countries, faqs, visaServices } from '@/data/fixtures'
 import { site } from '@/data/site'
 import { img } from '@/lib/utils'
 import { getPublicContent } from '@/lib/public-functions'
-import { CountryFlag } from '@/components/CountryFlag'
 import { BoardingPassGenerator } from '@/components/BoardingPassGenerator'
 
 export const Route = createFileRoute('/')({ loader: () => getPublicContent(), component: Home })
