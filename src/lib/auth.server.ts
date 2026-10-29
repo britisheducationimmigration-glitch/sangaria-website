@@ -234,7 +234,7 @@ async function sendEmailViaResend({ to, subject, html }: { to: string; subject: 
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: 'British Education & Immigration <onboarding@resend.dev>',
+     from: 'British Education & Immigration <otp@send.britisheducationandimmigration.com>',
       to: [to],
       subject,
       html,
