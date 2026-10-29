@@ -1,0 +1,8 @@
+# British Education and Immigration - Robots.txt
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /api/
+
+Sitemap: https://britisheducationandimmigration.com/sitemap.xml
