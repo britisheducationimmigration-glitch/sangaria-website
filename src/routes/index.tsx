@@ -3,6 +3,7 @@ import { Link, createFileRoute } from '@tanstack/react-router'
 import { ArrowRight, Award, BadgeCheck, Headphones, MapPin, Timer } from 'lucide-react'
 import { ApprovalCard, PostCard, TestimonialCard } from '@/components/Cards'
 import { CountryFlag } from '@/components/CountryFlag'
+import { BoardingPassGenerator } from '@/components/BoardingPassGenerator'
 import { EnquiryForm } from '@/components/EnquiryForm'
 import { Eyebrow } from '@/components/Section'
 import { ServiceIcon } from '@/components/ServiceIcon'
@@ -10,7 +11,6 @@ import { countries, faqs, visaServices } from '@/data/fixtures'
 import { site } from '@/data/site'
 import { img } from '@/lib/utils'
 import { getPublicContent } from '@/lib/public-functions'
-import { BoardingPassGenerator } from '@/components/BoardingPassGenerator'
 
 export const Route = createFileRoute('/')({ loader: () => getPublicContent(), component: Home })
 
@@ -63,7 +63,6 @@ function Home() {
     <>
       {/* ========================================================================= */}
       {/* MOBILE-ONLY VIEW (Phones / Small screens: visible on md:hidden)          */}
-      {/* Real p-4 padding on all cards, zero overflow, generous gaps & margins     */}
       {/* ========================================================================= */}
       <div className="block md:hidden">
         {/* MOBILE HERO */}
@@ -74,15 +73,13 @@ function Home() {
             </span>
 
             {/* 3-in-1 Animated Headline (Mobile) */}
-           <h1 className="mt-5 text-[2.75rem] font-extrabold leading-[1.03] tracking-tight">
+            <h1 className="mt-5 text-[2.75rem] font-extrabold leading-[1.03] tracking-tight">
               <span className="inline-block animate-rise">Pack your bags.</span>
               <br />
               <span className="relative inline-block animate-rise [animation-delay:100ms]">
-                {/* 🌟 Shining Golden-Coral Gradient */}
-                <span className="bg-gradient-to-r from-amber-300 via-amber-100 to-coral-400 bg-clip-text text-transparent [-webkit-background-clip:text] font-extrabold">
+                <span className="bg-gradient-to-r from-amber-300 via-amber-100 to-coral-400 bg-clip-text text-transparent font-extrabold">
                   We’ll handle
                 </span>
-                {/* ✍️ Pen-Draw Marker Animation */}
                 <svg viewBox="0 0 300 20" className="absolute -bottom-2 left-0 w-full overflow-visible" aria-hidden>
                   <path
                     d="M2 15 Q 75 2 150 10 T 298 6"
@@ -99,7 +96,6 @@ function Home() {
                 </svg>
               </span>
               <br />
-              {/* ✈️ Smooth Rotating Text */}
               <span className="inline-flex items-center gap-2 h-[1.15em] overflow-hidden">
                 <span
                   className={
@@ -119,7 +115,7 @@ function Home() {
               Study visas, PR, work permits, tourist visas & IELTS/PTE coaching for Canada, UK, Australia, USA, NZ & Europe — right here in Sangaria.
             </p>
 
-            {/* QUICK COUNTRY & VISA FINDER (Mobile: Clean labels, no text overflow) */}
+            {/* QUICK COUNTRY & VISA FINDER */}
             <div className="mt-7 rounded-2xl bg-forest-950/90 border border-white/20 p-4 shadow-2xl overflow-hidden">
               <div className="flex items-center justify-between mb-3">
                 <span className="font-mono text-[11px] font-bold uppercase tracking-wide text-coral-400">
@@ -164,200 +160,147 @@ function Home() {
                       onChange={(e) => setSelectedVisa(e.target.value)}
                       className="w-full rounded-xl bg-white text-forest-900 text-xs font-bold py-2.5 pl-2.5 pr-7 shadow-sm outline-none border border-forest-900/15 appearance-none truncate"
                     >
-                      <option value="study">🎓 Study Visa</option>
-                      <option value="pr">🏛️ PR / Immig.</option>
-                      <option value="work">💼 Work Permit</option>
-                      <option value="tourist">✈️ Tourist Visa</option>
-                      <option value="coaching">📚 IELTS / PTE</option>
+                      <option value="study">Study Visa</option>
+                      <option value="pr">Permanent Residency</option>
+                      <option value="work">Work Permit</option>
+                      <option value="tourist">Tourist Visa</option>
+                      <option value="spouse">Spouse Visa</option>
                     </select>
                     <span className="pointer-events-none absolute right-2.5 top-2.5 text-[10px] text-forest-900/60">▼</span>
                   </div>
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="mt-4 flex flex-col gap-2">
-                <Link
-                  to="/countries/$slug"
-                  params={{ slug: selectedCountry }}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-coral-500 py-3 px-4 text-xs font-extrabold text-white shadow-md active:scale-98 transition text-center"
-                >
-                  <span className="truncate">Explore {countries.find((c) => c.slug === selectedCountry)?.name ?? 'Country'} Guide</span>
-                  <ArrowRight className="size-3.5 shrink-0" />
-                </Link>
-                <div className="flex gap-2">
-                  <Link
-                    to="/eligibility"
-                    className="flex-1 rounded-xl border border-white/30 bg-white/10 py-2.5 px-3 text-xs font-bold text-white text-center active:bg-white/20 transition truncate"
-                  >
-                    Eligibility Check →
-                  </Link>
-                  <Link
-                    to="/contact"
-                    className="rounded-xl border border-white/30 bg-white/10 py-2.5 px-3.5 text-xs font-bold text-white text-center active:bg-white/20 transition"
-                  >
-                    Contact
-                  </Link>
-                </div>
-              </div>
+              <Link
+                to={selectedCountry ? `/destinations/${selectedCountry}` : `/services/${selectedVisa}`}
+                className="mt-3.5 flex w-full items-center justify-center gap-2 rounded-xl bg-coral-500 py-3 text-xs font-bold text-white shadow-md active:bg-coral-600 transition"
+              >
+                <span>Check Eligibility & Requirements</span>
+                <ArrowRight className="size-3.5" />
+              </Link>
             </div>
 
-            {/* 2x2 STATS (Mobile) */}
-            <dl className="mt-7 grid grid-cols-2 gap-3.5">
+            {/* Quick CTAs */}
+            <div className="mt-6 flex flex-col gap-3">
+              <Link
+                to="/eligibility"
+                className="flex items-center justify-center gap-2 rounded-full bg-coral-500 py-3.5 text-center text-xs font-bold text-white shadow-lg active:bg-coral-600 transition"
+              >
+                <span>Check Your Eligibility (Free)</span>
+                <ArrowRight className="size-4" />
+              </Link>
+              <a
+                href={site.phoneHref}
+                className="rounded-full border border-white/20 bg-forest-950/60 py-3 text-center text-xs font-bold text-white active:bg-white/10 transition"
+              >
+                Call Sangaria Office: {site.phone}
+              </a>
+            </div>
+
+            {/* Stats Grid */}
+            <div className="mt-8 grid grid-cols-2 gap-3 pt-6 border-t border-white/15">
               {stats.map((s) => (
-                <div key={s.label} className="rounded-2xl bg-white/5 border border-white/10 p-4 text-center">
-                  <dt className="font-display text-2xl font-extrabold text-white">{s.value}</dt>
-                  <dd className="mt-1 text-[10px] uppercase tracking-wider text-forest-100/70">{s.label}</dd>
+                <div key={s.label} className="rounded-xl bg-forest-950/50 border border-white/10 p-3">
+                  <p className="font-display text-2xl font-extrabold text-coral-400">{s.value}</p>
+                  <p className="text-[11px] text-forest-100/70 font-medium mt-0.5">{s.label}</p>
                 </div>
               ))}
-            </dl>
+            </div>
 
-            {/* MOBILE HERO IMAGE WITH PROPERLY DOCKED BADGES */}
-            <div className="relative mt-8 w-full overflow-hidden rounded-2xl border border-white/15 shadow-2xl">
-              <img
-                src={img('/img/hero.webp', 640, 720)}
-                alt="Student holding passport and university acceptance letter"
-                width={640}
-                height={720}
-                className="aspect-[4/3] w-full object-cover"
-              />
-
-              {/* Stamp safely locked at top-right with margin */}
-              <div className="absolute top-3.5 right-3.5 grid size-16 place-items-center rounded-full border-2 border-dashed border-coral-400 bg-forest-950/90 text-center font-mono text-[9px] font-bold uppercase leading-tight tracking-wider text-coral-300 backdrop-blur shadow-lg">
-                Visa
-                <br />
-                Approved
-                <br />✓
+            {/* Sangaria Office Card */}
+            <div className="mt-4 rounded-xl border border-white/15 bg-forest-950/80 p-3.5 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-coral-400">📍 Sangaria Office</span>
+                <span className="rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] px-2 py-0.5 font-bold">Open Today</span>
               </div>
-
-              {/* Boarding pass docked neatly at bottom with no overlap */}
-              <div className="absolute bottom-0 inset-x-0 bg-cream/95 backdrop-blur-md p-3.5 text-forest-900 border-t border-forest-900/10">
-                <div className="flex items-center justify-between font-mono text-[9px] uppercase tracking-wider text-forest-900/60">
-                  <span>BOARDING PASS</span>
-                  <span>BEI · SANGARIA</span>
-                </div>
-                <div className="mt-1.5 flex items-center justify-between font-display text-sm font-extrabold">
-                  <span>SNG <span className="text-[10px] font-normal text-forest-900/60">Sangaria</span></span>
-                  <span className="text-coral-500 font-mono text-xs">- - ✈ - -</span>
-                  <span>YYZ <span className="text-[10px] font-normal text-forest-900/60">Toronto</span></span>
-                </div>
-              </div>
+              <p className="mt-1 text-[11px] text-forest-100/70">{site.address}</p>
+              <p className="text-[10px] text-white/50 mt-0.5">{site.openingHours}</p>
             </div>
           </div>
         </section>
 
-        {/* MOBILE JUMP TO BAR */}
-        <div className="sticky top-[61px] z-30 overflow-x-auto bg-forest-950 py-3 px-4 scrollbar-none border-y border-white/10 backdrop-blur-md">
-          <div className="flex items-center gap-2.5 w-max">
-            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-coral-400 shrink-0">JUMP:</span>
-            <a href="#services-m" className="shrink-0 rounded-full bg-forest-900/90 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">✈️ Services</a>
-            <a href="#destinations-m" className="shrink-0 rounded-full bg-forest-900/90 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">🌍 Countries</a>
-            <a href="#coaching-m" className="shrink-0 rounded-full bg-forest-900/90 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">📚 IELTS & PTE</a>
-            <a href="#approvals-m" className="shrink-0 rounded-full bg-forest-900/90 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">🎉 Visas</a>
-            <a href="#reviews-m" className="shrink-0 rounded-full bg-forest-900/90 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">⭐ Reviews</a>
-            <a href="#enquiry-m" className="shrink-0 rounded-full bg-coral-500 px-3.5 py-1 text-xs font-bold text-white shadow-md">🔴 Free Enquiry</a>
-          </div>
-        </div>
-
-        {/* APPROVALS MARQUEE (MOBILE) */}
+        {/* MOBILE APPROVALS MARQUEE */}
         {settings.approvalsMarqueeEnabled && (
-          <section className="overflow-hidden border-b border-forest-900/10 bg-coral-500 py-3.5 text-white">
-            <div className="flex w-max animate-marquee gap-8 whitespace-nowrap font-display text-sm font-bold">
+          <section className="overflow-hidden border-b border-forest-900/10 bg-coral-500 py-3 text-white">
+            <div className="flex w-max animate-marquee gap-8 whitespace-nowrap text-xs font-bold">
               {[...approvals, ...approvals].map((a, i) => (
                 <span key={i} className="flex items-center gap-2">
                   <CountryFlag
                     flag={a.flag}
                     country={a.country}
                     className="shrink-0 inline-block rounded-[2px]"
-                    style={{ width: '26px', height: '17px', minWidth: '26px', maxWidth: '26px' }}
+                    style={{ width: '22px', height: '14px', minWidth: '22px', maxWidth: '22px' }}
                   />
-                  <span>{a.name} — {a.visa}</span>
-                  <span className="text-white/50">✦</span>
+                  {a.name} — {a.visa} <span className="text-white/50">✦</span>
                 </span>
               ))}
             </div>
           </section>
         )}
 
-        {/* ============================================================== */}
-        {/* SERVICES SECTION (MOBILE: 6 clean boxes, p-4, zero overflow)   */}
-        {/* ============================================================== */}
+        {/* MOBILE SERVICES */}
         <section id="services-m" className="px-5 py-20 border-b border-forest-900/10 bg-white">
-          <div className="flex items-end justify-between mb-8">
-            <div>
-              <Eyebrow>What we do</Eyebrow>
-              <h2 className="mt-2 text-2xl font-extrabold text-forest-900">Every visa handled by one team.</h2>
-            </div>
-            <Link to="/visas" className="text-xs font-bold text-coral-600 hover:underline shrink-0">
-              All visas →
-            </Link>
-          </div>
+          <Eyebrow>What we do</Eyebrow>
+          <h2 className="mt-2 text-2xl font-extrabold text-forest-900">Visa services we handle</h2>
+          <p className="mt-2 text-xs leading-relaxed text-forest-900/70">
+            From initial counselling to your flight departure — complete assistance under one roof in Sangaria.
+          </p>
 
-          <div className="grid grid-cols-2 gap-4">
-            {visaServices.map((s, i) => (
+          <div className="mt-6 flex flex-col gap-3.5">
+            {visaServices.map((v) => (
               <Link
-                key={s.slug}
-                to="/visas"
-                hash={s.slug}
-                className={
-                  'flex flex-col justify-between rounded-2xl p-4 shadow-sm border border-forest-900/10 transition overflow-hidden ' +
-                  (i === 0
-                    ? 'bg-forest-900 text-white shadow-md border-transparent'
-                    : 'bg-white text-forest-900 active:bg-forest-50')
-                }
+                key={v.slug}
+                to={`/services/${v.slug}`}
+                className="group flex items-center justify-between rounded-2xl border border-forest-900/10 bg-sand/30 p-4 transition active:bg-sand/60 shadow-sm"
               >
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className={'grid size-9 shrink-0 place-items-center rounded-xl ' + (i === 0 ? 'bg-coral-500 text-white' : 'bg-forest-50 text-forest-700')}>
-                      <ServiceIcon name={s.icon} className="size-4" />
-                    </span>
-                    <span className={'font-mono text-xs font-bold ' + (i === 0 ? 'text-white/40' : 'text-forest-900/30')}>0{i + 1}</span>
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-forest-900 text-coral-400 shadow-sm">
+                    <ServiceIcon name={v.icon} className="size-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-extrabold text-forest-900 truncate">{v.title}</h3>
+                    <p className="text-[11px] text-forest-900/60 truncate mt-0.5">{v.tagline}</p>
                   </div>
-                  <h3 className="mt-3 text-sm font-extrabold leading-snug">{s.title}</h3>
-                  <p className={'mt-1.5 text-[11px] leading-relaxed line-clamp-3 ' + (i === 0 ? 'text-forest-100/75' : 'text-forest-900/65')}>
-                    {s.summary}
-                  </p>
                 </div>
+                <ArrowRight className="size-4 shrink-0 text-coral-500 transition group-active:translate-x-1 ml-2" />
               </Link>
             ))}
           </div>
         </section>
 
-        {/* ============================================================== */}
-        {/* DESTINATIONS SECTION (MOBILE: 8 clean cards, p-4, no bottom bleed) */}
-        {/* ============================================================== */}
+        {/* MOBILE DESTINATIONS */}
         <section id="destinations-m" className="bg-sand/60 bg-dots px-5 py-20 border-b border-forest-900/10">
-          <div className="mb-8">
-            <Eyebrow>Destinations</Eyebrow>
-            <h2 className="mt-2 text-2xl font-extrabold text-forest-900">Choose where your next chapter begins.</h2>
-            <p className="mt-2 text-xs text-forest-900/70">Top study abroad countries with full guidance in Sangaria.</p>
-          </div>
+          <Eyebrow>Destinations</Eyebrow>
+          <h2 className="mt-2 text-2xl font-extrabold text-forest-900">Where would you like to go?</h2>
+          <p className="mt-2 text-xs leading-relaxed text-forest-900/70">
+            Click any country for eligibility, intake timelines, top universities and visa requirements.
+          </p>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="mt-6 grid grid-cols-2 gap-3">
             {countries.map((c) => (
               <Link
                 key={c.slug}
-                to="/countries/$slug"
-                params={{ slug: c.slug }}
-                className="flex flex-col justify-between rounded-2xl bg-white p-4 shadow-sm border border-forest-900/10 active:bg-forest-900 active:text-white transition group overflow-hidden"
+                to={`/destinations/${c.slug}`}
+                className="group flex flex-col justify-between rounded-2xl bg-white p-4 shadow-sm border border-forest-900/10 transition active:scale-[0.98] overflow-hidden"
               >
                 <div>
                   <div className="flex items-center justify-between">
                     <CountryFlag
-                      code={c.code}
                       flag={c.flag}
-                      country={c.name}
-                      className="rounded shadow-sm shrink-0"
-                      style={{ width: '36px', height: '24px', minWidth: '36px', maxWidth: '36px' }}
+                      country={c.slug}
+                      className="shrink-0 inline-block rounded-[3px]"
+                      style={{ width: '32px', height: '21px', minWidth: '32px', maxWidth: '32px' }}
                     />
-                    <span className="font-mono text-xs font-bold text-forest-900/40 group-active:text-white/40">{c.code}</span>
+                    <span className="font-mono text-[9px] font-bold text-coral-600 bg-coral-50 px-1.5 py-0.5 rounded">
+                      {c.popularIntakes?.split(',')[0] || 'Open'}
+                    </span>
                   </div>
-                  <h3 className="mt-2.5 text-sm font-extrabold text-forest-900 group-active:text-white leading-tight">{c.name}</h3>
-                  <p className="mt-1 text-[11px] text-forest-900/65 group-active:text-white/70 line-clamp-2 leading-tight">{c.headline}</p>
+                  <h3 className="mt-3 text-sm font-extrabold text-forest-900">{c.name}</h3>
+                  <p className="mt-0.5 text-[10px] text-forest-900/60 line-clamp-1">{c.popularFor}</p>
                 </div>
-                <div className="mt-3.5 pt-2 border-t border-forest-900/10 group-active:border-white/15 flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-coral-600 group-active:text-coral-300">{c.stats[0].value}</span>
-                  <ArrowRight className="size-3.5 text-coral-500 group-active:text-coral-300" />
+                <div className="mt-3 pt-2 border-t border-forest-900/5 flex items-center justify-between text-[11px] font-bold text-forest-900">
+                  <span>Explore</span>
+                  <ArrowRight className="size-3 text-coral-500 group-active:translate-x-0.5 transition" />
                 </div>
               </Link>
             ))}
@@ -383,13 +326,7 @@ function Home() {
         {/* 🎫 VIRTUAL BOARDING PASS (Mobile) */}
         <BoardingPassGenerator />
 
-        {/* ============================================================== */}
-        {/* COACHING SECTION (MOBILE: py-20 for clear separation)          */}
-        {/* ============================================================== */}
-        <section id="coaching-m" className="px-5 py-20 border-b border-forest-900/10 bg-white">
-        {/* ============================================================== */}
-        {/* COACHING SECTION (MOBILE: py-20 for clear separation)          */}
-        {/* ============================================================== */}
+        {/* COACHING SECTION (MOBILE) */}
         <section id="coaching-m" className="px-5 py-20 border-b border-forest-900/10 bg-white">
           <div className="relative overflow-hidden rounded-2xl shadow-lg mb-8">
             <img
@@ -400,7 +337,6 @@ function Home() {
               loading="lazy"
               className="aspect-[16/10] w-full object-cover"
             />
-            {/* PTE 79+ badge locked inside photo corner with backdrop blur */}
             <div className="absolute bottom-3 right-3 rounded-xl bg-forest-900/90 backdrop-blur-md px-3.5 py-1.5 text-white shadow-md">
               <span className="font-display text-lg font-extrabold text-coral-400">79+</span>
               <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wider text-forest-100/80">PTE Score</span>
@@ -432,140 +368,93 @@ function Home() {
               to="/coaching"
               className="mt-8 block w-full rounded-full bg-forest-900 py-4 text-center text-xs font-bold text-white transition active:bg-forest-800 shadow-md"
             >
-              View batches & fees →
+              Coaching batches & fees →
             </Link>
           </div>
         </section>
 
-        {/* ============================================================== */}
-        {/* PROCESS SECTION (MOBILE: p-4, zero overflow)                   */}
-        {/* ============================================================== */}
+        {/* 4-STEP PROCESS (MOBILE) */}
         <section className="bg-forest-900 bg-grain px-5 py-20 text-white">
-          <div className="mb-8">
-            <Eyebrow light>How it works</Eyebrow>
-            <h2 className="mt-2 text-2xl font-extrabold">Four steps to your destination.</h2>
-          </div>
-
-          <ol className="grid grid-cols-2 gap-4">
-            {steps.map((s) => (
-              <li key={s.n} className="rounded-2xl border border-white/15 bg-white/5 p-4 shadow-sm flex flex-col justify-between overflow-hidden">
+          <Eyebrow light>How it works</Eyebrow>
+          <h2 className="mt-2 text-2xl font-extrabold">Sangaria to your campus: 4 steps</h2>
+          <div className="mt-8 flex flex-col gap-6">
+            {steps.map((st) => (
+              <div key={st.n} className="flex items-start gap-4">
+                <span className="font-display text-2xl font-extrabold text-coral-400 shrink-0">{st.n}</span>
                 <div>
-                  <span className="font-display text-2xl font-extrabold text-coral-400">{s.n}</span>
-                  <h3 className="mt-1.5 text-sm font-bold text-white leading-tight">{s.title}</h3>
+                  <h3 className="text-sm font-extrabold text-white">{st.title}</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-forest-100/75">{st.text}</p>
                 </div>
-                <p className="mt-2 text-[11px] leading-tight text-forest-100/70">{s.text}</p>
-              </li>
+              </div>
             ))}
-          </ol>
+          </div>
         </section>
 
-        {/* ============================================================== */}
-        {/* RECENT APPROVALS (MOBILE: py-20 for clear separation)          */}
-        {/* ============================================================== */}
+        {/* RECENT VISAS (MOBILE) */}
         <section id="approvals-m" className="px-5 py-20 border-b border-forest-900/10 bg-white">
-          <div className="flex items-end justify-between mb-8">
+          <div className="flex items-end justify-between">
             <div>
-              <Eyebrow>Fresh approvals</Eyebrow>
-              <h2 className="mt-2 text-2xl font-extrabold text-forest-900">Visas that landed this month.</h2>
+              <Eyebrow>Recent Approvals</Eyebrow>
+              <h2 className="mt-2 text-2xl font-extrabold text-forest-900">From our Sangaria office</h2>
             </div>
-            <Link to="/success-stories" className="text-xs font-bold text-coral-600 hover:underline shrink-0">
-              See all →
-            </Link>
+            <Link to="/approvals" className="text-xs font-bold text-coral-500">View all →</Link>
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            {approvals.slice(0, 4).map((a, i) => (
-              <ApprovalCard key={a.name} a={a} i={i} />
+          <div className="mt-6 flex flex-col gap-4">
+            {approvals.slice(0, 3).map((a) => (
+              <ApprovalCard key={a.id} approval={a} />
             ))}
           </div>
         </section>
 
-        {/* ============================================================== */}
-        {/* TESTIMONIALS (MOBILE: py-20 for clear separation)             */}
-        {/* ============================================================== */}
+        {/* REVIEWS (MOBILE) */}
         <section id="reviews-m" className="bg-sand/60 px-5 py-20 border-b border-forest-900/10">
-          <div className="mb-8">
+          <div className="text-center">
             <Eyebrow>Testimonials</Eyebrow>
-            <h2 className="mt-2 text-2xl font-extrabold text-forest-900">Real students. Real visas.</h2>
+            <h2 className="mt-2 text-2xl font-extrabold text-forest-900">Loved by students & parents</h2>
+            <div className="mt-3 flex items-center justify-center gap-1 text-amber-500 text-lg">
+              ★★★★★ <span className="ml-1 text-xs font-bold text-forest-900">4.9 / 5.0 (200+ Reviews)</span>
+            </div>
           </div>
-
-          <div className="grid gap-5">
-            {visibleTestimonialsMobile.map((t, i) => (
-              <TestimonialCard key={t.name} t={t} featured={i === 0} />
+          <div className="mt-6 flex flex-col gap-4">
+            {visibleTestimonialsMobile.map((t) => (
+              <TestimonialCard key={t.id} testimonial={t} />
             ))}
           </div>
-
           {testimonials.length > 2 && (
             <button
               type="button"
               onClick={() => setShowAllTestimonialsMobile(!showAllTestimonialsMobile)}
-              className="mt-6 w-full rounded-full border border-forest-900/15 bg-white py-4 text-xs font-bold text-forest-900 shadow-sm active:bg-forest-50 transition"
+              className="mt-6 w-full rounded-full border border-forest-900/20 bg-white py-3 text-center text-xs font-bold text-forest-900 shadow-sm transition active:bg-sand/50"
             >
-              {showAllTestimonialsMobile
-                ? 'Show Fewer Reviews ↑'
-                : `Show More Reviews (${testimonials.length - 2}+ और देखें) ↓`}
+              {showAllTestimonialsMobile ? 'Show less reviews' : `Show all ${testimonials.length} reviews ↓`}
             </button>
           )}
         </section>
 
-        {/* ============================================================== */}
-        {/* NEWS & BLOG (MOBILE: py-20 for clear separation)              */}
-        {/* ============================================================== */}
+        {/* BLOG / NEWS (MOBILE) */}
         <section className="px-5 py-20 border-b border-forest-900/10 bg-white">
-          <div className="flex items-end justify-between mb-8">
+          <div className="flex items-end justify-between">
             <div>
-              <Eyebrow>News & Blog</Eyebrow>
-              <h2 className="mt-2 text-2xl font-extrabold text-forest-900">Latest visa updates.</h2>
+              <Eyebrow>Latest Updates</Eyebrow>
+              <h2 className="mt-2 text-2xl font-extrabold text-forest-900">News & Guides</h2>
             </div>
-            <Link to="/updates" className="text-xs font-bold text-coral-600 hover:underline shrink-0">
-              All articles →
-            </Link>
+            <Link to="/blog" className="text-xs font-bold text-coral-500">Read all →</Link>
           </div>
-
-          <div className="grid gap-5">
-            {posts.slice(0, 3).map((p) => (
-              <PostCard key={p.slug} p={p} />
+          <div className="mt-6 flex flex-col gap-4">
+            {posts.slice(0, 2).map((p) => (
+              <PostCard key={p.slug} post={p} />
             ))}
           </div>
         </section>
 
-        {/* ==================================================================== */}
-        {/* FAQ + ENQUIRY (MOBILE: Independent floating FAQ cards, generous gap) */}
-        {/* ==================================================================== */}
-        <section id="enquiry-m" className="px-5 py-20">
-          <div className="mb-10">
-            <Eyebrow>FAQs</Eyebrow>
-            <h2 className="mt-2 text-2xl font-extrabold text-forest-900">Questions we hear every day.</h2>
-            <p className="mt-2 text-xs text-forest-900/70">Tap any question below to see full answer.</p>
-
-            {/* Independent Floating FAQ Cards with 14px space between them */}
-            <div className="mt-6 space-y-3.5">
-              {faqs.map((f) => (
-                <details
-                  key={f.q}
-                  className="group rounded-2xl bg-white p-5 shadow-sm border border-forest-900/10 transition [&_summary::-webkit-details-marker]:hidden"
-                >
-                  <summary className="flex cursor-pointer items-center justify-between gap-3 font-display text-[15px] font-bold text-forest-900 leading-snug">
-                    <span>{f.q}</span>
-                    <span className="grid size-8 shrink-0 place-items-center rounded-full bg-forest-50 text-coral-600 transition group-open:rotate-45 text-sm font-bold shadow-xs">
-                      +
-                    </span>
-                  </summary>
-                  <p className="mt-3.5 border-t border-forest-900/10 pt-3 text-xs leading-relaxed text-forest-900/75">
-                    {f.a}
-                  </p>
-                </details>
-              ))}
-            </div>
-
-            <p className="mt-6 flex items-center gap-2 text-xs text-forest-900/60">
-              <MapPin className="size-3.5 text-coral-500 shrink-0" /> {site.address}
-            </p>
-          </div>
-
-          <div className="rounded-2xl bg-forest-900 bg-grain p-6 text-white shadow-xl">
-            <h2 className="text-xl font-extrabold">Free Profile Evaluation</h2>
-            <p className="mt-1.5 mb-6 text-xs text-forest-100/70">Share details — a counsellor calls you back within one working day.</p>
+        {/* ENQUIRY (MOBILE) */}
+        <section id="enquiry-m" className="px-5 py-20 bg-forest-900 text-white">
+          <Eyebrow light>Free Counselling</Eyebrow>
+          <h2 className="mt-2 text-2xl font-extrabold">Book your free profile assessment</h2>
+          <p className="mt-2 text-xs leading-relaxed text-forest-100/75">
+            Visit our office at Sangaria or request a callback. We reply within 2 business hours.
+          </p>
+          <div className="mt-6">
             <EnquiryForm source="home-mobile" dark />
           </div>
         </section>
@@ -573,7 +462,6 @@ function Home() {
 
       {/* ========================================================================= */}
       {/* DESKTOP-ONLY VIEW (Laptops / Desktops: visible on hidden md:block)       */}
-      {/* Spacious 3- and 4-column layout WITH Quick Visa & Country Finder in Hero  */}
       {/* ========================================================================= */}
       <div className="hidden md:block">
         {/* DESKTOP HERO */}
@@ -583,8 +471,6 @@ function Home() {
               <div className="animate-rise">
                 <Eyebrow light>Sangaria · Hanumangarh · Since day one</Eyebrow>
               </div>
-
-              {/* 3-in-1 Animated Headline (Desktop) */}
               <h1 className="mt-7 animate-rise text-4xl sm:text-6xl lg:text-[4.2rem] xl:text-[4.8rem] font-extrabold leading-[1.08] [animation-delay:80ms]">
                 <span className="inline-block">Pack your bags.</span>
                 <br />
@@ -611,21 +497,22 @@ function Home() {
                   </span>
                 </span>
               </h1>
-
-              <p className="mt-8 max-w-xl animate-rise text-lg leading-relaxed text-forest-100/80 [animation-delay:160ms]">
-                Study visas, PR, work permits, tourist visas and IELTS / PTE coaching for Canada, UK, Australia, USA, New Zealand, Germany and Europe —
-                all under one roof at {site.name}.
+              <p className="mt-8 animate-rise text-lg leading-relaxed text-forest-100/85 [animation-delay:160ms]">
+                Study visas, PR, work permits, tourist visas & IELTS/PTE coaching for Canada, UK, Australia, USA, NZ & Europe — with honest guidance and zero false promises, right here in Sangaria.
               </p>
 
-              {/* QUICK COUNTRY & VISA FINDER ON DESKTOP */}
-              <div className="mt-8 max-w-xl rounded-2xl bg-forest-950/80 border border-white/20 p-5 shadow-2xl">
+              {/* DESKTOP QUICK FINDER */}
+              <div className="mt-8 rounded-2xl bg-forest-950/90 border border-white/20 p-5 shadow-2xl backdrop-blur">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="font-mono text-xs font-extrabold uppercase tracking-wider text-coral-400">
-                    Quick Visa & Country Finder
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-coral-400">
+                    ⚡ Quick Visa & Country Finder
                   </span>
-                  <span className="text-xs text-white/60">Free Profile Evaluation</span>
+                  <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-white/80">
+                    Free Profile Check
+                  </span>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="desktop-country" className="block text-xs font-semibold text-white/80 mb-1">Target Country</label>
                     <div className="relative">
@@ -659,57 +546,77 @@ function Home() {
                         onChange={(e) => setSelectedVisa(e.target.value)}
                         className="w-full rounded-xl bg-white text-forest-900 text-sm font-bold py-2.5 pl-3 pr-8 shadow-sm outline-none border border-forest-900/15 appearance-none cursor-pointer"
                       >
-                        <option value="study">🎓 Study Visa</option>
-                        <option value="pr">🏛️ PR / Immigration</option>
-                        <option value="work">💼 Work Permit</option>
-                        <option value="tourist">✈️ Tourist Visa</option>
-                        <option value="coaching">📚 IELTS / PTE Coaching</option>
+                        <option value="study">Study Visa / Permit</option>
+                        <option value="pr">Permanent Residency (PR)</option>
+                        <option value="work">Work Permit / LMIA</option>
+                        <option value="tourist">Tourist / Visitor Visa</option>
+                        <option value="spouse">Spouse Open Work Permit</option>
                       </select>
                       <span className="pointer-events-none absolute right-3 top-3 text-xs text-forest-900/60">▼</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-4 flex gap-3">
+                <div className="mt-4 flex items-center gap-3">
                   <Link
-                    to="/countries/$slug"
-                    params={{ slug: selectedCountry }}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-coral-500 py-3 px-4 font-bold text-white shadow-md hover:bg-coral-600 transition"
+                    to={selectedCountry ? `/destinations/${selectedCountry}` : `/services/${selectedVisa}`}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-coral-500 py-3 text-xs font-bold text-white shadow-md hover:bg-coral-600 transition"
                   >
-                    Explore {countries.find((c) => c.slug === selectedCountry)?.name ?? 'Country'} Guide <ArrowRight className="size-4" />
+                    <span>Check Intake Deadlines & Requirements</span>
+                    <ArrowRight className="size-4" />
                   </Link>
                   <Link
                     to="/eligibility"
-                    className="rounded-xl border border-white/30 bg-white/10 py-3 px-5 font-bold text-white hover:bg-white/20 transition"
+                    className="rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-xs font-bold text-white hover:bg-white/20 transition whitespace-nowrap"
                   >
-                    Check Eligibility
+                    60-Sec Evaluation →
                   </Link>
                 </div>
               </div>
 
-              {/* 4 STATS ON DESKTOP */}
-              <dl className="mt-10 grid max-w-xl grid-cols-2 gap-6 sm:grid-cols-4">
+              {/* CTAs */}
+              <div className="mt-8 flex flex-wrap items-center gap-4 animate-rise [animation-delay:240ms]">
+                <Link
+                  to="/eligibility"
+                  className="rounded-full bg-coral-500 px-8 py-4 font-bold text-white shadow-lg transition hover:bg-coral-600 active:scale-95"
+                >
+                  Check Your Visa Eligibility (Free) →
+                </Link>
+                <a
+                  href={site.phoneHref}
+                  className="rounded-full border border-white/20 bg-forest-950/50 px-6 py-4 font-bold text-white transition hover:bg-white/10"
+                >
+                  Call: {site.phone}
+                </a>
+              </div>
+
+              {/* Stats Bar */}
+              <div className="mt-14 grid grid-cols-4 gap-6 border-t border-white/10 pt-8 animate-rise [animation-delay:320ms]">
                 {stats.map((s) => (
                   <div key={s.label}>
-                    <dt className="font-display text-3xl font-extrabold text-white">{s.value}</dt>
-                    <dd className="mt-1 text-xs uppercase tracking-wider text-forest-100/60">{s.label}</dd>
+                    <p className="font-display text-4xl font-extrabold text-coral-400">{s.value}</p>
+                    <p className="mt-1 text-xs text-forest-100/70">{s.label}</p>
                   </div>
                 ))}
-              </dl>
+              </div>
             </div>
 
-            <div className="relative mx-auto w-full max-w-md lg:max-w-none">
-              <div className="absolute -inset-4 rotate-3 rounded-[2.5rem] bg-coral-500/90" />
-              <img
-                src={img('/img/hero.webp', 720, 860)}
-                alt="Student holding passport and university acceptance letter at the airport"
-                width={720}
-                height={860}
-                className="relative aspect-[6/7] w-full rounded-[2rem] object-cover shadow-2xl"
-              />
-              {/* boarding pass */}
-              <div className="absolute -bottom-10 -left-4 w-[78%] rounded-2xl bg-cream p-4 text-forest-900 shadow-2xl sm:-left-12">
-                <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-widest text-forest-900/60">
+            {/* Desktop Hero Visual */}
+            <div className="relative animate-rise [animation-delay:200ms]">
+              <div className="relative overflow-hidden rounded-[2.5rem] border border-white/15 bg-white/5 p-4 backdrop-blur-sm shadow-2xl">
+                <img
+                  src={img('/img/hero.webp', 1200, 900)}
+                  alt="Students holding visa approvals from Sangaria"
+                  width={600}
+                  height={450}
+                  loading="eager"
+                  className="aspect-[4/3] w-full rounded-[2rem] object-cover"
+                />
+              </div>
+
+              {/* Floating Boarding Pass Badge */}
+              <div className="absolute -bottom-6 -left-6 rounded-2xl border border-forest-900/10 bg-white p-5 text-forest-900 shadow-2xl">
+                <div className="flex items-center justify-between gap-6 font-mono text-[11px] uppercase tracking-wider text-forest-900/60">
                   <span>Boarding pass</span>
                   <span>BEI · 2026</span>
                 </div>
@@ -773,68 +680,77 @@ function Home() {
 
         {/* DESKTOP SERVICES */}
         <section id="services-desktop" className="mx-auto max-w-7xl px-6 py-24">
-          <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+          <div className="flex items-end justify-between">
             <div>
               <Eyebrow>What we do</Eyebrow>
-              <h2 className="mt-4 max-w-2xl text-4xl font-extrabold text-forest-900 md:text-5xl">Every kind of visa, handled by one trusted team.</h2>
+              <h2 className="mt-3 font-display text-4xl font-extrabold text-forest-900">
+                End-to-end visa services
+              </h2>
             </div>
-            <Link to="/visas" className="font-bold text-coral-600 hover:underline">
-              All visa services →
+            <Link to="/services" className="font-bold text-coral-500 hover:underline">
+              View all services →
             </Link>
           </div>
-          <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {visaServices.map((s, i) => (
+          <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {visaServices.map((v) => (
               <Link
-                key={s.slug}
-                to="/visas"
-                hash={s.slug}
-                className={
-                  'group relative overflow-hidden rounded-3xl p-8 transition hover:-translate-y-1 ' +
-                  (i === 0 ? 'bg-forest-900 text-white' : 'bg-white ring-1 ring-forest-900/10 hover:ring-forest-900')
-                }
+                key={v.slug}
+                to={`/services/${v.slug}`}
+                className="group flex flex-col justify-between rounded-3xl border border-forest-900/10 bg-sand/30 p-8 transition hover:-translate-y-1 hover:border-coral-500 hover:bg-sand/60 hover:shadow-lg"
               >
-                <span className={'grid size-14 place-items-center rounded-2xl ' + (i === 0 ? 'bg-coral-500' : 'bg-forest-50 text-forest-700')}>
-                  <ServiceIcon name={s.icon} className="size-6" />
+                <div>
+                  <span className="inline-flex size-14 items-center justify-center rounded-2xl bg-forest-900 text-coral-400">
+                    <ServiceIcon name={v.icon} className="size-7" />
+                  </span>
+                  <h3 className="mt-6 font-display text-xl font-extrabold text-forest-900">{v.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-forest-900/70">{v.tagline}</p>
+                </div>
+                <span className="mt-6 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-coral-500">
+                  Learn more <ArrowRight className="size-4 transition group-hover:translate-x-1" />
                 </span>
-                <h3 className="mt-6 text-2xl font-bold">{s.title}</h3>
-                <p className={'mt-3 ' + (i === 0 ? 'text-forest-100/75' : 'text-forest-900/65')}>{s.summary}</p>
-                <span className="absolute top-8 right-8 font-mono text-xs opacity-40">0{i + 1}</span>
               </Link>
             ))}
           </div>
         </section>
 
-        {/* DESKTOP COUNTRIES */}
+        {/* DESKTOP DESTINATIONS */}
         <section id="destinations-desktop" className="bg-sand/60 bg-dots py-24">
           <div className="mx-auto max-w-7xl px-6">
-            <Eyebrow>Destinations</Eyebrow>
-            <h2 className="mt-4 max-w-3xl text-4xl font-extrabold text-forest-900 md:text-5xl">Choose where your next chapter begins.</h2>
-            <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="flex items-end justify-between">
+              <div>
+                <Eyebrow>Destinations</Eyebrow>
+                <h2 className="mt-3 font-display text-4xl font-extrabold text-forest-900">
+                  Where would you like to study?
+                </h2>
+              </div>
+              <Link to="/destinations" className="font-bold text-coral-500 hover:underline">
+                View all countries →
+              </Link>
+            </div>
+            <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {countries.map((c) => (
                 <Link
                   key={c.slug}
-                  to="/countries/$slug"
-                  params={{ slug: c.slug }}
-                  className="group relative flex flex-col rounded-3xl bg-cream p-6 ring-1 ring-forest-900/10 transition hover:-translate-y-1 hover:bg-forest-900 hover:text-white"
+                  to={`/destinations/${c.slug}`}
+                  className="group flex flex-col justify-between rounded-3xl bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
                 >
-                  <div className="flex items-center justify-between">
-                    <CountryFlag
-                      code={c.code}
-                      flag={c.flag}
-                      country={c.name}
-                      className="rounded shadow-sm shrink-0"
-                      style={{ width: '48px', height: '32px', minWidth: '48px', maxWidth: '48px' }}
-                    />
-                    <span className="font-mono text-2xl font-bold text-forest-900/20 group-hover:text-white/20">{c.code}</span>
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <CountryFlag
+                        flag={c.flag}
+                        country={c.slug}
+                        className="shrink-0 inline-block rounded-[3px]"
+                        style={{ width: '36px', height: '24px', minWidth: '36px', maxWidth: '36px' }}
+                      />
+                      <span className="font-mono text-xs font-bold text-coral-600 bg-coral-50 px-2 py-0.5 rounded">
+                        {c.popularIntakes?.split(',')[0] || 'Open'}
+                      </span>
+                    </div>
+                    <h3 className="mt-4 font-display text-xl font-extrabold text-forest-900">{c.name}</h3>
+                    <p className="mt-1 text-xs text-forest-900/60 line-clamp-1">{c.popularFor}</p>
                   </div>
-                  <h3 className="mt-6 text-2xl font-bold">{c.name}</h3>
-                  <p className="mt-1 text-sm opacity-70">{c.headline}</p>
-                  <div className="my-5 border-t-2 border-dashed border-forest-900/15 group-hover:border-white/20" />
-                  <div className="flex items-end justify-between text-sm">
-                    <span>
-                      <span className="block text-[10px] uppercase tracking-widest opacity-60">{c.stats[0].label}</span>
-                      <span className="font-bold">{c.stats[0].value}</span>
-                    </span>
+                  <div className="mt-6 flex items-center justify-between pt-4 border-t border-forest-900/5 text-xs font-bold text-forest-900">
+                    <span>Explore programs</span>
                     <ArrowRight className="size-5 text-coral-500 transition group-hover:translate-x-1" />
                   </div>
                 </Link>
@@ -852,9 +768,6 @@ function Home() {
 
         {/* DESKTOP COACHING */}
         <section id="coaching-desktop" className="mx-auto grid max-w-7xl items-center gap-14 px-6 py-24 lg:grid-cols-2">
-
-        {/* DESKTOP COACHING */}
-        <section id="coaching-desktop" className="mx-auto grid max-w-7xl items-center gap-14 px-6 py-24 lg:grid-cols-2">
           <div className="relative">
             <img
               src={img('/img/coaching.webp', 760, 560)}
@@ -862,7 +775,7 @@ function Home() {
               width={760}
               height={560}
               loading="lazy"
-              className="aspect-[19/14] w-full rounded-[2rem] object-cover shadow-2xl"
+              className="aspect-[19/14] w-full rounded-[2rem] object-cover"
             />
             <div className="absolute -right-4 -bottom-6 rounded-2xl bg-forest-900 p-5 text-white shadow-xl">
               <p className="font-display text-4xl font-extrabold text-coral-500">79+</p>
@@ -871,130 +784,154 @@ function Home() {
           </div>
           <div>
             <Eyebrow>IELTS & PTE Coaching</Eyebrow>
-            <h2 className="mt-4 text-4xl font-extrabold text-forest-900 md:text-5xl">Your score is your passport. Let’s raise it.</h2>
-            <p className="mt-5 text-lg text-forest-900/70">
-              Small batches, experienced trainers, a dedicated PTE computer lab and weekly mock tests — right here in Sangaria.
+            <h2 className="mt-3 font-display text-4xl font-extrabold text-forest-900">
+              Your score is your passport. Let’s raise it.
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-forest-900/70">
+              Small batches, certified trainers, a dedicated PTE lab and weekly full-length mock tests — right here in Sangaria.
             </p>
-            <ul className="mt-8 grid gap-4 sm:grid-cols-2">
+            <ul className="mt-8 grid grid-cols-2 gap-4">
               {[
-                { icon: Headphones, t: 'Real-exam PTE lab' },
-                { icon: Timer, t: 'Weekly timed mocks' },
-                { icon: Award, t: 'Band feedback' },
+                { icon: Headphones, t: 'Real PTE lab' },
+                { icon: Timer, t: 'Timed mock tests' },
+                { icon: Award, t: 'Band-wise feedback' },
                 { icon: BadgeCheck, t: 'Free demo class' },
               ].map(({ icon: Icon, t }) => (
-                <li key={t} className="flex items-center gap-3 rounded-2xl bg-white p-4 font-semibold ring-1 ring-forest-900/10">
-                  <Icon className="size-5 text-coral-500" /> {t}
+                <li key={t} className="flex items-center gap-3 rounded-2xl bg-forest-50 p-4 text-sm font-semibold text-forest-900">
+                  <Icon className="size-5 text-coral-500 shrink-0" />
+                  <span>{t}</span>
                 </li>
               ))}
             </ul>
-            <Link to="/coaching" className="mt-8 inline-flex rounded-full bg-forest-900 px-7 py-4 font-bold text-white transition hover:bg-forest-700">
-              View batches & fees →
-            </Link>
+            <div className="mt-10 flex items-center gap-4">
+              <Link
+                to="/coaching"
+                className="rounded-full bg-forest-900 px-8 py-4 font-bold text-white transition hover:bg-forest-800"
+              >
+                View batches & fees →
+              </Link>
+              <a
+                href={site.phoneHref}
+                className="rounded-full border border-forest-900/20 px-6 py-4 font-bold text-forest-900 transition hover:bg-sand"
+              >
+                Book free demo: {site.phone}
+              </a>
+            </div>
           </div>
         </section>
 
-        {/* DESKTOP PROCESS */}
+        {/* 4-STEP PROCESS (DESKTOP) */}
         <section className="bg-forest-900 bg-grain py-24 text-white">
           <div className="mx-auto max-w-7xl px-6">
             <Eyebrow light>How it works</Eyebrow>
-            <h2 className="mt-4 max-w-2xl text-4xl font-extrabold md:text-5xl">Four steps from Sangaria to your dream destination.</h2>
-            <ol className="mt-14 grid gap-6 md:grid-cols-4">
-              {steps.map((s) => (
-                <li key={s.n} className="relative rounded-3xl border border-white/10 bg-white/5 p-7">
-                  <span className="font-display text-6xl font-extrabold text-coral-500/90">{s.n}</span>
-                  <h3 className="mt-4 text-xl font-bold">{s.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-forest-100/70">{s.text}</p>
-                </li>
+            <h2 className="mt-3 font-display text-4xl font-extrabold">Sangaria to your campus: 4 steps</h2>
+            <div className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+              {steps.map((st) => (
+                <div key={st.n} className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+                  <span className="font-display text-4xl font-extrabold text-coral-400">{st.n}</span>
+                  <h3 className="mt-4 font-display text-xl font-bold">{st.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-forest-100/75">{st.text}</p>
+                </div>
               ))}
-            </ol>
+            </div>
           </div>
         </section>
 
-        {/* DESKTOP RECENT APPROVALS */}
+        {/* RECENT VISAS (DESKTOP) */}
         <section id="approvals-desktop" className="mx-auto max-w-7xl px-6 py-24">
-          <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+          <div className="flex items-end justify-between">
             <div>
-              <Eyebrow>Fresh approvals</Eyebrow>
-              <h2 className="mt-4 text-4xl font-extrabold text-forest-900 md:text-5xl">Visas that landed this month.</h2>
+              <Eyebrow>Real outcomes</Eyebrow>
+              <h2 className="mt-3 font-display text-4xl font-extrabold text-forest-900">Recent approvals</h2>
             </div>
-            <Link to="/success-stories" className="font-bold text-coral-600 hover:underline">
-              See all success stories →
+            <Link to="/approvals" className="font-bold text-coral-500 hover:underline">
+              View all 2,500+ approvals →
             </Link>
           </div>
-          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {approvals.slice(0, 4).map((a, i) => (
-              <ApprovalCard key={a.name} a={a} i={i} />
+          <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {approvals.slice(0, 3).map((a) => (
+              <ApprovalCard key={a.id} approval={a} />
             ))}
           </div>
         </section>
 
-        {/* DESKTOP TESTIMONIALS */}
+        {/* REVIEWS (DESKTOP) */}
         <section id="reviews-desktop" className="bg-sand/60 py-24">
           <div className="mx-auto max-w-7xl px-6">
-            <Eyebrow>Testimonials</Eyebrow>
-            <h2 className="mt-4 max-w-2xl text-4xl font-extrabold text-forest-900 md:text-5xl">Real students. Real families. Real visas.</h2>
-            <div className="mt-12 grid gap-6 md:grid-cols-3">
-              {visibleTestimonialsDesktop.map((t, i) => (
-                <TestimonialCard key={t.name} t={t} featured={i === 1} />
+            <div className="flex items-end justify-between">
+              <div>
+                <Eyebrow>Testimonials</Eyebrow>
+                <h2 className="mt-3 font-display text-4xl font-extrabold text-forest-900">
+                  What students & parents say
+                </h2>
+              </div>
+              <div className="text-right">
+                <div className="text-xl font-bold text-amber-500">★★★★★</div>
+                <p className="text-xs text-forest-900/60">4.9 / 5.0 on Google Reviews (200+)</p>
+              </div>
+            </div>
+            <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {visibleTestimonialsDesktop.map((t) => (
+                <TestimonialCard key={t.id} testimonial={t} />
               ))}
             </div>
-
             {testimonials.length > 3 && (
-              <div className="mt-10 text-center">
+              <div className="mt-12 text-center">
                 <button
                   type="button"
                   onClick={() => setShowAllTestimonials(!showAllTestimonials)}
-                  className="rounded-full border border-forest-900/20 bg-white px-7 py-3.5 font-bold text-forest-900 shadow-sm transition hover:bg-forest-900 hover:text-white"
+                  className="rounded-full border border-forest-900/20 bg-white px-8 py-3.5 text-sm font-bold text-forest-900 shadow-sm transition hover:bg-forest-900 hover:text-white"
                 >
-                  {showAllTestimonials ? 'Show Fewer Reviews ↑' : `Show More Reviews (${testimonials.length - 3}+ और देखें) ↓`}
+                  {showAllTestimonials ? 'Show less testimonials' : `Show all ${testimonials.length} testimonials ↓`}
                 </button>
               </div>
             )}
           </div>
         </section>
 
-        {/* DESKTOP UPDATES (News & Blog) */}
+        {/* BLOG / NEWS (DESKTOP) */}
         <section className="mx-auto max-w-7xl px-6 py-24">
-          <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+          <div className="flex items-end justify-between">
             <div>
-              <Eyebrow>News & Blog</Eyebrow>
-              <h2 className="mt-4 text-4xl font-extrabold text-forest-900 md:text-5xl">Latest visa updates.</h2>
+              <Eyebrow>From the blog</Eyebrow>
+              <h2 className="mt-3 font-display text-4xl font-extrabold text-forest-900">Visa updates & advice</h2>
             </div>
-            <Link to="/updates" className="font-bold text-coral-600 hover:underline">
-              All articles →
+            <Link to="/blog" className="font-bold text-coral-500 hover:underline">
+              Read all articles →
             </Link>
           </div>
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
+          <div className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
             {posts.slice(0, 3).map((p) => (
-              <PostCard key={p.slug} p={p} />
+              <PostCard key={p.slug} post={p} />
             ))}
           </div>
         </section>
 
-        {/* DESKTOP FAQ + ENQUIRY */}
-        <section id="enquiry" className="mx-auto grid max-w-7xl gap-12 px-6 pb-28 lg:grid-cols-[1fr_1.1fr]">
+        {/* ENQUIRY (DESKTOP) */}
+        <section id="enquiry" className="mx-auto grid max-w-7xl gap-14 px-6 py-24 lg:grid-cols-2">
           <div>
-            <Eyebrow>FAQs</Eyebrow>
-            <h2 className="mt-4 text-4xl font-extrabold text-forest-900">Questions we hear every day.</h2>
-            <div className="mt-8 divide-y divide-forest-900/10 rounded-3xl bg-white ring-1 ring-forest-900/10">
-              {faqs.map((f) => (
-                <details key={f.q} className="group p-6 [&_summary::-webkit-details-marker]:hidden">
-                  <summary className="flex cursor-pointer items-center justify-between gap-4 font-display text-lg font-bold text-forest-900">
-                    {f.q}
-                    <span className="grid size-8 shrink-0 place-items-center rounded-full bg-forest-50 text-coral-600 transition group-open:rotate-45">+</span>
-                  </summary>
-                  <p className="mt-3 text-forest-900/70">{f.a}</p>
-                </details>
-              ))}
-            </div>
-            <p className="mt-6 flex items-center gap-2 text-sm text-forest-900/60">
-              <MapPin className="size-4 text-coral-500" /> {site.address}
+            <Eyebrow>Free counselling</Eyebrow>
+            <h2 className="mt-3 font-display text-4xl font-extrabold text-forest-900">
+              Your global journey starts with a conversation.
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-forest-900/70">
+              Walk into our Sangaria office or send an enquiry. We review your profile, recommend realistic courses & countries, and never charge for first counselling.
             </p>
+            <div className="mt-8 space-y-4">
+              <div className="flex items-start gap-4">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-forest-900 text-coral-400">
+                  <MapPin className="size-5" />
+                </span>
+                <div>
+                  <p className="font-bold text-forest-900">Sangaria Office</p>
+                  <p className="text-sm text-forest-900/70">{site.address}</p>
+                  <p className="text-xs text-forest-900/50 mt-0.5">{site.openingHours}</p>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="rounded-[2rem] bg-forest-900 bg-grain p-8 text-white md:p-10">
-            <h2 className="text-3xl font-extrabold">Get a free profile evaluation</h2>
-            <p className="mt-2 mb-8 text-forest-100/70">Share a few details — a counsellor calls you back within one working day.</p>
-            <EnquiryForm source="home" dark />
+          <div className="rounded-3xl border border-forest-900/10 bg-sand/40 p-8">
+            <EnquiryForm source="home-desktop" />
           </div>
         </section>
       </div>
