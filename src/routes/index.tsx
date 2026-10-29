@@ -379,8 +379,6 @@ function Home() {
             </Link>
           </div>
         </section>
-</div>
-        </section>
 
         {/* 🎫 VIRTUAL BOARDING PASS (Mobile) */}
         <BoardingPassGenerator />
@@ -846,9 +844,6 @@ function Home() {
                 <span className="mt-6 font-display text-2xl font-extrabold leading-tight">Find the country that fits your profile in 60 seconds →</span>
               </Link>
             </div>
-          </div>
-        </section>
-        </div>
           </div>
         </section>
 
