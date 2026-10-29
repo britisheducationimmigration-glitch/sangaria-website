@@ -43,7 +43,7 @@ function Home() {
       {/* MOBILE-ONLY VIEW (Phones / Small screens: visible on md:hidden)          */}
       {/* 100% optimized for vertical screens: clean gaps, zero overlapping elements */}
       {/* ========================================================================= */}
-      <div className="block md:hidden">
+      <div className="block min-w-0 overflow-x-clip pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:hidden">
         {/* MOBILE HERO */}
         <section className="relative overflow-hidden bg-forest-900 bg-grain text-white px-4 pt-7 pb-10">
           <div>
@@ -51,7 +51,7 @@ function Home() {
               📍 Sangaria · Hanumangarh · Since Day 1
             </span>
 
-            <h1 className="mt-4 text-[2.6rem] font-extrabold leading-[1.02] tracking-tight">
+            <h1 className="mt-4 max-w-[12ch] text-[clamp(2.35rem,11vw,3.25rem)] font-extrabold leading-[0.98] tracking-[-0.04em]">
               Pack your bags.
               <br />
               <span className="relative inline-block text-coral-500">
@@ -64,7 +64,7 @@ function Home() {
               the visa.
             </h1>
 
-            <p className="mt-3 text-sm leading-relaxed text-forest-100/80">
+            <p className="mt-4 max-w-[42rem] text-[clamp(0.875rem,3.7vw,1rem)] leading-7 text-forest-100/80">
               Study visas, PR, work permits, tourist visas & IELTS/PTE coaching for Canada, UK, Australia, USA, NZ & Europe — right here in Sangaria.
             </p>
 
@@ -83,7 +83,7 @@ function Home() {
                     <select
                       value={mobileCountry}
                       onChange={(e) => setMobileCountry(e.target.value)}
-                      className="w-full rounded-xl bg-white text-forest-900 text-xs font-bold py-2.5 pl-2.5 pr-6 shadow-sm outline-none border border-forest-900/10 appearance-none"
+                      className="min-h-11 w-full rounded-xl bg-white text-forest-900 text-xs font-bold py-2.5 pl-2.5 pr-7 shadow-sm outline-none border border-forest-900/10 appearance-none focus-visible:ring-2 focus-visible:ring-coral-400"
                     >
                       <option value="canada">🇨🇦 Canada</option>
                       <option value="uk">🇬🇧 UK</option>
@@ -103,7 +103,7 @@ function Home() {
                     <select
                       value={mobileVisa}
                       onChange={(e) => setMobileVisa(e.target.value)}
-                      className="w-full rounded-xl bg-white text-forest-900 text-xs font-bold py-2.5 pl-2.5 pr-6 shadow-sm outline-none border border-forest-900/10 appearance-none"
+                      className="min-h-11 w-full rounded-xl bg-white text-forest-900 text-xs font-bold py-2.5 pl-2.5 pr-7 shadow-sm outline-none border border-forest-900/10 appearance-none focus-visible:ring-2 focus-visible:ring-coral-400"
                     >
                       <option value="study">🎓 Study Visa</option>
                       <option value="pr">🏛️ PR / Immigration</option>
@@ -120,13 +120,13 @@ function Home() {
                 <Link
                   to="/countries/$slug"
                   params={{ slug: mobileCountry }}
-                  className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-coral-500 py-2.5 px-3 text-xs font-extrabold text-white shadow-md active:scale-95 transition"
+                  className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-coral-500 px-3 py-2.5 text-center text-xs font-extrabold text-white shadow-md transition active:scale-[.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-300 focus-visible:ring-offset-2 focus-visible:ring-offset-forest-950"
                 >
                   View {countries.find((c) => c.slug === mobileCountry)?.name ?? 'Country'} Guide <ArrowRight className="size-3.5" />
                 </Link>
                 <Link
                   to="/eligibility"
-                  className="rounded-xl border border-white/25 bg-white/10 py-2.5 px-3 text-xs font-bold text-white text-center active:bg-white/20 transition"
+                  className="flex min-h-11 items-center justify-center rounded-xl border border-white/25 bg-white/10 px-3 py-2.5 text-center text-xs font-bold text-white transition active:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-300"
                 >
                   Eligibility
                 </Link>
@@ -178,7 +178,7 @@ function Home() {
         </section>
 
         {/* MOBILE JUMP TO BAR (Touch scrollable, strict gaps, zero squishing) */}
-        <div className="sticky top-[61px] z-30 overflow-x-auto bg-forest-950/95 py-2.5 px-4 scrollbar-none border-y border-white/10 backdrop-blur-md">
+        <div className="sticky top-[61px] z-30 overflow-x-auto border-y border-white/10 bg-forest-950/95 px-4 py-2.5 pb-[calc(.625rem+env(safe-area-inset-bottom))] scrollbar-none backdrop-blur-md supports-[backdrop-filter]:bg-forest-950/80">
           <div className="flex items-center gap-2 w-max">
             <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-coral-400 shrink-0">JUMP:</span>
             <a href="#services-m" className="shrink-0 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white active:bg-coral-500">✈️ Services</a>
@@ -193,7 +193,7 @@ function Home() {
         {/* APPROVALS MARQUEE (MOBILE) */}
         {settings.approvalsMarqueeEnabled && (
           <section className="overflow-hidden border-b border-forest-900/10 bg-coral-500 py-2.5 text-white">
-            <div className="flex w-max animate-marquee gap-8 whitespace-nowrap font-display text-sm font-bold">
+            <div className="flex w-max motion-safe:animate-marquee gap-8 whitespace-nowrap font-display text-sm font-bold">
               {[...approvals, ...approvals].map((a, i) => (
                 <span key={i} className="flex items-center gap-2">
                   <CountryFlag
@@ -211,11 +211,11 @@ function Home() {
         )}
 
         {/* SERVICES (MOBILE: Clean 2-column tiles) */}
-        <section id="services-m" className="px-4 py-12">
+        <section id="services-m" className="scroll-mt-28 px-4 py-12">
           <div className="flex items-end justify-between">
             <div>
               <Eyebrow>What we do</Eyebrow>
-              <h2 className="mt-2 text-2xl font-extrabold text-forest-900">Every visa handled by one team.</h2>
+              <h2 className="mt-2 max-w-[22ch] text-2xl font-extrabold leading-tight tracking-tight text-forest-900">Every visa handled by one team.</h2>
             </div>
             <Link to="/visas" className="text-xs font-bold text-coral-600 hover:underline shrink-0">
               All visas →
@@ -251,9 +251,9 @@ function Home() {
         </section>
 
         {/* DESTINATIONS (MOBILE: Clean 2-column grid, NO overlaps, strict flag sizes) */}
-        <section id="destinations-m" className="bg-sand/60 bg-dots px-4 py-12">
+        <section id="destinations-m" className="scroll-mt-28 bg-sand/60 bg-dots px-4 py-12">
           <Eyebrow>Destinations</Eyebrow>
-          <h2 className="mt-2 text-2xl font-extrabold text-forest-900">Choose where your next chapter begins.</h2>
+          <h2 className="mt-2 max-w-[22ch] text-2xl font-extrabold leading-tight tracking-tight text-forest-900">Choose where your next chapter begins.</h2>
           <p className="mt-1 text-xs text-forest-900/70">Top study abroad countries with full guidance in Sangaria.</p>
 
           <div className="mt-5 grid grid-cols-2 gap-2.5">
@@ -262,7 +262,7 @@ function Home() {
                 key={c.slug}
                 to="/countries/$slug"
                 params={{ slug: c.slug }}
-                className="flex flex-col justify-between rounded-2xl bg-cream p-3.5 ring-1 ring-forest-900/10 active:bg-forest-900 active:text-white transition shadow-sm group"
+                className="group flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl bg-cream p-3.5 shadow-sm ring-1 ring-forest-900/10 transition active:bg-forest-900 active:text-white"
               >
                 <div>
                   <div className="flex items-center justify-between">
@@ -304,7 +304,7 @@ function Home() {
         </section>
 
         {/* COACHING (MOBILE: Image with neatly contained badge, 2x2 features) */}
-        <section id="coaching-m" className="px-4 py-12">
+        <section id="coaching-m" className="scroll-mt-28 px-4 py-12">
           <div className="relative overflow-hidden rounded-2xl shadow-lg">
             <img
               src={img('/img/coaching.webp', 640, 420)}
@@ -323,7 +323,7 @@ function Home() {
 
           <div className="mt-5">
             <Eyebrow>IELTS & PTE Coaching</Eyebrow>
-            <h2 className="mt-2 text-2xl font-extrabold text-forest-900">Your score is your passport. Let’s raise it.</h2>
+            <h2 className="mt-2 max-w-[22ch] text-2xl font-extrabold leading-tight tracking-tight text-forest-900">Your score is your passport. Let’s raise it.</h2>
             <p className="mt-2 text-xs leading-relaxed text-forest-900/70">
               Small batches, experienced trainers, a dedicated PTE computer lab and weekly mock tests — right here in Sangaria.
             </p>
@@ -354,7 +354,7 @@ function Home() {
         {/* PROCESS (MOBILE: 2x2 grid of 4 steps) */}
         <section className="bg-forest-900 bg-grain px-4 py-12 text-white">
           <Eyebrow light>How it works</Eyebrow>
-          <h2 className="mt-2 text-2xl font-extrabold">Four steps to your destination.</h2>
+          <h2 className="mt-2 max-w-[22ch] text-2xl font-extrabold leading-tight tracking-tight">Four steps to your destination.</h2>
 
           <ol className="mt-5 grid grid-cols-2 gap-2.5">
             {steps.map((s) => (
@@ -368,11 +368,11 @@ function Home() {
         </section>
 
         {/* RECENT APPROVALS (MOBILE) */}
-        <section id="approvals-m" className="px-4 py-12">
+        <section id="approvals-m" className="scroll-mt-28 px-4 py-12">
           <div className="flex items-end justify-between">
             <div>
               <Eyebrow>Fresh approvals</Eyebrow>
-              <h2 className="mt-2 text-2xl font-extrabold text-forest-900">Visas that landed this month.</h2>
+              <h2 className="mt-2 max-w-[22ch] text-2xl font-extrabold leading-tight tracking-tight text-forest-900">Visas that landed this month.</h2>
             </div>
             <Link to="/success-stories" className="text-xs font-bold text-coral-600 hover:underline shrink-0">
               See all →
@@ -387,9 +387,9 @@ function Home() {
         </section>
 
         {/* TESTIMONIALS (MOBILE: Clean cards + Show More Reviews Button) */}
-        <section id="reviews-m" className="bg-sand/60 px-4 py-12">
+        <section id="reviews-m" className="scroll-mt-28 bg-sand/60 px-4 py-12">
           <Eyebrow>Testimonials</Eyebrow>
-          <h2 className="mt-2 text-2xl font-extrabold text-forest-900">Real students. Real visas.</h2>
+          <h2 className="mt-2 max-w-[22ch] text-2xl font-extrabold leading-tight tracking-tight text-forest-900">Real students. Real visas.</h2>
 
           <div className="mt-5 grid gap-3">
             {visibleTestimonialsMobile.map((t, i) => (
@@ -415,7 +415,7 @@ function Home() {
           <div className="flex items-end justify-between">
             <div>
               <Eyebrow>News & Blog</Eyebrow>
-              <h2 className="mt-2 text-2xl font-extrabold text-forest-900">Latest visa updates.</h2>
+              <h2 className="mt-2 max-w-[22ch] text-2xl font-extrabold leading-tight tracking-tight text-forest-900">Latest visa updates.</h2>
             </div>
             <Link to="/updates" className="text-xs font-bold text-coral-600 hover:underline shrink-0">
               All articles →
@@ -430,10 +430,10 @@ function Home() {
         </section>
 
         {/* FAQ + ENQUIRY (MOBILE) */}
-        <section id="enquiry-m" className="px-4 pb-20">
+        <section id="enquiry-m" className="scroll-mt-28 px-4 pb-20">
           <div>
             <Eyebrow>FAQs</Eyebrow>
-            <h2 className="mt-2 text-2xl font-extrabold text-forest-900">Questions we hear every day.</h2>
+            <h2 className="mt-2 max-w-[22ch] text-2xl font-extrabold leading-tight tracking-tight text-forest-900">Questions we hear every day.</h2>
             <div className="mt-4 divide-y divide-forest-900/10 rounded-2xl bg-white ring-1 ring-forest-900/10">
               {faqs.map((f) => (
                 <details key={f.q} className="group p-4 [&_summary::-webkit-details-marker]:hidden">
@@ -456,13 +456,25 @@ function Home() {
             <EnquiryForm source="home-mobile" dark />
           </div>
         </section>
+
+        {/* MOBILE CONVERSION BAR: thumb-friendly, safe-area aware */}
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-forest-950/95 px-3 py-2.5 shadow-[0_-8px_30px_rgba(0,0,0,.18)] backdrop-blur-md supports-[backdrop-filter]:bg-forest-950/80 [padding-bottom:calc(.625rem+env(safe-area-inset-bottom))] md:hidden">
+          <div className="mx-auto flex max-w-lg items-center gap-2">
+            <Link to="/contact" className="flex min-h-11 flex-1 items-center justify-center rounded-xl border border-white/20 px-3 text-xs font-bold text-white transition active:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-300">
+              Talk to counsellor
+            </Link>
+            <Link to="/eligibility" className="flex min-h-11 flex-1 items-center justify-center rounded-xl bg-coral-500 px-3 text-xs font-extrabold text-white shadow-lg transition active:bg-coral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral-300 focus-visible:ring-offset-2 focus-visible:ring-offset-forest-950">
+              Check eligibility <ArrowRight className="ml-1 size-3.5" />
+            </Link>
+          </div>
+        </div>
       </div>
 
       {/* ========================================================================= */}
       {/* DESKTOP-ONLY VIEW (Laptops / Desktops: visible on hidden md:block)       */}
       {/* Spacious 3- and 4-column layout that user confirmed is working great on PC */}
       {/* ========================================================================= */}
-      <div className="hidden md:block">
+      <div className="hidden min-w-0 overflow-x-clip md:block">
         {/* DESKTOP HERO */}
         <section className="relative overflow-hidden bg-forest-900 bg-grain text-white">
           <div className="mx-auto grid max-w-7xl items-center gap-14 px-6 pt-16 pb-24 lg:grid-cols-[1.15fr_1fr] lg:pt-24">
@@ -534,7 +546,7 @@ function Home() {
                   </div>
                 </div>
               </div>
-              <div className="absolute top-6 -right-3 grid size-28 animate-stamp place-items-center rounded-full border-[3px] border-dashed border-coral-500 bg-forest-950/80 text-center font-mono text-[11px] font-bold uppercase leading-tight tracking-widest text-coral-400 backdrop-blur [animation-delay:600ms] sm:-right-6">
+              <div className="absolute top-6 -right-3 grid size-28 motion-safe:animate-stamp place-items-center rounded-full border-[3px] border-dashed border-coral-500 bg-forest-950/80 text-center font-mono text-[11px] font-bold uppercase leading-tight tracking-widest text-coral-400 backdrop-blur [animation-delay:600ms] sm:-right-6">
                 Visa
                 <br />
                 Approved
@@ -564,7 +576,7 @@ function Home() {
         {/* DESKTOP APPROVALS MARQUEE */}
         {settings.approvalsMarqueeEnabled && (
           <section className="overflow-hidden border-y border-forest-900/10 bg-coral-500 py-4 text-white">
-            <div className="flex w-max animate-marquee gap-10 whitespace-nowrap font-display text-lg font-bold">
+            <div className="flex w-max motion-safe:animate-marquee gap-10 whitespace-nowrap font-display text-lg font-bold">
               {[...approvals, ...approvals].map((a, i) => (
                 <span key={i} className="flex items-center gap-3">
                   <CountryFlag
@@ -581,7 +593,7 @@ function Home() {
         )}
 
         {/* DESKTOP SERVICES */}
-        <section id="services-desktop" className="mx-auto max-w-7xl px-6 py-24">
+        <section id="services-desktop" className="scroll-mt-24 mx-auto max-w-7xl px-6 py-24">
           <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
             <div>
               <Eyebrow>What we do</Eyebrow>
@@ -614,7 +626,7 @@ function Home() {
         </section>
 
         {/* DESKTOP COUNTRIES */}
-        <section id="destinations-desktop" className="bg-sand/60 bg-dots py-24">
+        <section id="destinations-desktop" className="scroll-mt-24 bg-sand/60 bg-dots py-24">
           <div className="mx-auto max-w-7xl px-6">
             <Eyebrow>Destinations</Eyebrow>
             <h2 className="mt-4 max-w-3xl text-4xl font-extrabold text-forest-900 md:text-5xl">Choose where your next chapter begins.</h2>
@@ -657,7 +669,7 @@ function Home() {
         </section>
 
         {/* DESKTOP COACHING */}
-        <section id="coaching-desktop" className="mx-auto grid max-w-7xl items-center gap-14 px-6 py-24 lg:grid-cols-2">
+        <section id="coaching-desktop" className="scroll-mt-24 mx-auto grid max-w-7xl items-center gap-14 px-6 py-24 lg:grid-cols-2">
           <div className="relative">
             <img
               src={img('/img/coaching.webp', 760, 560)}
@@ -714,7 +726,7 @@ function Home() {
         </section>
 
         {/* DESKTOP RECENT APPROVALS */}
-        <section id="approvals-desktop" className="mx-auto max-w-7xl px-6 py-24">
+        <section id="approvals-desktop" className="scroll-mt-24 mx-auto max-w-7xl px-6 py-24">
           <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
             <div>
               <Eyebrow>Fresh approvals</Eyebrow>
@@ -732,7 +744,7 @@ function Home() {
         </section>
 
         {/* DESKTOP TESTIMONIALS */}
-        <section id="reviews-desktop" className="bg-sand/60 py-24">
+        <section id="reviews-desktop" className="scroll-mt-24 bg-sand/60 py-24">
           <div className="mx-auto max-w-7xl px-6">
             <Eyebrow>Testimonials</Eyebrow>
             <h2 className="mt-4 max-w-2xl text-4xl font-extrabold text-forest-900 md:text-5xl">Real students. Real families. Real visas.</h2>
@@ -775,7 +787,7 @@ function Home() {
         </section>
 
         {/* DESKTOP FAQ + ENQUIRY */}
-        <section id="enquiry" className="mx-auto grid max-w-7xl gap-12 px-6 pb-28 lg:grid-cols-[1fr_1.1fr]">
+        <section id="enquiry" className="scroll-mt-24 mx-auto grid max-w-7xl gap-12 px-6 pb-28 lg:grid-cols-[1fr_1.1fr]">
           <div>
             <Eyebrow>FAQs</Eyebrow>
             <h2 className="mt-4 text-4xl font-extrabold text-forest-900">Questions we hear every day.</h2>
