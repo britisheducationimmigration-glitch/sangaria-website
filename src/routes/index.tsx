@@ -272,7 +272,7 @@ function Home() {
         </section>
 
         {/* MOBILE JUMP TO BAR */}
-        <div className="sticky top-[61px] z-30 overflow-x-auto bg-forest-950 py-3 px-4 scrollbar-none border-y border-white/10 backdrop-blur-md">
+        <div className="sticky top-0 z-45 overflow-x-auto bg-forest-950/95 py-3 px-4 scrollbar-none border-y border-white/10 backdrop-blur-md shadow-lg">
           <div className="flex items-center gap-2.5 w-max">
             <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-coral-400 shrink-0">JUMP:</span>
             <a href="#services-m" className="shrink-0 rounded-full bg-forest-900/90 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">✈️ Services</a>
@@ -732,8 +732,8 @@ function Home() {
           </div>
         </section>
 
-        {/* DESKTOP JUMP TO BAR */}
-        <div className="border-b border-forest-900/10 bg-forest-950 py-3.5 text-white">
+       {/* DESKTOP JUMP TO BAR */}
+        <div className="sticky top-0 z-45 border-b border-forest-900/10 bg-forest-950/95 py-3.5 text-white backdrop-blur-md shadow-lg">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-6 text-sm">
             <span className="font-mono text-xs font-bold uppercase tracking-widest text-coral-400">JUMP TO:</span>
             <div className="flex items-center gap-7 font-semibold">
@@ -748,7 +748,6 @@ function Home() {
             </Link>
           </div>
         </div>
-
         {/* DESKTOP APPROVALS MARQUEE */}
         {settings.approvalsMarqueeEnabled && (
           <section className="overflow-hidden border-y border-forest-900/10 bg-coral-500 py-4 text-white">
