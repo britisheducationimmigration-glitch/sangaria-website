@@ -6,7 +6,31 @@ import { CountryFlag } from '@/components/CountryFlag'
 import { countries, visaServices } from '@/data/fixtures'
 
 export const Route = createFileRoute('/visas')({
-  head: () => ({ meta: [{ title: 'Visa Services · British Education and Immigration' }] }),
+  head: () => ({
+    meta: [
+      { title: 'Visa Services · British Education and Immigration' },
+      {
+        name: 'description',
+        content:
+          'Explore study visa, visit visa, work permit, and PR services in Sangaria with expert support for Canada, UK, Australia, USA, and Europe.',
+      },
+      { name: 'robots', content: 'index,follow' },
+      { property: 'og:title', content: 'Visa Services · British Education and Immigration' },
+      {
+        property: 'og:description',
+        content:
+          'Study visa, work permit, tourist visa, PR counselling, and document filing support from trusted experts in Sangaria.',
+      },
+      { property: 'og:url', content: 'https://britisheducationandimmigration.com/visas' },
+      { name: 'twitter:title', content: 'Visa Services · British Education and Immigration' },
+      {
+        name: 'twitter:description',
+        content:
+          'Apply for study, tourist, work and PR visas with expert guidance and free counselling in Sangaria.',
+      },
+    ],
+    links: [{ rel: 'canonical', href: 'https://britisheducationandimmigration.com/visas' }],
+  }),
   component: VisasPage,
 })
 

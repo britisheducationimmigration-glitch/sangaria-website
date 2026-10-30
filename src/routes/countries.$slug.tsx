@@ -13,7 +13,34 @@ export const Route = createFileRoute('/countries/$slug')({
     return { country }
   },
   head: ({ loaderData }) => ({
-    meta: [{ title: `${loaderData?.country.name} Visa & Study · British Education and Immigration` }],
+    meta: [
+      { title: `${loaderData.country.name} Visa & Study · British Education and Immigration` },
+      {
+        name: 'description',
+        content: `Apply for ${loaderData.country.name} study visa, PR, and work permit guidance with British Education and Immigration in Sangaria.`,
+      },
+      { name: 'robots', content: 'index,follow' },
+      { property: 'og:title', content: `${loaderData.country.name} Visa & Study · British Education and Immigration` },
+      {
+        property: 'og:description',
+        content: `Get expert visa guidance for ${loaderData.country.name}, including eligibility, fees, documentation, and counselling support in Sangaria.`,
+      },
+      {
+        property: 'og:url',
+        content: `https://britisheducationandimmigration.com/countries/${loaderData.country.slug}`,
+      },
+      { name: 'twitter:title', content: `${loaderData.country.name} Visa & Study · British Education and Immigration` },
+      {
+        name: 'twitter:description',
+        content: `Explore ${loaderData.country.name} study visa and immigration guidance with expert counselling and free profile evaluation.`,
+      },
+    ],
+    links: [
+      {
+        rel: 'canonical',
+        href: `https://britisheducationandimmigration.com/countries/${loaderData.country.slug}`,
+      },
+    ],
   }),
   component: CountryPage,
 })
@@ -108,7 +135,7 @@ function CountryPage() {
             <div className="mt-6 border-t border-forest-900/10 pt-5">
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-forest-900/50">Official sources</p>
               <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
-                {guidance.sources.map((source) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer" className="text-sm font-bold text-coral-600 hover:underline">{source.label} ↗</a>)}
+                {guidance.sources.map((source) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer" className="text-sm font-bold text-coral-600 hover:underline">{source.label}</a>)}
               </div>
             </div>
           </div>
