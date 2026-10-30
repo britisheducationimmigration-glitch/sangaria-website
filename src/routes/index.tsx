@@ -11,6 +11,7 @@ import { site } from '@/data/site'
 import { img } from '@/lib/utils'
 import { getPublicContent } from '@/lib/public-functions'
 import { BoardingPassGenerator } from '@/components/BoardingPassGenerator'
+import { FamilyCashflowPlanner } from '@/components/FamilyCashflowPlanner'
 
 export const Route = createFileRoute('/')({ loader: () => getPublicContent(), component: Home })
 
@@ -432,6 +433,7 @@ function Home() {
             </Link>
           </div>
         </section>
+       <FamilyCashflowPlanner />
 
         {/* ============================================================== */}
         {/* PROCESS SECTION (MOBILE: p-4, zero overflow)                   */}
@@ -885,6 +887,7 @@ function Home() {
             </Link>
           </div>
         </section>
+        <FamilyCashflowPlanner />
 
         {/* DESKTOP PROCESS */}
         <section className="bg-forest-900 bg-grain py-24 text-white">
