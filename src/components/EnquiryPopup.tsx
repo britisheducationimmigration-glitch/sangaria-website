@@ -1,5 +1,5 @@
 import { X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouterState } from '@tanstack/react-router'
 import { EnquiryForm } from './EnquiryForm'
 import { getPublicContent } from '@/lib/public-functions'
@@ -11,12 +11,40 @@ const popupStages = [
   { delay: 89, title: 'Last chance to connect', message: 'Book a free consultation for your study, work or PR plan.' },
 ]
 
+const POPUP_STATE_KEY = 'bei-enquiry-popup-state'
+
+type PopupState = {
+  skip58AfterSecondDismiss: boolean
+}
+
+function readPopupState(): PopupState {
+  try {
+    const raw = window.sessionStorage.getItem(POPUP_STATE_KEY)
+    if (!raw) return { skip58AfterSecondDismiss: false }
+    const parsed = JSON.parse(raw) as Partial<PopupState>
+    return {
+      skip58AfterSecondDismiss: Boolean(parsed.skip58AfterSecondDismiss),
+    }
+  } catch {
+    return { skip58AfterSecondDismiss: false }
+  }
+}
+
+function writePopupState(state: PopupState) {
+  try {
+    window.sessionStorage.setItem(POPUP_STATE_KEY, JSON.stringify(state))
+  } catch {
+    // ignore session storage issues
+  }
+}
+
 export function EnquiryPopup() {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const [open, setOpen] = useState(false)
   const [currentStage, setCurrentStage] = useState(0)
   const [enabled, setEnabled] = useState(true)
-  const [hasDismissedSecondTime, setHasDismissedSecondTime] = useState(false)
+  const [skip58AfterSecondDismiss, setSkip58AfterSecondDismiss] = useState(() => readPopupState().skip58AfterSecondDismiss)
+  const timerRefs = useRef<number[]>([])
 
   useEffect(() => {
     let active = true
@@ -26,46 +54,44 @@ export function EnquiryPopup() {
         setEnabled(content.settings.popupEnabled)
       })
       .catch(() => undefined)
+
     return () => {
       active = false
     }
   }, [])
 
   useEffect(() => {
-    if (!enabled || pathname.startsWith('/admin')) return
+    writePopupState({ skip58AfterSecondDismiss })
+  }, [skip58AfterSecondDismiss])
 
-    const timers = popupStages.map((stage) => {
-      const isSecondStage = stage.delay === 58
-      const isThirdStage = stage.delay === 89
+  useEffect(() => {
+    if (!enabled || pathname.startsWith('/admin') || open) return
 
+    const pendingStages = popupStages.filter((_, index) => {
+      if (index === 2 && skip58AfterSecondDismiss) return false
+      return true
+    })
+
+    const timers = pendingStages.map((stage) => {
+      const stageIndex = popupStages.findIndex((item) => item.delay === stage.delay)
       return window.setTimeout(() => {
-        if (isSecondStage && hasDismissedSecondTime) {
-          return
-        }
-
-        if (isThirdStage && hasDismissedSecondTime) {
-          setCurrentStage(3)
-          setOpen(true)
-          return
-        }
-
-        setCurrentStage(popupStages.findIndex((item) => item.delay === stage.delay))
+        setCurrentStage(stageIndex)
         setOpen(true)
       }, stage.delay * 1000)
     })
 
+    timerRefs.current = timers
+
     return () => {
       timers.forEach((timer) => window.clearTimeout(timer))
     }
-  }, [enabled, pathname, hasDismissedSecondTime])
+  }, [enabled, open, pathname, skip58AfterSecondDismiss])
 
   if (!open || pathname.startsWith('/admin')) return null
 
   function close() {
-    const stageIndex = currentStage
-
-    if (stageIndex === 1) {
-      setHasDismissedSecondTime(true)
+    if (currentStage === 1) {
+      setSkip58AfterSecondDismiss(true)
     }
 
     setOpen(false)
