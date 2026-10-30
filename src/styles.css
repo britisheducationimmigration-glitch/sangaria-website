@@ -40,10 +40,19 @@
   to { opacity: 1; transform: scale(1) rotate(-8deg); }
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+  min-width: 0;
+}
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+body,
+#root,
+main {
   overflow-x: hidden;
 }
 
@@ -64,13 +73,16 @@ img, svg, video {
 
 a {
   text-decoration: none;
+  color: inherit;
 }
 
 button,
 input,
 select,
-textarea {
+textarea,
+summary {
   font: inherit;
+  max-width: 100%;
 }
 
 h1, h2, h3, h4 {
@@ -81,6 +93,11 @@ h1, h2, h3, h4 {
 
 p {
   margin: 0;
+  overflow-wrap: anywhere;
+}
+
+span, li, td, th, div {
+  overflow-wrap: anywhere;
 }
 
 /* Subtle topographic grain used on dark sections */
@@ -137,6 +154,25 @@ select.field option {
 @keyframes penDraw {
   0% { stroke-dashoffset: 320; }
   100% { stroke-dashoffset: 0; }
+}
+
+@media (max-width: 767px) {
+  .sm\:hidden,
+  .md\:block,
+  .md\:hidden,
+  .md\:flex,
+  .sm\:flex {
+    min-width: 0;
+  }
+
+  [class*='grid'],
+  [class*='flex'] {
+    min-width: 0;
+  }
+
+  .overflow-hidden-mobile {
+    overflow: hidden;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
