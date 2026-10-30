@@ -2,19 +2,34 @@ import { useState } from 'react'
 import { Plane, MapPin, X, ArrowRight, MessageCircle, RotateCcw } from 'lucide-react'
 
 export function BoardingPassGenerator() {
-  const [name, setName] = useState('Somveer')
+  const [name, setName] = useState('')
   const [origin, setOrigin] = useState('Sangaria (SNG)')
+  const [customOrigin, setCustomOrigin] = useState('')
   const [dest, setDest] = useState('Toronto, Canada (YYZ)')
+  const [customDest, setCustomDest] = useState('')
   const [visa, setVisa] = useState('Study Visa')
+  const [customVisa, setCustomVisa] = useState('')
   const [intake, setIntake] = useState('Winter / Jan 2027')
+  const [customIntake, setCustomIntake] = useState('')
   const [open, setOpen] = useState(false)
 
-  const orgCode = origin.includes('(') ? origin.split('(')[1].replace(')', '') : 'SNG'
-  const destCode = dest.includes('(') ? dest.split('(')[1].replace(')', '') : 'YYZ'
-  const year = intake.match(/202[6-9]/)?.[0] || '2027'
+  // Resolve display values & codes
+  const displayOrigin = origin === 'CUSTOM' ? (customOrigin.trim() || 'Custom City') : origin
+  const orgCode = origin === 'CUSTOM' 
+    ? (customOrigin.trim().slice(0, 3).toUpperCase() || 'ORG') 
+    : (origin.includes('(') ? origin.split('(')[1].replace(')', '') : 'SNG')
+
+  const displayDest = dest === 'CUSTOM' ? (customDest.trim() || 'Dream Destination') : dest
+  const destCode = dest === 'CUSTOM'
+    ? (customDest.trim().slice(0, 3).toUpperCase() || 'DST')
+    : (dest.includes('(') ? dest.split('(')[1].replace(')', '') : 'YYZ')
+
+  const displayVisa = visa === 'CUSTOM' ? (customVisa.trim() || 'Global Career') : visa
+  const displayIntake = intake === 'CUSTOM' ? (customIntake.trim() || '2027 Intake') : intake
+  const year = displayIntake.match(/202[6-9]/)?.[0] || '2027'
   const passName = name.trim().toUpperCase() || 'PASSENGER'
 
-  const shareText = `✈️ My Future Flight Boarding Pass:\n👤 Passenger: ${passName}\n📍 Origin: ${origin}\n🌍 Destination: ${dest}\n🎯 Visa: ${visa}\n📅 Intake: ${intake}\n\n🏛️ British Education & Immigration, Sangaria\n👉 Check eligibility: https://britisheducationandimmigration.com`
+  const shareText = `✈️ My Future Flight Boarding Pass:\n👤 Passenger: ${passName}\n📍 Origin: ${displayOrigin}\n🌍 Destination: ${displayDest}\n🎯 Visa Goal: ${displayVisa}\n📅 Intake: ${displayIntake}\n\n🏛️ British Education & Immigration, Sangaria\n👉 Check eligibility: https://britisheducationandimmigration.com`
 
   const shareWA = () => {
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`, '_blank')
@@ -39,11 +54,11 @@ export function BoardingPassGenerator() {
             Design Your <span className="bg-gradient-to-r from-amber-300 via-amber-100 to-coral-400 bg-clip-text text-transparent">2027 Boarding Pass</span>
           </h2>
           <p className="mt-2 text-xs sm:text-sm text-forest-100/75">
-            Fill details below and generate your personalized international boarding pass instantly.
+            Fill details or type your own city below to generate your personalized international boarding pass.
           </p>
         </div>
 
-        {/* Clean Compact Form */}
+        {/* Clean Form */}
         <div className="rounded-3xl bg-forest-900/95 border border-white/15 p-6 sm:p-8 shadow-2xl backdrop-blur">
           <div className="space-y-4">
             <div>
@@ -58,6 +73,7 @@ export function BoardingPassGenerator() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Origin City */}
               <div>
                 <label className="block text-xs font-bold text-white/85 mb-1.5 flex items-center gap-1">
                   <MapPin className="size-3.5 text-coral-400" /> Origin City
@@ -73,9 +89,20 @@ export function BoardingPassGenerator() {
                   <option value="Bathinda (BTI)">📍 Bathinda (BTI)</option>
                   <option value="Delhi NCR (DEL)">📍 Delhi NCR (DEL)</option>
                   <option value="Amritsar (ATQ)">📍 Amritsar (ATQ)</option>
+                  <option value="CUSTOM">✏️ Other City (Type your city...)</option>
                 </select>
+                {origin === 'CUSTOM' && (
+                  <input
+                    type="text"
+                    value={customOrigin}
+                    onChange={(e) => setCustomOrigin(e.target.value)}
+                    placeholder="Type departure city (e.g. Abohar, Sirsa)..."
+                    className="mt-2 w-full rounded-xl bg-forest-950 border border-coral-400/60 px-3 py-2 text-xs text-white placeholder-white/40 focus:outline-none"
+                  />
+                )}
               </div>
 
+              {/* Dream Destination */}
               <div>
                 <label className="block text-xs font-bold text-white/85 mb-1.5 flex items-center gap-1">
                   <Plane className="size-3.5 text-coral-400" /> Dream Destination
@@ -93,9 +120,20 @@ export function BoardingPassGenerator() {
                   <option value="New York, USA (JFK)">🇺🇸 New York, USA (JFK)</option>
                   <option value="Berlin, Germany (BER)">🇩🇪 Berlin, Germany (BER)</option>
                   <option value="Auckland, NZ (AKL)">🇳🇿 Auckland, NZ (AKL)</option>
+                  <option value="CUSTOM">✏️ Other Destination (Type city...)</option>
                 </select>
+                {dest === 'CUSTOM' && (
+                  <input
+                    type="text"
+                    value={customDest}
+                    onChange={(e) => setCustomDest(e.target.value)}
+                    placeholder="Type destination city (e.g. Calgary, Dublin)..."
+                    className="mt-2 w-full rounded-xl bg-forest-950 border border-coral-400/60 px-3 py-2 text-xs text-white placeholder-white/40 focus:outline-none"
+                  />
+                )}
               </div>
 
+              {/* Visa Category */}
               <div>
                 <label className="block text-xs font-bold text-white/85 mb-1.5">Visa Category</label>
                 <select
@@ -108,9 +146,20 @@ export function BoardingPassGenerator() {
                   <option value="Work Permit">💼 Work Permit</option>
                   <option value="Spouse Visa">💍 Spouse Open Work Permit</option>
                   <option value="Tourist Visa">✈️ Tourist Visa</option>
+                  <option value="CUSTOM">✏️ Other Visa (Type custom...)</option>
                 </select>
+                {visa === 'CUSTOM' && (
+                  <input
+                    type="text"
+                    value={customVisa}
+                    onChange={(e) => setCustomVisa(e.target.value)}
+                    placeholder="Type your visa goal..."
+                    className="mt-2 w-full rounded-xl bg-forest-950 border border-coral-400/60 px-3 py-2 text-xs text-white placeholder-white/40 focus:outline-none"
+                  />
+                )}
               </div>
 
+              {/* Target Intake */}
               <div>
                 <label className="block text-xs font-bold text-white/85 mb-1.5">Target Intake</label>
                 <select
@@ -123,7 +172,17 @@ export function BoardingPassGenerator() {
                   <option value="Fall / Sept 2027">🍁 Fall / Sept 2027</option>
                   <option value="Winter / Jan 2028">❄️ Winter / Jan 2028</option>
                   <option value="Immediate 2026">⚡ Immediate 2026</option>
+                  <option value="CUSTOM">✏️ Other Intake (Type year...)</option>
                 </select>
+                {intake === 'CUSTOM' && (
+                  <input
+                    type="text"
+                    value={customIntake}
+                    onChange={(e) => setCustomIntake(e.target.value)}
+                    placeholder="Type intake (e.g. Fall 2027)..."
+                    className="mt-2 w-full rounded-xl bg-forest-950 border border-coral-400/60 px-3 py-2 text-xs text-white placeholder-white/40 focus:outline-none"
+                  />
+                )}
               </div>
             </div>
 
@@ -143,7 +202,7 @@ export function BoardingPassGenerator() {
       {/* POPUP MODAL */}
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-forest-950/85 backdrop-blur-md">
-          <div className="relative w-full max-w-lg rounded-3xl bg-forest-900 border border-white/20 p-5 shadow-2xl">
+          <div className="relative w-full max-w-lg rounded-3xl bg-forest-900 border border-white/20 p-5 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
               <span className="text-sm font-extrabold text-white">✨ Your Boarding Pass is Ready!</span>
               <button
@@ -169,7 +228,7 @@ export function BoardingPassGenerator() {
                   <div>
                     <span className="font-mono text-[9px] font-bold text-forest-900/60 uppercase">ORIGIN</span>
                     <p className="text-3xl font-black text-forest-900 leading-none mt-0.5">{orgCode}</p>
-                    <p className="text-[11px] font-semibold text-forest-900/75 mt-0.5">{origin.split('(')[0]}</p>
+                    <p className="text-[11px] font-semibold text-forest-900/75 mt-0.5">{displayOrigin.split('(')[0]}</p>
                   </div>
 
                   <div className="flex flex-col items-center">
@@ -185,7 +244,7 @@ export function BoardingPassGenerator() {
                   <div className="text-right">
                     <span className="font-mono text-[9px] font-bold text-forest-900/60 uppercase">DESTINATION</span>
                     <p className="text-3xl font-black text-forest-900 leading-none mt-0.5">{destCode}</p>
-                    <p className="text-[11px] font-semibold text-forest-900/75 mt-0.5">{dest.split(',')[0]}</p>
+                    <p className="text-[11px] font-semibold text-forest-900/75 mt-0.5">{displayDest.split(',')[0]}</p>
                   </div>
                 </div>
 
@@ -196,11 +255,11 @@ export function BoardingPassGenerator() {
                   </div>
                   <div>
                     <span className="block text-[9px] font-mono text-forest-900/60 uppercase">Visa Goal</span>
-                    <span className="font-bold text-forest-900 truncate block">{visa}</span>
+                    <span className="font-bold text-forest-900 truncate block">{displayVisa}</span>
                   </div>
                   <div>
                     <span className="block text-[9px] font-mono text-forest-900/60 uppercase">Intake</span>
-                    <span className="font-bold text-forest-900 truncate block">{intake}</span>
+                    <span className="font-bold text-forest-900 truncate block">{displayIntake}</span>
                   </div>
                   <div>
                     <span className="block text-[9px] font-mono text-forest-900/60 uppercase">Flight / Seat</span>
