@@ -12,6 +12,7 @@ const popupStages = [
 ]
 
 const POPUP_STATE_KEY = 'bei-enquiry-popup-state'
+const POPUP_DONE_KEY = 'bei-enquiry-popup-submitted'
 
 type PopupState = {
   skip58AfterSecondDismiss: boolean
@@ -38,12 +39,29 @@ function writePopupState(state: PopupState) {
   }
 }
 
+function hasSubmittedPopup(): boolean {
+  try {
+    return window.sessionStorage.getItem(POPUP_DONE_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function markPopupSubmitted() {
+  try {
+    window.sessionStorage.setItem(POPUP_DONE_KEY, '1')
+  } catch {
+    // ignore session storage issues
+  }
+}
+
 export function EnquiryPopup() {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const [open, setOpen] = useState(false)
   const [currentStage, setCurrentStage] = useState(0)
   const [enabled, setEnabled] = useState(true)
   const [skip58AfterSecondDismiss, setSkip58AfterSecondDismiss] = useState(() => readPopupState().skip58AfterSecondDismiss)
+  const [alreadySubmitted, setAlreadySubmitted] = useState(() => hasSubmittedPopup())
   const timerRefs = useRef<number[]>([])
 
   useEffect(() => {
@@ -65,6 +83,7 @@ export function EnquiryPopup() {
   }, [skip58AfterSecondDismiss])
 
   useEffect(() => {
+    if (alreadySubmitted) return
     if (!enabled || pathname.startsWith('/admin') || open) return
 
     const pendingStages = popupStages.filter((_, index) => {
@@ -85,15 +104,21 @@ export function EnquiryPopup() {
     return () => {
       timers.forEach((timer) => window.clearTimeout(timer))
     }
-  }, [enabled, open, pathname, skip58AfterSecondDismiss])
+  }, [alreadySubmitted, enabled, open, pathname, skip58AfterSecondDismiss])
 
-  if (!open || pathname.startsWith('/admin')) return null
+  if (!open || pathname.startsWith('/admin') || alreadySubmitted) return null
 
   function close() {
     if (currentStage === 1) {
       setSkip58AfterSecondDismiss(true)
     }
 
+    setOpen(false)
+  }
+
+  function handleSuccess() {
+    markPopupSubmitted()
+    setAlreadySubmitted(true)
     setOpen(false)
   }
 
@@ -108,7 +133,7 @@ export function EnquiryPopup() {
         <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-coral-400">{stage.title}</p>
         <h2 className="mt-3 pr-8 text-2xl font-extrabold sm:text-3xl">{stage.message}</h2>
         <p className="mt-2 mb-6 text-sm text-forest-100/70">Share your details and a counsellor will call within one working day.</p>
-        <EnquiryForm source="popup" dark compact onSuccess={close} />
+        <EnquiryForm source="popup" dark compact onSuccess={handleSuccess} />
       </div>
     </div>
   )
