@@ -34,23 +34,11 @@ export function BoardingPassGenerator() {
   const shareWA = () => {
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`, '_blank')
   }
- const scrollToEnquiry = () => {
-  setOpen(false)
-  setTimeout(() => {
-    const target = 
-      document.querySelector('#enquiry-m form') || 
-      document.querySelector('#enquiry form') || 
-      document.getElementById('enquiry-m') || 
-      document.getElementById('enquiry')
 
-    if (target) {
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      const input = target.querySelector('input')
-      input?.focus({ preventScroll: true })
-    }
-  }, 150)
-}
-  
+  const handleMakeReal = () => {
+    setOpen(false)
+    window.location.href = '/contact'
+  }
 
   return (
     <section id="boarding-pass-section" className="relative overflow-hidden bg-forest-950 py-16 px-4 sm:px-6 border-y border-white/10 text-white">
@@ -316,7 +304,7 @@ export function BoardingPassGenerator() {
 
               <button
                 type="button"
-                onClick={scrollToEnquiry}
+                onClick={handleMakeReal}
                 className="w-full flex items-center justify-center gap-2 rounded-xl bg-coral-500 hover:bg-coral-600 py-3 px-4 text-xs font-extrabold text-white shadow-md transition active:scale-[0.98] cursor-pointer"
               >
                 <span>Make This Flight Real ➔ Book Free Counselling</span>
