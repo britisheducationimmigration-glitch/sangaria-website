@@ -34,14 +34,23 @@ export function BoardingPassGenerator() {
   const shareWA = () => {
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`, '_blank')
   }
+ const scrollToEnquiry = () => {
+  setOpen(false)
+  setTimeout(() => {
+    const target = 
+      document.querySelector('#enquiry-m form') || 
+      document.querySelector('#enquiry form') || 
+      document.getElementById('enquiry-m') || 
+      document.getElementById('enquiry')
 
-  const scrollToEnquiry = () => {
-    setOpen(false)
-    setTimeout(() => {
-      const el = document.getElementById('enquiry-m') || document.getElementById('enquiry')
-      el?.scrollIntoView({ behavior: 'smooth' })
-    }, 100)
-  }
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      const input = target.querySelector('input')
+      input?.focus({ preventScroll: true })
+    }
+  }, 150)
+}
+  
 
   return (
     <section id="boarding-pass-section" className="relative overflow-hidden bg-forest-950 py-16 px-4 sm:px-6 border-y border-white/10 text-white">
