@@ -170,8 +170,8 @@ export function FamilyCashflowPlanner() {
         </div>
       </div>
 
-      {/* Country Select Pills */}
-      <div className="flex gap-2 overflow-x-auto py-4 scrollbar-none">
+     {/* Country Select Pills */}
+      <div className="flex flex-wrap gap-2 py-4">
         {data.map((c) => {
           const isActive = c.slug === selectedSlug
           return (
@@ -179,14 +179,14 @@ export function FamilyCashflowPlanner() {
               key={c.slug}
               type="button"
               onClick={() => setSelectedSlug(c.slug)}
-              className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-xs font-bold transition cursor-pointer ${
+              className={`flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-bold transition cursor-pointer ${
                 isActive
                   ? 'bg-coral-500 text-white shadow-md'
                   : 'bg-white/10 text-white/80 ring-1 ring-white/10 hover:bg-white/20'
               }`}
             >
-              <span>{c.flag}</span>
-              <span>{c.name}</span>
+              <span className="shrink-0">{c.flag}</span>
+              <span className="truncate">{c.name}</span>
             </button>
           )
         })}
