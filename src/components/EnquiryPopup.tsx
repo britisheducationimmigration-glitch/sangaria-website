@@ -13,6 +13,7 @@ const popupStages = [
 
 const POPUP_STATE_KEY = 'bei-enquiry-popup-state'
 const POPUP_DONE_KEY = 'bei-enquiry-popup-submitted'
+const POPUP_DISMISSED_KEY = 'bei-enquiry-popup-dismissed' // 👈 Added to track close/dismiss
 
 type PopupState = {
   skip58AfterSecondDismiss: boolean
@@ -35,13 +36,16 @@ function writePopupState(state: PopupState) {
   try {
     window.sessionStorage.setItem(POPUP_STATE_KEY, JSON.stringify(state))
   } catch {
-    // ignore session storage issues
+    // ignore
   }
 }
 
-function hasSubmittedPopup(): boolean {
+function hasInteractedWithPopup(): boolean {
   try {
-    return window.sessionStorage.getItem(POPUP_DONE_KEY) === '1'
+    return (
+      window.sessionStorage.getItem(POPUP_DONE_KEY) === '1' ||
+      window.sessionStorage.getItem(POPUP_DISMISSED_KEY) === '1'
+    )
   } catch {
     return false
   }
@@ -51,7 +55,15 @@ function markPopupSubmitted() {
   try {
     window.sessionStorage.setItem(POPUP_DONE_KEY, '1')
   } catch {
-    // ignore session storage issues
+    // ignore
+  }
+}
+
+function markPopupDismissed() {
+  try {
+    window.sessionStorage.setItem(POPUP_DISMISSED_KEY, '1')
+  } catch {
+    // ignore
   }
 }
 
@@ -61,7 +73,7 @@ export function EnquiryPopup() {
   const [currentStage, setCurrentStage] = useState(0)
   const [enabled, setEnabled] = useState(true)
   const [skip58AfterSecondDismiss, setSkip58AfterSecondDismiss] = useState(() => readPopupState().skip58AfterSecondDismiss)
-  const [alreadySubmitted, setAlreadySubmitted] = useState(() => hasSubmittedPopup())
+  const [interacted, setInteracted] = useState(() => hasInteractedWithPopup())
   const timerRefs = useRef<number[]>([])
 
   useEffect(() => {
@@ -83,7 +95,7 @@ export function EnquiryPopup() {
   }, [skip58AfterSecondDismiss])
 
   useEffect(() => {
-    if (alreadySubmitted) return
+    if (interacted) return
     if (!enabled || pathname.startsWith('/admin') || open) return
 
     const pendingStages = popupStages.filter((_, index) => {
@@ -104,21 +116,22 @@ export function EnquiryPopup() {
     return () => {
       timers.forEach((timer) => window.clearTimeout(timer))
     }
-  }, [alreadySubmitted, enabled, open, pathname, skip58AfterSecondDismiss])
+  }, [interacted, enabled, open, pathname, skip58AfterSecondDismiss])
 
-  if (!open || pathname.startsWith('/admin') || alreadySubmitted) return null
+  if (!open || pathname.startsWith('/admin') || interacted) return null
 
   function close() {
     if (currentStage === 1) {
       setSkip58AfterSecondDismiss(true)
     }
-
+    markPopupDismissed() // 👈 Ek baar close karne par dobara is session me nahi aayega
+    setInteracted(true)
     setOpen(false)
   }
 
   function handleSuccess() {
     markPopupSubmitted()
-    setAlreadySubmitted(true)
+    setInteracted(true)
     setOpen(false)
   }
 
