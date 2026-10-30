@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { ArrowRight, Award, BadgeCheck, Headphones, MapPin, Timer, ShieldCheck, Zap, HeartHandshake } from 'lucide-react'
 import { ApprovalCard, PostCard, TestimonialCard } from '@/components/Cards'
@@ -46,6 +46,12 @@ function Home() {
   const [wordIndex, setWordIndex] = useState(0)
   const [fade, setFade] = useState(true)
 
+  // Sticky Jump bar state & refs
+  const [isMobileSticky, setIsMobileSticky] = useState(false)
+  const [isDesktopSticky, setIsDesktopSticky] = useState(false)
+  const mobileRef = useRef<HTMLDivElement>(null)
+  const desktopRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     const timer = setInterval(() => {
       setFade(false)
@@ -55,6 +61,22 @@ function Home() {
       }, 250)
     }, 2800)
     return () => clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (mobileRef.current) {
+        const rect = mobileRef.current.getBoundingClientRect()
+        setIsMobileSticky(rect.top <= 0)
+      }
+      if (desktopRef.current) {
+        const rect = desktopRef.current.getBoundingClientRect()
+        setIsDesktopSticky(rect.top <= 0)
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
   const visibleTestimonialsDesktop = showAllTestimonials ? testimonials : testimonials.slice(0, 3)
@@ -272,15 +294,17 @@ function Home() {
         </section>
 
         {/* MOBILE JUMP TO BAR */}
-        <div className="sticky top-0 z-50 overflow-x-auto bg-forest-950 py-3 px-4 scrollbar-none border-y border-white/10 shadow-xl">
-          <div className="flex items-center gap-2.5 w-max">
-            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-coral-400 shrink-0">JUMP:</span>
-            <a href="#services-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">✈️ Services</a>
-            <a href="#destinations-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">🌍 Countries</a>
-            <a href="#coaching-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">📚 IELTS & PTE</a>
-            <a href="#approvals-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">🎉 Visas</a>
-            <a href="#reviews-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">⭐ Reviews</a>
-            <a href="#enquiry-m" className="shrink-0 rounded-full bg-coral-500 px-3.5 py-1 text-xs font-bold text-white shadow-md">🔴 Free Enquiry</a>
+        <div ref={mobileRef} className="h-[52px]">
+          <div className={`${isMobileSticky ? 'fixed top-0 left-0 right-0 z-50 shadow-xl' : 'relative'} transition-all duration-150 overflow-x-auto bg-forest-950 py-3 px-4 scrollbar-none border-y border-white/10`}>
+            <div className="flex items-center gap-2.5 w-max">
+              <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-coral-400 shrink-0">JUMP:</span>
+              <a href="#services-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">✈️ Services</a>
+              <a href="#destinations-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">🌍 Countries</a>
+              <a href="#coaching-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">📚 IELTS & PTE</a>
+              <a href="#approvals-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">🎉 Visas</a>
+              <a href="#reviews-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">⭐ Reviews</a>
+              <a href="#enquiry-m" className="shrink-0 rounded-full bg-coral-500 px-3.5 py-1 text-xs font-bold text-white shadow-md">🔴 Free Enquiry</a>
+            </div>
           </div>
         </div>
 
@@ -574,7 +598,7 @@ function Home() {
           </div>
         </section>
 
-        {/* STEP 5: MOBILE STICKY BOTTOM CTA BAR */}
+        {/* MOBILE STICKY BOTTOM CTA BAR */}
         <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-forest-950/95 backdrop-blur-md border-t border-white/15 px-4 py-3 flex items-center justify-between gap-3 shadow-2xl">
           <a
             href="tel:+919772570478"
@@ -732,22 +756,25 @@ function Home() {
           </div>
         </section>
 
-      {/* DESKTOP JUMP TO BAR */}
-        <div className="sticky top-0 z-50 border-b border-forest-900/10 bg-forest-950 py-3.5 text-white shadow-xl">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 text-sm">
-            <span className="font-mono text-xs font-bold uppercase tracking-widest text-coral-400">JUMP TO:</span>
-            <div className="flex items-center gap-7 font-semibold">
-              <a href="#services-desktop" className="hover:text-coral-400 transition">✈️ Services</a>
-              <a href="#destinations-desktop" className="hover:text-coral-400 transition">🌍 Countries</a>
-              <a href="#coaching-desktop" className="hover:text-coral-400 transition">📚 IELTS & PTE</a>
-              <a href="#approvals-desktop" className="hover:text-coral-400 transition">🎉 Recent Visas</a>
-              <a href="#reviews-desktop" className="hover:text-coral-400 transition">⭐ Reviews</a>
+        {/* DESKTOP JUMP TO BAR */}
+        <div ref={desktopRef} className="h-[52px]">
+          <div className={`${isDesktopSticky ? 'fixed top-0 left-0 right-0 z-50 shadow-xl' : 'relative'} transition-all duration-150 border-b border-forest-900/10 bg-forest-950 py-3.5 text-white`}>
+            <div className="mx-auto flex max-w-7xl items-center justify-between px-6 text-sm">
+              <span className="font-mono text-xs font-bold uppercase tracking-widest text-coral-400">JUMP TO:</span>
+              <div className="flex items-center gap-7 font-semibold">
+                <a href="#services-desktop" className="hover:text-coral-400 transition">✈️ Services</a>
+                <a href="#destinations-desktop" className="hover:text-coral-400 transition">🌍 Countries</a>
+                <a href="#coaching-desktop" className="hover:text-coral-400 transition">📚 IELTS & PTE</a>
+                <a href="#approvals-desktop" className="hover:text-coral-400 transition">🎉 Recent Visas</a>
+                <a href="#reviews-desktop" className="hover:text-coral-400 transition">⭐ Reviews</a>
+              </div>
+              <Link to="/contact" className="rounded-full bg-coral-500 px-5 py-2 text-xs font-bold text-white hover:bg-coral-600 transition shadow-sm">
+                🔴 Free Enquiry
+              </Link>
             </div>
-            <Link to="/contact" className="rounded-full bg-coral-500 px-5 py-2 text-xs font-bold text-white hover:bg-coral-600 transition shadow-sm">
-              🔴 Free Enquiry
-            </Link>
           </div>
         </div>
+
         {/* DESKTOP APPROVALS MARQUEE */}
         {settings.approvalsMarqueeEnabled && (
           <section className="overflow-hidden border-y border-forest-900/10 bg-coral-500 py-4 text-white">
