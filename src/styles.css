@@ -71,9 +71,14 @@ img, svg, video {
   max-width: 100%;
 }
 
-a {
-  text-decoration: none;
+a,
+a:link,
+a:visited,
+a:hover,
+a:focus,
+a:active {
   color: inherit;
+  text-decoration: none;
 }
 
 button,
@@ -100,7 +105,6 @@ span, li, td, th, div {
   overflow-wrap: anywhere;
 }
 
-/* Subtle topographic grain used on dark sections */
 .bg-grain {
   background-image:
     radial-gradient(circle at 20% 10%, rgb(196 81 93 / 0.14), transparent 40%),
@@ -111,7 +115,6 @@ span, li, td, th, div {
   background-image: radial-gradient(rgb(18 73 123 / 0.12) 1px, transparent 1px);
   background-size: 18px 18px;
 }
-/* Ticket perforation edge */
 .ticket-edge {
   background-image: radial-gradient(circle at 0 50%, transparent 9px, currentColor 9.5px);
 }
@@ -157,14 +160,6 @@ select.field option {
 }
 
 @media (max-width: 767px) {
-  .sm\:hidden,
-  .md\:block,
-  .md\:hidden,
-  .md\:flex,
-  .sm\:flex {
-    min-width: 0;
-  }
-
   [class*='grid'],
   [class*='flex'] {
     min-width: 0;
@@ -186,4 +181,23 @@ select.field option {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Explicit text visibility for dark CTA links/buttons */
+.text-white,
+a.text-white,
+a.text-white:hover,
+a.text-white:focus,
+a.text-white:active,
+a.text-white:visited {
+  color: #ffffff !important;
+}
+
+.text-forest-900,
+a.text-forest-900,
+a.text-forest-900:hover,
+a.text-forest-900:focus,
+a.text-forest-900:active,
+a.text-forest-900:visited {
+  color: #123752 !important;
 }
