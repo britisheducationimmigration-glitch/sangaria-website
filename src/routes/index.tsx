@@ -433,7 +433,6 @@ function Home() {
             </Link>
           </div>
         </section>
-       <FamilyCashflowPlanner />
 
         {/* ============================================================== */}
         {/* PROCESS SECTION (MOBILE: p-4, zero overflow)                   */}
@@ -456,6 +455,7 @@ function Home() {
             ))}
           </ol>
         </section>
+        <FamilyCashflowPlanner />
 
         {/* ============================================================== */}
         {/* RECENT APPROVALS (MOBILE: py-20 for clear separation)          */}
@@ -887,7 +887,7 @@ function Home() {
             </Link>
           </div>
         </section>
-        <FamilyCashflowPlanner />
+      
 
         {/* DESKTOP PROCESS */}
         <section className="bg-forest-900 bg-grain py-24 text-white">
@@ -905,7 +905,7 @@ function Home() {
             </ol>
           </div>
         </section>
-
+<FamilyCashflowPlanner />
         {/* DESKTOP RECENT APPROVALS */}
         <section id="approvals-desktop" className="mx-auto max-w-7xl px-6 py-24">
           <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
