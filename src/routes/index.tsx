@@ -293,9 +293,9 @@ function Home() {
           </div>
         </section>
 
-        {/* MOBILE JUMP TO BAR */}
+       {/* MOBILE JUMP TO BAR */}
         <div ref={mobileRef} className="h-[52px]">
-          <div className={`${isMobileSticky ? 'fixed top-0 left-0 right-0 z-50 shadow-xl' : 'relative'} transition-all duration-150 overflow-x-auto bg-forest-950 py-3 px-4 scrollbar-none border-y border-white/10`}>
+          <div className={`${isMobileSticky ? 'fixed top-0 left-0 right-0 z-40 shadow-xl bg-forest-950/95 backdrop-blur-md' : 'relative'} transition-all duration-200 overflow-x-auto py-3 px-4 scrollbar-none border-y border-white/10`}>
             <div className="flex items-center gap-2.5 w-max">
               <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-coral-400 shrink-0">JUMP:</span>
               <a href="#services-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">✈️ Services</a>
@@ -756,9 +756,9 @@ function Home() {
           </div>
         </section>
 
-        {/* DESKTOP JUMP TO BAR */}
+       {/* DESKTOP JUMP TO BAR */}
         <div ref={desktopRef} className="h-[52px]">
-          <div className={`${isDesktopSticky ? 'fixed top-0 left-0 right-0 z-50 shadow-xl' : 'relative'} transition-all duration-150 border-b border-forest-900/10 bg-forest-950 py-3.5 text-white`}>
+          <div className={`${isDesktopSticky ? 'fixed top-0 left-0 right-0 z-40 shadow-xl bg-forest-950/95 backdrop-blur-md' : 'relative'} transition-all duration-200 border-b border-forest-900/10 py-3.5 text-white`}>
             <div className="mx-auto flex max-w-7xl items-center justify-between px-6 text-sm">
               <span className="font-mono text-xs font-bold uppercase tracking-widest text-coral-400">JUMP TO:</span>
               <div className="flex items-center gap-7 font-semibold">
