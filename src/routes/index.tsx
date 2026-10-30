@@ -65,8 +65,8 @@ function Home() {
       {/* ========================================================================= */}
       {/* MOBILE-ONLY VIEW                                                          */}
       {/* ========================================================================= */}
-      <div className="block md:hidden">
-        {/* MOBILE HERO (Original clean layout restored) */}
+      <div className="block md:hidden bg-cream text-forest-900">
+        {/* MOBILE HERO */}
         <section className="relative overflow-hidden bg-forest-900 bg-grain text-white px-5 pt-8 pb-16">
           <div>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-forest-950/80 border border-white/20 px-3.5 py-1 text-[11px] font-bold text-coral-400 shadow-sm">
@@ -175,7 +175,7 @@ function Home() {
                 <Link
                   to="/countries/$slug"
                   params={{ slug: selectedCountry }}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-coral-500 py-3 px-4 text-xs font-extrabold text-white shadow-md active:scale-98 transition text-center"
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-coral-500 py-3 px-4 text-xs font-extrabold text-white shadow-lg active:scale-98 transition text-center"
                 >
                   <span className="truncate">Explore {countries.find((c) => c.slug === selectedCountry)?.name ?? 'Country'} Guide</span>
                   <ArrowRight className="size-3.5 shrink-0" />
@@ -304,7 +304,7 @@ function Home() {
           </section>
         )}
 
-        {/* SERVICES SECTION (MOBILE - STEP 2: rounded-3xl & shadow) */}
+        {/* SERVICES SECTION (MOBILE) */}
         <section id="services-m" className="px-5 py-20 border-b border-forest-900/10 bg-white">
           <div className="flex items-end justify-between mb-8">
             <div>
@@ -346,7 +346,7 @@ function Home() {
           </div>
         </section>
 
-        {/* DESTINATIONS SECTION (MOBILE - STEP 2: rounded-3xl cards) */}
+        {/* DESTINATIONS SECTION (MOBILE) */}
         <section id="destinations-m" className="bg-sand/60 bg-dots px-5 py-20 border-b border-forest-900/10">
           <div className="mb-8">
             <Eyebrow>Destinations</Eyebrow>
@@ -574,7 +574,7 @@ function Home() {
           </div>
         </section>
 
-        {/* MOBILE STICKY BOTTOM CTA BAR */}
+        {/* STEP 5: MOBILE STICKY BOTTOM CTA BAR */}
         <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-forest-950/95 backdrop-blur-md border-t border-white/15 px-4 py-3 flex items-center justify-between gap-3 shadow-2xl">
           <a
             href="tel:+919772570478"
@@ -606,8 +606,8 @@ function Home() {
       {/* ========================================================================= */}
       {/* DESKTOP-ONLY VIEW                                                         */}
       {/* ========================================================================= */}
-      <div className="hidden md:block">
-        {/* DESKTOP HERO (Original clean layout) */}
+      <div className="hidden md:block bg-cream text-forest-900">
+        {/* DESKTOP HERO */}
         <section className="relative overflow-hidden bg-forest-900 bg-grain text-white">
           <div className="mx-auto grid max-w-7xl items-center gap-14 px-6 pt-16 pb-24 lg:grid-cols-[1.15fr_1fr] lg:pt-24">
             <div>
@@ -973,7 +973,7 @@ function Home() {
             <Eyebrow>FAQs</Eyebrow>
             <h2 className="mt-4 text-4xl font-extrabold text-forest-900">Questions we hear every day.</h2>
             <div className="mt-8 divide-y divide-forest-900/10 rounded-3xl bg-white ring-1 ring-forest-900/10 shadow-sm">
-              {faqs.nowMap ? null : faqs.map((f) => (
+              {faqs.map((f) => (
                 <details key={f.q} className="group p-6 [&_summary::-webkit-details-marker]:hidden">
                   <summary className="flex cursor-pointer items-center justify-between gap-4 font-display text-lg font-bold text-forest-900">
                     {f.q}
