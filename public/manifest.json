@@ -1,0 +1,21 @@
+{
+  "name": "British Education & Immigration",
+  "short_name": "BEI",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f8fa",
+  "theme_color": "#123752",
+  "description": "Study visa consultant and IELTS/PTE coaching in Sangaria, Hanumangarh. Expert visa guidance for Canada, UK, Australia, USA, NZ and Europe.",
+  "icons": [
+    {
+      "src": "/img/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/img/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
