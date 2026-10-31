@@ -26,9 +26,9 @@ export type CountryRule = {
   slug: string
   name: string
   flag: string
-  /** Minimum percentage score needed, per goal. Omit a goal if not offered. */
+  /** Internal screening threshold for this site's checklist score; it is not a government or visa threshold. */
   minScore: Partial<Record<Goal, number>>
-  /** Hard minimum points on specific factors (e.g. English). */
+  /** Internal checklist threshold on a selected factor, not a government visa requirement. */
   minFactor?: Partial<Record<string, number>>
   note?: string
 }
@@ -44,7 +44,7 @@ export type EligibilityRules = {
 }
 
 export const eligibilityRules: EligibilityRules = {
-  updatedAt: '2026-10-26',
+  updatedAt: '2026-10-31',
   goals: [
     { id: 'study', label: 'Study abroad', description: 'Diploma, bachelors or masters' },
     { id: 'pr', label: 'PR / Settle', description: 'Permanent residence' },
@@ -155,17 +155,17 @@ export const eligibilityRules: EligibilityRules = {
   ],
   countries: [
     { slug: 'canada', name: 'Canada', flag: '🇨🇦', minScore: { study: 60, pr: 72, work: 65, visit: 55 }, minFactor: { english: 14 } },
-    { slug: 'uk', name: 'United Kingdom', flag: '🇬🇧', minScore: { study: 50, work: 60, visit: 50 }, note: 'IELTS waiver possible with strong Class 12 English' },
+    { slug: 'uk', name: 'United Kingdom', flag: '🇬🇧', minScore: { study: 50, work: 60, visit: 50 }, note: 'English evidence depends on the course, education provider and visa route; confirm each requirement separately.' },
     { slug: 'australia', name: 'Australia', flag: '🇦🇺', minScore: { study: 58, pr: 75, work: 65, visit: 52 }, minFactor: { english: 14 } },
     { slug: 'usa', name: 'United States', flag: '🇺🇸', minScore: { study: 62, visit: 60 }, minFactor: { english: 18 } },
     { slug: 'new-zealand', name: 'New Zealand', flag: '🇳🇿', minScore: { study: 55, pr: 72, work: 62, visit: 50 }, minFactor: { english: 14 } },
-    { slug: 'germany', name: 'Germany', flag: '🇩🇪', minScore: { study: 58, work: 60 }, minFactor: { education: 18 }, note: 'Bachelors required for masters programs' },
+    { slug: 'germany', name: 'Germany', flag: '🇩🇪', minScore: { study: 58, work: 60 }, minFactor: { education: 18 }, note: 'Academic entry requirements vary by programme; check the selected university’s official admissions rules.' },
     { slug: 'europe', name: 'Europe / Schengen', flag: '🇪🇺', minScore: { visit: 55 } },
   ],
   bands: [
-    { min: 75, label: 'Excellent profile', tone: 'great', message: 'You have a strong profile with multiple country options. Let’s file early for the best intake.' },
-    { min: 60, label: 'Good profile', tone: 'good', message: 'You qualify for several destinations. A counsellor can help you pick the safest route.' },
-    { min: 45, label: 'Fair profile', tone: 'fair', message: 'A few improvements — usually your English score or funds — will open more options.' },
-    { min: 0, label: 'Needs work', tone: 'low', message: 'Don’t worry — most profiles can be improved. Start with IELTS/PTE coaching and a free counselling session.' },
+    { min: 75, label: 'Many checklist factors align', tone: 'great', message: 'Your answers align with more of the selected factors in this preliminary checklist. Review the official rules for the specific route.' },
+    { min: 60, label: 'Several checklist factors align', tone: 'good', message: 'Your answers align with several selected checklist factors. A full route-specific review is still needed.' },
+    { min: 45, label: 'Some factors need review', tone: 'fair', message: 'Some answers fall below this site's preliminary checklist targets. Review the destination and visa-route requirements before deciding next steps.' },
+    { min: 0, label: 'Review profile details', tone: 'low', message: 'This checklist found gaps in some selected profile factors. A case review may identify other information or routes to consider.' },
   ],
 }
