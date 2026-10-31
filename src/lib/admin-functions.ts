@@ -206,6 +206,18 @@ export const updateSettings = createServerFn({ method: 'POST' }).middleware([adm
   return { ok: true }
 })
 
+export const saveCashflow = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
+  const input = (data ?? {}) as Record<string, unknown>
+  if (!Array.isArray(input.cashflowData) || input.cashflowData.length === 0) throw new Error('Cashflow data is required')
+  const cashflowJson = JSON.stringify(input.cashflowData)
+  if (cashflowJson.length > 500_000) throw new Error('Cashflow data is too large')
+  return { cashflowJson }
+}).handler(async ({ data, context }) => {
+  if (context.role !== 'super_admin') throw new Error('Only a super admin can update cashflow')
+  await execute('UPDATE site_settings SET cashflow_json = ? WHERE id = 1', [data.cashflowJson])
+  return { ok: true }
+})
+
 export const saveAdminUser = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
   const input = (data ?? {}) as Record<string, unknown>
   const email = stringValue(input.email, 190).toLowerCase()

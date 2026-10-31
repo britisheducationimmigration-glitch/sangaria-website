@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState, type FormEvent, type MouseEvent, type ReactNode } from 'react'
-import { getAdminSnapshot, deleteAdminUser, deleteBatch, deleteEnquiry, deletePost, deleteStory, exportEnquiries, saveAdminUser, saveBatch, savePost, saveStory, updateEnquiry, updateSettings } from '@/lib/admin-functions'
+import { getAdminSnapshot, deleteAdminUser, deleteBatch, deleteEnquiry, deletePost, deleteStory, exportEnquiries, saveAdminUser, saveBatch, saveCashflow, savePost, saveStory, updateEnquiry, updateSettings } from '@/lib/admin-functions'
 import type { AdminPost, AdminRole, AdminSnapshot, AdminStory, AdminUser, CoachingBatch, Enquiry, EnquiryStatus } from '@/lib/content-types'
 import { defaultCashflowData, CountryCashflow } from '@/data/cashflow'
 
@@ -475,6 +475,7 @@ function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
     return defaultCashflowData
   })
   const [selectedSlug, setSelectedSlug] = useState('canada')
+  const [busy, setBusy] = useState(false)
 
   const country = data.find((c) => c.slug === selectedSlug) || data[0]
 
@@ -492,21 +493,31 @@ function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
     }))
   }
 
-  const save = () => {
+  const save = async () => {
     try {
+      setBusy(true)
+      await saveCashflow({ data: { cashflowData: data } })
       localStorage.setItem('bei_custom_cashflow', JSON.stringify(data))
-      onNotice('Budget & Cashflow saved! Changes are now live on the website.')
-    } catch {
-      onNotice('Could not save budget data.')
+      onNotice('Budget & Cashflow saved to database and is live on the website.')
+    } catch (error) {
+      onNotice(error instanceof Error ? error.message : 'Could not save budget data.')
+    } finally {
+      setBusy(false)
     }
   }
 
-  const resetToOfficial = () => {
+  const resetToOfficial = async () => {
     setData(defaultCashflowData)
     try {
+      setBusy(true)
+      await saveCashflow({ data: { cashflowData: defaultCashflowData } })
       localStorage.removeItem('bei_custom_cashflow')
-      onNotice('Reset to official 2026/2027 embassy defaults.')
-    } catch {}
+      onNotice('Reset to official 2026/2027 embassy defaults and saved to database.')
+    } catch {
+      onNotice('Reset locally, but database sync failed.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -518,8 +529,8 @@ function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
           <p className="text-xs text-forest-900/60 mt-1">Edit embassy fees, GIC living costs, and stage-by-stage expenses. Updates reflect instantly on the public website.</p>
         </div>
         <div className="flex gap-2">
-          <button type="button" onClick={resetToOfficial} className="rounded-xl border border-forest-900/20 px-4 py-2 text-xs font-bold text-forest-900 hover:bg-forest-50">Reset Defaults</button>
-          <button type="button" onClick={save} className="rounded-xl bg-forest-900 px-5 py-2 text-xs font-bold text-white hover:bg-forest-800 shadow-md">Save Changes</button>
+          <button type="button" disabled={busy} onClick={resetToOfficial} className="rounded-xl border border-forest-900/20 px-4 py-2 text-xs font-bold text-forest-900 hover:bg-forest-50 disabled:opacity-50">Reset Defaults</button>
+          <button type="button" disabled={busy} onClick={save} className="rounded-xl bg-forest-900 px-5 py-2 text-xs font-bold text-white hover:bg-forest-800 shadow-md disabled:opacity-50">{busy ? 'Saving to DB…' : 'Save Changes'}</button>
         </div>
       </div>
 
@@ -599,8 +610,8 @@ function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
       </div>
 
       <div className="flex justify-end gap-3">
-        <button type="button" onClick={save} className="rounded-2xl bg-forest-900 px-8 py-3 text-sm font-bold text-white hover:bg-forest-800 shadow-md">
-          Save All Budget Changes
+        <button type="button" disabled={busy} onClick={save} className="rounded-2xl bg-forest-900 px-8 py-3 text-sm font-bold text-white hover:bg-forest-800 shadow-md disabled:opacity-50">
+          {busy ? 'Saving…' : 'Save All Budget Changes'}
         </button>
       </div>
     </section>

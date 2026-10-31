@@ -2,6 +2,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { execute, jsonArray, queryRows } from './db.server'
 import type { PublicContent, PublicCoachingContent, SiteSettings } from './content-types'
 import { approvals as fixtureApprovals, coachingSchedule as fixtureCoachingSchedule, posts as fixturePosts, testimonials as fixtureTestimonials } from '@/data/fixtures'
+import { defaultCashflowData, type CountryCashflow } from '@/data/cashflow'
 
 const defaultSettings: SiteSettings = {
   popupEnabled: true,
@@ -92,6 +93,19 @@ export const getPublicContent = createServerFn({ method: 'GET' }).handler(async 
   const data = { posts, approvals, testimonials, settings: mapSettings(settingsRows[0]) }
   publicContentCache = { data, expiresAt: Date.now() + 8_000 }
   return data
+})
+
+export const getPublicCashflow = createServerFn({ method: 'GET' }).handler(async (): Promise<CountryCashflow[]> => {
+  const rows = await queryRows('SELECT cashflow_json FROM site_settings WHERE id = 1 LIMIT 1')
+  const raw = rows[0]?.cashflow_json
+  if (typeof raw !== 'string' || !raw.trim()) return defaultCashflowData
+
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed as CountryCashflow[] : defaultCashflowData
+  } catch {
+    return defaultCashflowData
+  }
 })
 
 let coachingCache: { expiresAt: number; data: PublicCoachingContent } | null = null
