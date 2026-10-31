@@ -3,7 +3,7 @@
 Public website for **British Education and Immigration**, Sangaria (Hanumangarh, Rajasthan): study visas, PR, work, spouse and tourist visas for Canada, UK, Australia, USA, New Zealand, Germany and Europe/Schengen, plus IELTS & PTE coaching.
 
 ## Pages
-- `/` Home · `/countries` and `/countries/:slug` · `/visas` · `/eligibility` (eligibility checker) · `/coaching` (IELTS & PTE) · `/success-stories` (visa approvals + testimonials) · `/updates` and `/updates/:slug` (news & blog) · `/contact`
+- `/` Home · `/countries` and `/countries/:slug` · `/visas` · `/eligibility` (preliminary profile checklist) · `/coaching` (IELTS & PTE) · `/success-stories` (visa approvals + testimonials) · `/updates` and `/updates/:slug` (news & blog) · `/contact`
 
 ## Tech
 - TanStack Start (React 19, file-based routing) + Tailwind CSS v4, deployed on a server-capable runtime
@@ -19,7 +19,8 @@ netlify dev   # or: pnpm dev
 ## Editing content (for now)
 - Business details: `src/data/site.ts`
 - Countries, visa services, blog posts, testimonials, approvals, coaching batches, FAQs: `src/data/fixtures.ts`
-- Eligibility checker rules (points, thresholds): `src/data/eligibility-rules.ts`
+- Profile checklist rules (site-defined factors and thresholds; not government visa criteria): `src/data/eligibility-rules.ts`
+- Country visa details and official sources: `src/data/visa-guidance.ts`; follow the monthly review checklist in [`VISA-GUIDANCE-MAINTENANCE.md`](./VISA-GUIDANCE-MAINTENANCE.md).
 
 ## Admin lead workflow
 - `/admin` supports search, stage filters, date filters, assignee, next follow-up time, counsellor notes, WhatsApp action, and role-based access.
