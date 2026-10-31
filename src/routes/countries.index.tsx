@@ -60,20 +60,26 @@ function CountriesPage() {
           {countries.map((country) => {
             const selected = selectedSlugs.includes(country.slug)
             return (
-              <article key={country.slug} className="group grid overflow-hidden rounded-3xl bg-white ring-1 ring-forest-900/10 transition hover:-translate-y-1 hover:shadow-[8px_8px_0_0] hover:shadow-forest-900 sm:grid-cols-[1fr_auto]">
-                <Link to="/countries/$slug" params={{ slug: country.slug }} className="block p-8 focus-visible:z-10">
-                  <CountryFlag code={country.code} flag={country.flag} country={country.name} className="h-10 w-14 shrink-0 shadow-sm" />
-                  <h2 className="mt-5 text-3xl font-extrabold text-forest-900">{country.name}</h2>
-                  <p className="mt-2 text-forest-900/65">{country.headline}</p>
-                  <div className="mt-6 flex flex-wrap gap-2">
-                    {country.visas.slice(0, 4).map((visa) => (
-                      <span key={visa} className="rounded-full bg-forest-50 px-3 py-1 text-xs font-semibold text-forest-700">{visa}</span>
+              <article key={country.slug} className="group grid overflow-hidden rounded-3xl bg-white ring-1 ring-forest-900/10 transition hover:-translate-y-1 hover:shadow-[8px_8px_0_0] hover:shadow-forest-900 lg:grid-cols-[1fr_auto]">
+                <Link to="/countries/$slug" params={{ slug: country.slug }} className="block p-5 focus-visible:z-10 sm:p-8">
+                  <CountryFlag code={country.code} flag={country.flag} country={country.name} className="h-8 w-12 shrink-0 shadow-sm sm:h-10 sm:w-14" />
+                  <h2 className="mt-4 text-2xl font-extrabold text-forest-900 sm:mt-5 sm:text-3xl">{country.name}</h2>
+                  <p className="mt-1 text-sm text-forest-900/65 sm:mt-2 sm:text-base">{country.headline}</p>
+                  <div className="mt-4 flex flex-wrap gap-1.5 sm:mt-6 sm:gap-2">
+                    {country.visas.slice(0, 3).map((visa) => (
+                      <span key={visa} className="max-w-full rounded-full bg-forest-50 px-2.5 py-1 text-[10px] font-semibold leading-tight text-forest-700 sm:px-3 sm:text-xs">{visa}</span>
                     ))}
+                    {country.visas.length > 3 && (
+                      <>
+                        <span className="rounded-full bg-forest-50 px-2.5 py-1 text-[10px] font-semibold leading-tight text-forest-700 sm:hidden">+{country.visas.length - 3} more</span>
+                        <span className="hidden rounded-full bg-forest-50 px-3 py-1 text-xs font-semibold leading-tight text-forest-700 sm:inline-flex">{country.visas[3]}</span>
+                      </>
+                    )}
                   </div>
-                  <span className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-bold text-coral-600">View destination guide <ArrowRight aria-hidden="true" className="size-4 transition group-hover:translate-x-1" /></span>
+                  <span className="mt-4 inline-flex min-h-11 items-center gap-2 text-xs font-bold text-coral-600 sm:mt-5 sm:text-sm">View destination guide <ArrowRight aria-hidden="true" className="size-4 transition group-hover:translate-x-1" /></span>
                 </Link>
-                <div className="flex flex-row justify-between gap-4 border-t-2 border-dashed border-forest-900/10 bg-cream p-6 sm:w-56 sm:flex-col sm:border-t-0 sm:border-l-2">
-                  <div className="grid flex-1 grid-cols-2 gap-3 sm:grid-cols-1">
+                <div className="flex flex-col gap-4 border-t-2 border-dashed border-forest-900/10 bg-cream p-4 lg:w-56 lg:border-t-0 lg:border-l-2 lg:p-6">
+                  <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">
                     {country.stats.map((stat) => (
                       <div key={stat.label}>
                         <p className="text-[10px] uppercase tracking-widest text-forest-900/50">{stat.label}</p>
@@ -86,7 +92,7 @@ function CountriesPage() {
                     aria-pressed={selected}
                     aria-label={(selected ? 'Remove ' : 'Add ') + country.name + (selected ? ' from comparison' : ' to comparison')}
                     onClick={() => toggleCompare(country.slug, country.name)}
-                    className={'flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full border px-4 py-2 text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500 sm:w-full ' + (selected ? 'border-forest-900 bg-forest-900 text-white hover:bg-forest-800' : 'border-forest-900/15 bg-white text-forest-900 hover:border-coral-500 hover:bg-coral-50')}
+                    className={'flex min-h-11 w-full items-center justify-center gap-2 rounded-full border px-4 py-2 text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500 sm:w-full ' + (selected ? 'border-forest-900 bg-forest-900 text-white hover:bg-forest-800' : 'border-forest-900/15 bg-white text-forest-900 hover:border-coral-500 hover:bg-coral-50')}
                   >
                     {selected ? <><Check aria-hidden="true" className="size-4" /> Selected</> : '＋ Compare'}
                   </button>
