@@ -5,34 +5,16 @@ import { EnquiryForm } from '@/components/EnquiryForm'
 import { PageHero } from '@/components/Section'
 import { site } from '@/data/site'
 
+import { createPageSeo } from '@/lib/seo'
+
 export const Route = createFileRoute('/contact')({
   validateSearch: (s: Record<string, unknown>): { interest?: string } => ({
     interest: typeof s.interest === 'string' ? s.interest : undefined,
   }),
-  head: () => ({
-    meta: [
-      { title: 'Contact & Free Enquiry · British Education and Immigration' },
-      {
-        name: 'description',
-        content:
-          'Contact British Education and Immigration in Sangaria for study visa counselling, IELTS/PTE coaching, PR guidance, and free profile evaluation.',
-      },
-      { name: 'robots', content: 'index,follow' },
-      { property: 'og:title', content: 'Contact & Free Enquiry · British Education and Immigration' },
-      {
-        property: 'og:description',
-        content:
-          'Talk to our Sangaria visa experts for study visas, PR guidance, IELTS/PTE coaching, and free counselling.',
-      },
-      { property: 'og:url', content: 'https://britisheducationandimmigration.com/contact' },
-      { name: 'twitter:title', content: 'Contact & Free Enquiry · British Education and Immigration' },
-      {
-        name: 'twitter:description',
-        content:
-          'Contact our expert counselling team in Sangaria for visa guidance and free profile evaluation.',
-      },
-    ],
-    links: [{ rel: 'canonical', href: 'https://britisheducationandimmigration.com/contact' }],
+  head: () => createPageSeo({
+    title: 'Contact & Free Enquiry | British Education Sangaria',
+    description: 'Contact our Sangaria team for study visa counselling, IELTS/PTE coaching, PR guidance and a free profile evaluation.',
+    path: '/contact',
   }),
   component: ContactPage,
 })
