@@ -1,7 +1,8 @@
 import { createMiddleware, createServerFn } from '@tanstack/react-start'
 import { execute, jsonArray, queryRows } from './db.server'
 import type { AdminPost, AdminRole, AdminSnapshot, AdminStory, CoachingBatch, Enquiry, EnquiryStatus, SiteSettings } from './content-types'
-import { defaultCashflowData, type CountryCashflow } from '@/data/cashflow'
+import { defaultCashflowData, mergeNewCashflowDestinations, type CountryCashflow } from '@/data/cashflow'
+import { isValidBatchStartDate } from '@/lib/batch-dates'
 
 function stringValue(value: unknown, max = 5000) {
   return typeof value === 'string' ? value.trim().slice(0, max) : ''
@@ -183,8 +184,10 @@ export const saveBatch = createServerFn({ method: 'POST' }).middleware([adminMid
   const input = (data ?? {}) as Record<string, unknown>
   const program = stringValue(input.program, 80)
   const batch = stringValue(input.batch, 160)
+  const starts = stringValue(input.starts, 80)
   if (!program || !batch) throw new Error('Program and batch name are required')
-  return { id: numberValue(input.id), program, batch, time: stringValue(input.time, 160), seats: Math.max(0, Math.min(999, numberValue(input.seats, 0))), starts: stringValue(input.starts, 80), published: Boolean(input.published) }
+  if (!isValidBatchStartDate(starts)) throw new Error('Choose a valid full batch start date')
+  return { id: numberValue(input.id), program, batch, time: stringValue(input.time, 160), seats: Math.max(0, Math.min(999, numberValue(input.seats, 0))), starts, published: Boolean(input.published) }
 }).handler(async ({ data, context }) => {
   assertCapability(context.role, 'content')
   if (data.id) await execute('UPDATE coaching_batches SET program = ?, batch_name = ?, time_slot = ?, seats = ?, starts = ?, published = ? WHERE id = ?', [data.program, data.batch, data.time, data.seats, data.starts, data.published ? 1 : 0, data.id])
@@ -226,7 +229,7 @@ export const getAdminCashflow = createServerFn({ method: 'GET' }).middleware([ad
   if (typeof raw !== 'string' || !raw.trim()) return defaultCashflowData
   try {
     const parsed = JSON.parse(raw) as unknown
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed as CountryCashflow[] : defaultCashflowData
+    return Array.isArray(parsed) && parsed.length > 0 ? mergeNewCashflowDestinations(parsed as CountryCashflow[]) : defaultCashflowData
   } catch {
     return defaultCashflowData
   }

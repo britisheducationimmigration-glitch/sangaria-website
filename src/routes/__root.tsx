@@ -53,16 +53,10 @@ export const Route = createRootRoute({
     meta: [
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'Study Visa & IELTS Coaching in Sangaria | British Education' },
       {
         name: 'keywords',
         content:
           'study visa Sangaria, IELTS coaching Sangaria, PTE coaching Sangaria, immigration consultant Sangaria, Canada visa Hanumangarh, study abroad Rajasthan',
-      },
-      {
-        name: 'description',
-        content:
-          'Trusted study visa consultant and IELTS/PTE coaching in Sangaria, Hanumangarh. 2,500+ visas approved for Canada, UK, Australia, USA, New Zealand & Europe. Visit Bhagatpura Road office.',
       },
       { name: 'theme-color', content: '#123752' },
 
@@ -74,25 +68,14 @@ export const Route = createRootRoute({
 
       // OpenGraph for WhatsApp & Social Media Rich Previews (Fast 76KB WebP)
       { property: 'og:site_name', content: 'British Education and Immigration' },
-      { property: 'og:type', content: 'website' },
-      { property: 'og:url', content: 'https://britisheducationandimmigration.com' },
-      { property: 'og:title', content: 'Study Visa & IELTS Coaching in Sangaria | British Education' },
-      {
-        property: 'og:description',
-        content:
-          '2,500+ visas approved for Canada, UK, Australia, USA & Europe. IELTS & PTE coaching with dedicated computer lab in Sangaria, Hanumangarh.',
-      },
       { property: 'og:image', content: 'https://britisheducationandimmigration.com/img/hero.webp' },
       { property: 'og:locale', content: 'en_IN' },
 
       // Twitter Card Preview
       { name: 'twitter:card', content: 'summary_large_image' },
-      { name: 'twitter:title', content: 'Study Visa & IELTS Coaching in Sangaria | British Education' },
-      { name: 'twitter:description', content: 'Trusted visa consultancy and IELTS/PTE coaching in Sangaria, Hanumangarh.' },
       { name: 'twitter:image', content: 'https://britisheducationandimmigration.com/img/hero.webp' },
     ],
     links: [
-      { rel: 'canonical', href: 'https://britisheducationandimmigration.com/' },
       { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
       { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
       { rel: 'icon', href: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519664045228795/VqtFGwaGtbWyvcCS' },

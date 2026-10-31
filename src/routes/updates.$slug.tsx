@@ -3,6 +3,8 @@ import { PostCard, formatDate } from '@/components/Cards'
 import { EnquiryForm } from '@/components/EnquiryForm'
 import { getPublicContent } from '@/lib/public-functions'
 
+import { createPageSeo } from '@/lib/seo'
+
 export const Route = createFileRoute('/updates/$slug')({
   loader: async ({ params }) => {
     const { posts } = await getPublicContent()
@@ -10,8 +12,14 @@ export const Route = createFileRoute('/updates/$slug')({
     if (!post) throw notFound()
     return { post, posts }
   },
-  head: ({ loaderData }) => ({
-    meta: [{ title: `${loaderData?.post.title} · British Education and Immigration` }, { name: 'description', content: loaderData?.post.excerpt }],
+  head: ({ loaderData }) => createPageSeo({
+    title: loaderData?.post
+      ? `${loaderData.post.title} | British Education`
+      : 'Visa & Study Abroad Updates | British Education Sangaria',
+    description: loaderData?.post?.excerpt
+      || 'Read visa policy updates and study abroad guidance from British Education and Immigration.',
+    path: loaderData?.post?.slug ? `/updates/${loaderData.post.slug}` : '/updates',
+    type: 'article',
   }),
   component: PostPage,
 })

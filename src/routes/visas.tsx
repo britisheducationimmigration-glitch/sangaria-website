@@ -5,31 +5,13 @@ import { ServiceIcon } from '@/components/ServiceIcon'
 import { CountryFlag } from '@/components/CountryFlag'
 import { countries, visaServices } from '@/data/fixtures'
 
+import { createPageSeo } from '@/lib/seo'
+
 export const Route = createFileRoute('/visas')({
-  head: () => ({
-    meta: [
-      { title: 'Visa Services · British Education and Immigration' },
-      {
-        name: 'description',
-        content:
-          'Explore study visa, visit visa, work permit, and PR services in Sangaria with expert support for Canada, UK, Australia, USA, and Europe.',
-      },
-      { name: 'robots', content: 'index,follow' },
-      { property: 'og:title', content: 'Visa Services · British Education and Immigration' },
-      {
-        property: 'og:description',
-        content:
-          'Study visa, work permit, tourist visa, PR counselling, and document filing support from trusted experts in Sangaria.',
-      },
-      { property: 'og:url', content: 'https://britisheducationandimmigration.com/visas' },
-      { name: 'twitter:title', content: 'Visa Services · British Education and Immigration' },
-      {
-        name: 'twitter:description',
-        content:
-          'Apply for study, tourist, work and PR visas with expert guidance and free counselling in Sangaria.',
-      },
-    ],
-    links: [{ rel: 'canonical', href: 'https://britisheducationandimmigration.com/visas' }],
+  head: () => createPageSeo({
+    title: 'Study, Visitor & Work Visa Services | British Education Sangaria',
+    description: 'Explore study, visitor, work and permanent residence guidance for Canada, the UK, Australia, New Zealand, the USA and Europe.',
+    path: '/visas',
   }),
   component: VisasPage,
 })

@@ -6,8 +6,16 @@ import { bandScoreTable, coachingCourses } from '@/data/fixtures'
 import { getCoachingContent } from '@/lib/public-functions'
 import { img } from '@/lib/utils'
 
+import { createPageSeo } from '@/lib/seo'
+
+import { formatBatchStartDate } from '@/lib/batch-dates'
+
 export const Route = createFileRoute('/coaching')({
-  head: () => ({ meta: [{ title: 'IELTS & PTE Coaching in Sangaria · British Education and Immigration' }] }),
+  head: () => createPageSeo({
+    title: 'IELTS & PTE Coaching in Sangaria | British Education',
+    description: 'Prepare for IELTS and PTE in small coaching batches in Sangaria. Check class timings, upcoming batches and book a free demo.',
+    path: '/coaching',
+  }),
   loader: () => getCoachingContent(),
   component: CoachingPage,
 })
@@ -93,7 +101,7 @@ function CoachingPage() {
                 <div>
                   <p className="font-display font-bold text-forest-900">{b.batch} <span className="ml-2 rounded-full bg-forest-50 px-2 py-1 text-[10px] uppercase tracking-wide text-forest-700">{b.program}</span></p>
                   <p className="text-sm text-forest-900/60">
-                    {b.time} · starts {b.starts}
+                    {b.time} · starts {formatBatchStartDate(b.starts)}
                   </p>
                 </div>
                 <span className={'rounded-full px-3 py-1 text-xs font-bold ' + (b.seats <= 4 ? 'bg-coral-100 text-coral-600' : 'bg-forest-50 text-forest-700')}>

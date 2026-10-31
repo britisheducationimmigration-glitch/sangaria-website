@@ -84,7 +84,7 @@ export const countries: Country[] = [
     highlights: ['Regional study bonus', 'High minimum wages', 'Points-tested PR system'],
     costs: [
       { label: 'Living funds', value: 'AUD 29,710 / yr' },
-      { label: 'Visa fee', value: 'AUD 1,600' },
+      { label: 'Visa fee', value: 'AUD 2,500' },
       { label: 'OSHC', value: 'AUD ~600 / yr' },
     ],
     english: 'IELTS 6.0 / PTE 50',
@@ -130,7 +130,7 @@ export const countries: Country[] = [
     highlights: ['Green List occupations', 'Partner work rights', 'Small class sizes'],
     costs: [
       { label: 'Living funds', value: 'NZD 20,000 / yr' },
-      { label: 'Visa fee', value: 'NZD 750' },
+      { label: 'Visa fee', value: 'NZD 850' },
       { label: 'Insurance', value: 'NZD ~700 / yr' },
     ],
     english: 'IELTS 6.0 / PTE 50',
@@ -459,11 +459,11 @@ export const coachingCourses = [
 ]
 
 export const coachingSchedule = [
-  { batch: 'IELTS Morning', time: '8:00 – 10:00 AM', seats: 6, starts: 'Nov 3' },
+  { batch: 'IELTS Morning', time: '8:00 – 10:00 AM', seats: 6, starts: '2026-11-03' },
   { batch: 'PTE Morning', time: '10:00 AM – 12:00 PM', seats: 4, starts: 'Nov 3' },
-  { batch: 'IELTS Afternoon', time: '1:00 – 3:00 PM', seats: 9, starts: 'Nov 10' },
+  { batch: 'IELTS Afternoon', time: '1:00 – 3:00 PM', seats: 9, starts: '2026-11-10' },
   { batch: 'PTE Evening', time: '4:00 – 6:00 PM', seats: 3, starts: 'Nov 10' },
-  { batch: 'Weekend PTE Crash', time: 'Sat–Sun · 10 AM – 2 PM', seats: 8, starts: 'Nov 8' },
+  { batch: 'Weekend PTE Crash', time: 'Sat–Sun · 10 AM – 2 PM', seats: 8, starts: '2026-11-08' },
 ]
 
 export const bandScoreTable = [

@@ -225,4 +225,125 @@ export const defaultCashflowData: CountryCashflow[] = [
       },
     ],
   },
+  {
+    slug: 'new-zealand',
+    name: 'New Zealand',
+    flag: '🇳🇿',
+    currency: 'NZD',
+    headline: 'First-year Tuition + Living Funds Evidence',
+    totalEstimateINR: '₹24 - 32 Lakhs (estimated)',
+    officialRuleNote: 'Planning estimate, not an official minimum. For tertiary or other non-compulsory study, INZ requires NZD $20,000 per year for living costs (or NZD $1,667 per month for shorter study), separate from tuition. Fee Paying Student Visa costs from NZD $850. The INR uses roughly ₹56 per NZD; it includes living-funds evidence that is not itself a payment, and actual exchange rates/provider fees vary.',
+    officialSources: [
+      { label: 'INZ Fee Paying Student Visa', url: 'https://www.immigration.govt.nz/visas/fee-paying-student-visa/' },
+      { label: 'INZ student fund requirements', url: 'https://www.immigration.govt.nz/process-to-apply/applying-for-a-visa/providing-evidence-and-documents-to-support-your-visa-application/student-fund-requirements/' },
+    ],
+    stages: [
+      {
+        stageNumber: 1,
+        title: 'Offer & Application',
+        timeline: 'Month 0 - 1',
+        inrEstimate: '₹0 - ₹25,000',
+        officialCost: 'NZD $0 - $450 (varies by provider)',
+        paidTo: 'Education provider / application services',
+        description: 'Application and document costs vary by provider; confirm the fee and refund terms before paying.',
+        refundableInfo: 'Refund terms depend on the provider; confirm before payment',
+      },
+      {
+        stageNumber: 2,
+        title: 'First-year Tuition & Insurance',
+        timeline: 'Month 1 - 2',
+        inrEstimate: '₹12.7 - 20 Lakhs (approx.)',
+        officialCost: 'NZD $22,000 - $35,000 tuition + provider-quoted insurance',
+        paidTo: 'Approved education provider / insurer',
+        description: 'Tuition range follows this site’s country guidance; exact fees and insurance come from the provider offer.',
+        refundableInfo: 'Provider and insurer refund terms vary',
+      },
+      {
+        stageNumber: 3,
+        title: 'Living Funds Evidence',
+        timeline: 'Month 2',
+        inrEstimate: '₹0 transfer; show funds of about ₹11.2 Lakhs',
+        officialCost: 'NZD $20,000 per year or $1,667 per month for shorter study',
+        paidTo: 'Your own funds or an acceptable sponsor',
+        description: 'This is evidence of accessible living funds, not tuition or a payment to an agent. Prepaid accommodation may affect the amount under INZ rules.',
+        refundableInfo: 'Funds remain available to you; they are not paid to the agency',
+      },
+      {
+        stageNumber: 4,
+        title: 'Fee Paying Student Visa',
+        timeline: 'Month 3',
+        inrEstimate: 'From about ₹47,600 (approx.)',
+        officialCost: 'From NZD $850 (Immigration New Zealand)',
+        paidTo: 'Immigration New Zealand online portal',
+        description: 'Official Fee Paying Student Visa application charge; confirm the amount shown for your application before payment.',
+        refundableInfo: 'Check INZ refund rules for your application before paying',
+      },
+    ],
+  },
+  {
+    slug: 'usa',
+    name: 'United States',
+    flag: '🇺🇸',
+    currency: 'USD',
+    headline: 'First-year Tuition + School-specific Financial Evidence',
+    totalEstimateINR: '₹31 - 62 Lakhs (estimated)',
+    officialRuleNote: 'Planning range, not a federal minimum. A school records its tuition, living and other costs on Form I-20; the amount depends on the school and programme. F-1 visa application fee is US$185 and the separate I-901 SEVIS fee is US$350. INR uses roughly ₹96 per USD; living-fund evidence is not itself a payment, and actual exchange rates/provider fees vary. School insurance and travel are additional.',
+    officialSources: [
+      { label: 'U.S. Department of State student visa fees', url: 'https://travel.state.gov/content/travel/en/us-visas/study/student-visa.html' },
+      { label: 'ICE Form I-901 fee', url: 'https://www.ice.gov/doclib/sevis/pdf/i901.pdf' },
+      { label: 'DHS Study in the States: Form I-20 costs', url: 'https://studyinthestates.dhs.gov/assets/pdf/SEVP_SingleSheetTrainingAids_2402425_BW.pdf' },
+    ],
+    stages: [
+      {
+        stageNumber: 1,
+        title: 'School Applications',
+        timeline: 'Month 0 - 1',
+        inrEstimate: '₹0 - ₹48,000 (approx.)',
+        officialCost: 'US$0 - $500 (school-dependent estimate)',
+        paidTo: 'College / university application portals',
+        description: 'Application fees vary by school; check each school’s current fee and waiver policy.',
+        refundableInfo: 'Refund terms depend on the school',
+      },
+      {
+        stageNumber: 2,
+        title: 'First-year Tuition',
+        timeline: 'Month 1 - 2',
+        inrEstimate: '₹19.2 - 43.2 Lakhs (approx.)',
+        officialCost: 'US$20,000 - $45,000 (planning range; school quote controls)',
+        paidTo: 'College / university',
+        description: 'Indicative range from this site’s country guidance. Health insurance and other school charges may be additional.',
+        refundableInfo: 'School refund terms vary; confirm them before paying',
+      },
+      {
+        stageNumber: 3,
+        title: 'Living-cost Financial Evidence',
+        timeline: 'Month 2',
+        inrEstimate: '₹0 transfer; budget about ₹11.5 - 17.3 Lakhs',
+        officialCost: 'US$12,000 - $18,000 / year (planning estimate, not a government minimum)',
+        paidTo: 'Your own funds or accepted sponsor',
+        description: 'Use the cost figures and financial evidence requested by the school for your Form I-20; actual costs vary by location and programme.',
+        refundableInfo: 'Funds evidence is not a payment to the agency',
+      },
+      {
+        stageNumber: 4,
+        title: 'F-1 Visa + I-901 SEVIS Fees',
+        timeline: 'Month 3',
+        inrEstimate: 'About ₹51,360 (approx.)',
+        officialCost: 'US$185 visa application + US$350 I-901 SEVIS',
+        paidTo: 'U.S. visa application and FMJfee.com portals',
+        description: 'The visa application fee and SEVIS fee are separate charges. Confirm current fee instructions before payment.',
+        refundableInfo: 'U.S. visa application fee is non-refundable; check I-901 rules before paying',
+      },
+    ],
+  },
 ]
+
+const newlySupportedCashflowSlugs = new Set(['new-zealand', 'usa'])
+
+export function mergeNewCashflowDestinations(savedData: CountryCashflow[]): CountryCashflow[] {
+  const savedSlugs = new Set(savedData.map((country) => country.slug))
+  const missingDestinations = defaultCashflowData.filter(
+    (country) => newlySupportedCashflowSlugs.has(country.slug) && !savedSlugs.has(country.slug),
+  )
+  return [...savedData, ...missingDestinations]
+}
