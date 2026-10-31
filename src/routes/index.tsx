@@ -399,7 +399,7 @@ function Home() {
                 key={c.slug}
                 to="/countries/$slug"
                 params={{ slug: c.slug }}
-                className="flex flex-col justify-between rounded-3xl bg-white p-4 shadow-sm border border-forest-900/10 active:bg-forest-900 active:text-white transition group overflow-hidden hover:shadow-md"
+                className="flex flex-col justify-between rounded-3xl bg-white p-4 shadow-sm border border-forest-900/10 active:bg-forest-900 active:text-white hover:bg-forest-900 hover:text-white transition group overflow-hidden hover:shadow-md"
               >
                 <div>
                   <div className="flex items-center justify-between">
@@ -410,10 +410,10 @@ function Home() {
                       className="rounded shadow-sm shrink-0"
                       style={{ width: '36px', height: '24px', minWidth: '36px', maxWidth: '36px' }}
                     />
-                    <span className="font-mono text-xs font-bold text-forest-900/40 group-active:text-white/40">{c.code}</span>
+                    <span className="font-mono text-xs font-bold text-forest-900/40 group-active:text-white/40 group-hover:text-white/40">{c.code}</span>
                   </div>
-                  <h3 className="mt-2.5 text-sm font-extrabold text-forest-900 group-active:text-white leading-tight">{c.name}</h3>
-                  <p className="mt-1 text-[11px] text-forest-900/65 group-active:text-white/70 line-clamp-2 leading-tight">{c.headline}</p>
+                  <h3 className="mt-2.5 text-sm font-extrabold text-forest-900 group-active:text-white group-hover:text-white leading-tight">{c.name}</h3>
+                  <p className="mt-1 text-[11px] text-forest-900/65 group-active:text-white/70 group-hover:text-white/70 line-clamp-2 leading-tight">{c.headline}</p>
                 </div>
                 <div className="mt-3.5 pt-2 border-t border-forest-900/10 group-active:border-white/15 flex items-center justify-between">
                   <span className="text-[10px] font-bold text-coral-600 group-active:text-coral-300">{c.stats[0].value}</span>
@@ -878,13 +878,13 @@ function Home() {
                     />
                     <span className="font-mono text-2xl font-bold text-forest-900/20 group-hover:text-white/20">{c.code}</span>
                   </div>
-                  <h3 className="mt-6 text-2xl font-bold">{c.name}</h3>
-                  <p className="mt-1 text-sm opacity-70">{c.headline}</p>
+                  <h3 className="mt-6 text-2xl font-bold text-forest-900 group-hover:text-white">{c.name}</h3>
+                  <p className="mt-1 text-sm text-forest-900/70 group-hover:text-white/80">{c.headline}</p>
                   <div className="my-5 border-t-2 border-dashed border-forest-900/15 group-hover:border-white/20" />
                   <div className="flex items-end justify-between text-sm">
-                    <span>
-                      <span className="block text-[10px] uppercase tracking-widest opacity-60">{c.stats[0].label}</span>
-                      <span className="font-bold">{c.stats[0].value}</span>
+                    <span className="text-forest-900 group-hover:text-white">
+                      <span className="block text-[10px] uppercase tracking-widest text-forest-900/60 group-hover:text-white/60">{c.stats[0].label}</span>
+                      <span className="font-bold text-forest-900 group-hover:text-white">{c.stats[0].value}</span>
                     </span>
                     <ArrowRight className="size-5 text-coral-500 transition group-hover:translate-x-1" />
                   </div>
