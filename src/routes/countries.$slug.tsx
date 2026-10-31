@@ -5,7 +5,6 @@ import { Eyebrow } from '@/components/Section'
 import { countries } from '@/data/fixtures'
 import { visaGuidance } from '@/data/visa-guidance'
 import { CountryFlag } from '@/components/CountryFlag'
-import { JourneyRoute } from '@/components/JourneyRoute'
 
 export const Route = createFileRoute('/countries/$slug')({
   loader: ({ params }) => {
@@ -73,8 +72,6 @@ function CountryPage() {
           </dl>
         </div>
       </section>
-
-      <JourneyRoute destination={c.name} destinationCode={c.code} activeStep={1} />
 
       <section className="mx-auto grid max-w-7xl gap-12 px-6 py-20 lg:grid-cols-[1.3fr_1fr]">
         <div className="space-y-10">
