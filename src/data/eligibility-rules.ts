@@ -165,7 +165,7 @@ export const eligibilityRules: EligibilityRules = {
   bands: [
     { min: 75, label: 'Many checklist factors align', tone: 'great', message: 'Your answers align with more of the selected factors in this preliminary checklist. Review the official rules for the specific route.' },
     { min: 60, label: 'Several checklist factors align', tone: 'good', message: 'Your answers align with several selected checklist factors. A full route-specific review is still needed.' },
-    { min: 45, label: 'Some factors need review', tone: 'fair', message: 'Some answers fall below this site's preliminary checklist targets. Review the destination and visa-route requirements before deciding next steps.' },
+    { min: 45, label: 'Some factors need review', tone: 'fair', message: 'Some answers fall below this site\'s preliminary checklist targets. Review the destination and visa-route requirements before deciding next steps.' },
     { min: 0, label: 'Review profile details', tone: 'low', message: 'This checklist found gaps in some selected profile factors. A case review may identify other information or routes to consider.' },
   ],
 }
