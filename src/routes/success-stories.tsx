@@ -5,9 +5,15 @@ import { Eyebrow, PageHero } from '@/components/Section'
 import { cn, img } from '@/lib/utils'
 import { getPublicContent } from '@/lib/public-functions'
 
+import { createPageSeo } from '@/lib/seo'
+
 export const Route = createFileRoute('/success-stories')({
   loader: () => getPublicContent(),
-  head: () => ({ meta: [{ title: 'Visa Approvals & Testimonials · British Education and Immigration' }] }),
+  head: () => createPageSeo({
+    title: 'Visa Success Stories | British Education Sangaria',
+    description: 'Read recent student and family visa stories from British Education and Immigration clients in Sangaria and nearby towns.',
+    path: '/success-stories',
+  }),
   component: SuccessPage,
 })
 
