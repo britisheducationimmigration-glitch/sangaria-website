@@ -6,8 +6,14 @@ import { CountryFlag } from '@/components/CountryFlag'
 import { countries } from '@/data/fixtures'
 import { visaGuidance } from '@/data/visa-guidance'
 
+import { createPageSeo } from '@/lib/seo'
+
 export const Route = createFileRoute('/countries/')({
-  head: () => ({ meta: [{ title: 'Study & Visa Destinations · British Education and Immigration' }] }),
+  head: () => createPageSeo({
+    title: 'Study Destinations & Visa Fees | British Education Sangaria',
+    description: 'Compare study destinations, visa guidance, tuition ranges, living funds and intakes for international students.',
+    path: '/countries',
+  }),
   component: CountriesPage,
 })
 
