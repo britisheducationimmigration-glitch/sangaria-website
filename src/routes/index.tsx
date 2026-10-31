@@ -675,6 +675,57 @@ function Home() {
                 Study visas, PR, work permits, tourist visas and IELTS / PTE coaching for Canada, UK, Australia, USA, New Zealand, Germany and Europe —
                 all under one roof at {site.name}.
               </p>
+
+              <div className="mt-7 max-w-xl rounded-3xl border border-white/15 bg-forest-950/85 p-5 shadow-xl sm:p-6">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <span className="font-mono text-xs font-bold uppercase tracking-wide text-coral-400">Visa & Country Finder</span>
+                  <span className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-semibold text-white/75">Free Check</span>
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="min-w-0">
+                    <label htmlFor="desktop-country" className="mb-1 block text-xs font-bold text-white/80">Country</label>
+                    <div className="relative">
+                      <select id="desktop-country" aria-label="Select Country" value={selectedCountry} onChange={(event) => setSelectedCountry(event.target.value)} className="w-full appearance-none truncate rounded-xl border border-forest-900/15 bg-white py-3 pl-3 pr-8 text-sm font-bold text-forest-900 shadow-sm">
+                        <option value="canada">🇨🇦 Canada</option>
+                        <option value="uk">🇬🇧 UK</option>
+                        <option value="australia">🇦🇺 Australia</option>
+                        <option value="usa">🇺🇸 USA</option>
+                        <option value="new-zealand">🇳🇿 New Zealand</option>
+                        <option value="germany">🇩🇪 Germany</option>
+                        <option value="europe">🇪🇺 Europe</option>
+                        <option value="">Other / not sure</option>
+                      </select>
+                      <span aria-hidden="true" className="pointer-events-none absolute right-3 top-3.5 text-xs text-forest-900/60">▼</span>
+                    </div>
+                  </div>
+                  <div className="min-w-0">
+                    <label htmlFor="desktop-visa" className="mb-1 block text-xs font-bold text-white/80">Visa type</label>
+                    <div className="relative">
+                      <select id="desktop-visa" aria-label="Select Visa Type" value={selectedVisa} onChange={(event) => setSelectedVisa(event.target.value)} className="w-full appearance-none truncate rounded-xl border border-forest-900/15 bg-white py-3 pl-3 pr-8 text-sm font-bold text-forest-900 shadow-sm">
+                        <option value="study">🎓 Study Visa</option>
+                        <option value="pr">🏛️ PR / Immigration</option>
+                        <option value="work">💼 Work Permit</option>
+                        <option value="tourist">✈️ Tourist Visa</option>
+                        <option value="coaching">📚 IELTS / PTE</option>
+                      </select>
+                      <span aria-hidden="true" className="pointer-events-none absolute right-3 top-3.5 text-xs text-forest-900/60">▼</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {selectedCountry ? (
+                    <Link to="/countries/$slug" params={{ slug: selectedCountry }} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-coral-500 px-4 py-3 text-sm font-extrabold text-white shadow-lg transition hover:bg-coral-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-400">
+                      Explore {countries.find((country) => country.slug === selectedCountry)?.name ?? 'Country'} Guide <ArrowRight aria-hidden="true" className="size-4 shrink-0" />
+                    </Link>
+                  ) : (
+                    <Link to="/countries" className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-coral-500 px-4 py-3 text-sm font-extrabold text-white shadow-lg transition hover:bg-coral-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-400">
+                      Browse destinations <ArrowRight aria-hidden="true" className="size-4 shrink-0" />
+                    </Link>
+                  )}
+                  <Link to="/eligibility" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-400">Eligibility check</Link>
+                  <Link to="/contact" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-400">Contact</Link>
+                </div>
+              </div>
             </div>
 
             <div className="relative mx-auto w-full max-w-md lg:max-w-none">
