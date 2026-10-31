@@ -11,6 +11,7 @@ import { site } from '@/data/site'
 import { img } from '@/lib/utils'
 import { getPublicContent } from '@/lib/public-functions'
 import { BoardingPassGenerator } from '@/components/BoardingPassGenerator'
+import { JourneyRoute } from '@/components/JourneyRoute'
 import { FamilyCashflowPlanner } from '@/components/FamilyCashflowPlanner'
 
 export const Route = createFileRoute('/')({ loader: () => getPublicContent(), component: Home })
@@ -253,6 +254,8 @@ function Home() {
             </div>
           </div>
         </section>
+
+        <JourneyRoute destination="your next destination" destinationCode="WORLD" activeStep={0} />
 
         {/* STEP 3: EDITORIAL "WHY CHOOSE US" TRUST STRIP (Mobile) */}
         <section className="bg-sand border-b border-forest-900/10 py-8 px-5">
@@ -760,6 +763,8 @@ function Home() {
             </div>
           </div>
         </section>
+
+      <JourneyRoute destination="your next destination" destinationCode="WORLD" activeStep={0} />
 
       {/* DESKTOP FIXED HEADER + JUMP TO BAR COMBO */}
         {/* DESKTOP JUMP TO BAR */}
