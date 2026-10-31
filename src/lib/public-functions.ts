@@ -2,7 +2,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { execute, jsonArray, queryRows } from './db.server'
 import type { PublicContent, PublicCoachingContent, SiteSettings } from './content-types'
 import { approvals as fixtureApprovals, coachingSchedule as fixtureCoachingSchedule, posts as fixturePosts, testimonials as fixtureTestimonials } from '@/data/fixtures'
-import { defaultCashflowData, type CountryCashflow } from '@/data/cashflow'
+import { defaultCashflowData, mergeNewCashflowDestinations, type CountryCashflow } from '@/data/cashflow'
 
 const defaultSettings: SiteSettings = {
   popupEnabled: true,
@@ -158,7 +158,7 @@ export const getPublicCashflow = createServerFn({ method: 'GET' }).handler(async
 
   try {
     const parsed = JSON.parse(raw) as unknown
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed as CountryCashflow[] : defaultCashflowData
+    return Array.isArray(parsed) && parsed.length > 0 ? mergeNewCashflowDestinations(parsed as CountryCashflow[]) : defaultCashflowData
   } catch {
     return defaultCashflowData
   }
