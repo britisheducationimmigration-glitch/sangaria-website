@@ -9,7 +9,7 @@ export type VisaGuidance = {
 
 export const visaGuidance: Record<string, VisaGuidance> = {
   canada: {
-    lastVerified: '26 October 2026',
+    lastVerified: '31 October 2026',
     feeRows: [
       { label: 'Study permit', value: 'CAD 150' },
       { label: 'Visitor visa', value: 'CAD 100' },
@@ -19,21 +19,27 @@ export const visaGuidance: Record<string, VisaGuidance> = {
     ],
     feeSummary: 'IRCC government fees shown above are route-specific. Visitor applications by a family of 5+ are capped at CAD 500 when applying together. Express Entry CAD 1,590 includes the right of permanent residence fee; the lower amount without it is CAD 990. A spouse/partner and dependent children have separate fees.',
     requirements: [
-      'Study: acceptance from a Designated Learning Institution, a provincial/territorial attestation letter or Quebec Acceptance Certificate in most cases, proof of tuition and living funds, valid travel documents, and health/character evidence where required.',
+      'Study: acceptance from a Designated Learning Institution, a provincial/territorial attestation letter or Quebec Acceptance Certificate in most cases, proof of tuition and living funds, valid travel documents, and health/character evidence where required. For applications made on or after 1 September 2026, IRCC lists CAD 23,448 in first-year living funds for one person outside Quebec, excluding tuition and transportation; family size and Quebec rules change the amount.',
       'Visitor: valid travel document, clear purpose, enough funds, strong ties such as work/home/family, and proof that you will leave Canada at the end of the visit.',
+      'Post-study work: a PGWP is not automatic. Eligibility and duration depend on the eligible school and programme, application timing, language requirements and, for some programmes, field of study.',
       'Work: eligibility depends on an employer-specific or open permit. Employer-specific permits generally need a job offer; open permits have their own eligibility rules.',
       'Express Entry: approved language results and program-specific skilled work experience under CEC, FSW or FST, followed by a personalized document checklist after invitation.',
+      'Spouse open work permits are limited to eligible cases, including spouses of students in master’s programmes of at least 16 months, doctoral programmes, and selected professional programmes. Check current IRCC criteria for your case.',
     ],
     caveat: 'Fees, biometrics, medical exams, police certificates, translations, employer compliance fees and visa-centre costs can change or apply separately. Eligibility or an invitation does not guarantee approval.',
     sources: [
       { label: 'IRCC fee list', url: 'https://ircc.canada.ca/english/information/fees/fees.asp' },
-      { label: 'Study permit documents', url: 'https://www.canada.ca/en/immigration-refugees-citizenship/services/study-canada/study-permit/get-documents.html' },
+      { label: 'Study permit proof of funds', url: 'https://www.canada.ca/en/immigration-refugees-citizenship/services/study-canada/study-permit/get-documents/financial-support.html' },
+      { label: 'PAL/TAL requirements and exceptions', url: 'https://www.canada.ca/en/immigration-refugees-citizenship/services/study-canada/study-permit/get-documents/provincial-attestation-letter.html' },
+      { label: 'Choosing a Canadian school and its English requirements', url: 'https://www.canada.ca/en/immigration-refugees-citizenship/services/study-canada/study-permit/prepare.html' },
+      { label: 'Post-graduation work permit eligibility', url: 'https://www.canada.ca/en/immigration-refugees-citizenship/services/study-canada/work/after-graduation/eligibility.html' },
+      { label: 'Spouse open work permits', url: 'https://www.canada.ca/en/immigration-refugees-citizenship/services/study-canada/work/help-your-spouse-common-law-partner-work-canada.html' },
       { label: 'Visitor visa eligibility', url: 'https://www.canada.ca/en/immigration-refugees-citizenship/services/visit-canada/eligibility.html' },
-      { label: 'Express Entry eligibility', url: 'https://www.canada.ca/en/immigration-refugees-citizenship/services/immigrate-canada/express-entry/eligibility.html' },
+      { label: 'Express Entry eligibility', url: 'https://www.canada.ca/en/immigration-refugees-citizenship/services/immigrate-canada/express-entry/who-can-apply.html' },
     ],
   },
   uk: {
-    lastVerified: '26 October 2026',
+    lastVerified: '31 October 2026',
     feeRows: [
       { label: 'Student visa', value: '£558' },
       { label: 'Standard Visitor, 6 months', value: '£135' },
@@ -43,7 +49,7 @@ export const visaGuidance: Record<string, VisaGuidance> = {
     ],
     feeSummary: 'The Skilled Worker amount depends on duration, location and occupation; Immigration Health Surcharge is separate and calculated from visa length. Eligible Health and Care Worker applicants can be exempt from IHS.',
     requirements: [
-      'Student: licensed student sponsor, Confirmation of Acceptance for Studies, English and financial requirements, and parental consent evidence for applicants aged 16 or 17.',
+      'Student: licensed student sponsor, Confirmation of Acceptance for Studies, English and financial requirements, and parental consent evidence for applicants aged 16 or 17. GOV.UK lists living funds of £1,171 per month outside London or £1,529 in London, for up to 9 months; exemptions and personal circumstances apply.',
       'Visitor: permitted activity, valid travel document, genuine temporary visit, funds for the stay and return journey, and intention to leave; work is generally not allowed.',
       'Visitor evidence can include employment/study, bank statements, sponsor relationship and lawful UK sponsor status. Documents not in English or Welsh need full verifiable translations.',
       'Skilled Worker: approved employer, Certificate of Sponsorship, eligible occupation, required salary, English ability and usually £1,270 held for 28 days unless exempt or certified by the employer.',
@@ -52,6 +58,10 @@ export const visaGuidance: Record<string, VisaGuidance> = {
     sources: [
       { label: 'Student visa', url: 'https://www.gov.uk/student-visa' },
       { label: 'Student documents', url: 'https://www.gov.uk/student-visa/documents-you-must-provide' },
+      { label: 'Student visa living costs', url: 'https://www.gov.uk/student-visa/money' },
+      { label: 'Student visa English requirements', url: 'https://www.gov.uk/student-visa/knowledge-of-english' },
+      { label: 'Home Office visa fee table', url: 'https://www.gov.uk/government/publications/visa-regulations-revised-table/home-office-immigration-and-nationality-fees-8-april-2026' },
+      { label: 'Graduate visa', url: 'https://www.gov.uk/graduate-visa' },
       { label: 'Standard Visitor', url: 'https://www.gov.uk/standard-visitor' },
       { label: 'Skilled Worker costs', url: 'https://www.gov.uk/skilled-worker-visa/how-much-it-costs' },
       { label: 'Immigration Health Surcharge', url: 'https://www.gov.uk/healthcare-immigration-application/how-much-pay' },

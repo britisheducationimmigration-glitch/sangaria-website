@@ -9,7 +9,7 @@ import { evaluate, factorsFor, type Answers } from '@/lib/eligibility'
 import { cn } from '@/lib/utils'
 
 export const Route = createFileRoute('/eligibility')({
-  head: () => ({ meta: [{ title: 'Free Visa Eligibility Checker · British Education and Immigration' }] }),
+  head: () => ({ meta: [{ title: 'Free Visa Profile Check · British Education and Immigration' }] }),
   component: EligibilityPage,
 })
 
@@ -40,15 +40,14 @@ function EligibilityPage() {
     <section className="relative min-h-[80vh] overflow-hidden bg-forest-900 bg-grain py-16 text-white md:py-24">
       <div className="mx-auto grid max-w-7xl gap-12 px-6 lg:grid-cols-[0.8fr_1.2fr]">
         <div>
-          <Eyebrow light>Free eligibility check</Eyebrow>
+          <Eyebrow light>Preliminary profile check</Eyebrow>
           <h1 className="mt-6 text-5xl font-extrabold leading-[0.95] md:text-6xl">
-            Where can <span className="text-coral-500">you</span> go?
+            Where might your <span className="text-coral-500">profile</span> fit?
           </h1>
           <p className="mt-6 max-w-md text-lg text-forest-100/75">
-            Answer a few quick questions for a preliminary profile estimate based on selected factors for Canada, UK, Australia, USA, New Zealand, Germany and
-            Europe. It is a screening aid, not a legal eligibility assessment.
+            Answer a few quick questions for a preliminary profile checklist across Canada, UK, Australia, USA, New Zealand, Germany and Europe. It compares only the selected factors shown here; it does not assess every legal requirement for a visa route.
           </p>
-          <p className="mt-8 font-mono text-xs text-forest-100/50">Rules last updated · {rules.updatedAt}</p>
+          <p className="mt-8 font-mono text-xs text-forest-100/50">Checklist framework reviewed · {rules.updatedAt}</p>
           {goal && (
             <div className="mt-10">
               <div className="flex justify-between text-xs uppercase tracking-widest text-forest-100/60">
@@ -132,27 +131,33 @@ function EligibilityPage() {
                 </div>
               </div>
               <h3 className="mt-10 mb-4 font-display text-lg font-bold">
-                Preliminary country matches for {rules.goals.find((g) => g.id === goal)?.label.toLowerCase()}
+                Preliminary profile matches for {rules.goals.find((g) => g.id === goal)?.label.toLowerCase()}
               </h3>
-              <p className="mb-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm leading-relaxed text-forest-900/75">This estimate is based only on your answers and the checklist factors shown here. It is not an official eligibility decision and does not guarantee a visa or approval. Rules change; confirm current criteria with the linked government authority and get a full case review before applying.</p>
+              <p className="mb-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm leading-relaxed text-forest-900/75">This is general guidance based on your answers and selected factors. It does not determine legal eligibility, assess every requirement for a visa route, predict an application outcome or guarantee approval. The score and thresholds are internal to this site, not government criteria or visa points. Requirements change; review each destination’s official sources and get a case-specific assessment before applying.</p>
               <ul className="grid gap-3">
                 {result.countries.map((c) => (
                   <li
                     key={c.slug}
-                    className={cn('flex items-center gap-4 rounded-2xl p-4 ring-1', c.eligible ? 'bg-forest-50 ring-forest-600/30' : 'bg-white ring-forest-900/10')}
+                    className={cn('flex items-center gap-4 rounded-2xl p-4 ring-1', c.matchesChecklist ? 'bg-forest-50 ring-forest-600/30' : 'bg-white ring-forest-900/10')}
                   >
                     <CountryFlag flag={c.flag} country={c.name} className="h-7 w-10 shrink-0 shadow-sm" />
                     <div className="flex-1">
                       <p className="font-bold">{c.name}</p>
-                      <p className="text-sm text-forest-900/60">
-                        {c.eligible
-                          ? (c.note ?? 'Your answers match this checklist’s typical factors; a full case review is still needed.')
-                          : c.unmet.length
-                            ? `Improve: ${c.unmet.join(', ')}`
-                            : `Needs ${c.gap}% more on your profile score`}
+                      <p className="mt-1 text-xs font-bold uppercase tracking-wide text-forest-900/60">
+                        {c.matchesChecklist ? 'Preliminary profile match' : 'Further review needed'}
                       </p>
+                      <p className="mt-1 text-sm text-forest-900/60">
+                        {c.matchesChecklist
+                          ? 'More of this site’s selected profile factors align with its internal checklist.'
+                          : c.unmet.length
+                            ? `Selected internal checklist thresholds were not met for: ${c.unmet.join(', ')}.`
+                            : 'This site’s internal checklist score did not reach its screening threshold.'}
+                      </p>
+                      <Link to="/countries/$slug" params={{ slug: c.slug }} className="mt-2 inline-block text-sm font-bold text-coral-600 hover:underline">
+                        Review destination guidance & official sources →
+                      </Link>
                     </div>
-                    {c.eligible ? <CheckCircle2 className="size-6 text-forest-600" /> : <XCircle className="size-6 text-coral-500/70" />}
+                    {c.matchesChecklist ? <CheckCircle2 aria-hidden="true" className="size-6 shrink-0 text-forest-600" /> : <XCircle aria-hidden="true" className="size-6 shrink-0 text-coral-500/70" />}
                   </li>
                 ))}
               </ul>
@@ -162,11 +167,11 @@ function EligibilityPage() {
                 <EnquiryForm
                   source="eligibility"
                   compact
-                  summary={`Goal: ${goal} | Score: ${result.score}% | Eligible: ${
+                  summary={`Goal: ${goal} | Profile checklist score: ${result.score}% | Preliminary matches: ${
                     result.countries
-                      .filter((c) => c.eligible)
+                      .filter((c) => c.matchesChecklist)
                       .map((c) => c.name)
-                      .join(', ') || 'none'
+                      .join(', ') || 'none from this checklist'
                   } | Answers: ${Object.entries(answers)
                     .map(([k, v]) => `${k}=${v}`)
                     .join(', ')}`}
@@ -177,7 +182,7 @@ function EligibilityPage() {
                   <RotateCcw className="size-4" /> Start again
                 </button>
                 <Link to="/coaching" className="text-sm font-bold text-coral-600">
-                  Boost your score with IELTS / PTE coaching →
+                  Explore IELTS / PTE coaching →
                 </Link>
               </div>
             </div>
@@ -211,7 +216,7 @@ function ScoreRing({ score }: { score: number }) {
       <div className="absolute inset-0 grid place-items-center text-center">
         <span>
           <span className="block font-display text-4xl font-extrabold">{score}</span>
-          <span className="text-[10px] uppercase tracking-widest text-forest-900/50">Preliminary score</span>
+          <span className="text-[10px] uppercase tracking-widest text-forest-900/50">Site checklist score</span>
         </span>
       </div>
     </div>
