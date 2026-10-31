@@ -6,41 +6,18 @@ import { countries } from '@/data/fixtures'
 import { visaGuidance } from '@/data/visa-guidance'
 import { CountryFlag } from '@/components/CountryFlag'
 
+import { createPageSeo } from '@/lib/seo'
+
 export const Route = createFileRoute('/countries/$slug')({
   loader: ({ params }) => {
     const country = countries.find((c) => c.slug === params.slug)
     if (!country) throw notFound()
     return { country }
   },
-  head: ({ loaderData }) => ({
-    meta: [
-      { title: `${loaderData.country.name} Visa & Study · British Education and Immigration` },
-      {
-        name: 'description',
-        content: `Apply for ${loaderData.country.name} study visa, PR, and work permit guidance with British Education and Immigration in Sangaria.`,
-      },
-      { name: 'robots', content: 'index,follow' },
-      { property: 'og:title', content: `${loaderData.country.name} Visa & Study · British Education and Immigration` },
-      {
-        property: 'og:description',
-        content: `Get expert visa guidance for ${loaderData.country.name}, including eligibility, fees, documentation, and counselling support in Sangaria.`,
-      },
-      {
-        property: 'og:url',
-        content: `https://britisheducationandimmigration.com/countries/${loaderData.country.slug}`,
-      },
-      { name: 'twitter:title', content: `${loaderData.country.name} Visa & Study · British Education and Immigration` },
-      {
-        name: 'twitter:description',
-        content: `Explore ${loaderData.country.name} study visa and immigration guidance with expert counselling and free profile evaluation.`,
-      },
-    ],
-    links: [
-      {
-        rel: 'canonical',
-        href: `https://britisheducationandimmigration.com/countries/${loaderData.country.slug}`,
-      },
-    ],
+  head: ({ loaderData }) => createPageSeo({
+    title: `${loaderData.country.name} Study Visa & Costs | British Education`,
+    description: `Review ${loaderData.country.name} visa fees, study costs, intakes and guidance from official sources. Get free counselling in Sangaria.`,
+    path: `/countries/${loaderData.country.slug}`,
   }),
   component: CountryPage,
 })
