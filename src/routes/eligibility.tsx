@@ -8,8 +8,14 @@ import { eligibilityRules as rules, type Goal } from '@/data/eligibility-rules'
 import { evaluate, factorsFor, type Answers } from '@/lib/eligibility'
 import { cn } from '@/lib/utils'
 
+import { createPageSeo } from '@/lib/seo'
+
 export const Route = createFileRoute('/eligibility')({
-  head: () => ({ meta: [{ title: 'Free Visa Profile Check · British Education and Immigration' }] }),
+  head: () => createPageSeo({
+    title: 'Free Visa Profile Check | British Education Sangaria',
+    description: 'Take a quick preliminary visa profile check. Results are general guidance, not an immigration decision or approval guarantee.',
+    path: '/eligibility',
+  }),
   component: EligibilityPage,
 })
 
