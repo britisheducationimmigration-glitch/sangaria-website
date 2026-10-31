@@ -7,7 +7,7 @@ import { Logo } from './Logo'
 export function SiteHeader() {
   const [open, setOpen] = useState(false)
   return (
-    <header className="sticky top-0 z-40">
+    <header className="sticky top-0 z-50">
       <div className="hidden bg-forest-950 text-[13px] text-forest-100 md:block">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-2">
           <span>📍 Sangaria, Hanumangarh · {site.hours}</span>
