@@ -32,10 +32,10 @@ export function evaluate(rules: EligibilityRules, goal: Goal, answers: Answers) 
         .filter(([id]) => factors.some((f) => f.id === id))
         .filter(([id, need]) => (pointsById[id] ?? 0) < (need ?? 0))
         .map(([id]) => factors.find((f) => f.id === id)!.label)
-      const eligible = score >= min && unmet.length === 0
-      return { ...c, min, eligible, unmet, gap: Math.max(0, min - score) }
+      const matchesChecklist = score >= min && unmet.length === 0
+      return { ...c, min, matchesChecklist, unmet, gap: Math.max(0, min - score) }
     })
-    .sort((a, b) => Number(b.eligible) - Number(a.eligible) || a.gap - b.gap)
+    .sort((a, b) => Number(b.matchesChecklist) - Number(a.matchesChecklist) || a.gap - b.gap)
 
   return { score, earned, max, band, countries }
 }
