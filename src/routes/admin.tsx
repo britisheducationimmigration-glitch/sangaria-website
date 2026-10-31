@@ -126,56 +126,93 @@ function PasswordInput({ value, onChange, className, placeholder, required, minL
 }
 
 function AdminAuthCard({ onLoginSuccess }: { onLoginSuccess: () => Promise<void> }) {
-  const [mode, setMode] = useState<'login' | 'forgot'>('login')
+  const [mode, setMode] = useState<'login' | 'forgot' | 'pin'>('login')
   const [identifier, setIdentifier] = useState('admin@britisheducationandimmigration.com')
   const [password, setPassword] = useState('')
+  const [otpEmail, setOtpEmail] = useState('')
+  const [otpStep, setOtpStep] = useState<'enter_email' | 'enter_otp'>('enter_email')
+  const [otpCode, setOtpCode] = useState('')
+  const [newOtpPassword, setNewOtpPassword] = useState('')
   const [recoveryEmail, setRecoveryEmail] = useState('admin@britisheducationandimmigration.com')
   const [recoveryKey, setRecoveryKey] = useState('')
-  const [newPassword, setNewPassword] = useState('')
+  const [newPinPassword, setNewPinPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null)
 
-  async function handleLogin(e: FormEvent) {
-    e.preventDefault()
+  async function handleLogin(event: FormEvent) {
+    event.preventDefault()
     setBusy(true)
     setMessage(null)
     try {
-      const res = await fetch('/admin/oauth/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier, password }),
-      })
-      const data = (await res.json()) as { ok?: boolean; error?: string }
-      if (!res.ok || !data.ok) {
-        throw new Error(data.error || 'Invalid username or password')
-      }
+      const response = await fetch('/admin/oauth/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier, password }) })
+      const data = (await response.json()) as { ok?: boolean; error?: string }
+      if (!response.ok || !data.ok) throw new Error(data.error || 'Invalid username or password')
       await onLoginSuccess()
-    } catch (err) {
-      setMessage({ text: err instanceof Error ? err.message : 'Login failed', type: 'error' })
+    } catch (error) {
+      setMessage({ text: error instanceof Error ? error.message : 'Login failed', type: 'error' })
     } finally {
       setBusy(false)
     }
   }
 
-  async function handleReset(e: FormEvent) {
-    e.preventDefault()
+  async function requestOtp() {
     setBusy(true)
     setMessage(null)
     try {
-      const res = await fetch('/admin/oauth/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'forgot', email: recoveryEmail, recoveryKey, newPassword }),
-      })
-      const data = (await res.json()) as { ok?: boolean; message?: string; error?: string }
-      if (!res.ok || !data.ok) {
-        throw new Error(data.error || 'Password reset failed')
-      }
-      setMessage({ text: data.message || 'Password updated successfully! Please sign in with your new password.', type: 'success' })
+      const response = await fetch('/admin/oauth/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'send-otp', email: otpEmail }) })
+      const data = (await response.json()) as { ok?: boolean; message?: string; error?: string }
+      if (!response.ok || !data.ok) throw new Error(data.error || 'Failed to send OTP')
+      setOtpStep('enter_otp')
+      setOtpCode('')
+      setMessage({ text: data.message || 'OTP sent. Check your inbox or spam folder.', type: 'success' })
+    } catch (error) {
+      setMessage({ text: error instanceof Error ? error.message : 'Failed to send OTP', type: 'error' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleSendOtp(event: FormEvent) {
+    event.preventDefault()
+    await requestOtp()
+  }
+
+  async function handleVerifyOtp(event: FormEvent) {
+    event.preventDefault()
+    setBusy(true)
+    setMessage(null)
+    try {
+      const response = await fetch('/admin/oauth/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'verify-otp', email: otpEmail, otp: otpCode, newPassword: newOtpPassword }) })
+      const data = (await response.json()) as { ok?: boolean; message?: string; error?: string }
+      if (!response.ok || !data.ok) throw new Error(data.error || 'Failed to verify OTP')
+      setMessage({ text: data.message || 'Password reset successfully. Sign in with your new password.', type: 'success' })
       setMode('login')
       setPassword('')
-    } catch (err) {
-      setMessage({ text: err instanceof Error ? err.message : 'Reset failed', type: 'error' })
+      setOtpStep('enter_email')
+      setOtpCode('')
+      setNewOtpPassword('')
+    } catch (error) {
+      setMessage({ text: error instanceof Error ? error.message : 'Failed to verify OTP', type: 'error' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handlePinReset(event: FormEvent) {
+    event.preventDefault()
+    setBusy(true)
+    setMessage(null)
+    try {
+      const response = await fetch('/admin/oauth/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'forgot', email: recoveryEmail, recoveryKey, newPassword: newPinPassword }) })
+      const data = (await response.json()) as { ok?: boolean; message?: string; error?: string }
+      if (!response.ok || !data.ok) throw new Error(data.error || 'Password reset failed')
+      setMessage({ text: data.message || 'Password reset successfully with the Master PIN. Sign in now.', type: 'success' })
+      setMode('login')
+      setPassword('')
+      setRecoveryKey('')
+      setNewPinPassword('')
+    } catch (error) {
+      setMessage({ text: error instanceof Error ? error.message : 'Master PIN reset failed', type: 'error' })
     } finally {
       setBusy(false)
     }
@@ -189,137 +226,85 @@ function AdminAuthCard({ onLoginSuccess }: { onLoginSuccess: () => Promise<void>
           <h1 className="mt-1 text-2xl font-extrabold">British Education & Immigration</h1>
         </div>
       </div>
-
       <div className="mt-6 flex rounded-full bg-forest-950 p-1 text-xs font-bold">
-        <button
-          type="button"
-          onClick={() => { setMode('login'); setMessage(null) }}
-          className={`flex-1 rounded-full py-2.5 transition ${mode === 'login' ? 'bg-coral-500 text-white shadow' : 'text-forest-100/60 hover:text-white'}`}
-        >
-          Sign in
-        </button>
-        <button
-          type="button"
-          onClick={() => { setMode('forgot'); setMessage(null) }}
-          className={`flex-1 rounded-full py-2.5 transition ${mode === 'forgot' ? 'bg-coral-500 text-white shadow' : 'text-forest-100/60 hover:text-white'}`}
-        >
-          Forgot password?
-        </button>
+        <button type="button" onClick={() => { setMode('login'); setMessage(null) }} className={'flex-1 rounded-full py-2.5 transition ' + (mode === 'login' ? 'bg-coral-500 text-white shadow' : 'text-forest-100/60 hover:text-white')}>Sign in</button>
+        <button type="button" onClick={() => { setMode('forgot'); setOtpStep('enter_email'); setMessage(null) }} className={'flex-1 rounded-full py-2.5 transition ' + (mode !== 'login' ? 'bg-coral-500 text-white shadow' : 'text-forest-100/60 hover:text-white')}>Forgot password?</button>
       </div>
-
-      {message && (
-        <div className={`mt-5 rounded-2xl p-4 text-xs font-bold leading-relaxed ${message.type === 'success' ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/40' : 'bg-red-500/20 text-red-300 ring-1 ring-red-500/40'}`}>
-          {message.text}
-        </div>
-      )}
-
+      {message && <div className={'mt-5 rounded-2xl p-4 text-xs font-bold leading-relaxed ' + (message.type === 'success' ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/40' : 'bg-red-500/20 text-red-300 ring-1 ring-red-500/40')}>{message.text}</div>}
       {mode === 'login' ? (
         <form onSubmit={handleLogin} className="mt-6 space-y-4">
           <div>
-            <label className="block text-xs font-bold text-forest-100/70 mb-1.5">Username or Email</label>
-            <input
-              type="text"
-              required
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-              className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:bg-white/20 focus:outline-none focus:ring-coral-400"
-              placeholder="admin@britisheducationandimmigration.com"
-            />
+            <label className="mb-1.5 block text-xs font-bold text-forest-100/70">Username or Email</label>
+            <input type="text" required value={identifier} onChange={(event) => setIdentifier(event.target.value)} autoComplete="username" className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:bg-white/20 focus:outline-none focus:ring-coral-400" placeholder="admin@britisheducationandimmigration.com" />
           </div>
           <div>
-            <div className="flex items-center justify-between mb-1.5">
+            <div className="mb-1.5 flex items-center justify-between">
               <label className="text-xs font-bold text-forest-100/70">Password</label>
-              <button
-                type="button"
-                onClick={() => { setMode('forgot'); setMessage(null) }}
-                className="text-[11px] font-bold text-coral-400 hover:underline"
-              >
-                Forgot?
-              </button>
+              <button type="button" onClick={() => { setMode('forgot'); setOtpStep('enter_email'); setMessage(null) }} className="text-[11px] font-bold text-coral-400 hover:underline">Forgot?</button>
             </div>
-            <PasswordInput
-              value={password}
-              onChange={setPassword}
-              required
-              autoComplete="current-password"
-              ariaLabel="Admin password"
-              className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:bg-white/20 focus:outline-none focus:ring-coral-400"
-              placeholder="Enter admin password"
-              toggleClassName="text-white/60 hover:text-white"
-            />
+            <PasswordInput value={password} onChange={setPassword} required autoComplete="current-password" ariaLabel="Admin password" className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:bg-white/20 focus:outline-none focus:ring-coral-400" placeholder="Enter admin password" toggleClassName="text-white/60 hover:text-white" />
           </div>
-          <button
-            type="submit"
-            disabled={busy}
-            className="w-full mt-2 rounded-full bg-coral-500 py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-coral-600 disabled:opacity-50"
-          >
-            {busy ? 'Verifying…' : 'Sign in to Dashboard →'}
-          </button>
-          
+          <button type="submit" disabled={busy} className="mt-2 w-full rounded-full bg-coral-500 py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-coral-600 disabled:opacity-50">{busy ? 'Verifying…' : 'Sign in to Dashboard →'}</button>
         </form>
+      ) : mode === 'forgot' ? (
+        otpStep === 'enter_email' ? (
+          <form onSubmit={handleSendOtp} className="mt-6 space-y-4">
+            <p className="text-xs leading-relaxed text-forest-100/70">Enter your registered admin email to receive a 6-digit OTP. It expires after 10 minutes.</p>
+            <div>
+              <label className="mb-1.5 block text-xs font-bold text-forest-100/70">Registered Email</label>
+              <input type="email" required value={otpEmail} onChange={(event) => setOtpEmail(event.target.value)} autoComplete="email" className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:outline-none focus:ring-coral-400" placeholder="Enter your admin email" />
+            </div>
+            <button type="submit" disabled={busy || !otpEmail.trim()} className="mt-2 w-full rounded-full bg-coral-500 py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-coral-600 disabled:opacity-50">{busy ? 'Sending OTP…' : 'Send 6-Digit OTP to Email →'}</button>
+            <div className="border-t border-white/10 pt-3 text-center">
+              <button type="button" onClick={() => { setRecoveryEmail(otpEmail.trim() || 'admin@britisheducationandimmigration.com'); setMode('pin'); setMessage(null) }} className="text-xs font-bold text-coral-400 hover:text-coral-300 hover:underline">Email access nahi hai? Master PIN se reset karein →</button>
+            </div>
+            <button type="button" onClick={() => { setMode('login'); setMessage(null) }} className="w-full text-center text-xs font-bold text-forest-100/60 hover:text-white">← Back to sign in</button>
+          </form>
+        ) : (
+          <form onSubmit={handleVerifyOtp} className="mt-6 space-y-4">
+            <div className="flex items-center justify-between gap-3 text-xs text-forest-100/70">
+              <span className="min-w-0 break-all">Sent to: <b>{otpEmail}</b></span>
+              <button type="button" onClick={() => { setOtpStep('enter_email'); setMessage(null) }} className="shrink-0 text-coral-400 hover:underline">Change</button>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-bold text-forest-100/70">Enter 6-Digit OTP</label>
+              <input type="text" required maxLength={6} pattern="[0-9]{6}" inputMode="numeric" autoComplete="one-time-code" value={otpCode} onChange={(event) => setOtpCode(event.target.value.replace(/\D/g, ''))} className="w-full rounded-2xl bg-white/10 px-4 py-3 text-center text-xl font-mono font-bold tracking-widest text-white ring-1 ring-white/10 focus:outline-none focus:ring-coral-400" placeholder="123456" aria-label="6-digit password reset code" />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-bold text-forest-100/70">New Password (minimum 6 characters)</label>
+              <PasswordInput value={newOtpPassword} onChange={setNewOtpPassword} required minLength={6} autoComplete="new-password" ariaLabel="New admin password" className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:outline-none focus:ring-coral-400" placeholder="Enter new password" toggleClassName="text-white/60 hover:text-white" />
+            </div>
+            <button type="submit" disabled={busy || otpCode.length !== 6 || newOtpPassword.length < 6} className="mt-2 w-full rounded-full bg-coral-500 py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-coral-600 disabled:opacity-50">{busy ? 'Verifying OTP…' : 'Verify OTP & Reset Password'}</button>
+            <div className="flex items-center justify-between pt-1 text-xs">
+              <button type="button" onClick={() => void requestOtp()} disabled={busy} className="font-bold text-coral-400 hover:underline disabled:opacity-50">{busy ? 'Sending…' : 'Resend OTP'}</button>
+              <button type="button" onClick={() => { setMode('login'); setMessage(null) }} className="font-bold text-forest-100/60 hover:text-white">Cancel</button>
+            </div>
+          </form>
+        )
       ) : (
-        <form onSubmit={handleReset} className="mt-6 space-y-4">
-          <p className="text-xs leading-relaxed text-forest-100/70">
-            Enter your admin email, the master Recovery Key (Security PIN), and your new password.
-          </p>
+        <form onSubmit={handlePinReset} className="mt-6 space-y-4">
+          <p className="text-xs leading-relaxed text-forest-100/70">Master Security PIN reset. Use this fallback if you cannot access the registered admin email.</p>
           <div>
-            <label className="block text-xs font-bold text-forest-100/70 mb-1.5">Admin Email</label>
-            <input
-              type="email"
-              required
-              value={recoveryEmail}
-              onChange={(e) => setRecoveryEmail(e.target.value)}
-              className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:outline-none focus:ring-coral-400"
-              placeholder="admin@britisheducationandimmigration.com"
-            />
+            <label className="mb-1.5 block text-xs font-bold text-forest-100/70">Admin Email</label>
+            <input type="email" required value={recoveryEmail} onChange={(event) => setRecoveryEmail(event.target.value)} autoComplete="email" className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:outline-none focus:ring-coral-400" placeholder="Enter admin email" />
           </div>
           <div>
-            <label className="block text-xs font-bold text-forest-100/70 mb-1.5">Master Recovery Key (Security PIN)</label>
-            <input
-              type="text"
-              required
-              value={recoveryKey}
-              onChange={(e) => setRecoveryKey(e.target.value)}
-              className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:outline-none focus:ring-coral-400"
-              placeholder="e.g. Sangaria@Reset2026"
-            />
-            
+            <label className="mb-1.5 block text-xs font-bold text-forest-100/70">Master Recovery Key (Security PIN)</label>
+            <input type="text" required value={recoveryKey} onChange={(event) => setRecoveryKey(event.target.value)} autoComplete="off" className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:outline-none focus:ring-coral-400" placeholder="Enter recovery key" />
           </div>
           <div>
-            <label className="block text-xs font-bold text-forest-100/70 mb-1.5">New Password (minimum 6 characters)</label>
-            <PasswordInput
-              value={newPassword}
-              onChange={setNewPassword}
-              required
-              minLength={6}
-              autoComplete="new-password"
-              ariaLabel="New admin password"
-              className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:outline-none focus:ring-coral-400"
-              placeholder="Enter new password"
-              toggleClassName="text-white/60 hover:text-white"
-            />
+            <label className="mb-1.5 block text-xs font-bold text-forest-100/70">New Password (minimum 6 characters)</label>
+            <PasswordInput value={newPinPassword} onChange={setNewPinPassword} required minLength={6} autoComplete="new-password" ariaLabel="New password for Master PIN reset" className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:outline-none focus:ring-coral-400" placeholder="Enter new password" toggleClassName="text-white/60 hover:text-white" />
           </div>
-          <button
-            type="submit"
-            disabled={busy}
-            className="w-full mt-2 rounded-full bg-coral-500 py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-coral-600 disabled:opacity-50"
-          >
-            {busy ? 'Updating…' : 'Reset & Save Password'}
-          </button>
-          <button
-            type="button"
-            onClick={() => { setMode('login'); setMessage(null) }}
-            className="w-full text-center text-xs font-bold text-forest-100/60 hover:text-white"
-          >
-            ← Back to sign in
-          </button>
+          <button type="submit" disabled={busy} className="mt-2 w-full rounded-full bg-coral-500 py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-coral-600 disabled:opacity-50">{busy ? 'Updating…' : 'Reset & Save Password'}</button>
+          <div className="flex justify-between pt-1 text-xs">
+            <button type="button" onClick={() => { setMode('forgot'); setOtpStep('enter_email'); setMessage(null) }} className="font-bold text-coral-400 hover:underline">← Use email OTP</button>
+            <button type="button" onClick={() => { setMode('login'); setMessage(null) }} className="font-bold text-forest-100/60 hover:text-white">Cancel</button>
+          </div>
         </form>
       )}
-
       <div className="mt-6 border-t border-white/10 pt-4 text-center">
-        <a href="/" className="text-xs font-semibold text-forest-100/60 hover:text-white">
-          ← Return to public website
-        </a>
+        <a href="/" className="text-xs font-semibold text-forest-100/60 hover:text-white">← Return to public website</a>
       </div>
     </div>
   )
@@ -770,49 +755,138 @@ function UsersPanel({ users, currentEmail, onReload, onNotice }: { users: AdminU
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
   const [role, setRole] = useState<AdminRole>('content_editor')
+  const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
+  const [resetModalUser, setResetModalUser] = useState<AdminUser | null>(null)
+  const [newStaffPassword, setNewStaffPassword] = useState('')
+
   async function save() {
+    const cleanEmail = email.trim().toLowerCase()
+    const cleanPassword = password.trim()
+    if (!cleanEmail || !cleanPassword) { onNotice('Email and initial password are required'); return }
+    if (cleanPassword.length < 6) { onNotice('Password must be at least 6 characters'); return }
     setBusy(true)
     try {
-      await saveAdminUser({ data: { email, name, role } })
+      await saveAdminUser({ data: { email: cleanEmail, name: name.trim() || cleanEmail, role, password: cleanPassword } })
       setEmail('')
       setName('')
+      setPassword('')
       await onReload()
-      onNotice('User role saved. They can now sign in with this email.')
+      onNotice('New staff user created. They can sign in with this email and password.')
     } catch (cause) {
-      onNotice(cause instanceof Error ? cause.message : 'Could not save user role.')
-    } finally { setBusy(false) }
+      onNotice(cause instanceof Error ? cause.message : 'Could not save user.')
+    } finally {
+      setBusy(false)
+    }
   }
-  async function remove(openId: string) {
-    if (!window.confirm('Remove this dashboard user?')) return
+
+  async function handleResetStaffPassword(event: FormEvent) {
+    event.preventDefault()
+    const cleanPassword = newStaffPassword.trim()
+    if (!resetModalUser || cleanPassword.length < 6) return
     setBusy(true)
-    try { await deleteAdminUser({ data: { openId } }); await onReload(); onNotice('Dashboard user removed.') }
-    catch (cause) { onNotice(cause instanceof Error ? cause.message : 'Could not remove user.') }
-    finally { setBusy(false) }
+    try {
+      await saveAdminUser({ data: { email: resetModalUser.email, name: resetModalUser.name, role: resetModalUser.role, password: cleanPassword } })
+      onNotice('Password for ' + resetModalUser.email + ' has been updated.')
+      setResetModalUser(null)
+      setNewStaffPassword('')
+      await onReload()
+    } catch (cause) {
+      onNotice(cause instanceof Error ? cause.message : 'Could not update staff password.')
+    } finally {
+      setBusy(false)
+    }
   }
-  return <section className="grid gap-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-    <div>
-      <p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">Access control</p>
-      <h2 className="mt-2 text-3xl font-extrabold">Users & roles</h2>
-      <p className="mt-2 text-sm leading-relaxed text-forest-900/65">Add an email before that person signs in. They use the owner login button and receive only the permissions assigned here.</p>
-      <div className="mt-6 grid gap-3 rounded-3xl bg-white p-5 ring-1 ring-forest-900/10">
-        <input className="field" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="User email" required />
-        <input className="field" value={name} onChange={(event) => setName(event.target.value)} placeholder="Display name (optional)" />
-        <select className="field" value={role} onChange={(event) => setRole(event.target.value as AdminRole)}>
-          <option value="content_editor">Content Editor</option>
-          <option value="enquiry_manager">Enquiry Manager</option>
-          <option value="super_admin">Super Admin</option>
-        </select>
-        <div className="rounded-2xl bg-cream p-4 text-sm text-forest-900/70">
-          <strong className="text-forest-900">{roleLabels[role]}</strong>
-          <p className="mt-1">{role === 'super_admin' ? 'Everything: enquiries, content, settings and user roles.' : role === 'content_editor' ? 'Only News/Updates and Success Stories content.' : 'Only enquiry inbox, status/notes and CSV export.'}</p>
+
+  async function remove(openId: string) {
+    if (!window.confirm('Remove this dashboard user? They will no longer be able to log in.')) return
+    setBusy(true)
+    try {
+      await deleteAdminUser({ data: { openId } })
+      await onReload()
+      onNotice('Dashboard user removed.')
+    } catch (cause) {
+      onNotice(cause instanceof Error ? cause.message : 'Could not remove user.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+      <div>
+        <p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">Access control</p>
+        <h2 className="mt-2 text-3xl font-extrabold">Add New Staff / User</h2>
+        <p className="mt-2 text-sm leading-relaxed text-forest-900/65">Create an account for counsellors or editors. They sign in with this email and password, and only see the sections allowed by their role.</p>
+        <div className="mt-6 grid gap-4 rounded-3xl bg-white p-6 ring-1 ring-forest-900/10">
+          <div>
+            <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-forest-900/70">Staff Email (Login ID) *</label>
+            <input className="field" type="email" autoComplete="off" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="staff@example.com" required />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-forest-900/70">Staff Full Name</label>
+            <input className="field" type="text" autoComplete="off" value={name} onChange={(event) => setName(event.target.value)} placeholder="Staff member's name" />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-forest-900/70">Initial Password (minimum 6 characters) *</label>
+            <PasswordInput value={password} onChange={setPassword} required minLength={6} autoComplete="new-password" ariaLabel="Initial password for new staff user" className="field" placeholder="Set an initial password" toggleClassName="text-forest-900/50 hover:text-forest-900" />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-forest-900/70">Role & Permissions</label>
+            <select className="field" value={role} onChange={(event) => setRole(event.target.value as AdminRole)}>
+              <option value="content_editor">Content Editor (News, Stories & Batches)</option>
+              <option value="enquiry_manager">Enquiry Manager (Leads & Inquiries)</option>
+              <option value="super_admin">Super Admin (Everything)</option>
+            </select>
+          </div>
+          <div className="rounded-2xl bg-cream p-4 text-xs text-forest-900/70">
+            <strong className="text-forest-900">{roleLabels[role]}</strong>
+            <p className="mt-1">{role === 'super_admin' ? 'Full control over leads, content, settings and users.' : role === 'content_editor' ? 'Can manage News, coaching batches and Success Stories.' : 'Can manage enquiries and follow-ups.'}</p>
+          </div>
+          <button type="button" disabled={busy || !email.trim() || password.trim().length < 6} onClick={() => void save()} className="w-fit rounded-full bg-forest-900 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{busy ? 'Saving…' : 'Create staff user'}</button>
         </div>
-        <button type="button" disabled={busy || !email} onClick={() => void save()} className="w-fit rounded-full bg-forest-900 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">Save user role</button>
       </div>
-    </div>
-    <div className="grid gap-3">
-      {users.map((user) => <article key={user.openId} className="flex flex-col justify-between gap-3 rounded-2xl bg-white p-5 ring-1 ring-forest-900/10 sm:flex-row sm:items-center"><div><strong>{user.name || user.email}</strong><p className="text-sm text-forest-900/60">{user.email}</p><span className="mt-2 inline-flex rounded-full bg-coral-50 px-3 py-1 text-xs font-bold text-coral-700">{roleLabels[user.role]}</span></div><button type="button" disabled={busy || user.email.toLowerCase() === currentEmail.toLowerCase()} onClick={() => void remove(user.openId)} className="w-fit rounded-full border border-red-200 px-4 py-2 text-sm font-bold text-red-700 disabled:cursor-not-allowed disabled:opacity-40">{user.email.toLowerCase() === currentEmail.toLowerCase() ? 'Current account' : 'Remove'}</button></article>)}
-      {users.length === 0 && <p className="rounded-2xl bg-white p-6 text-center text-sm text-forest-900/60">No provisioned users yet.</p>}
-    </div>
-  </section>
+
+      <div className="grid gap-3">
+        {users.map((user) => (
+          <article key={user.openId} className="flex flex-col justify-between gap-3 rounded-2xl bg-white p-5 ring-1 ring-forest-900/10 sm:flex-row sm:items-center">
+            <div>
+              <strong>{user.name || user.email}</strong>
+              <p className="text-sm text-forest-900/60">{user.email}</p>
+              <span className="mt-2 inline-flex rounded-full bg-coral-50 px-3 py-1 text-xs font-bold text-coral-700">{roleLabels[user.role]}</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => { setResetModalUser(user); setNewStaffPassword('') }} className="rounded-full border border-forest-900/20 px-3.5 py-1.5 text-xs font-bold text-forest-900 hover:bg-forest-50">Reset password</button>
+              <button type="button" disabled={busy || user.email.toLowerCase() === currentEmail.toLowerCase()} onClick={() => void remove(user.openId)} className="w-fit rounded-full border border-red-200 px-4 py-2 text-sm font-bold text-red-700 disabled:cursor-not-allowed disabled:opacity-40">{user.email.toLowerCase() === currentEmail.toLowerCase() ? 'Current account' : 'Remove'}</button>
+            </div>
+          </article>
+        ))}
+        {users.length === 0 && <p className="rounded-2xl bg-white p-6 text-center text-sm text-forest-900/60">No provisioned users yet.</p>}
+      </div>
+
+      {resetModalUser && (
+        <div role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setResetModalUser(null) }} className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm">
+          <section role="dialog" aria-modal="true" aria-labelledby="reset-staff-password-title" className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-forest-900/10">
+            <div className="flex items-center justify-between border-b border-forest-900/10 pb-3">
+              <div>
+                <h3 id="reset-staff-password-title" className="text-lg font-extrabold text-forest-900">Reset staff password</h3>
+                <p className="mt-1 text-xs text-forest-900/60">{resetModalUser.email}</p>
+              </div>
+              <button type="button" onClick={() => setResetModalUser(null)} aria-label="Close password reset dialog" className="text-sm font-bold text-forest-900/40 hover:text-forest-900">✕</button>
+            </div>
+            <form onSubmit={handleResetStaffPassword} className="mt-4 space-y-4">
+              <div>
+                <label className="mb-1 block text-xs font-bold text-forest-900/70">New Password</label>
+                <PasswordInput value={newStaffPassword} onChange={setNewStaffPassword} required minLength={6} autoComplete="new-password" ariaLabel="New password for staff user" className="field" placeholder="Enter new password" toggleClassName="text-forest-900/50 hover:text-forest-900" />
+              </div>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setResetModalUser(null)} className="rounded-full border border-forest-900/15 px-5 py-2.5 text-xs font-bold text-forest-900">Cancel</button>
+                <button type="submit" disabled={busy || newStaffPassword.trim().length < 6} className="rounded-full bg-forest-900 px-5 py-2.5 text-xs font-bold text-white disabled:opacity-50">{busy ? 'Saving…' : 'Save Password'}</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
+    </section>
+  )
 }
