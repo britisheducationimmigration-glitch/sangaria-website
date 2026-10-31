@@ -110,9 +110,11 @@ export async function getDb() {
           popup_delay_seconds INT UNSIGNED NOT NULL DEFAULT 8,
           whatsapp_enabled BOOLEAN NOT NULL DEFAULT TRUE,
           approvals_marquee_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+          cashflow_json LONGTEXT NULL,
           updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         )
       `)
+      await ensureColumn(poolInstance, 'site_settings', 'cashflow_json', 'LONGTEXT NULL')
       await poolInstance.query(`
         CREATE TABLE IF NOT EXISTS enquiries (
           id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,

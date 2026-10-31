@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState, type FormEvent, type MouseEvent, type ReactNode } from 'react'
-import { getAdminSnapshot, deleteAdminUser, deleteBatch, deleteEnquiry, deletePost, deleteStory, exportEnquiries, saveAdminUser, saveBatch, savePost, saveStory, updateEnquiry, updateSettings } from '@/lib/admin-functions'
+import { getAdminSnapshot, deleteAdminUser, deleteBatch, deleteEnquiry, deletePost, deleteStory, exportEnquiries, saveAdminUser, saveBatch, saveCashflow, savePost, saveStory, updateEnquiry, updateSettings } from '@/lib/admin-functions'
 import type { AdminPost, AdminRole, AdminSnapshot, AdminStory, AdminUser, CoachingBatch, Enquiry, EnquiryStatus } from '@/lib/content-types'
 import { defaultCashflowData, CountryCashflow } from '@/data/cashflow'
 
@@ -426,13 +426,24 @@ function EnquiryCard({ item, onReload, onNotice, canDelete }: { item: Enquiry; o
 }
 
 function BatchPanel({ items, selected, onSelect, onReload, onNotice }: { items: CoachingBatch[]; selected: CoachingBatch | null; onSelect: (item: CoachingBatch | null) => void; onReload: () => Promise<void>; onNotice: (message: string) => void }) {
-  return <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.8fr)]"><div><div className="mb-5 flex items-end justify-between gap-4"><div><p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">IELTS · PTE · Languages</p><h2 className="mt-2 text-3xl font-extrabold">Manage upcoming batches</h2><p className="mt-1 text-sm text-forest-900/60">Add or update any coaching program without touching code.</p></div><button type="button" onClick={() => onSelect({ id: 0, program: 'IELTS', batch: '', time: '', seats: 0, starts: '', published: true })} className="rounded-full bg-coral-500 px-4 py-2 text-sm font-bold text-white">+ New batch</button></div><div className="grid gap-3">{items.map((item) => <button type="button" key={item.id} onClick={() => onSelect(item)} className={`rounded-2xl bg-white p-4 text-left ring-1 ring-forest-900/10 transition hover:ring-forest-900 ${selected?.id === item.id ? 'ring-2 ring-coral-500' : ''}`}><div className="flex items-center justify-between gap-3"><strong>{item.batch}</strong><span className="rounded-full bg-forest-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-forest-700">{item.program}</span></div><span className="mt-1 block text-xs text-forest-900/50">{item.time} · {item.starts} · {item.seats} seats · {item.published ? 'Published' : 'Hidden'}</span></button>)}</div></div>{selected ? <BatchEditor item={selected} onReload={onReload} onNotice={onNotice} onClose={() => onSelect(null)} /> : <div className="grid min-h-72 place-items-center rounded-3xl border border-dashed border-forest-900/20 p-8 text-center text-forest-900/50">Select a batch or create a new one.</div>}</section>
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  function selectBatch(item: CoachingBatch | null) {
+    if (item && selected && item.id !== selected.id && hasUnsavedChanges && !window.confirm('You have unsaved changes in this batch. Switch anyway and discard them?')) return
+    setHasUnsavedChanges(false)
+    onSelect(item)
+  }
+  function closeBatch() {
+    if (hasUnsavedChanges && !window.confirm('You have unsaved changes in this batch. Close and discard them?')) return
+    setHasUnsavedChanges(false)
+    onSelect(null)
+  }
+  return <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.8fr)]"><div><div className="mb-5 flex items-end justify-between gap-4"><div><p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">IELTS · PTE · Languages</p><h2 className="mt-2 text-3xl font-extrabold">Manage upcoming batches</h2><p className="mt-1 text-sm text-forest-900/60">Add or update any coaching program without touching code.</p></div><button type="button" onClick={() => selectBatch({ id: 0, program: 'IELTS', batch: '', time: '', seats: 0, starts: '', published: true })} className="rounded-full bg-coral-500 px-4 py-2 text-sm font-bold text-white">+ New batch</button></div><div className="grid gap-3">{items.map((item) => <button type="button" key={item.id} onClick={() => selectBatch(item)} className={`rounded-2xl bg-white p-4 text-left ring-1 ring-forest-900/10 transition hover:ring-forest-900 ${selected?.id === item.id ? 'ring-2 ring-coral-500' : ''}`}><div className="flex items-center justify-between gap-3"><strong>{item.batch}</strong><span className="rounded-full bg-forest-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-forest-700">{item.program}</span></div><span className="mt-1 block text-xs text-forest-900/50">{item.time} · {item.starts} · {item.seats} seats · {item.published ? 'Published' : 'Hidden'}</span></button>)}</div></div>{selected ? <BatchEditor key={`batch-${selected.id}`} item={selected} onReload={onReload} onNotice={onNotice} onClose={closeBatch} onDirtyChange={setHasUnsavedChanges} /> : <div className="grid min-h-72 place-items-center rounded-3xl border border-dashed border-forest-900/20 p-8 text-center text-forest-900/50">Select a batch or create a new one.</div>}</section>
 }
 
-function BatchEditor({ item, onReload, onNotice, onClose }: { item: CoachingBatch; onReload: () => Promise<void>; onNotice: (message: string) => void; onClose: () => void }) {
+function BatchEditor({ item, onReload, onNotice, onClose, onDirtyChange }: { item: CoachingBatch; onReload: () => Promise<void>; onNotice: (message: string) => void; onClose: () => void; onDirtyChange: (dirty: boolean) => void }) {
   const [form, setForm] = useState(item)
   const [busy, setBusy] = useState(false)
-  function update<K extends keyof CoachingBatch>(key: K, value: CoachingBatch[K]) { setForm((current) => ({ ...current, [key]: value })) }
+  function update<K extends keyof CoachingBatch>(key: K, value: CoachingBatch[K]) { setForm((current) => ({ ...current, [key]: value })); onDirtyChange(true) }
   async function submit(event: FormEvent) { event.preventDefault(); setBusy(true); try { await saveBatch({ data: form }); await onReload(); onNotice('Coaching batch saved.'); onClose() } catch (cause) { onNotice(cause instanceof Error ? cause.message : 'Could not save batch.') } finally { setBusy(false) } }
   async function remove() { if (!form.id || !window.confirm('Delete this coaching batch?')) return; setBusy(true); try { await deleteBatch({ data: { id: form.id } }); await onReload(); onNotice('Coaching batch deleted.'); onClose() } catch { onNotice('Could not delete batch.') } finally { setBusy(false) } }
   return <form onSubmit={submit} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-forest-900/10"><div className="mb-5 flex items-start justify-between gap-4"><div><p className="font-mono text-[10px] uppercase tracking-[0.18em] text-coral-600">Public schedule</p><h3 className="text-xl font-extrabold">Batch editor</h3><p className="mt-1 text-xs leading-relaxed text-forest-900/55">These details appear in the Upcoming batches section on the public IELTS & PTE page.</p></div><button type="button" onClick={onClose} className="text-sm font-bold text-forest-900/50">Close</button></div><div className="grid gap-4"><EditorField label="Program / language" hint="Example: IELTS, PTE, German A1, French B2"><input className="field" value={form.program} onChange={(e) => update('program', e.target.value)} placeholder="IELTS / PTE / German…" required /></EditorField><EditorField label="Batch name" hint="Example: German A1 Evening Batch or IELTS Weekend Batch"><input className="field" value={form.batch} onChange={(e) => update('batch', e.target.value)} placeholder="Name visitors will recognise" required /></EditorField><EditorField label="Class timing" hint="Example: Mon–Fri · 6:00–8:00 PM"><input className="field" value={form.time} onChange={(e) => update('time', e.target.value)} placeholder="Days and time" /></EditorField><div className="grid gap-4 sm:grid-cols-2"><EditorField label="Seats left" hint="Use 0 when full"><input className="field" type="number" min="0" value={form.seats} onChange={(e) => update('seats', Number(e.target.value))} /></EditorField><EditorField label="Starts on" hint="Example: 1 December 2026"><input className="field" value={form.starts} onChange={(e) => update('starts', e.target.value)} placeholder="Start date / month" /></EditorField></div><label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={form.published} onChange={(e) => update('published', e.target.checked)} /> Show this batch on the public coaching page</label><div className="flex flex-wrap gap-2"><button disabled={busy} className="rounded-full bg-forest-900 px-5 py-3 text-sm font-bold text-white">Save batch</button>{form.id > 0 && <button type="button" disabled={busy} onClick={() => void remove()} className="rounded-full border border-red-200 px-5 py-3 text-sm font-bold text-red-700">Delete</button>}</div></div></form>
@@ -440,7 +451,7 @@ function BatchEditor({ item, onReload, onNotice, onClose }: { item: CoachingBatc
 
 function ContentPanel({ type, items, selected, onSelect, onReload, onNotice }: { type: 'news' | 'stories'; items: AdminPost[] | AdminStory[]; selected: AdminPost | AdminStory | null; onSelect: (item: AdminPost | AdminStory | null) => void; onReload: () => Promise<void>; onNotice: (message: string) => void }) {
   const news = type === 'news'
-  return <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.8fr)]"><div><div className="mb-5 flex items-end justify-between gap-4"><div><p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">{news ? 'News & updates' : 'Success stories'}</p><h2 className="mt-2 text-3xl font-extrabold">Edit without code</h2></div><button type="button" onClick={() => onSelect(news ? { id: 0, ...blankPost } : { id: 0, ...blankStory })} className="rounded-full bg-coral-500 px-4 py-2 text-sm font-bold text-white">+ New</button></div><div className="grid gap-3">{items.map((item) => <button type="button" key={item.id} onClick={() => onSelect(item)} className={`rounded-2xl bg-white p-4 text-left ring-1 ring-forest-900/10 transition hover:ring-forest-900 ${selected?.id === item.id ? 'ring-2 ring-coral-500' : ''}`}><div className="flex items-center justify-between gap-3"><strong>{news ? (item as AdminPost).title : (item as AdminStory).name}</strong><span className={`rounded-full px-2 py-1 text-[10px] font-bold ${item.published ? 'bg-emerald-100 text-emerald-800' : 'bg-forest-100 text-forest-700'}`}>{item.published ? 'Published' : 'Draft'}</span></div><span className="mt-1 block text-xs text-forest-900/50">{news ? `${(item as AdminPost).category} · ${(item as AdminPost).date}` : `${(item as AdminStory).kind} · ${(item as AdminStory).country}`}</span></button>)}</div></div>{selected ? news ? <PostEditor item={selected as AdminPost} onReload={onReload} onNotice={onNotice} onClose={() => onSelect(null)} /> : <StoryEditor item={selected as AdminStory} onReload={onReload} onNotice={onNotice} onClose={() => onSelect(null)} /> : <div className="grid min-h-72 place-items-center rounded-3xl border border-dashed border-forest-900/20 p-8 text-center text-forest-900/50">Select an item or create a new one.</div>}</section>
+  return <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.8fr)]"><div><div className="mb-5 flex items-end justify-between gap-4"><div><p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">{news ? 'News & updates' : 'Success stories'}</p><h2 className="mt-2 text-3xl font-extrabold">Edit without code</h2></div><button type="button" onClick={() => onSelect(news ? { id: 0, ...blankPost } : { id: 0, ...blankStory })} className="rounded-full bg-coral-500 px-4 py-2 text-sm font-bold text-white">+ New</button></div><div className="grid gap-3">{items.map((item) => <button type="button" key={item.id} onClick={() => onSelect(item)} className={`rounded-2xl bg-white p-4 text-left ring-1 ring-forest-900/10 transition hover:ring-forest-900 ${selected?.id === item.id ? 'ring-2 ring-coral-500' : ''}`}><div className="flex items-center justify-between gap-3"><strong>{news ? (item as AdminPost).title : (item as AdminStory).name}</strong><span className={`rounded-full px-2 py-1 text-[10px] font-bold ${item.published ? 'bg-emerald-100 text-emerald-800' : 'bg-forest-100 text-forest-700'}`}>{item.published ? 'Published' : 'Draft'}</span></div><span className="mt-1 block text-xs text-forest-900/50">{news ? `${(item as AdminPost).category} · ${(item as AdminPost).date}` : `${(item as AdminStory).kind} · ${(item as AdminStory).country}`}</span></button>)}</div></div>{selected ? news ? <PostEditor key={`post-${selected.id}`} item={selected as AdminPost} onReload={onReload} onNotice={onNotice} onClose={() => onSelect(null)} /> : <StoryEditor key={`story-${selected.id}`} item={selected as AdminStory} onReload={onReload} onNotice={onNotice} onClose={() => onSelect(null)} /> : <div className="grid min-h-72 place-items-center rounded-3xl border border-dashed border-forest-900/20 p-8 text-center text-forest-900/50">Select an item or create a new one.</div>}</section>
 }
 
 function EditorField({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
@@ -475,6 +486,7 @@ function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
     return defaultCashflowData
   })
   const [selectedSlug, setSelectedSlug] = useState('canada')
+  const [busy, setBusy] = useState(false)
 
   const country = data.find((c) => c.slug === selectedSlug) || data[0]
 
@@ -492,21 +504,31 @@ function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
     }))
   }
 
-  const save = () => {
+  const save = async () => {
     try {
+      setBusy(true)
+      await saveCashflow({ data: { cashflowData: data } })
       localStorage.setItem('bei_custom_cashflow', JSON.stringify(data))
-      onNotice('Budget & Cashflow saved! Changes are now live on the website.')
-    } catch {
-      onNotice('Could not save budget data.')
+      onNotice('Budget & Cashflow saved to database and is live on the website.')
+    } catch (error) {
+      onNotice(error instanceof Error ? error.message : 'Could not save budget data.')
+    } finally {
+      setBusy(false)
     }
   }
 
-  const resetToOfficial = () => {
+  const resetToOfficial = async () => {
     setData(defaultCashflowData)
     try {
+      setBusy(true)
+      await saveCashflow({ data: { cashflowData: defaultCashflowData } })
       localStorage.removeItem('bei_custom_cashflow')
-      onNotice('Reset to official 2026/2027 embassy defaults.')
-    } catch {}
+      onNotice('Reset to official 2026/2027 embassy defaults and saved to database.')
+    } catch {
+      onNotice('Reset locally, but database sync failed.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -518,8 +540,8 @@ function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
           <p className="text-xs text-forest-900/60 mt-1">Edit embassy fees, GIC living costs, and stage-by-stage expenses. Updates reflect instantly on the public website.</p>
         </div>
         <div className="flex gap-2">
-          <button type="button" onClick={resetToOfficial} className="rounded-xl border border-forest-900/20 px-4 py-2 text-xs font-bold text-forest-900 hover:bg-forest-50">Reset Defaults</button>
-          <button type="button" onClick={save} className="rounded-xl bg-forest-900 px-5 py-2 text-xs font-bold text-white hover:bg-forest-800 shadow-md">Save Changes</button>
+          <button type="button" disabled={busy} onClick={resetToOfficial} className="rounded-xl border border-forest-900/20 px-4 py-2 text-xs font-bold text-forest-900 hover:bg-forest-50 disabled:opacity-50">Reset Defaults</button>
+          <button type="button" disabled={busy} onClick={save} className="rounded-xl bg-forest-900 px-5 py-2 text-xs font-bold text-white hover:bg-forest-800 shadow-md disabled:opacity-50">{busy ? 'Saving to DB…' : 'Save Changes'}</button>
         </div>
       </div>
 
@@ -599,8 +621,8 @@ function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
       </div>
 
       <div className="flex justify-end gap-3">
-        <button type="button" onClick={save} className="rounded-2xl bg-forest-900 px-8 py-3 text-sm font-bold text-white hover:bg-forest-800 shadow-md">
-          Save All Budget Changes
+        <button type="button" disabled={busy} onClick={save} className="rounded-2xl bg-forest-900 px-8 py-3 text-sm font-bold text-white hover:bg-forest-800 shadow-md disabled:opacity-50">
+          {busy ? 'Saving…' : 'Save All Budget Changes'}
         </button>
       </div>
     </section>

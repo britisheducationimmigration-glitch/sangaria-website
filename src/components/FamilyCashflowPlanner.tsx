@@ -1,20 +1,23 @@
 import { useState, useEffect } from 'react'
 import { defaultCashflowData, CountryCashflow } from '@/data/cashflow'
+import { getPublicCashflow } from '@/lib/public-functions'
 
 export function FamilyCashflowPlanner() {
   const [data, setData] = useState<CountryCashflow[]>(defaultCashflowData)
   const [selectedSlug, setSelectedSlug] = useState('canada')
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('bei_custom_cashflow')
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setData(parsed)
-        }
-      }
-    } catch {}
+    let active = true
+    void getPublicCashflow()
+      .then((saved) => {
+        if (active && Array.isArray(saved) && saved.length > 0) setData(saved)
+      })
+      .catch(() => {
+        // Keep the bundled cashflow.ts defaults when the database is unavailable.
+      })
+    return () => {
+      active = false
+    }
   }, [])
 
   const country = data.find((c) => c.slug === selectedSlug) || data[0]
