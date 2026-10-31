@@ -201,3 +201,31 @@ a.text-forest-900:active,
 a.text-forest-900:visited {
   color: #123752 !important;
 }
+
+
+/* Consistent keyboard, pressed and touch feedback for interactive controls. */
+:where(a[href], button, input, select, textarea, summary, [role='button'], [tabindex]):focus-visible {
+  outline: 3px solid #c4515d;
+  outline-offset: 3px;
+}
+
+:where(button, [role='button'], a[href].rounded-full, a[href].inline-flex, a[href].grid) {
+  min-width: 44px;
+  min-height: 44px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:where(button:not(:disabled), a[href], [role='button']) {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+:where(button:not(:disabled):active, a[href]:active, [role='button']:active) {
+  filter: brightness(0.94);
+}
+
+.field:focus-visible {
+  outline: 3px solid #c4515d;
+  outline-offset: 2px;
+}
