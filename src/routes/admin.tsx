@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { ApprovalCard, TestimonialCard } from '@/components/Cards'
 import { useEffect, useState, type FormEvent, type MouseEvent, type ReactNode } from 'react'
 import { getAdminCashflow, getAdminSnapshot, deleteAdminUser, deleteBatch, deleteEnquiry, deletePost, deleteStory, exportEnquiries, saveAdminUser, saveBatch, saveCashflow, savePost, saveStory, updateEnquiry, updateSettings } from '@/lib/admin-functions'
 import type { AdminPost, AdminRole, AdminSnapshot, AdminStory, AdminUser, CoachingBatch, Enquiry, EnquiryStatus } from '@/lib/content-types'
@@ -378,6 +379,8 @@ function ChangePasswordModal({ onClose, onNotice }: { onClose: () => void; onNot
 }
 
 function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setStatusFilter, dateFrom, setDateFrom, dateTo, setDateTo, onReload, onNotice, canDelete }: { enquiries: Enquiry[]; stats: AdminSnapshot['enquiryStats']; query: string; setQuery: (value: string) => void; statusFilter: EnquiryStatus | 'All'; setStatusFilter: (value: EnquiryStatus | 'All') => void; dateFrom: string; setDateFrom: (value: string) => void; dateTo: string; setDateTo: (value: string) => void; onReload: () => Promise<void>; onNotice: (message: string) => void; canDelete: boolean }) {
+  const [viewMode, setViewMode] = useState<'list' | 'board'>('list')
+  const [selectedBoardLeadId, setSelectedBoardLeadId] = useState<number | null>(null)
   async function downloadExcel() {
     try {
       const result = await exportEnquiries({ data: { query, status: statusFilter === 'All' ? '' : statusFilter, from: dateFrom, to: dateTo } })
@@ -398,10 +401,13 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
     ['Due today', stats.dueToday, 'bg-amber-100 text-amber-900'],
     ['Converted', stats.converted, 'bg-emerald-100 text-emerald-900'],
   ] as const
+  const boardStatuses: EnquiryStatus[] = ['New', 'Contacted', 'Follow-up', 'Documents Pending', 'Applied', 'Converted', 'Closed']
+  const selectedBoardLead = enquiries.find((item) => item.id === selectedBoardLeadId)
   return (
     <section>
       <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">Lead command centre</p><h2 className="mt-2 text-3xl font-extrabold">Turn enquiries into admissions</h2><p className="mt-1 text-sm text-forest-900/60">Search, move, assign and schedule every lead from one place.</p></div><button type="button" onClick={() => void downloadExcel()} className="w-fit rounded-full bg-forest-900 px-4 py-2 text-sm font-bold text-white">Download Excel</button></div>
       <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">{cards.map(([label, value, classes]) => <div key={label} className={`rounded-2xl p-4 ring-1 ring-forest-900/10 ${classes}`}><p className="text-xs font-bold uppercase tracking-wider opacity-65">{label}</p><p className="mt-2 text-3xl font-extrabold">{value}</p></div>)}</div>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><p className="text-sm font-bold text-forest-900/65">Choose how to review your filtered leads.</p><div role="group" aria-label="Lead display mode" className="inline-flex rounded-full bg-white p-1 ring-1 ring-forest-900/10"><button type="button" aria-pressed={viewMode === 'list'} onClick={() => setViewMode('list')} className={'rounded-full px-4 py-2 text-xs font-bold ' + (viewMode === 'list' ? 'bg-forest-900 text-white' : 'text-forest-900/65')}>List</button><button type="button" aria-pressed={viewMode === 'board'} onClick={() => setViewMode('board')} className={'rounded-full px-4 py-2 text-xs font-bold ' + (viewMode === 'board' ? 'bg-forest-900 text-white' : 'text-forest-900/65')}>Pipeline board</button></div></div>
       <div className="mb-6 grid gap-3 rounded-2xl bg-white p-4 ring-1 ring-forest-900/10 md:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(0,1fr))]">
         <input value={query} onChange={(event) => setQuery(event.target.value)} className="field" placeholder="Search name, phone, city, country…" />
         <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as EnquiryStatus | 'All')} className="field"><option value="All">All stages</option>{['New', 'Contacted', 'Follow-up', 'Documents Pending', 'Applied', 'Converted', 'Closed'].map((status) => <option key={status}>{status}</option>)}</select>
@@ -409,7 +415,48 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
         <input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} className="field" aria-label="To date" />
       </div>
       <div className="mb-4 flex flex-wrap gap-2 text-xs font-bold text-forest-900/60"><span className="rounded-full bg-white px-3 py-1.5 ring-1 ring-forest-900/10">Showing {enquiries.length} loaded leads</span><span className="rounded-full bg-white px-3 py-1.5 ring-1 ring-forest-900/10">Excel includes Summary + Follow-ups sheets</span></div>
-      <div className="grid gap-4">{enquiries.map((item) => <EnquiryCard key={item.id} item={item} onReload={onReload} onNotice={onNotice} canDelete={canDelete} />)}{enquiries.length === 0 && <p className="rounded-2xl bg-white p-8 text-center text-forest-900/60">No enquiries match these filters.</p>}</div>
+      {viewMode === 'list' ? (
+        <div className="grid gap-4">{enquiries.map((item) => <EnquiryCard key={item.id} item={item} onReload={onReload} onNotice={onNotice} canDelete={canDelete} />)}{enquiries.length === 0 && <p className="rounded-2xl bg-white p-8 text-center text-forest-900/60">No enquiries match these filters.</p>}</div>
+      ) : (
+        <div className="space-y-5">
+          <div className="overflow-x-auto pb-3">
+            <div className="grid min-w-[1260px] grid-cols-7 gap-3">
+              {boardStatuses.map((stage) => {
+                const stageItems = enquiries.filter((item) => item.status === stage)
+                return (
+                  <section key={stage} className="min-h-64 rounded-2xl bg-forest-50 p-3 ring-1 ring-forest-900/10">
+                    <header className="mb-3 flex items-center justify-between gap-2 border-b border-forest-900/10 pb-3">
+                      <h3 className="text-xs font-extrabold text-forest-900">{stage}</h3>
+                      <span className="rounded-full bg-white px-2 py-1 font-mono text-[10px] font-bold text-forest-700">{stageItems.length}</span>
+                    </header>
+                    <div className="grid gap-2">
+                      {stageItems.map((item) => (
+                        <button key={item.id} type="button" onClick={() => setSelectedBoardLeadId(item.id)} aria-label={'Open ' + item.name + ' lead details'} className="rounded-xl bg-white p-3 text-left shadow-sm ring-1 ring-forest-900/10 transition hover:-translate-y-0.5 hover:ring-coral-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-coral-500">
+                          <span className="block truncate text-sm font-extrabold text-forest-900">{item.name}</span>
+                          <span className="mt-1 block truncate text-xs text-forest-900/60">{item.interest || 'General counselling'}{item.country ? ' · ' + item.country : ''}</span>
+                          <span className="mt-2 block truncate font-mono text-[10px] text-forest-900/55">{item.phone}</span>
+                          {item.nextFollowUpAt && <span className="mt-2 block rounded-lg bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-900">Follow-up {new Date(item.nextFollowUpAt).toLocaleString()}</span>}
+                          {item.assignedTo && <span className="mt-2 block truncate text-[10px] text-forest-900/50">Assigned: {item.assignedTo}</span>}
+                        </button>
+                      ))}
+                      {stageItems.length === 0 && <p className="rounded-xl border border-dashed border-forest-900/15 px-2 py-4 text-center text-[10px] text-forest-900/45">No leads here</p>}
+                    </div>
+                  </section>
+                )
+              })}
+            </div>
+          </div>
+          {selectedBoardLead ? (
+            <section className="rounded-3xl bg-forest-50 p-3 sm:p-5">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div><p className="font-mono text-[10px] font-bold uppercase tracking-widest text-coral-600">Selected lead</p><h3 className="mt-1 text-lg font-extrabold text-forest-900">{selectedBoardLead.name}</h3></div>
+                <button type="button" onClick={() => setSelectedBoardLeadId(null)} className="rounded-full bg-white px-4 py-2 text-xs font-bold text-forest-900 ring-1 ring-forest-900/10">Close details</button>
+              </div>
+              <EnquiryCard key={selectedBoardLead.id} item={selectedBoardLead} onReload={onReload} onNotice={onNotice} canDelete={canDelete} />
+            </section>
+          ) : <p className="rounded-2xl bg-white p-6 text-center text-sm text-forest-900/55">Choose a lead card to update its stage, owner or follow-up.</p>}
+        </div>
+      )}
     </section>
   )
 }
@@ -461,19 +508,79 @@ function EditorField({ label, hint, children }: { label: string; hint?: string; 
 function PostEditor({ item, onReload, onNotice, onClose }: { item: AdminPost; onReload: () => Promise<void>; onNotice: (message: string) => void; onClose: () => void }) {
   const [form, setForm] = useState(item)
   const [busy, setBusy] = useState(false)
+  const [preview, setPreview] = useState(false)
   function update<K extends keyof AdminPost>(key: K, value: AdminPost[K]) { setForm((current) => ({ ...current, [key]: value })) }
   async function submit(event: FormEvent) { event.preventDefault(); setBusy(true); try { await savePost({ data: form }); await onReload(); onNotice('News article saved.'); onClose() } catch { onNotice('Could not save article. Check the fields.') } finally { setBusy(false) } }
   async function remove() { if (!form.id || !window.confirm('Delete this article?')) return; setBusy(true); try { await deletePost({ data: { id: form.id } }); await onReload(); onNotice('Article deleted.'); onClose() } catch { onNotice('Could not delete article.') } finally { setBusy(false) } }
-  return <form onSubmit={submit} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-forest-900/10"><div className="mb-5 flex items-start justify-between gap-4"><div><p className="font-mono text-[10px] uppercase tracking-[0.18em] text-coral-600">News & updates</p><h3 className="text-xl font-extrabold">Article editor</h3><p className="mt-1 text-xs leading-relaxed text-forest-900/55">Fill the fields below. The title, summary and article paragraphs appear on the public News & Blog page.</p></div><button type="button" onClick={onClose} className="text-sm font-bold text-forest-900/50">Close</button></div><div className="grid gap-4"><EditorField label="Headline / title" hint="Example: UK Graduate Route: the latest on post-study work duration"><input className="field" value={form.title} onChange={(e) => update('title', e.target.value)} placeholder="Write the public article headline" required /></EditorField><div className="grid gap-4 sm:grid-cols-2"><EditorField label="URL slug" hint="Lowercase words with hyphens only; example: uk-graduate-route-update"><input className="field" value={form.slug} onChange={(e) => update('slug', e.target.value)} placeholder="uk-graduate-route-update" required /></EditorField><EditorField label="Category" hint="Used to group the article"><select className="field" value={form.category} onChange={(e) => update('category', e.target.value as AdminPost['category'])}><option>Visa News</option><option>Study Abroad</option><option>IELTS & PTE</option><option>Immigration</option></select></EditorField></div><div className="grid gap-4 sm:grid-cols-2"><EditorField label="Publish date" hint="Date shown on the article card"><input className="field" type="date" value={form.date} onChange={(e) => update('date', e.target.value)} /></EditorField><EditorField label="Reading time (minutes)" hint="Example: 5"><input className="field" type="number" min="1" value={form.readMins} onChange={(e) => update('readMins', Number(e.target.value))} /></EditorField></div><EditorField label="Short summary / excerpt" hint="One or two lines used on cards and SEO previews"><textarea className="field" rows={3} value={form.excerpt} onChange={(e) => update('excerpt', e.target.value)} placeholder="Summarise the main point for a visitor" /></EditorField><EditorField label="Article content" hint="Write one paragraph per blank line. Do not add headings or HTML tags."><textarea className="field" rows={10} value={form.body.join('\n\n')} onChange={(e) => update('body', e.target.value.split(/\n\s*\n/))} placeholder="First paragraph...\n\nSecond paragraph..." /></EditorField><label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={form.published} onChange={(e) => update('published', e.target.checked)} /> Publish on website</label><div className="flex flex-wrap gap-2"><button disabled={busy} className="rounded-full bg-forest-900 px-5 py-3 text-sm font-bold text-white">Save article</button>{form.id > 0 && <button type="button" disabled={busy} onClick={() => void remove()} className="rounded-full border border-red-200 px-5 py-3 text-sm font-bold text-red-700">Delete</button>}</div></div></form>
+  return (
+    <form onSubmit={submit} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-forest-900/10">
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div><p className="font-mono text-[10px] uppercase tracking-[0.18em] text-coral-600">News & updates</p><h3 className="text-xl font-extrabold">Article editor</h3><p className="mt-1 text-xs leading-relaxed text-forest-900/55">Fill the fields below. The title, summary and article paragraphs appear on the public News & Blog page.</p></div>
+        <div className="flex shrink-0 items-center gap-2"><button type="button" aria-pressed={preview} onClick={() => setPreview((value) => !value)} className={'rounded-full px-4 py-2 text-xs font-bold ring-1 ring-forest-900/15 ' + (preview ? 'bg-coral-500 text-white ring-coral-500' : 'bg-white text-forest-900')}>{preview ? 'Back to edit' : 'Preview'}</button><button type="button" onClick={onClose} className="text-sm font-bold text-forest-900/50">Close</button></div>
+      </div>
+      {preview ? (
+        <div className="rounded-2xl bg-forest-50 p-4 sm:p-5">
+          <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-coral-600">Public preview · unsaved changes</p>
+          <article className="mt-3 max-w-3xl overflow-hidden rounded-3xl bg-white p-6 ring-1 ring-forest-900/10">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-forest-900/55"><span className="rounded-full bg-forest-50 px-3 py-1 font-bold text-forest-700">{form.category}</span><span>{form.readMins} min read · {form.date || 'Date not set'}</span></div>
+            <h4 className="mt-4 break-words font-display text-2xl font-extrabold text-forest-900">{form.title || 'Article headline'}</h4>
+            <p className="mt-2 text-sm leading-relaxed text-forest-900/70">{form.excerpt || 'Your article summary will appear here.'}</p>
+            <div className="mt-5 border-t border-forest-900/10 pt-4">{form.body.filter((paragraph) => paragraph.trim()).length ? form.body.filter((paragraph) => paragraph.trim()).map((paragraph, index) => <p key={index} className="mb-4 text-sm leading-relaxed text-forest-900/75 last:mb-0">{paragraph}</p>) : <p className="text-sm text-forest-900/50">Article paragraphs will appear here.</p>}</div>
+          </article>
+          <p className="mt-3 text-xs text-forest-900/55">Preview changes only; they reach the website after you return to edit and save.</p>
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          <EditorField label="Headline / title" hint="Example: UK Graduate Route: the latest on post-study work duration"><input className="field" value={form.title} onChange={(e) => update('title', e.target.value)} placeholder="Write the public article headline" required /></EditorField>
+          <div className="grid gap-4 sm:grid-cols-2"><EditorField label="URL slug" hint="Lowercase words with hyphens only; example: uk-graduate-route-update"><input className="field" value={form.slug} onChange={(e) => update('slug', e.target.value)} placeholder="uk-graduate-route-update" required /></EditorField><EditorField label="Category" hint="Used to group the article"><select className="field" value={form.category} onChange={(e) => update('category', e.target.value as AdminPost['category'])}><option>Visa News</option><option>Study Abroad</option><option>IELTS & PTE</option><option>Immigration</option></select></EditorField></div>
+          <div className="grid gap-4 sm:grid-cols-2"><EditorField label="Publish date" hint="Date shown on the article card"><input className="field" type="date" value={form.date} onChange={(e) => update('date', e.target.value)} /></EditorField><EditorField label="Reading time (minutes)" hint="Example: 5"><input className="field" type="number" min="1" value={form.readMins} onChange={(e) => update('readMins', Number(e.target.value))} /></EditorField></div>
+          <EditorField label="Short summary / excerpt" hint="One or two lines used on cards and SEO previews"><textarea className="field" rows={3} value={form.excerpt} onChange={(e) => update('excerpt', e.target.value)} placeholder="Summarise the main point for a visitor" /></EditorField>
+          <EditorField label="Article content" hint="Write one paragraph per blank line. Do not add headings or HTML tags."><textarea className="field" rows={10} value={form.body.join('\n\n')} onChange={(e) => update('body', e.target.value.split(/\n\s*\n/))} placeholder="First paragraph...\n\nSecond paragraph..." /></EditorField>
+        </div>
+      )}
+      <div className="mt-5 grid gap-4 border-t border-forest-900/10 pt-4">
+        <label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={form.published} onChange={(e) => update('published', e.target.checked)} /> Publish on website</label>
+        <div className="flex flex-wrap gap-2"><button disabled={busy || preview} className="rounded-full bg-forest-900 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">{busy ? 'Saving…' : 'Save article'}</button>{form.id > 0 && <button type="button" disabled={busy} onClick={() => void remove()} className="rounded-full border border-red-200 px-5 py-3 text-sm font-bold text-red-700 disabled:opacity-50">Delete</button>}</div>
+      </div>
+    </form>
+  )
 }
-
 function StoryEditor({ item, onReload, onNotice, onClose }: { item: AdminStory; onReload: () => Promise<void>; onNotice: (message: string) => void; onClose: () => void }) {
   const [form, setForm] = useState(item)
   const [busy, setBusy] = useState(false)
+  const [preview, setPreview] = useState(false)
   function update<K extends keyof AdminStory>(key: K, value: AdminStory[K]) { setForm((current) => ({ ...current, [key]: value })) }
   async function submit(event: FormEvent) { event.preventDefault(); setBusy(true); try { await saveStory({ data: form }); await onReload(); onNotice('Success story saved.'); onClose() } catch { onNotice('Could not save story. Check the fields.') } finally { setBusy(false) } }
   async function remove() { if (!form.id || !window.confirm('Delete this story?')) return; setBusy(true); try { await deleteStory({ data: { id: form.id } }); await onReload(); onNotice('Story deleted.'); onClose() } catch { onNotice('Could not delete story.') } finally { setBusy(false) } }
-  return <form onSubmit={submit} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-forest-900/10"><div className="mb-5 flex items-start justify-between gap-4"><div><p className="font-mono text-[10px] uppercase tracking-[0.18em] text-coral-600">Success stories</p><h3 className="text-xl font-extrabold">Story editor</h3><p className="mt-1 text-xs leading-relaxed text-forest-900/55">Use this for a visa approval or a client testimonial. Published entries appear on the Success Stories page and home page.</p></div><button type="button" onClick={onClose} className="text-sm font-bold text-forest-900/50">Close</button></div><div className="grid gap-4"><div className="grid gap-4 sm:grid-cols-2"><EditorField label="Story type" hint="Choose approval for a result card or testimonial for a client quote"><select className="field" value={form.kind} onChange={(e) => update('kind', e.target.value as AdminStory['kind'])}><option value="testimonial">Client testimonial</option><option value="approval">Visa approval</option></select></EditorField><EditorField label="Person / family name" hint="Example: Harpreet Kaur or Pooja & Family"><input className="field" value={form.name} onChange={(e) => update('name', e.target.value)} placeholder="Client name" required /></EditorField></div><div className="grid gap-4 sm:grid-cols-2"><EditorField label="City" hint="Example: Sangaria"><input className="field" value={form.city} onChange={(e) => update('city', e.target.value)} placeholder="Client city" /></EditorField><EditorField label="Destination country" hint="Example: Canada, United Kingdom or Australia"><input className="field" value={form.country} onChange={(e) => update('country', e.target.value)} placeholder="Country reached / applied to" /></EditorField></div><div className="grid gap-4 sm:grid-cols-2"><EditorField label="Visa / course"><input className="field" value={form.visa} onChange={(e) => update('visa', e.target.value)} placeholder="Study Permit, Student Visa, IELTS…" /></EditorField><EditorField label="Flag code / emoji (optional)" hint="Optional; use CA, UK, AU or an emoji. The footer uses reliable code badges."><input className="field" value={form.flag} onChange={(e) => update('flag', e.target.value)} placeholder="CA or 🇨🇦" /></EditorField></div><div className="grid gap-4 sm:grid-cols-2"><EditorField label="Initials" hint="Two letters shown on the story card; example: HK"><input className="field" value={form.initials} onChange={(e) => update('initials', e.target.value)} placeholder="HK" /></EditorField><EditorField label="Approval / story date"><input className="field" type="date" value={form.date} onChange={(e) => update('date', e.target.value)} /></EditorField></div><EditorField label="Rating (1 to 5 stars)"><input className="field" type="number" min="1" max="5" value={form.rating} onChange={(e) => update('rating', Number(e.target.value))} /></EditorField><EditorField label="Client quote" hint="Write the exact short testimonial. For an approval, describe the result in one or two sentences."><textarea className="field" rows={6} value={form.quote} onChange={(e) => update('quote', e.target.value)} placeholder="My visa was approved..." /></EditorField><EditorField label="Short result note" hint="Example: Sept intake · Conestoga or MSc Data Science"><input className="field" value={form.note} onChange={(e) => update('note', e.target.value)} placeholder="Extra result detail shown on the card" /></EditorField><label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={form.published} onChange={(e) => update('published', e.target.checked)} /> Publish on website</label><div className="flex flex-wrap gap-2"><button disabled={busy} className="rounded-full bg-forest-900 px-5 py-3 text-sm font-bold text-white">Save story</button>{form.id > 0 && <button type="button" disabled={busy} onClick={() => void remove()} className="rounded-full border border-red-200 px-5 py-3 text-sm font-bold text-red-700">Delete</button>}</div></div></form>
+  return (
+    <form onSubmit={submit} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-forest-900/10">
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div><p className="font-mono text-[10px] uppercase tracking-[0.18em] text-coral-600">Success stories</p><h3 className="text-xl font-extrabold">Story editor</h3><p className="mt-1 text-xs leading-relaxed text-forest-900/55">Use this for a visa approval or a client testimonial. Published entries appear on the Success Stories page and home page.</p></div>
+        <div className="flex shrink-0 items-center gap-2"><button type="button" aria-pressed={preview} onClick={() => setPreview((value) => !value)} className={'rounded-full px-4 py-2 text-xs font-bold ring-1 ring-forest-900/15 ' + (preview ? 'bg-coral-500 text-white ring-coral-500' : 'bg-white text-forest-900')}>{preview ? 'Back to edit' : 'Preview'}</button><button type="button" onClick={onClose} className="text-sm font-bold text-forest-900/50">Close</button></div>
+      </div>
+      {preview ? (
+        <div className="rounded-2xl bg-forest-50 p-4 sm:p-5">
+          <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-coral-600">Public card preview · unsaved changes</p>
+          <div className="mx-auto mt-3 max-w-md">{form.kind === 'approval' ? <ApprovalCard a={form} /> : <TestimonialCard t={form} />}</div>
+          <p className="mt-3 text-xs text-forest-900/55">Preview changes only; they reach the website after you return to edit and save.</p>
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          <div className="grid gap-4 sm:grid-cols-2"><EditorField label="Story type" hint="Choose approval for a result card or testimonial for a client quote"><select className="field" value={form.kind} onChange={(e) => update('kind', e.target.value as AdminStory['kind'])}><option value="testimonial">Client testimonial</option><option value="approval">Visa approval</option></select></EditorField><EditorField label="Person / family name" hint="Example: Harpreet Kaur or Pooja & Family"><input className="field" value={form.name} onChange={(e) => update('name', e.target.value)} placeholder="Client name" required /></EditorField></div>
+          <div className="grid gap-4 sm:grid-cols-2"><EditorField label="City" hint="Example: Sangaria"><input className="field" value={form.city} onChange={(e) => update('city', e.target.value)} placeholder="Client city" /></EditorField><EditorField label="Destination country" hint="Example: Canada, United Kingdom or Australia"><input className="field" value={form.country} onChange={(e) => update('country', e.target.value)} placeholder="Country reached / applied to" /></EditorField></div>
+          <div className="grid gap-4 sm:grid-cols-2"><EditorField label="Visa / course"><input className="field" value={form.visa} onChange={(e) => update('visa', e.target.value)} placeholder="Study Permit, Student Visa, IELTS…" /></EditorField><EditorField label="Flag code / emoji (optional)" hint="Optional; use CA, UK, AU or an emoji. The footer uses reliable code badges."><input className="field" value={form.flag} onChange={(e) => update('flag', e.target.value)} placeholder="CA or 🇨🇦" /></EditorField></div>
+          <div className="grid gap-4 sm:grid-cols-2"><EditorField label="Initials" hint="Two letters shown on the story card; example: HK"><input className="field" value={form.initials} onChange={(e) => update('initials', e.target.value)} placeholder="HK" /></EditorField><EditorField label="Approval / story date"><input className="field" type="date" value={form.date} onChange={(e) => update('date', e.target.value)} /></EditorField></div>
+          <EditorField label="Rating (1 to 5 stars)"><input className="field" type="number" min="1" max="5" value={form.rating} onChange={(e) => update('rating', Number(e.target.value))} /></EditorField>
+          <EditorField label="Client quote" hint="Write the exact short testimonial. For an approval, describe the result in one or two sentences."><textarea className="field" rows={6} value={form.quote} onChange={(e) => update('quote', e.target.value)} placeholder="My visa was approved..." /></EditorField>
+          <EditorField label="Short result note" hint="Example: Sept intake · Conestoga or MSc Data Science"><input className="field" value={form.note} onChange={(e) => update('note', e.target.value)} placeholder="Extra result detail shown on the card" /></EditorField>
+        </div>
+      )}
+      <div className="mt-5 grid gap-4 border-t border-forest-900/10 pt-4">
+        <label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={form.published} onChange={(e) => update('published', e.target.checked)} /> Publish on website</label>
+        <div className="flex flex-wrap gap-2"><button disabled={busy || preview} className="rounded-full bg-forest-900 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">{busy ? 'Saving…' : 'Save story'}</button>{form.id > 0 && <button type="button" disabled={busy} onClick={() => void remove()} className="rounded-full border border-red-200 px-5 py-3 text-sm font-bold text-red-700 disabled:opacity-50">Delete</button>}</div>
+      </div>
+    </form>
+  )
 }
 function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
   const [data, setData] = useState<CountryCashflow[]>(defaultCashflowData)
