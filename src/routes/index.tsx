@@ -878,13 +878,13 @@ function Home() {
                     />
                     <span className="font-mono text-2xl font-bold text-forest-900/20 group-hover:text-white/20">{c.code}</span>
                   </div>
-                  <h3 className="mt-6 text-2xl font-bold text-forest-900 group-hover:text-white">{c.name}</h3>
-                  <p className="mt-1 text-sm text-forest-900/70 group-hover:text-white/80">{c.headline}</p>
+                  <h3 className="mt-6 text-2xl font-bold text-forest-900 group-hover:!text-white">{c.name}</h3>
+                  <p className="mt-1 text-sm text-forest-900/70 group-hover:!text-white/80">{c.headline}</p>
                   <div className="my-5 border-t-2 border-dashed border-forest-900/15 group-hover:border-white/20" />
                   <div className="flex items-end justify-between text-sm">
-                    <span className="text-forest-900 group-hover:text-white">
-                      <span className="block text-[10px] uppercase tracking-widest text-forest-900/60 group-hover:text-white/60">{c.stats[0].label}</span>
-                      <span className="font-bold text-forest-900 group-hover:text-white">{c.stats[0].value}</span>
+                    <span className="text-forest-900 group-hover:!text-white">
+                      <span className="block text-[10px] uppercase tracking-widest text-forest-900/60 group-hover:!text-white/60">{c.stats[0].label}</span>
+                      <span className="font-bold text-forest-900 group-hover:!text-white">{c.stats[0].value}</span>
                     </span>
                     <ArrowRight className="size-5 text-coral-500 transition group-hover:translate-x-1" />
                   </div>
