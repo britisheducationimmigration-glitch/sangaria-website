@@ -210,8 +210,6 @@ a.text-forest-900:visited {
 }
 
 :where(button, [role='button'], a[href].rounded-full, a[href].inline-flex, a[href].grid) {
-  min-width: 44px;
-  min-height: 44px;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
