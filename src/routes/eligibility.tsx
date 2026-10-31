@@ -45,8 +45,8 @@ function EligibilityPage() {
             Where can <span className="text-coral-500">you</span> go?
           </h1>
           <p className="mt-6 max-w-md text-lg text-forest-100/75">
-            Answer a few quick questions. We score your profile against the latest requirements for Canada, UK, Australia, USA, New Zealand, Germany and
-            Europe.
+            Answer a few quick questions for a preliminary profile estimate based on selected factors for Canada, UK, Australia, USA, New Zealand, Germany and
+            Europe. It is a screening aid, not a legal eligibility assessment.
           </p>
           <p className="mt-8 font-mono text-xs text-forest-100/50">Rules last updated · {rules.updatedAt}</p>
           {goal && (
@@ -132,8 +132,9 @@ function EligibilityPage() {
                 </div>
               </div>
               <h3 className="mt-10 mb-4 font-display text-lg font-bold">
-                Country match for {rules.goals.find((g) => g.id === goal)?.label.toLowerCase()}
+                Preliminary country matches for {rules.goals.find((g) => g.id === goal)?.label.toLowerCase()}
               </h3>
+              <p className="mb-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm leading-relaxed text-forest-900/75">This estimate is based only on your answers and the checklist factors shown here. It is not an official eligibility decision and does not guarantee a visa or approval. Rules change; confirm current criteria with the linked government authority and get a full case review before applying.</p>
               <ul className="grid gap-3">
                 {result.countries.map((c) => (
                   <li
@@ -145,7 +146,7 @@ function EligibilityPage() {
                       <p className="font-bold">{c.name}</p>
                       <p className="text-sm text-forest-900/60">
                         {c.eligible
-                          ? (c.note ?? 'Your profile meets the typical requirements.')
+                          ? (c.note ?? 'Your answers match this checklist’s typical factors; a full case review is still needed.')
                           : c.unmet.length
                             ? `Improve: ${c.unmet.join(', ')}`
                             : `Needs ${c.gap}% more on your profile score`}
@@ -210,7 +211,7 @@ function ScoreRing({ score }: { score: number }) {
       <div className="absolute inset-0 grid place-items-center text-center">
         <span>
           <span className="block font-display text-4xl font-extrabold">{score}</span>
-          <span className="text-[10px] uppercase tracking-widest text-forest-900/50">Profile score</span>
+          <span className="text-[10px] uppercase tracking-widest text-forest-900/50">Preliminary score</span>
         </span>
       </div>
     </div>
