@@ -84,7 +84,7 @@ export const countries: Country[] = [
     highlights: ['Regional study bonus', 'High minimum wages', 'Points-tested PR system'],
     costs: [
       { label: 'Living funds', value: 'AUD 29,710 / yr' },
-      { label: 'Visa fee', value: 'AUD 1,600' },
+      { label: 'Visa fee', value: 'AUD 2,500' },
       { label: 'OSHC', value: 'AUD ~600 / yr' },
     ],
     english: 'IELTS 6.0 / PTE 50',
@@ -130,7 +130,7 @@ export const countries: Country[] = [
     highlights: ['Green List occupations', 'Partner work rights', 'Small class sizes'],
     costs: [
       { label: 'Living funds', value: 'NZD 20,000 / yr' },
-      { label: 'Visa fee', value: 'NZD 750' },
+      { label: 'Visa fee', value: 'NZD 850' },
       { label: 'Insurance', value: 'NZD ~700 / yr' },
     ],
     english: 'IELTS 6.0 / PTE 50',
