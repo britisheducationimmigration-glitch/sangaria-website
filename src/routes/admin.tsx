@@ -93,6 +93,38 @@ function AdminPage() {
     </div>
   )
 }
+function PasswordInput({ value, onChange, className, placeholder, required, minLength, autoComplete, ariaLabel, toggleClassName }: { value: string; onChange: (value: string) => void; className: string; placeholder: string; required?: boolean; minLength?: number; autoComplete: string; ariaLabel: string; toggleClassName: string }) {
+  const [visible, setVisible] = useState(false)
+  return (
+    <div className="relative">
+      <input
+        type={visible ? 'text' : 'password'}
+        required={required}
+        minLength={minLength}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className={className + ' !pr-12'}
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+        aria-label={ariaLabel}
+      />
+      <button
+        type="button"
+        onClick={() => setVisible((current) => !current)}
+        aria-label={visible ? 'Hide password' : 'Show password'}
+        aria-pressed={visible}
+        className={'absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-r-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-400 ' + toggleClassName}
+      >
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+          <path d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12 18 18.75 12 18.75 2.25 12 2.25 12Z" />
+          <circle cx="12" cy="12" r="3" />
+          {visible && <path d="m3 3 18 18" />}
+        </svg>
+      </button>
+    </div>
+  )
+}
+
 function AdminAuthCard({ onLoginSuccess }: { onLoginSuccess: () => Promise<void> }) {
   const [mode, setMode] = useState<'login' | 'forgot'>('login')
   const [identifier, setIdentifier] = useState('admin@britisheducationandimmigration.com')
@@ -205,13 +237,15 @@ function AdminAuthCard({ onLoginSuccess }: { onLoginSuccess: () => Promise<void>
                 Forgot?
               </button>
             </div>
-            <input
-              type="password"
-              required
+            <PasswordInput
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={setPassword}
+              required
+              autoComplete="current-password"
+              ariaLabel="Admin password"
               className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:bg-white/20 focus:outline-none focus:ring-coral-400"
               placeholder="Enter admin password"
+              toggleClassName="text-white/60 hover:text-white"
             />
           </div>
           <button
@@ -253,14 +287,16 @@ function AdminAuthCard({ onLoginSuccess }: { onLoginSuccess: () => Promise<void>
           </div>
           <div>
             <label className="block text-xs font-bold text-forest-100/70 mb-1.5">New Password (minimum 6 characters)</label>
-            <input
-              type="password"
+            <PasswordInput
+              value={newPassword}
+              onChange={setNewPassword}
               required
               minLength={6}
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
+              autoComplete="new-password"
+              ariaLabel="New admin password"
               className="w-full rounded-2xl bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 ring-1 ring-white/10 focus:outline-none focus:ring-coral-400"
               placeholder="Enter new password"
+              toggleClassName="text-white/60 hover:text-white"
             />
           </div>
           <button
@@ -332,38 +368,15 @@ function ChangePasswordModal({ onClose, onNotice }: { onClose: () => void; onNot
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div>
             <label className="block text-xs font-bold text-forest-900/70 mb-1">Current Password</label>
-            <input
-              type="password"
-              required
-              value={oldPassword}
-              onChange={(e) => setOldPassword(e.target.value)}
-              className="field"
-              placeholder="Enter current password"
-            />
+            <PasswordInput value={oldPassword} onChange={setOldPassword} required autoComplete="current-password" ariaLabel="Current admin password" className="field" placeholder="Enter current password" toggleClassName="text-forest-900/50 hover:text-forest-900" />
           </div>
           <div>
             <label className="block text-xs font-bold text-forest-900/70 mb-1">New Password (min 6 characters)</label>
-            <input
-              type="password"
-              required
-              minLength={6}
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="field"
-              placeholder="Enter new password"
-            />
+            <PasswordInput value={newPassword} onChange={setNewPassword} required minLength={6} autoComplete="new-password" ariaLabel="New admin password" className="field" placeholder="Enter new password" toggleClassName="text-forest-900/50 hover:text-forest-900" />
           </div>
           <div>
             <label className="block text-xs font-bold text-forest-900/70 mb-1">Confirm New Password</label>
-            <input
-              type="password"
-              required
-              minLength={6}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="field"
-              placeholder="Re-type new password"
-            />
+            <PasswordInput value={confirmPassword} onChange={setConfirmPassword} required minLength={6} autoComplete="new-password" ariaLabel="Confirm new admin password" className="field" placeholder="Re-type new password" toggleClassName="text-forest-900/50 hover:text-forest-900" />
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="rounded-full border border-forest-900/15 px-5 py-2.5 text-xs font-bold text-forest-900">
