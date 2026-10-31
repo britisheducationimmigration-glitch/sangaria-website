@@ -66,15 +66,15 @@ function CountriesPage() {
                   <h2 className="mt-4 text-2xl font-extrabold text-forest-900 sm:mt-5 sm:text-3xl">{country.name}</h2>
                   <p className="mt-1 text-sm text-forest-900/65 sm:mt-2 sm:text-base">{country.headline}</p>
                   <div className="mt-4 flex flex-wrap gap-1.5 sm:mt-6 sm:gap-2">
-                    {country.visas.slice(0, 3).map((visa) => (
-                      <span key={visa} className="max-w-full rounded-full bg-forest-50 px-2.5 py-1 text-[10px] font-semibold leading-tight text-forest-700 sm:px-3 sm:text-xs">{visa}</span>
+                    {country.visas.slice(0, 2).map((visa, index) => (
+                      <span key={'mobile-' + index} className="max-w-full rounded-full bg-forest-50 px-2.5 py-1 text-[10px] font-semibold leading-tight text-forest-700 sm:hidden">{visa}</span>
                     ))}
-                    {country.visas.length > 3 && (
-                      <>
-                        <span className="rounded-full bg-forest-50 px-2.5 py-1 text-[10px] font-semibold leading-tight text-forest-700 sm:hidden">+{country.visas.length - 3} more</span>
-                        <span className="hidden rounded-full bg-forest-50 px-3 py-1 text-xs font-semibold leading-tight text-forest-700 sm:inline-flex">{country.visas[3]}</span>
-                      </>
+                    {country.visas.length > 2 && (
+                      <span className="rounded-full bg-forest-50 px-2.5 py-1 text-[10px] font-semibold leading-tight text-forest-700 sm:hidden">+{country.visas.length - 2} more</span>
                     )}
+                    {country.visas.slice(0, 4).map((visa, index) => (
+                      <span key={'desktop-' + index} className="hidden max-w-full rounded-full bg-forest-50 px-3 py-1 text-xs font-semibold leading-tight text-forest-700 sm:inline-flex">{visa}</span>
+                    ))}
                   </div>
                   <span className="mt-4 inline-flex min-h-11 items-center gap-2 text-xs font-bold text-coral-600 sm:mt-5 sm:text-sm">View destination guide <ArrowRight aria-hidden="true" className="size-4 transition group-hover:translate-x-1" /></span>
                 </Link>
@@ -92,7 +92,7 @@ function CountriesPage() {
                     aria-pressed={selected}
                     aria-label={(selected ? 'Remove ' : 'Add ') + country.name + (selected ? ' from comparison' : ' to comparison')}
                     onClick={() => toggleCompare(country.slug, country.name)}
-                    className={'flex min-h-11 w-full items-center justify-center gap-2 rounded-full border px-4 py-2 text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500 sm:w-full ' + (selected ? 'border-forest-900 bg-forest-900 text-white hover:bg-forest-800' : 'border-forest-900/15 bg-white text-forest-900 hover:border-coral-500 hover:bg-coral-50')}
+                    className={'flex min-h-11 w-fit self-start items-center justify-center gap-2 rounded-full border px-4 py-2 text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500 lg:w-full lg:self-stretch ' + (selected ? 'border-forest-900 bg-forest-900 text-white hover:bg-forest-800' : 'border-forest-900/15 bg-white text-forest-900 hover:border-coral-500 hover:bg-coral-50')}
                   >
                     {selected ? <><Check aria-hidden="true" className="size-4" /> Selected</> : '＋ Compare'}
                   </button>
@@ -153,7 +153,7 @@ function CountriesPage() {
 
       {selectedSlugs.length > 0 && (
         <div className="fixed inset-x-3 bottom-20 z-40 mx-auto flex max-w-xl items-center justify-between gap-3 rounded-2xl bg-forest-950 p-3 text-white shadow-xl ring-1 ring-white/15 sm:inset-x-6">
-          <div aria-live="polite"><p className="font-mono text-[10px] font-bold uppercase tracking-wider text-coral-300">{selectedSlugs.length} of 3 destinations</p><p className="text-xs text-white/75">{selectedSlugs.length < 2 ? 'Add one more to compare' : 'Ready for side-by-side comparison'}</p></div>
+          <div aria-live="polite"><p className="font-mono text-[10px] font-bold uppercase tracking-wider text-coral-300">{selectedSlugs.length} / 3 selected</p><p className="text-xs text-white/75">{selectedSlugs.length < 2 ? 'Choose one more' : 'Ready to compare'}</p></div>
           <div className="flex shrink-0 items-center gap-2">
             <button type="button" onClick={() => { setSelectedSlugs([]); setShowComparison(false); setCompareNotice('') }} className="min-h-11 rounded-full px-3 py-2 text-xs font-bold text-white/80 hover:bg-white/10">Clear</button>
             <button type="button" disabled={selectedSlugs.length < 2} onClick={openComparison} className="min-h-11 rounded-full bg-coral-500 px-4 py-2 text-xs font-bold text-white transition hover:bg-coral-600 disabled:cursor-not-allowed disabled:opacity-50">Compare {selectedSlugs.length} <ArrowRight aria-hidden="true" className="ml-1 inline size-3.5" /></button>
