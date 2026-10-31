@@ -13,7 +13,17 @@ import { getPublicContent } from '@/lib/public-functions'
 import { BoardingPassGenerator } from '@/components/BoardingPassGenerator'
 import { FamilyCashflowPlanner } from '@/components/FamilyCashflowPlanner'
 
-export const Route = createFileRoute('/')({ loader: () => getPublicContent(), component: Home })
+import { createPageSeo } from '@/lib/seo'
+
+export const Route = createFileRoute('/')({
+  loader: () => getPublicContent(),
+  head: () => createPageSeo({
+    title: 'Study Visas & IELTS Coaching in Sangaria | British Education',
+    description: 'Get study visa guidance, IELTS/PTE coaching and free profile evaluation in Sangaria, Rajasthan. Compare destinations and explore next steps.',
+    path: '/',
+  }),
+  component: Home,
+})
 
 const stats = [
   { value: '2,500+', label: 'Visas approved' },
