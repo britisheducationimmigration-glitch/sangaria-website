@@ -48,7 +48,7 @@ function VisasPage() {
       >
         <div className="mt-10 flex flex-wrap gap-2">
           {visaServices.map((s) => (
-            <a key={s.slug} href={`#${s.slug}`} className="rounded-full border border-white/20 px-4 py-2 text-sm font-semibold hover:bg-white hover:text-forest-900">
+            <a key={s.slug} href={`#${s.slug}`} className="rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-400">
               {s.title}
             </a>
           ))}
@@ -88,7 +88,7 @@ function VisasPage() {
               key={c.slug}
               to="/countries/$slug"
               params={{ slug: c.slug }}
-              className="inline-flex items-center gap-2 rounded-full bg-cream px-5 py-3 font-display font-bold text-forest-900 ring-1 ring-forest-900/10 hover:bg-forest-900 hover:text-white"
+              className="inline-flex items-center gap-2 rounded-full bg-cream px-5 py-3 font-display font-bold text-forest-900 ring-1 ring-forest-900/10 transition-colors hover:bg-coral-50 hover:text-forest-900 hover:ring-coral-500/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500"
             >
               <CountryFlag flag={c.flag} code={c.code} country={c.name} className="h-4 w-6 shrink-0" />
               <span>{c.name}</span>
