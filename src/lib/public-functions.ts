@@ -64,21 +64,77 @@ function dateOnly(value: unknown) {
   return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString().slice(0, 10)
 }
 
+const legacyReviewedPosts: Record<string, { title: string; excerpt: string; body: string[] }> = {
+  'canada-study-permit-cap-2027': {
+    title: 'Canada study permit cap for 2027: what Rajasthan & Punjab students should know',
+    excerpt: 'IRCC has announced its allocation for next year. Here is how the provincial attestation letter (PAL) affects your application.',
+    body: [
+      'Canada continues to manage the number of new study permits through a national cap and a provincial attestation letter (PAL) requirement for most college and undergraduate programs.',
+      'Masters and PhD students at public institutions remain exempt from the PAL requirement, which makes postgraduate programs a strong option for graduates.',
+      'Our advice: apply early, keep your funds documentation clean, and choose programs aligned with your previous education. Book a free counselling session to check your profile.',
+    ],
+  },
+  'uk-graduate-route-update': {
+    title: 'UK Graduate Route: the latest on post-study work duration',
+    excerpt: 'Changes to the Graduate Route mean students should plan their career timeline carefully. We break it down.',
+    body: [
+      'The UK Graduate Route allows international students to stay and work after their studies. Recent policy updates have adjusted the duration for new applicants.',
+      'Students starting in January and May intakes should confirm the rules that apply on their visa application date.',
+      'Our counsellors can help you choose universities with strong employability records.',
+    ],
+  },
+}
+
+// Published posts are database-backed; only replace the exact legacy copy so later admin edits remain authoritative.
+function applyEditorialReview(post: PublicContent['posts'][number]): PublicContent['posts'][number] {
+  const reviewed = fixturePosts.find((candidate) => candidate.slug === post.slug)
+  if (!reviewed?.lastReviewed || !reviewed.sources?.length) return post
+
+  const legacy = legacyReviewedPosts[post.slug]
+  const isLegacyCopy =
+    !!legacy &&
+    post.title === legacy.title &&
+    post.excerpt === legacy.excerpt &&
+    JSON.stringify(post.body) === JSON.stringify(legacy.body)
+  const isReviewedCopy =
+    post.title === reviewed.title &&
+    post.excerpt === reviewed.excerpt &&
+    JSON.stringify(post.body) === JSON.stringify(reviewed.body)
+
+  if (!isLegacyCopy && !isReviewedCopy) return post
+
+  if (isLegacyCopy) {
+    return {
+      ...post,
+      title: reviewed.title,
+      excerpt: reviewed.excerpt,
+      readMins: reviewed.readMins,
+      body: reviewed.body,
+      lastReviewed: reviewed.lastReviewed,
+      sources: reviewed.sources,
+    }
+  }
+
+  return { ...post, lastReviewed: reviewed.lastReviewed, sources: reviewed.sources }
+}
+
 export const getPublicContent = createServerFn({ method: 'GET' }).handler(async (): Promise<PublicContent> => {
   if (publicContentCache && publicContentCache.expiresAt > Date.now()) return publicContentCache.data
   const postRows = await queryRows('SELECT slug, title, category, publish_date, excerpt, read_mins, body_json FROM content_posts WHERE published = 1 ORDER BY publish_date DESC, id DESC')
   const storyRows = await queryRows('SELECT id, kind, name, city, country, visa, quote, rating, initials, flag, story_date, note FROM success_stories WHERE published = 1 ORDER BY story_date DESC, id DESC')
   const settingsRows = await queryRows('SELECT popup_enabled, popup_delay_seconds, whatsapp_enabled, approvals_marquee_enabled FROM site_settings WHERE id = 1 LIMIT 1')
   const posts = postRows.length
-    ? postRows.map((row) => ({
-        slug: String(row.slug),
-        title: String(row.title),
-        category: String(row.category) as PublicContent['posts'][number]['category'],
-        date: dateOnly(row.publish_date),
-        excerpt: String(row.excerpt),
-        readMins: Number(row.read_mins),
-        body: jsonArray(row.body_json).map(String),
-      }))
+    ? postRows.map((row) =>
+        applyEditorialReview({
+          slug: String(row.slug),
+          title: String(row.title),
+          category: String(row.category) as PublicContent['posts'][number]['category'],
+          date: dateOnly(row.publish_date),
+          excerpt: String(row.excerpt),
+          readMins: Number(row.read_mins),
+          body: jsonArray(row.body_json).map(String),
+        }),
+      )
     : fixturePosts
   const approvals = storyRows.length
     ? storyRows.filter((row) => row.kind === 'approval').map((row) => ({
