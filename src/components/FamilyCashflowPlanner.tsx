@@ -71,9 +71,9 @@ export function FamilyCashflowPlanner() {
           <div class="country-badge">${country.flag} ${country.name} Study Visa — Family Cashflow Roadmap</div>
           
           <div class="summary-box">
-            <span style="font-size: 10px; font-weight: 700; color: #e11d48; text-transform: uppercase; letter-spacing: 0.05em;">Estimated 1st Year Outflow</span>
+            <span style="font-size: 10px; font-weight: 700; color: #e11d48; text-transform: uppercase; letter-spacing: 0.05em;">Estimated 1st-year planning total</span>
             <div class="total-val">${country.totalEstimateINR}</div>
-            <div class="rule-note"><strong>Official Embassy Requirement:</strong> ${country.officialRuleNote}</div>
+            <div class="rule-note"><strong>Visa and budget guidance:</strong> ${country.officialRuleNote}</div>
           </div>
 
           <table>
@@ -81,7 +81,7 @@ export function FamilyCashflowPlanner() {
               <tr>
                 <th style="width: 16%;">Stage & Time</th>
                 <th style="width: 32%;">Expense Title & Detail</th>
-                <th style="width: 24%;">Approx Outflow (INR / Forex)</th>
+                <th style="width: 24%;">Approx. Budget Amount (INR / Forex)</th>
                 <th style="width: 28%;">Paid Directly To & Refund</th>
               </tr>
             </thead>
@@ -119,8 +119,8 @@ export function FamilyCashflowPlanner() {
     let msg = `✈️ *British Education & Immigration, Sangaria*\n`
     msg += `📋 *Family Visa Budget & Cashflow Planner*\n\n`
     msg += `🌍 *Destination Country:* ${country.name} ${country.flag}\n`
-    msg += `💰 *Estimated Total:* ${country.totalEstimateINR}\n`
-    msg += `📌 *Official Rule:* ${country.officialRuleNote}\n\n`
+    msg += `💰 *Estimated planning total:* ${country.totalEstimateINR}\n`
+    msg += `📌 *Visa and budget guidance:* ${country.officialRuleNote}\n\n`
     msg += `--- *STAGE-BY-STAGE EXPENSES* ---\n`
     country.stages.forEach((st) => {
       msg += `\n*Stage 0${st.stageNumber}: ${st.title}*\n`
@@ -148,7 +148,7 @@ export function FamilyCashflowPlanner() {
             Family Cashflow Planner
           </h2>
           <p className="text-xs sm:text-sm text-forest-100/70 mt-1 max-w-xl">
-            Stage-by-stage breakdown of payments. You never pay everything at once.
+            Estimated payment stages plus any funds you may need to show. Totals are planning estimates.
           </p>
         </div>
 
@@ -198,13 +198,24 @@ export function FamilyCashflowPlanner() {
       {/* Country Summary Bar */}
       <div className="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <div>
-          <p className="text-[11px] uppercase tracking-wider text-coral-400 font-bold">Total Estimated Outflow</p>
+          <p className="text-[11px] uppercase tracking-wider text-coral-400 font-bold">Estimated First-year Budget</p>
           <p className="text-xl sm:text-2xl font-black text-white">{country.totalEstimateINR}</p>
         </div>
         <p className="text-xs text-forest-100/80 sm:max-w-md leading-relaxed border-t sm:border-t-0 sm:border-l border-white/10 sm:pl-4 pt-2 sm:pt-0">
           💡 {country.officialRuleNote}
         </p>
       </div>
+
+      {country.officialSources?.length ? (
+        <div className="-mt-2 mb-5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]">
+          <span className="font-bold text-coral-300">Official sources:</span>
+          {country.officialSources.map((source) => (
+            <a key={source.url} href={source.url} target="_blank" rel="noreferrer" className="text-white/75 underline decoration-white/30 underline-offset-2 hover:text-white">
+              {source.label}
+            </a>
+          ))}
+        </div>
+      ) : null}
 
       {/* 2x2 Grid for Mobile (matching What We Do & Destinations size) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
