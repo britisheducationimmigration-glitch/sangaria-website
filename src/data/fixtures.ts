@@ -27,21 +27,21 @@ export const countries: Country[] = [
     code: 'CA',
     headline: 'Study, work and build a path to PR',
     intro:
-      'Canada combines world-ranked colleges with clear post-study work rights and multiple routes to permanent residence through Express Entry and Provincial Nominee Programs.',
+      'Eligible students may qualify for a post-graduation work permit (PGWP) and permanent-residence pathways, but programme, institution and personal eligibility rules apply. Confirm the current IRCC criteria before planning.',
     stats: [
-      { label: 'Post-study work', value: 'Up to 3 yrs' },
-      { label: 'Spouse work permit', value: 'Eligible*' },
-      { label: 'Avg. tuition', value: 'CAD 15–30k' },
+      { label: 'Post-study work (if eligible)', value: 'PGWP: up to 3 yrs' },
+      { label: 'Spouse work permit', value: 'Eligible cases only' },
+      { label: 'Tuition', value: 'Varies by DLI and programme' },
     ],
     intakes: ['January', 'May', 'September'],
     visas: ['Study Permit', 'Express Entry PR', 'PNP', 'Visitor Visa', 'Work Permit'],
-    highlights: ['SDS-style fast processing streams', 'Co-op & internship programs', 'Large Punjabi & Rajasthani community'],
+    highlights: ['PAL/TAL required in most cases; exemptions apply', 'PGWP eligibility depends on the school and programme', 'Spouse open work permits are limited to eligible cases'],
     costs: [
-      { label: 'GIC (living funds)', value: 'CAD 20,635' },
+      { label: 'Living funds, 1 person outside Quebec (excl. tuition/travel)', value: 'CAD 23,448 from 1 Sep 2026' },
       { label: 'Visa fee', value: 'CAD 150' },
       { label: 'Biometrics', value: 'CAD 85' },
     ],
-    english: 'IELTS 6.0 (no band < 6) / PTE 60',
+    english: 'Set by the school and programme; some PGWP applicants also need language results.',
   },
   {
     slug: 'uk',
@@ -50,21 +50,21 @@ export const countries: Country[] = [
     code: 'UK',
     headline: 'One-year masters, world-famous universities',
     intro:
-      'The UK offers shorter degrees, a 2-year Graduate Route visa and universities known across the world — ideal for students who want quality and speed.',
+      'The UK offers shorter degrees and a Graduate Route for eligible graduates: 2 years for applications by 31 December 2026, 18 months from 1 January 2027, and 3 years for doctoral graduates.',
     stats: [
-      { label: 'Graduate Route', value: '18–24 months' },
-      { label: 'Masters duration', value: '1 year' },
-      { label: 'Avg. tuition', value: '£12–22k' },
+      { label: 'Graduate Route', value: '2 yrs / 18 mos; 3 yrs doctoral' },
+      { label: 'Many masters programmes', value: 'Often 1 year' },
+      { label: 'Tuition', value: 'Varies by university and course' },
     ],
     intakes: ['January', 'May', 'September'],
     visas: ['Student Visa', 'Graduate Route', 'Skilled Worker', 'Standard Visitor'],
-    highlights: ['IELTS waivers at many universities', 'Work 20 hrs/week while studying', 'No GIC requirement'],
+    highlights: ['English evidence depends on the course, sponsor and visa route', 'Student work rights depend on visa conditions and course', 'Graduate Route duration depends on application date'],
     costs: [
-      { label: 'Living funds (outside London)', value: '£1,136 / month' },
-      { label: 'Visa fee', value: '£524' },
+      { label: 'Student living funds, outside London (up to 9 months)', value: '£1,171 / month' },
+      { label: 'Student visa fee (outside UK)', value: '£558' },
       { label: 'IHS (health surcharge)', value: '£776 / year' },
     ],
-    english: 'IELTS UKVI 6.0 / PTE Academic 59',
+    english: 'Usually CEFR B2 at degree level or B1 below; exemptions and provider assessment may apply.',
   },
   {
     slug: 'australia',
@@ -334,33 +334,46 @@ export type Post = {
   excerpt: string
   readMins: number
   body: string[]
+  lastReviewed?: string
+  sources?: { label: string; url: string }[]
 }
 
 export const posts: Post[] = [
   {
     slug: 'canada-study-permit-cap-2027',
-    title: 'Canada study permit cap for 2027: what Rajasthan & Punjab students should know',
+    title: 'Canada study permit cap for 2027: what’s confirmed so far',
     category: 'Visa News',
     date: '2026-10-20',
-    excerpt: 'IRCC has announced its allocation for next year. Here is how the provincial attestation letter (PAL) affects your application.',
-    readMins: 5,
+    excerpt: 'IRCC has published 2026 allocation figures; its 2026 planning binder puts work on the 2027 cap in fall 2026. Check the current PAL/TAL rules before applying.',
+    readMins: 2,
+    lastReviewed: '2026-10-31',
+    sources: [
+      { label: 'IRCC 2026 allocation notice', url: 'https://www.canada.ca/en/immigration-refugees-citizenship/news/notices/2026-provincial-territorial-allocations-under-international-student-cap.html' },
+      { label: 'IRCC 2026 planning binder', url: 'https://www.canada.ca/en/immigration-refugees-citizenship/corporate/transparency/transition-binders/deputy-minister-2026/international-student-program.html' },
+      { label: 'PAL/TAL exceptions', url: 'https://www.canada.ca/en/immigration-refugees-citizenship/services/study-canada/study-permit/get-documents/provincial-attestation-letter.html' },
+    ],
     body: [
-      'Canada continues to manage the number of new study permits through a national cap and a provincial attestation letter (PAL) requirement for most college and undergraduate programs.',
-      'Masters and PhD students at public institutions remain exempt from the PAL requirement, which makes postgraduate programs a strong option for graduates.',
-      'Our advice: apply early, keep your funds documentation clean, and choose programs aligned with your previous education. Book a free counselling session to check your profile.',
+      'As of 31 October 2026, IRCC’s public allocation notice lists 2026 figures. Its 2026 planning binder says work to set the 2027 study-permit cap and seek provincial and territorial allocation approvals is scheduled for fall 2026. Check IRCC for a newer notice before making a 2027 plan.',
+      'A PAL or TAL is required in most cases. Exemptions include eligible master’s and doctoral students at public designated learning institutions starting 1 January 2026, along with other groups listed by IRCC. Check the exact programme and application rules; Quebec applicants may also need a CAQ.',
+      'An allocation or PAL/TAL does not guarantee a study permit. IRCC assesses each application against its full requirements. Confirm current instructions with your designated learning institution and IRCC before applying.',
     ],
   },
   {
     slug: 'uk-graduate-route-update',
-    title: 'UK Graduate Route: the latest on post-study work duration',
+    title: 'UK Graduate Route: duration by application date',
     category: 'Visa News',
     date: '2026-10-12',
-    excerpt: 'Changes to the Graduate Route mean students should plan their career timeline carefully. We break it down.',
-    readMins: 4,
+    excerpt: 'Eligible graduates get 2 years if they apply by 31 December 2026, 18 months from 1 January 2027, or 3 years for doctoral qualifications.',
+    readMins: 2,
+    lastReviewed: '2026-10-31',
+    sources: [
+      { label: 'GOV.UK Graduate visa', url: 'https://www.gov.uk/graduate-visa' },
+      { label: 'Immigration Rules: Graduate route', url: 'https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-graduate' },
+    ],
     body: [
-      'The UK Graduate Route allows international students to stay and work after their studies. Recent policy updates have adjusted the duration for new applicants.',
-      'Students starting in January and May intakes should confirm the rules that apply on their visa application date.',
-      'Our counsellors can help you choose universities with strong employability records.',
+      'Under current GOV.UK rules, eligible graduates receive 2 years when they apply on or before 31 December 2026. Applications made on or after 1 January 2027 receive 18 months. Graduates with a PhD or other doctoral qualification receive 3 years.',
+      'The application date sets the duration, not the course intake month. You must apply before your Student permission expires and after your education provider has told the Home Office that you completed your course.',
+      'Check the current GOV.UK guidance before planning. The Graduate visa cannot be extended, though some graduates may be able to switch to another route.',
     ],
   },
   {
