@@ -33,10 +33,10 @@ function CoachingPage() {
         intro="Expert-led IELTS and PTE coaching in Sangaria with small batches, a real-exam computer lab and weekly mock tests."
       >
         <div className="mt-10 flex flex-wrap gap-3">
-          <a href="#batches" className="rounded-full bg-coral-500 px-7 py-4 font-bold shadow-[4px_4px_0_0] shadow-black/40">
+          <a href="#batches" className="rounded-full bg-coral-500 px-7 py-4 font-bold text-white shadow-[4px_4px_0_0] shadow-black/40 transition-colors hover:bg-coral-600 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-300">
             See upcoming batches
           </a>
-          <a href="#demo" className="rounded-full border border-white/25 px-7 py-4 font-bold hover:bg-white hover:text-forest-900">
+          <a href="#demo" className="rounded-full border border-white/25 px-7 py-4 font-bold text-white transition-colors hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-300">
             Book a free demo
           </a>
         </div>

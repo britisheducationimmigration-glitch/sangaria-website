@@ -117,7 +117,7 @@ function CountryPage() {
                 ))}
               </tbody>
             </table>
-            <p className="mt-3 text-xs text-forest-900/50">Last verified {guidance.lastVerified}. Government fees only where stated; add-ons and route exceptions may apply.</p>
+            <p className="mt-3 text-xs text-forest-900/50">Last verified {guidance.lastVerified}. This is an indicative snapshot; fees and requirements vary by route, nationality, application location, family composition and date. Confirm the linked official source before applying. This page is general information, not an eligibility decision or guarantee of visa approval.</p>
             <p className="mt-3 text-sm leading-relaxed text-forest-900/70">{guidance.feeSummary}</p>
           </div>
           <div className="rounded-3xl bg-white p-8 ring-1 ring-forest-900/10">
