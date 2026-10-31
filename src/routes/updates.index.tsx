@@ -6,9 +6,15 @@ import type { Post } from '@/data/fixtures'
 import { cn } from '@/lib/utils'
 import { getPublicContent } from '@/lib/public-functions'
 
+import { createPageSeo } from '@/lib/seo'
+
 export const Route = createFileRoute('/updates/')({
   loader: () => getPublicContent(),
-  head: () => ({ meta: [{ title: 'Visa News & Blog · British Education and Immigration' }] }),
+  head: () => createPageSeo({
+    title: 'Visa & Study Abroad Updates | British Education Sangaria',
+    description: 'Browse visa policy updates, study abroad guides and IELTS/PTE articles from the British Education and Immigration team.',
+    path: '/updates',
+  }),
   component: UpdatesPage,
 })
 
