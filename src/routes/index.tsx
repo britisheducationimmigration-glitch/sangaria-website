@@ -293,32 +293,25 @@ function Home() {
           </div>
         </section>
 
-      {/* MOBILE FIXED HEADER + JUMP TO BAR COMBO */}
-        <div ref={mobileRef} className="h-[96px]">
-          <div className={`${isMobileSticky ? 'fixed top-0 left-0 right-0 z-50 shadow-2xl bg-forest-950/95 backdrop-blur-md border-b border-white/15' : 'relative'} transition-all duration-200`}>
-            {/* Mini Header visible when stuck */}
-            {isMobileSticky && (
-              <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 text-white sm:hidden">
-                <Link to="/" className="font-display font-extrabold text-xs tracking-tight text-coral-400">
-                  British Education & Immigration
-                </Link>
-                <div className="flex items-center gap-2">
-                  <a href="tel:+919772570478" className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-bold">📞 Call</a>
-                  <Link to="/contact" className="rounded-full bg-coral-500 px-3 py-1 text-[10px] font-extrabold">Enquiry</Link>
-                </div>
-              </div>
-            )}
-            {/* Jump Bar */}
-            <div className="overflow-x-auto py-2.5 px-4 scrollbar-none bg-forest-950">
-              <div className="flex items-center gap-2.5 w-max">
-                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-coral-400 shrink-0">JUMP:</span>
-                <a href="#services-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">✈️ Services</a>
-                <a href="#destinations-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">🌍 Countries</a>
-                <a href="#coaching-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">📚 IELTS & PTE</a>
-                <a href="#approvals-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">🎉 Visas</a>
-                <a href="#reviews-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">⭐ Reviews</a>
-                <a href="#enquiry-m" className="shrink-0 rounded-full bg-coral-500 px-3.5 py-1 text-xs font-bold text-white shadow-md">🔴 Free Enquiry</a>
-              </div>
+    
+       {/* MOBILE JUMP TO BAR */}
+        <div ref={mobileRef} className="h-[46px]">
+          <div
+            style={isMobileSticky ? { top: `${headerOffset}px` } : undefined}
+            className={`${
+              isMobileSticky
+                ? 'fixed left-0 right-0 z-40 shadow-xl bg-forest-950/95 backdrop-blur-md'
+                : 'relative bg-forest-950'
+            } overflow-x-auto py-2.5 px-4 scrollbar-none border-y border-white/10`}
+          >
+            <div className="flex items-center gap-2.5 w-max">
+              <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-coral-400 shrink-0">JUMP:</span>
+              <a href="#services-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">✈️ Services</a>
+              <a href="#destinations-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">🌍 Countries</a>
+              <a href="#coaching-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">📚 IELTS & PTE</a>
+              <a href="#approvals-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">🎉 Visas</a>
+              <a href="#reviews-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">⭐ Reviews</a>
+              <a href="#enquiry-m" className="shrink-0 rounded-full bg-coral-500 px-3.5 py-1 text-xs font-bold text-white shadow-md">🔴 Free Enquiry</a>
             </div>
           </div>
         </div>
@@ -772,24 +765,19 @@ function Home() {
         </section>
 
       {/* DESKTOP FIXED HEADER + JUMP TO BAR COMBO */}
-        <div ref={desktopRef} className="h-[96px]">
-          <div className={`${isDesktopSticky ? 'fixed top-0 left-0 right-0 z-50 shadow-2xl bg-forest-950/95 backdrop-blur-md border-b border-white/15' : 'relative'} transition-all duration-200 text-white`}>
-            {/* Mini Header visible when stuck */}
-            {isDesktopSticky && (
-              <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-2.5 border-b border-white/10">
-                <Link to="/" className="font-display font-extrabold text-sm tracking-tight text-coral-400">
-                  British Education & Immigration — Sangaria
-                </Link>
-                <div className="flex items-center gap-4 text-xs font-bold">
-                  <a href="tel:+919772570478" className="hover:text-coral-400">📞 +91 9772570478</a>
-                  <Link to="/contact" className="rounded-full bg-coral-500 px-4 py-1.5 text-white hover:bg-coral-600 transition">Free Enquiry</Link>
-                </div>
-              </div>
-            )}
-            {/* Jump Bar */}
-            <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3 bg-forest-950">
+        {/* DESKTOP JUMP TO BAR */}
+        <div ref={desktopRef} className="h-[52px]">
+          <div
+            style={isDesktopSticky ? { top: `${headerOffset}px` } : undefined}
+            className={`${
+              isDesktopSticky
+                ? 'fixed left-0 right-0 z-40 shadow-xl bg-forest-950/95 backdrop-blur-md'
+                : 'relative bg-forest-950'
+            } border-b border-forest-900/10 py-3 text-white`}
+          >
+            <div className="mx-auto flex max-w-7xl items-center justify-between px-6 text-sm">
               <span className="font-mono text-xs font-bold uppercase tracking-widest text-coral-400">JUMP TO:</span>
-              <div className="flex items-center gap-7 font-semibold text-sm">
+              <div className="flex items-center gap-7 font-semibold">
                 <a href="#services-desktop" className="hover:text-coral-400 transition">✈️ Services</a>
                 <a href="#destinations-desktop" className="hover:text-coral-400 transition">🌍 Countries</a>
                 <a href="#coaching-desktop" className="hover:text-coral-400 transition">📚 IELTS & PTE</a>
