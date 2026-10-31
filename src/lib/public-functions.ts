@@ -3,6 +3,7 @@ import { execute, jsonArray, queryRows } from './db.server'
 import type { PublicContent, PublicCoachingContent, SiteSettings } from './content-types'
 import { approvals as fixtureApprovals, coachingSchedule as fixtureCoachingSchedule, posts as fixturePosts, testimonials as fixtureTestimonials } from '@/data/fixtures'
 import { defaultCashflowData, mergeNewCashflowDestinations, type CountryCashflow } from '@/data/cashflow'
+import { isBatchExpired } from '@/lib/batch-dates'
 
 const defaultSettings: SiteSettings = {
   popupEnabled: true,
@@ -172,7 +173,7 @@ export const getCoachingContent = createServerFn({ method: 'GET' }).handler(asyn
   const batches = rows.length
     ? rows.map((row) => ({ id: Number(row.id), program: String(row.program), batch: String(row.batch_name), time: String(row.time_slot), seats: Number(row.seats), starts: String(row.starts), published: Boolean(row.published) }))
     : fixtureCoachingSchedule.map((batch, index) => ({ id: index + 1, program: batch.batch.includes('IELTS') ? 'IELTS' : 'PTE', batch: batch.batch, time: batch.time, seats: batch.seats, starts: batch.starts, published: true }))
-  const data = { batches }
+  const data = { batches: batches.filter((batch) => !isBatchExpired(batch.starts)) }
   coachingCache = { data, expiresAt: Date.now() + 8_000 }
   return data
 })
