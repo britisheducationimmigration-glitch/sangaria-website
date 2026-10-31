@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState, type FormEvent, type MouseEvent, type ReactNode } from 'react'
-import { getAdminSnapshot, deleteAdminUser, deleteBatch, deleteEnquiry, deletePost, deleteStory, exportEnquiries, saveAdminUser, saveBatch, saveCashflow, savePost, saveStory, updateEnquiry, updateSettings } from '@/lib/admin-functions'
+import { getAdminCashflow, getAdminSnapshot, deleteAdminUser, deleteBatch, deleteEnquiry, deletePost, deleteStory, exportEnquiries, saveAdminUser, saveBatch, saveCashflow, savePost, saveStory, updateEnquiry, updateSettings } from '@/lib/admin-functions'
 import type { AdminPost, AdminRole, AdminSnapshot, AdminStory, AdminUser, CoachingBatch, Enquiry, EnquiryStatus } from '@/lib/content-types'
 import { defaultCashflowData, CountryCashflow } from '@/data/cashflow'
 
@@ -476,17 +476,15 @@ function StoryEditor({ item, onReload, onNotice, onClose }: { item: AdminStory; 
   return <form onSubmit={submit} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-forest-900/10"><div className="mb-5 flex items-start justify-between gap-4"><div><p className="font-mono text-[10px] uppercase tracking-[0.18em] text-coral-600">Success stories</p><h3 className="text-xl font-extrabold">Story editor</h3><p className="mt-1 text-xs leading-relaxed text-forest-900/55">Use this for a visa approval or a client testimonial. Published entries appear on the Success Stories page and home page.</p></div><button type="button" onClick={onClose} className="text-sm font-bold text-forest-900/50">Close</button></div><div className="grid gap-4"><div className="grid gap-4 sm:grid-cols-2"><EditorField label="Story type" hint="Choose approval for a result card or testimonial for a client quote"><select className="field" value={form.kind} onChange={(e) => update('kind', e.target.value as AdminStory['kind'])}><option value="testimonial">Client testimonial</option><option value="approval">Visa approval</option></select></EditorField><EditorField label="Person / family name" hint="Example: Harpreet Kaur or Pooja & Family"><input className="field" value={form.name} onChange={(e) => update('name', e.target.value)} placeholder="Client name" required /></EditorField></div><div className="grid gap-4 sm:grid-cols-2"><EditorField label="City" hint="Example: Sangaria"><input className="field" value={form.city} onChange={(e) => update('city', e.target.value)} placeholder="Client city" /></EditorField><EditorField label="Destination country" hint="Example: Canada, United Kingdom or Australia"><input className="field" value={form.country} onChange={(e) => update('country', e.target.value)} placeholder="Country reached / applied to" /></EditorField></div><div className="grid gap-4 sm:grid-cols-2"><EditorField label="Visa / course"><input className="field" value={form.visa} onChange={(e) => update('visa', e.target.value)} placeholder="Study Permit, Student Visa, IELTS…" /></EditorField><EditorField label="Flag code / emoji (optional)" hint="Optional; use CA, UK, AU or an emoji. The footer uses reliable code badges."><input className="field" value={form.flag} onChange={(e) => update('flag', e.target.value)} placeholder="CA or 🇨🇦" /></EditorField></div><div className="grid gap-4 sm:grid-cols-2"><EditorField label="Initials" hint="Two letters shown on the story card; example: HK"><input className="field" value={form.initials} onChange={(e) => update('initials', e.target.value)} placeholder="HK" /></EditorField><EditorField label="Approval / story date"><input className="field" type="date" value={form.date} onChange={(e) => update('date', e.target.value)} /></EditorField></div><EditorField label="Rating (1 to 5 stars)"><input className="field" type="number" min="1" max="5" value={form.rating} onChange={(e) => update('rating', Number(e.target.value))} /></EditorField><EditorField label="Client quote" hint="Write the exact short testimonial. For an approval, describe the result in one or two sentences."><textarea className="field" rows={6} value={form.quote} onChange={(e) => update('quote', e.target.value)} placeholder="My visa was approved..." /></EditorField><EditorField label="Short result note" hint="Example: Sept intake · Conestoga or MSc Data Science"><input className="field" value={form.note} onChange={(e) => update('note', e.target.value)} placeholder="Extra result detail shown on the card" /></EditorField><label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={form.published} onChange={(e) => update('published', e.target.checked)} /> Publish on website</label><div className="flex flex-wrap gap-2"><button disabled={busy} className="rounded-full bg-forest-900 px-5 py-3 text-sm font-bold text-white">Save story</button>{form.id > 0 && <button type="button" disabled={busy} onClick={() => void remove()} className="rounded-full border border-red-200 px-5 py-3 text-sm font-bold text-red-700">Delete</button>}</div></div></form>
 }
 function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
-  const [data, setData] = useState<CountryCashflow[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('bei_custom_cashflow')
-        if (saved) return JSON.parse(saved)
-      } catch {}
-    }
-    return defaultCashflowData
-  })
+  const [data, setData] = useState<CountryCashflow[]>(defaultCashflowData)
   const [selectedSlug, setSelectedSlug] = useState('canada')
   const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    void getAdminCashflow()
+      .then((saved) => setData(saved))
+      .catch(() => onNotice('Could not load cashflow from database. Showing defaults.'))
+  }, [onNotice])
 
   const country = data.find((c) => c.slug === selectedSlug) || data[0]
 
@@ -508,7 +506,6 @@ function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
     try {
       setBusy(true)
       await saveCashflow({ data: { cashflowData: data } })
-      localStorage.setItem('bei_custom_cashflow', JSON.stringify(data))
       onNotice('Budget & Cashflow saved to database and is live on the website.')
     } catch (error) {
       onNotice(error instanceof Error ? error.message : 'Could not save budget data.')
@@ -522,7 +519,6 @@ function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
     try {
       setBusy(true)
       await saveCashflow({ data: { cashflowData: defaultCashflowData } })
-      localStorage.removeItem('bei_custom_cashflow')
       onNotice('Reset to official 2026/2027 embassy defaults and saved to database.')
     } catch {
       onNotice('Reset locally, but database sync failed.')

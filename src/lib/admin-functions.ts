@@ -1,6 +1,7 @@
 import { createMiddleware, createServerFn } from '@tanstack/react-start'
 import { execute, jsonArray, queryRows } from './db.server'
 import type { AdminPost, AdminRole, AdminSnapshot, AdminStory, CoachingBatch, Enquiry, EnquiryStatus, SiteSettings } from './content-types'
+import { defaultCashflowData, type CountryCashflow } from '@/data/cashflow'
 
 function stringValue(value: unknown, max = 5000) {
   return typeof value === 'string' ? value.trim().slice(0, max) : ''
@@ -216,6 +217,19 @@ export const saveCashflow = createServerFn({ method: 'POST' }).middleware([admin
   if (context.role !== 'super_admin') throw new Error('Only a super admin can update cashflow')
   await execute('UPDATE site_settings SET cashflow_json = ? WHERE id = 1', [data.cashflowJson])
   return { ok: true }
+})
+
+export const getAdminCashflow = createServerFn({ method: 'GET' }).middleware([adminMiddleware]).handler(async ({ context }): Promise<CountryCashflow[]> => {
+  if (context.role !== 'super_admin') throw new Error('Only a super admin can view cashflow settings')
+  const rows = await queryRows('SELECT cashflow_json FROM site_settings WHERE id = 1 LIMIT 1')
+  const raw = rows[0]?.cashflow_json
+  if (typeof raw !== 'string' || !raw.trim()) return defaultCashflowData
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed as CountryCashflow[] : defaultCashflowData
+  } catch {
+    return defaultCashflowData
+  }
 })
 
 export const saveAdminUser = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
