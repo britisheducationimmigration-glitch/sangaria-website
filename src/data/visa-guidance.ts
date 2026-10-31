@@ -58,16 +58,16 @@ export const visaGuidance: Record<string, VisaGuidance> = {
     ],
   },
   australia: {
-    lastVerified: '26 October 2026',
+    lastVerified: '31 October 2026',
     feeRows: [
-      { label: 'Student visa 500, primary applicant', value: 'AUD 2,000 from' },
+      { label: 'Student visa 500, primary applicant', value: 'AUD 2,500 from' },
       { label: 'Visitor 600, offshore tourist stream', value: 'AUD 250' },
       { label: 'Skilled Independent 189', value: 'AUD 6,135 from' },
       { label: 'Other costs', value: 'Health, police, tests, skills, OSHC separate' },
     ],
     feeSummary: 'The listed charges are primary-applicant government amounts. Additional applicants, concessions, onshore/offshore location, stream and payment surcharges can change the total. Use Home Affairs Visa Pricing Estimator before lodgement.',
     requirements: [
-      'Student 500: Confirmation of Enrolment, Genuine Student requirement, identity and circumstance-specific evidence, financial capacity and English evidence when required, adequate health insurance, and health/character compliance.',
+      'Student 500: Confirmation of Enrolment, Genuine Student requirement, identity and circumstance-specific evidence, financial capacity and English evidence when required, adequate health insurance, and health/character compliance. Rules effective 2 October 2026 also change who can apply or be granted a visa while in Australia and whether family can be included; check the current official rules for your case.',
       'Visitor 600 tourist stream: apply and remain outside Australia for the offshore stream, show genuine temporary intent, travel purpose, sufficient funds and incentives to return.',
       'Skilled Independent 189: SkillSelect invitation, usually under 45 when invited, nominated occupation, suitable skills assessment, English and points threshold, plus health and character requirements.',
       'Use the Home Affairs document checklist for nationality, location, family composition and route; non-English documents generally need compliant translations.',
