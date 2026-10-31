@@ -45,40 +45,37 @@ function Home() {
   const [showAllTestimonialsMobile, setShowAllTestimonialsMobile] = useState(false)
   const [wordIndex, setWordIndex] = useState(0)
   const [fade, setFade] = useState(true)
-
-  // Sticky Jump bar state & refs
+ // Sticky Jump bar state & refs (Dynamically attaches right under #site-main-header with 0 gap)
   const [isMobileSticky, setIsMobileSticky] = useState(false)
   const [isDesktopSticky, setIsDesktopSticky] = useState(false)
+  const [headerOffset, setHeaderOffset] = useState(68)
   const mobileRef = useRef<HTMLDivElement>(null)
   const desktopRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setFade(false)
-      setTimeout(() => {
-        setWordIndex((i) => (i + 1) % rotatingWords.length)
-        setFade(true)
-      }, 250)
-    }, 2800)
-    return () => clearInterval(timer)
-  }, [])
-
-  useEffect(() => {
     const handleScroll = () => {
+      const headerEl = document.getElementById('site-main-header')
+      const h = headerEl ? headerEl.offsetHeight : 68
+      setHeaderOffset(h)
+
       if (mobileRef.current) {
         const rect = mobileRef.current.getBoundingClientRect()
-        setIsMobileSticky(rect.top <= 0)
+        setIsMobileSticky(rect.top <= h)
       }
       if (desktopRef.current) {
         const rect = desktopRef.current.getBoundingClientRect()
-        setIsDesktopSticky(rect.top <= 0)
+        setIsDesktopSticky(rect.top <= h)
       }
     }
 
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    window.addEventListener('resize', handleScroll)
+    handleScroll()
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      window.removeEventListener('resize', handleScroll)
+    }
   }, [])
-
   const visibleTestimonialsDesktop = showAllTestimonials ? testimonials : testimonials.slice(0, 3)
   const visibleTestimonialsMobile = showAllTestimonialsMobile ? testimonials : testimonials.slice(0, 2)
 
