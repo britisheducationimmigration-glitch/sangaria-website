@@ -602,7 +602,7 @@ function EnquiryCard({ item, onReload, onNotice, canDelete, canManageComments }:
                   <p className="text-xs font-bold text-forest-900">
                     {activity.authorName || activity.authorEmail || 'Team member'}
                     <span className="font-normal text-forest-900/55"> · {formatActivityTime(activity.createdAt)}</span>
-                    {activity.editedBy && <span className="font-normal text-forest-900/55"> · Edited by {activity.editedBy}</span>}
+                    {activity.editedBy && <span className="font-normal text-forest-900/55"> · Edited by {activity.editedBy} on {formatActivityTime(activity.updatedAt)}</span>}
                   </p>
                   {editingActivityId === activity.id ? (
                     <div className="mt-3 grid gap-2">
