@@ -10,7 +10,7 @@ export const site = {
   latitude: 29.798547,
   longitude: 74.464214,
   mapUrl: 'https://www.google.com/maps/search/?api=1&query=29.798547,74.464214',
-  hours: 'Mon – Sat · 9:30 AM – 6:30 PM',
+  hours: 'Mon – Sat · 9:30 AM – 7:30 PM',
   instagram: 'https://www.instagram.com/british_education_and_immigrat/',
   facebook: 'https://www.facebook.com/BritishEducationAndImmigration',
 }

@@ -55,6 +55,22 @@ function Home() {
   const [showAllTestimonialsMobile, setShowAllTestimonialsMobile] = useState(false)
   const [wordIndex, setWordIndex] = useState(0)
   const [fade, setFade] = useState(true)
+
+  useEffect(() => {
+    let transitionTimer: number | undefined
+    const rotationTimer = window.setInterval(() => {
+      setFade(false)
+      transitionTimer = window.setTimeout(() => {
+        setWordIndex((current) => (current + 1) % rotatingWords.length)
+        setFade(true)
+      }, 250)
+    }, 3000)
+
+    return () => {
+      window.clearInterval(rotationTimer)
+      if (transitionTimer !== undefined) window.clearTimeout(transitionTimer)
+    }
+  }, [])
  // Sticky Jump bar state & refs (Dynamically attaches right under #site-main-header with 0 gap)
   const [isMobileSticky, setIsMobileSticky] = useState(false)
   const [isDesktopSticky, setIsDesktopSticky] = useState(false)
