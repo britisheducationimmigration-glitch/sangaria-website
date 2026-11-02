@@ -72,22 +72,57 @@ function AdminPage() {
     window.setTimeout(() => setNotice(''), 2800)
   }
 
+  function selectTab(value: Tab) {
+    if (settingsDirty && value !== 'settings' && !window.confirm('You have unsaved changes in Site settings. Leave this section and discard them?')) return
+    if (value !== 'settings') setSettingsDirty(false)
+    setTab(value)
+  }
+
   return (
     <div className="min-h-screen bg-cream text-forest-900">
       <header className="border-b border-forest-900/10 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-5 sm:px-8">
-          <div><p className="font-mono text-[10px] uppercase tracking-[0.2em] text-coral-600">Owner dashboard</p><h1 className="text-2xl font-extrabold">British Education & Immigration</h1></div>
-          <div className="text-right text-xs text-forest-900/60"><p>{snapshot.user.name}</p><p>{snapshot.user.email}</p><p className="font-bold text-coral-600">{roleLabels[snapshot.user.role]}</p><button type="button" onClick={() => setShowChangePass(true)} className="mr-3 font-bold text-forest-900 hover:text-coral-600">Change password</button><a href="/admin/oauth/logout" className="font-bold text-coral-600">Log out</a></div>
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-8 sm:py-5">
+          <div className="min-w-0">
+            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-coral-600">Owner dashboard</p>
+            <h1 className="mt-1 text-xl font-extrabold leading-tight text-forest-900 sm:text-2xl">British Education &amp; Immigration</h1>
+          </div>
+          <div className="grid gap-3 rounded-2xl border border-forest-900/10 bg-cream p-3 sm:flex sm:flex-col sm:items-end sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0">
+            <div className="min-w-0 text-left text-xs text-forest-900/70 sm:text-right">
+              <p className="font-semibold text-forest-900">{snapshot.user.name}</p>
+              <p className="break-all">{snapshot.user.email}</p>
+              <p className="font-bold text-coral-600">{roleLabels[snapshot.user.role]}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
+              <button type="button" onClick={() => setShowChangePass(true)} className="min-h-11 rounded-xl border border-forest-900/15 bg-white px-3 text-xs font-bold text-forest-900 transition hover:bg-forest-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500 sm:px-4 sm:text-sm">Change password</button>
+              <a href="/admin/oauth/logout" className="inline-flex min-h-11 items-center justify-center rounded-xl bg-coral-500 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-coral-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500">Log out</a>
+            </div>
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
-        <nav className="mb-8 flex gap-2 overflow-x-auto pb-2" aria-label="Admin sections">
-          {tabs.map(([value, label]) => <button key={value} type="button" onClick={() => {
-            if (settingsDirty && value !== 'settings' && !window.confirm('You have unsaved changes in Site settings. Leave this section and discard them?')) return
-            if (value !== 'settings') setSettingsDirty(false)
-            setTab(value)
-          }} className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold ${tab === value ? 'bg-forest-900 text-white' : 'bg-white ring-1 ring-forest-900/10'}`}>{label}</button>)}
-        </nav>
+        <div className="mb-8">
+          <label htmlFor="admin-section-select" className="mb-2 block text-xs font-bold uppercase tracking-wide text-forest-900/60 sm:hidden">Admin section</label>
+          <select
+            id="admin-section-select"
+            value={tab}
+            onChange={(event) => selectTab(event.currentTarget.value as Tab)}
+            className="min-h-12 w-full rounded-xl border border-forest-900/15 bg-white px-4 text-sm font-bold text-forest-900 shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500 sm:hidden"
+          >
+            {tabs.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
+          <nav className="hidden gap-2 overflow-x-auto overscroll-x-contain pb-2 sm:flex" aria-label="Admin sections">
+            {tabs.map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => selectTab(value)}
+                className={`min-h-11 shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold ${tab === value ? 'bg-forest-900 text-white' : 'bg-white ring-1 ring-forest-900/10'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+        </div>
         {notice && <p className="mb-5 rounded-xl bg-emerald-100 px-4 py-3 text-sm font-bold text-emerald-900">{notice}</p>}
         {tab === 'enquiries' && <EnquiriesPanel enquiries={filtered} stats={snapshot.enquiryStats} query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter} dateFrom={dateFrom} setDateFrom={setDateFrom} dateTo={dateTo} setDateTo={setDateTo} onReload={reload} onNotice={showNotice} canDelete={snapshot.user.role === 'super_admin'} canManageComments={snapshot.user.role === 'super_admin'} />}
         {tab === 'demo' && <DemoRequestsPanel enquiries={snapshot.enquiries.filter((item) => item.source === 'coaching')} totalCount={snapshot.enquiryStats.demoRequests} onReload={reload} onNotice={showNotice} canDelete={snapshot.user.role === 'super_admin'} canManageComments={snapshot.user.role === 'super_admin'} />}
