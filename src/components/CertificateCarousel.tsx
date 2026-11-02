@@ -74,16 +74,21 @@ export function CertificateCarousel({ certificates, id }: { certificates: Public
 
         <div className="grid gap-4 md:grid-cols-3" aria-live={paused ? 'polite' : 'off'}>
           {visible.map((item) => (
-            <article key={item.id} className="min-w-0 rounded-2xl bg-white p-3 ring-1 ring-forest-900/10 sm:p-4">
-              <div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl bg-cream p-3">
-                <img src={item.imageSrc} alt={item.altText} loading="lazy" decoding="async" className="max-h-full max-w-full object-contain" />
+            <Link
+              key={item.id}
+              to="/certificates"
+              aria-label={`View ${item.title} in the certificates gallery`}
+              className="block min-w-0 rounded-2xl bg-white p-3 ring-1 ring-forest-900/10 transition-shadow hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700 sm:p-4"
+            >
+              <div className="grid aspect-[4/3] min-h-0 w-full place-items-center overflow-hidden rounded-xl bg-cream p-3">
+                <img src={item.imageSrc} alt={item.altText} loading="lazy" decoding="async" className="block h-full w-full min-h-0 min-w-0 object-contain" />
               </div>
               <div className="px-1 pb-1 pt-4">
                 <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-coral-600">{item.category}</p>
                 <h3 className="mt-1 font-display text-base font-bold leading-snug text-forest-900">{item.title}</h3>
                 <p className="mt-1 text-xs text-forest-900/60">{item.issuer}</p>
               </div>
-            </article>
+            </Link>
           ))}
         </div>
 
