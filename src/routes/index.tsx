@@ -543,7 +543,7 @@ function Home() {
 
         <CertificateCarousel certificates={certificates} id="certificates-m" />
 
-        {/* TESTIMONIALS (MOBILE) */
+        {/* TESTIMONIALS (MOBILE) */}
         <section id="reviews-m" className="bg-sand/60 px-5 py-20 border-b border-forest-900/10">
           <div className="mb-8">
             <Eyebrow>Testimonials</Eyebrow>
@@ -1040,7 +1040,7 @@ function Home() {
 
         <CertificateCarousel certificates={certificates} id="certificates-desktop" />
 
-        {/* DESKTOP TESTIMONIALS */
+        {/* DESKTOP TESTIMONIALS */}
         <section id="reviews-desktop" className="bg-sand/60 py-24">
           <div className="mx-auto max-w-7xl px-6">
             <Eyebrow>Testimonials</Eyebrow>
