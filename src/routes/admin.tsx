@@ -110,7 +110,7 @@ function AdminPage() {
           >
             {tabs.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
-          <nav className="hidden gap-2 overflow-x-auto overscroll-x-contain pb-2 sm:flex" aria-label="Admin sections">
+          <nav className="hidden gap-2 overflow-x-auto overscroll-x-contain pb-2 sm:flex lg:flex-wrap lg:overflow-visible" aria-label="Admin sections">
             {tabs.map(([value, label]) => (
               <button
                 key={value}
