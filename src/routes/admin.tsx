@@ -11,7 +11,7 @@ export const Route = createFileRoute('/admin')({
   component: AdminPage,
 })
 
-type Tab = 'enquiries' | 'news' | 'stories' | 'batches' | 'budget' | 'settings' | 'users'
+type Tab = 'enquiries' | 'news' | 'stories' | 'batches' | 'budget' | 'settings' | 'users' | 'demo' | 'review' | 'reports'
 
 const roleLabels: Record<AdminRole, string> = { super_admin: 'Super Admin', content_editor: 'Content Editor', enquiry_manager: 'Enquiry Manager' }
 
@@ -53,15 +53,17 @@ function AdminPage() {
   }
 
   const filtered = snapshot.enquiries.filter((item) => {
-    const haystack = `${item.name} ${item.phone} ${item.email} ${item.city} ${item.country} ${item.interest} ${item.status} ${item.assignedTo}`.toLowerCase()
+    const haystack = `${item.name} ${item.phone} ${item.email} ${item.city} ${item.country} ${item.interest} ${item.status} ${item.assignedTo} ${item.source} ${item.summary}`.toLowerCase()
     const created = item.createdAt.slice(0, 10)
     return haystack.includes(query.toLowerCase()) && (statusFilter === 'All' || item.status === statusFilter) && (!dateFrom || created >= dateFrom) && (!dateTo || created <= dateTo)
   })
+  const newLeadQueue = snapshot.enquiries.filter((item) => item.status === 'New')
+  const draftQueue = snapshot.posts.filter((item) => !item.published)
   const tabs: Array<[Tab, string]> = snapshot.user.role === 'super_admin'
-    ? [['enquiries', `Enquiries (${snapshot.enquiryStats.total})`], ['news', 'News & Updates'], ['stories', 'Success Stories'], ['batches', 'Coaching batches'], ['budget', '💰 Cashflow Budget'],['settings', 'Site settings'], ['users', 'Users & roles']]
+    ? [['enquiries', `Enquiries (${snapshot.enquiryStats.total})`], ['demo', `Demo requests (${snapshot.enquiryStats.demoRequests})`], ['review', `Review queue (${newLeadQueue.length + draftQueue.length})`], ['reports', 'Reports'], ['news', 'News & Updates'], ['stories', 'Success Stories'], ['batches', 'Coaching batches'], ['budget', '💰 Cashflow Budget'], ['settings', 'Site settings'], ['users', 'Users & roles']]
     : snapshot.user.role === 'content_editor'
-      ? [['news', 'News & Updates'], ['stories', 'Success Stories'], ['batches', 'Coaching batches']]
-      : [['enquiries', `Enquiries (${snapshot.enquiries.length})`]]
+      ? [['review', `Review queue (${draftQueue.length})`], ['news', 'News & Updates'], ['stories', 'Success Stories'], ['batches', 'Coaching batches']]
+      : [['enquiries', `Enquiries (${snapshot.enquiries.length})`], ['demo', `Demo requests (${snapshot.enquiryStats.demoRequests})`], ['review', `Review queue (${newLeadQueue.length})`], ['reports', 'Reports']]
 
   function showNotice(message: string) {
     setNotice(message)
@@ -82,6 +84,9 @@ function AdminPage() {
         </nav>
         {notice && <p className="mb-5 rounded-xl bg-emerald-100 px-4 py-3 text-sm font-bold text-emerald-900">{notice}</p>}
         {tab === 'enquiries' && <EnquiriesPanel enquiries={filtered} stats={snapshot.enquiryStats} query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter} dateFrom={dateFrom} setDateFrom={setDateFrom} dateTo={dateTo} setDateTo={setDateTo} onReload={reload} onNotice={showNotice} canDelete={snapshot.user.role === 'super_admin'} canManageComments={snapshot.user.role === 'super_admin'} />}
+        {tab === 'demo' && <DemoRequestsPanel enquiries={snapshot.enquiries.filter((item) => item.source === 'coaching')} totalCount={snapshot.enquiryStats.demoRequests} onReload={reload} onNotice={showNotice} canDelete={snapshot.user.role === 'super_admin'} canManageComments={snapshot.user.role === 'super_admin'} />}
+        {tab === 'review' && <ReviewQueuePanel enquiries={newLeadQueue} drafts={draftQueue} onOpenEnquiries={() => { setQuery(''); setStatusFilter('New'); setTab('enquiries') }} onOpenDraft={(post) => { setSelectedPost(post); setTab('news') }} />}
+        {tab === 'reports' && <ReportsPanel stats={snapshot.enquiryStats} />}
         {tab === 'news' && <ContentPanel type="news" items={snapshot.posts} selected={selectedPost} onSelect={(item) => setSelectedPost(item as AdminPost | null)} onReload={reload} onNotice={showNotice} />}
         {tab === 'stories' && <ContentPanel type="stories" items={snapshot.stories} selected={selectedStory} onSelect={(item) => setSelectedStory(item as AdminStory | null)} onReload={reload} onNotice={showNotice} />}
         {tab === 'batches' && <BatchPanel items={snapshot.batches} selected={selectedBatch} onSelect={setSelectedBatch} onReload={reload} onNotice={showNotice} />}
@@ -456,6 +461,64 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
           ) : <p className="rounded-2xl bg-white p-6 text-center text-sm text-forest-900/55">Choose a lead card to update its stage, owner or follow-up.</p>}
         </div>
       )}
+    </section>
+  )
+}
+
+function DemoRequestsPanel({ enquiries, totalCount, onReload, onNotice, canDelete, canManageComments }: { enquiries: Enquiry[]; totalCount: number; onReload: () => Promise<void>; onNotice: (message: string) => void; canDelete: boolean; canManageComments: boolean }) {
+  const [dueOnly, setDueOnly] = useState(false)
+  const dueRequests = enquiries.filter((item) => item.nextFollowUpAt && new Date(item.nextFollowUpAt).getTime() <= Date.now() && !['Converted', 'Closed'].includes(item.status))
+  const visible = dueOnly ? dueRequests : enquiries
+  return (
+    <section>
+      <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div><p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">IELTS & PTE</p><h2 className="mt-2 text-3xl font-extrabold">Free demo requests</h2><p className="mt-1 text-sm text-forest-900/60">Preferred dates are requests. Confirm the available slot with the student and schedule the next follow-up on the lead.</p></div>
+        <button type="button" aria-pressed={dueOnly} onClick={() => setDueOnly((value) => !value)} className="w-fit rounded-full bg-amber-100 px-4 py-2 text-sm font-bold text-amber-900">{dueOnly ? 'Show all requests' : `Follow-ups due (${dueRequests.length})`}</button>
+      </div>
+      <div className="mb-5 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-2xl bg-white p-4 ring-1 ring-forest-900/10"><p className="text-xs font-bold uppercase tracking-wider text-forest-900/55">Total demo requests</p><p className="mt-2 text-3xl font-extrabold">{totalCount}</p></div>
+        <div className="rounded-2xl bg-amber-100 p-4 text-amber-900"><p className="text-xs font-bold uppercase tracking-wider opacity-70">Follow-ups due</p><p className="mt-2 text-3xl font-extrabold">{dueRequests.length}</p></div>
+      </div>
+      <div className="grid gap-4">{visible.map((item) => <EnquiryCard key={item.id} item={item} onReload={onReload} onNotice={onNotice} canDelete={canDelete} canManageComments={canManageComments} />)}{visible.length === 0 && <p className="rounded-2xl bg-white p-8 text-center text-forest-900/60">{dueOnly ? 'No demo follow-ups are due right now.' : 'No demo requests have been received yet.'}</p>}</div>
+      {totalCount > enquiries.length && <p className="mt-4 text-xs text-forest-900/55">Showing the latest {enquiries.length} requests in the lead list.</p>}
+    </section>
+  )
+}
+
+function ReviewQueuePanel({ enquiries, drafts, onOpenEnquiries, onOpenDraft }: { enquiries: Enquiry[]; drafts: AdminPost[]; onOpenEnquiries: () => void; onOpenDraft: (post: AdminPost) => void }) {
+  return (
+    <section>
+      <div className="mb-6"><p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">Needs attention</p><h2 className="mt-2 text-3xl font-extrabold">Review queue</h2><p className="mt-1 text-sm text-forest-900/60">A read-only overview of new enquiries and unpublished content, with links to the existing editing screens.</p></div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className="rounded-3xl bg-white p-5 ring-1 ring-forest-900/10">
+          <div className="mb-4 flex items-center justify-between gap-3"><h3 className="text-lg font-extrabold">New enquiries</h3><span className="rounded-full bg-coral-50 px-3 py-1 text-xs font-bold text-coral-700">{enquiries.length}</span></div>
+          <div className="grid gap-3">{enquiries.slice(0, 10).map((item) => <div key={item.id} className="rounded-2xl bg-cream p-4"><p className="font-bold">{item.name}</p><p className="mt-1 text-sm text-forest-900/60">{item.interest || 'General counselling'}{item.country ? ' · ' + item.country : ''}</p><p className="mt-1 text-xs text-forest-900/50">{new Date(item.createdAt).toLocaleString()}</p></div>)}{enquiries.length === 0 && <p className="text-sm text-forest-900/55">No new enquiries are waiting.</p>}</div>
+          {enquiries.length > 0 && <button type="button" onClick={onOpenEnquiries} className="mt-4 rounded-full bg-forest-900 px-4 py-2 text-sm font-bold text-white">Review new enquiries</button>}
+        </section>
+        <section className="rounded-3xl bg-white p-5 ring-1 ring-forest-900/10">
+          <div className="mb-4 flex items-center justify-between gap-3"><h3 className="text-lg font-extrabold">Unpublished content</h3><span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">{drafts.length}</span></div>
+          <div className="grid gap-3">{drafts.slice(0, 10).map((post) => <button key={post.id} type="button" onClick={() => onOpenDraft(post)} className="rounded-2xl bg-cream p-4 text-left transition hover:ring-1 hover:ring-coral-500"><span className="block font-bold">{post.title || 'Untitled draft'}</span><span className="mt-1 block text-xs text-forest-900/55">{post.category} · {post.date}</span></button>)}{drafts.length === 0 && <p className="text-sm text-forest-900/55">No unpublished articles are waiting.</p>}</div>
+          {drafts.length > 10 && <p className="mt-3 text-xs text-forest-900/55">Showing the latest 10 drafts.</p>}
+        </section>
+      </div>
+    </section>
+  )
+}
+
+function ReportsPanel({ stats }: { stats: AdminSnapshot['enquiryStats'] }) {
+  const conversion = stats.total ? Math.round((stats.converted / stats.total) * 100) : 0
+  const statuses = Object.entries(stats.byStatus).sort((a, b) => b[1] - a[1])
+  const sources = Object.entries(stats.bySource).sort((a, b) => b[1] - a[1])
+  return (
+    <section>
+      <div className="mb-6"><p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">Live lead summary</p><h2 className="mt-2 text-3xl font-extrabold">Reports</h2><p className="mt-1 text-sm text-forest-900/60">Counts are calculated from saved enquiries. Conversion is converted leads divided by all saved leads.</p></div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {[['New in last 7 days', stats.newLast7Days], ['Follow-ups due today', stats.dueToday], ['Demo requests', stats.demoRequests], ['Conversion rate', conversion + '%']].map(([label, value]) => <div key={String(label)} className="rounded-2xl bg-white p-5 ring-1 ring-forest-900/10"><p className="text-xs font-bold uppercase tracking-wider text-forest-900/55">{label}</p><p className="mt-2 text-3xl font-extrabold">{value}</p></div>)}
+      </div>
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <div className="rounded-3xl bg-white p-5 ring-1 ring-forest-900/10"><h3 className="text-lg font-extrabold">By stage</h3><div className="mt-4 divide-y divide-forest-900/10">{statuses.map(([label, value]) => <div key={label} className="flex justify-between gap-3 py-3 text-sm"><span>{label}</span><strong>{value}</strong></div>)}{statuses.length === 0 && <p className="py-3 text-sm text-forest-900/55">No enquiry data yet.</p>}</div></div>
+        <div className="rounded-3xl bg-white p-5 ring-1 ring-forest-900/10"><h3 className="text-lg font-extrabold">By source</h3><div className="mt-4 divide-y divide-forest-900/10">{sources.map(([label, value]) => <div key={label} className="flex justify-between gap-3 py-3 text-sm"><span>{label}</span><strong>{value}</strong></div>)}{sources.length === 0 && <p className="py-3 text-sm text-forest-900/55">No enquiry data yet.</p>}</div></div>
+      </div>
     </section>
   )
 }
@@ -914,10 +977,73 @@ function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
 function SettingsPanel({ settings, onReload, onNotice }: { settings: AdminSnapshot['settings']; onReload: () => Promise<void>; onNotice: (message: string) => void }) {
   const [form, setForm] = useState(settings)
   const [busy, setBusy] = useState(false)
-  async function save() { setBusy(true); try { await updateSettings({ data: form }); await onReload(); onNotice('Site settings saved.') } catch { onNotice('Could not save settings.') } finally { setBusy(false) } }
-  return <section className="max-w-2xl"><p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">Controls</p><h2 className="mt-2 text-3xl font-extrabold">Switch features on or off</h2><div className="mt-6 grid gap-4 rounded-3xl bg-white p-6 ring-1 ring-forest-900/10"><label className="flex items-center justify-between gap-4 border-b border-forest-900/10 pb-4"><span><strong className="block">Enquiry popup</strong><small className="text-forest-900/60">Show the enquiry form after visitors stay on the site.</small></span><input type="checkbox" checked={form.popupEnabled} onChange={(e) => setForm({ ...form, popupEnabled: e.target.checked })} /></label><label className="flex items-center justify-between gap-4 border-b border-forest-900/10 pb-4"><span><strong className="block">WhatsApp button</strong><small className="text-forest-900/60">Keep the floating WhatsApp contact action visible.</small></span><input type="checkbox" checked={form.whatsappEnabled} onChange={(e) => setForm({ ...form, whatsappEnabled: e.target.checked })} /></label><label className="flex items-center justify-between gap-4 border-b border-forest-900/10 pb-4"><span><strong className="block">Approvals marquee</strong><small className="text-forest-900/60">Show the moving recent-approval strip on the home page.</small></span><input type="checkbox" checked={form.approvalsMarqueeEnabled} onChange={(e) => setForm({ ...form, approvalsMarqueeEnabled: e.target.checked })} /></label><label><span className="mb-2 block font-bold">Popup delay (seconds)</span><input className="field max-w-40" type="number" min="3" max="60" value={form.popupDelaySeconds} onChange={(e) => setForm({ ...form, popupDelaySeconds: Number(e.target.value) })} /></label><button type="button" disabled={busy} onClick={() => void save()} className="w-fit rounded-full bg-forest-900 px-5 py-3 text-sm font-bold text-white">Save settings</button></div></section>
-}
 
+  function updateFaq(index: number, key: 'q' | 'a', value: string) {
+    setForm({ ...form, faqs: form.faqs.map((item, current) => current === index ? { ...item, [key]: value } : item) })
+  }
+  function updateStat(index: number, key: 'value' | 'label', value: string) {
+    setForm({ ...form, trustStats: form.trustStats.map((item, current) => current === index ? { ...item, [key]: value } : item) })
+  }
+  async function save() {
+    setBusy(true)
+    try {
+      await updateSettings({ data: form })
+      await onReload()
+      onNotice('Site settings saved.')
+    } catch (cause) {
+      onNotice(cause instanceof Error ? cause.message : 'Could not save settings.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="max-w-3xl">
+      <p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">Controls</p>
+      <h2 className="mt-2 text-3xl font-extrabold">Website settings</h2>
+      <p className="mt-2 text-sm text-forest-900/60">These values update the public pages after saving. Existing popup and WhatsApp controls remain here too.</p>
+      <div className="mt-6 grid gap-5 rounded-3xl bg-white p-6 ring-1 ring-forest-900/10">
+        <section className="grid gap-4 border-b border-forest-900/10 pb-5">
+          <h3 className="text-lg font-extrabold">Contact details</h3>
+          <label><span className="mb-2 block text-sm font-bold">Phone numbers (one per line)</span><textarea className="field min-h-20" value={form.phones.join('\n')} onChange={(event) => setForm({ ...form, phones: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean) })} /></label>
+          <label><span className="mb-2 block text-sm font-bold">Email addresses (one per line)</span><textarea className="field min-h-20" value={form.emails.join('\n')} onChange={(event) => setForm({ ...form, emails: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean) })} /></label>
+          <label><span className="mb-2 block text-sm font-bold">Office hours</span><input className="field" maxLength={120} value={form.officeHours} onChange={(event) => setForm({ ...form, officeHours: event.target.value })} placeholder="Mon – Sat · 9:30 AM – 7:30 PM" /></label>
+        </section>
+
+        <section className="grid gap-3 border-b border-forest-900/10 pb-5">
+          <div><h3 className="text-lg font-extrabold">Homepage trust numbers</h3><p className="text-xs text-forest-900/55">Edit the four small proof points shown in the home page hero.</p></div>
+          {form.trustStats.map((item, index) => <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1.5fr_auto]">
+            <input className="field" aria-label={`Trust number ${index + 1}`} value={item.value} onChange={(event) => updateStat(index, 'value', event.target.value)} placeholder="2,500+" />
+            <input className="field" aria-label={`Trust number label ${index + 1}`} value={item.label} onChange={(event) => updateStat(index, 'label', event.target.value)} placeholder="Visas approved" />
+            <button type="button" disabled={form.trustStats.length <= 1} onClick={() => setForm({ ...form, trustStats: form.trustStats.filter((_, current) => current !== index) })} className="rounded-full border border-forest-900/15 px-3 py-2 text-xs font-bold disabled:opacity-40">Remove</button>
+          </div>)}
+          <button type="button" disabled={form.trustStats.length >= 6} onClick={() => setForm({ ...form, trustStats: [...form.trustStats, { value: '', label: '' }] })} className="w-fit rounded-full bg-forest-50 px-4 py-2 text-xs font-bold text-forest-900 disabled:opacity-40">Add trust number</button>
+        </section>
+
+        <section className="grid gap-3 border-b border-forest-900/10 pb-5">
+          <div><h3 className="text-lg font-extrabold">Homepage FAQs</h3><p className="text-xs text-forest-900/55">Questions and answers appear in both FAQ sections on the home page.</p></div>
+          {form.faqs.map((item, index) => <div key={index} className="grid gap-2 rounded-2xl bg-cream p-4">
+            <div className="flex items-start gap-2">
+              <input className="field" aria-label={`FAQ question ${index + 1}`} value={item.q} onChange={(event) => updateFaq(index, 'q', event.target.value)} placeholder="Question" />
+              <button type="button" disabled={form.faqs.length <= 1} onClick={() => setForm({ ...form, faqs: form.faqs.filter((_, current) => current !== index) })} className="rounded-full border border-forest-900/15 px-3 py-2 text-xs font-bold disabled:opacity-40">Remove</button>
+            </div>
+            <textarea className="field min-h-20" aria-label={`FAQ answer ${index + 1}`} value={item.a} onChange={(event) => updateFaq(index, 'a', event.target.value)} placeholder="Answer" />
+          </div>)}
+          <button type="button" disabled={form.faqs.length >= 20} onClick={() => setForm({ ...form, faqs: [...form.faqs, { q: '', a: '' }] })} className="w-fit rounded-full bg-forest-50 px-4 py-2 text-xs font-bold text-forest-900 disabled:opacity-40">Add FAQ</button>
+        </section>
+
+        <section className="grid gap-4">
+          <h3 className="text-lg font-extrabold">Existing controls</h3>
+          <label className="flex items-center justify-between gap-4 border-b border-forest-900/10 pb-4"><span><strong className="block">Enquiry popup</strong><small className="text-forest-900/60">Show the enquiry form after visitors stay on the site.</small></span><input type="checkbox" checked={form.popupEnabled} onChange={(event) => setForm({ ...form, popupEnabled: event.target.checked })} /></label>
+          <label className="flex items-center justify-between gap-4 border-b border-forest-900/10 pb-4"><span><strong className="block">WhatsApp button</strong><small className="text-forest-900/60">Keep the floating WhatsApp contact action visible.</small></span><input type="checkbox" checked={form.whatsappEnabled} onChange={(event) => setForm({ ...form, whatsappEnabled: event.target.checked })} /></label>
+          <label className="flex items-center justify-between gap-4 border-b border-forest-900/10 pb-4"><span><strong className="block">Approvals marquee</strong><small className="text-forest-900/60">Show the moving recent-approval strip on the home page.</small></span><input type="checkbox" checked={form.approvalsMarqueeEnabled} onChange={(event) => setForm({ ...form, approvalsMarqueeEnabled: event.target.checked })} /></label>
+          <label><span className="mb-2 block font-bold">Popup delay (seconds)</span><input className="field max-w-40" type="number" min="3" max="60" value={form.popupDelaySeconds} onChange={(event) => setForm({ ...form, popupDelaySeconds: Number(event.target.value) })} /></label>
+        </section>
+        <button type="button" disabled={busy} onClick={() => void save()} className="w-fit rounded-full bg-forest-900 px-5 py-3 text-sm font-bold text-white disabled:opacity-60">{busy ? 'Saving…' : 'Save settings'}</button>
+      </div>
+    </section>
+  )
+}
 function UsersPanel({ users, currentEmail, onReload, onNotice }: { users: AdminUser[]; currentEmail: string; onReload: () => Promise<void>; onNotice: (message: string) => void }) {
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')

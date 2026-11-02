@@ -4,6 +4,7 @@ import { Facebook, Instagram } from '@/components/BrandIcons'
 import { EnquiryForm } from '@/components/EnquiryForm'
 import { PageHero } from '@/components/Section'
 import { site } from '@/data/site'
+import { Route as RootRoute } from './__root'
 
 import { createPageSeo } from '@/lib/seo'
 
@@ -21,6 +22,7 @@ export const Route = createFileRoute('/contact')({
 
 function ContactPage() {
   const { interest } = Route.useSearch()
+  const { settings } = RootRoute.useLoaderData()
   return (
     <>
       <PageHero
@@ -52,9 +54,9 @@ function ContactPage() {
                 <Phone className="mt-1 size-5 shrink-0 text-coral-400" />
                 <span>
                   <span className="block font-bold">Call us</span>
-                  {site.phones.map((p) => (
-                    <a key={p} href={`tel:+91${p}`} className="block text-forest-100/75 hover:text-white">
-                      +91 {p}
+                  {settings.phones.map((p) => (
+                    <a key={p} href={`tel:${p.startsWith('+') ? p : '+91' + p}`} className="block text-forest-100/75 hover:text-white">
+                      {p.startsWith('+') ? p : '+91 ' + p}
                     </a>
                   ))}
                 </span>
@@ -63,14 +65,14 @@ function ContactPage() {
                 <Clock className="mt-1 size-5 shrink-0 text-coral-400" />
                 <span>
                   <span className="block font-bold">Hours</span>
-                  <span className="text-forest-100/75">{site.hours}</span>
+                  <span className="text-forest-100/75">{settings.officeHours}</span>
                 </span>
               </li>
               <li className="flex gap-4">
                 <Mail className="mt-1 size-5 shrink-0 text-coral-400" />
                 <span>
                   <span className="block font-bold">Email us</span>
-                  {site.emails.map((email) => (
+                  {settings.emails.map((email) => (
                     <a
                       key={email}
                       href={`https://mail.google.com/mail/?view=cm&fs=1&to=${email}`}

@@ -51,6 +51,13 @@ export function EnquiryForm({
     const interest = String(data.get('interest') ?? '').trim()
     const country = String(data.get('country') ?? '').trim()
     const message = String(data.get('message') ?? '').trim()
+    const preferredDemoDate = source === 'coaching' ? String(data.get('preferredDemoDate') ?? '').trim() : ''
+    const preferredDemoTime = source === 'coaching' ? String(data.get('preferredDemoTime') ?? '').trim() : ''
+    const enquirySummary = [
+      summary ?? '',
+      preferredDemoDate ? 'Preferred demo date: ' + preferredDemoDate : '',
+      preferredDemoTime ? 'Preferred demo time: ' + preferredDemoTime : '',
+    ].filter(Boolean).join('\n')
 
     // 1. Build Pre-filled WhatsApp Message
     const textLines = [
@@ -63,7 +70,7 @@ export function EnquiryForm({
       interest ? `🎯 *Interest:* ${interest}` : '',
       country ? `🌍 *Preferred Country:* ${country}` : '',
       message ? `💬 *Message:* ${message}` : '',
-      summary ? `📋 *Details:* ${summary}` : '',
+      enquirySummary ? `📋 *Details:* ${enquirySummary}` : '',
       '',
       'Please guide me further. Thank you!',
     ].filter(Boolean).join('\n')
@@ -83,7 +90,7 @@ export function EnquiryForm({
           country,
           message,
           source,
-          summary: summary ?? '',
+          summary: enquirySummary,
         },
       })
 
@@ -211,6 +218,26 @@ export function EnquiryForm({
           </select>
         </div>
       </div>
+      {source === 'coaching' && (
+        <fieldset className={cn('rounded-2xl border p-4', dark ? 'border-white/15 bg-white/5' : 'border-forest-900/10 bg-forest-50')}>
+          <legend className={cn('px-1 text-sm font-bold', dark ? 'text-white' : 'text-forest-900')}>Preferred free demo slot</legend>
+          <p className={cn('mb-3 text-xs', dark ? 'text-forest-100/70' : 'text-forest-900/60')}>Choose a date and time window. Our team will confirm availability.</p>
+          <div className={cn('grid gap-3', !compact && 'sm:grid-cols-2')}>
+            <div>
+              <label className={labelCls} htmlFor={`${source}-demo-date`}>Preferred date (optional)</label>
+              <input id={`${source}-demo-date`} name="preferredDemoDate" type="date" min={new Date().toISOString().slice(0, 10)} className="field" />
+            </div>
+            <div>
+              <label className={labelCls} htmlFor={`${source}-demo-time`}>Time window</label>
+              <select id={`${source}-demo-time`} name="preferredDemoTime" defaultValue="Flexible" className="field">
+                <option>Flexible</option>
+                <option>9:30 AM – 12:30 PM</option>
+                <option>4:00 PM – 7:30 PM</option>
+              </select>
+            </div>
+          </div>
+        </fieldset>
+      )}
       <div>
         <label className={labelCls} htmlFor={`${source}-message`}>Message</label>
         <textarea id={`${source}-message`} name="message" rows={compact ? 2 : 4} className="field resize-none" placeholder="Tell us about your education, test scores or travel plans" />
@@ -222,7 +249,7 @@ export function EnquiryForm({
         className="group flex items-center justify-center gap-2 rounded-full bg-coral-500 px-7 py-4 font-bold text-white shadow-[4px_4px_0_0] shadow-forest-950 transition hover:-translate-y-0.5 disabled:opacity-70"
       >
         {state === 'sending' ? <Loader2 className="size-5 animate-spin" /> : <Send className="size-4 transition group-hover:translate-x-1" />}
-        {state === 'sending' ? 'Sending…' : 'Send enquiry'}
+        {state === 'sending' ? 'Sending…' : source === 'coaching' ? 'Request demo class' : 'Send enquiry'}
       </button>
     </form>
   )

@@ -1,6 +1,7 @@
 import { createMiddleware, createServerFn } from '@tanstack/react-start'
 import { execute, jsonArray, queryRows } from './db.server'
-import type { AdminPost, AdminRole, AdminSnapshot, AdminStory, CoachingBatch, Enquiry, EnquiryActivity, EnquiryStatus, SiteSettings } from './content-types'
+import type { AdminPost, AdminRole, AdminSnapshot, AdminStory, CoachingBatch, Enquiry, EnquiryActivity, EnquiryStatus } from './content-types'
+import { asFaqList, asTrustStatList, readSiteSettings } from './site-settings'
 import { defaultCashflowData, mergeNewCashflowDestinations, type CountryCashflow } from '@/data/cashflow'
 import { isValidBatchStartDate } from '@/lib/batch-dates'
 
@@ -12,8 +13,6 @@ function numberValue(value: unknown, fallback = 0) {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : fallback
 }
-
-const defaultSettings: SiteSettings = { popupEnabled: true, popupDelaySeconds: 8, whatsappEnabled: true, approvalsMarqueeEnabled: true }
 
 const adminMiddleware = createMiddleware().server(async ({ next, request }) => {
   const { ensureAdminRecord, getAdminRole, getSessionUser } = await import('./auth.server')
@@ -30,14 +29,6 @@ function assertCapability(role: AdminRole, capability: Capability) {
   if (!allowed) throw new Error('You do not have permission for this section')
 }
 
-function mapSettings(row?: Record<string, unknown>): SiteSettings {
-  return {
-    popupEnabled: row ? Boolean(row.popup_enabled) : defaultSettings.popupEnabled,
-    popupDelaySeconds: row ? Math.min(60, Math.max(3, Number(row.popup_delay_seconds) || 8)) : defaultSettings.popupDelaySeconds,
-    whatsappEnabled: row ? Boolean(row.whatsapp_enabled) : defaultSettings.whatsappEnabled,
-    approvalsMarqueeEnabled: row ? Boolean(row.approvals_marquee_enabled) : defaultSettings.approvalsMarqueeEnabled,
-  }
-}
 
 function dateOnly(value: unknown) {
   if (value instanceof Date) return value.toISOString().slice(0, 10)
@@ -66,14 +57,16 @@ function mapBatch(row: Record<string, unknown>): CoachingBatch {
 export const getAdminSnapshot = createServerFn({ method: 'GET' })
   .middleware([adminMiddleware])
   .handler(async ({ context }): Promise<AdminSnapshot> => {
-    const [enquiryRows, postRows, storyRows, settingsRows, userRows, statRows, batchRows] = await Promise.all([
+    const [enquiryRows, postRows, storyRows, settingsRows, userRows, statRows, batchRows, statusRows, sourceRows] = await Promise.all([
       context.role === 'content_editor' ? Promise.resolve([]) : queryRows('SELECT id, name, phone, email, city, interest, country, message, source, summary, status, notes, assigned_to, next_follow_up_at, created_at, updated_at FROM enquiries ORDER BY created_at DESC LIMIT 150'),
       context.role === 'enquiry_manager' ? Promise.resolve([]) : queryRows('SELECT * FROM content_posts ORDER BY publish_date DESC, id DESC LIMIT 100'),
       context.role === 'enquiry_manager' ? Promise.resolve([]) : queryRows('SELECT * FROM success_stories ORDER BY story_date DESC, id DESC LIMIT 100'),
-      context.role === 'super_admin' ? queryRows('SELECT popup_enabled, popup_delay_seconds, whatsapp_enabled, approvals_marquee_enabled FROM site_settings WHERE id = 1 LIMIT 1') : Promise.resolve([]),
+      context.role === 'super_admin' ? queryRows('SELECT popup_enabled, popup_delay_seconds, whatsapp_enabled, approvals_marquee_enabled, public_settings_json FROM site_settings WHERE id = 1 LIMIT 1') : Promise.resolve([]),
       context.role === 'super_admin' ? queryRows('SELECT * FROM admin_users ORDER BY email ASC') : Promise.resolve([]),
-      context.role === 'content_editor' ? Promise.resolve([]) : queryRows(`SELECT COUNT(*) AS total, SUM(status = 'New') AS new_count, SUM(status IN ('Follow-up', 'Documents Pending', 'Applied')) AS follow_ups, SUM(status = 'Converted') AS converted, SUM(next_follow_up_at IS NOT NULL AND DATE(next_follow_up_at) = CURRENT_DATE() AND status NOT IN ('Converted', 'Closed')) AS due_today FROM enquiries`),
+      context.role === 'content_editor' ? Promise.resolve([]) : queryRows(`SELECT COUNT(*) AS total, SUM(status = 'New') AS new_count, SUM(status IN ('Follow-up', 'Documents Pending', 'Applied')) AS follow_ups, SUM(status = 'Converted') AS converted, SUM(created_at >= CURRENT_DATE - INTERVAL 6 DAY) AS new_last_7_days, SUM(source = 'coaching') AS demo_requests, SUM(next_follow_up_at IS NOT NULL AND DATE(next_follow_up_at) = CURRENT_DATE() AND status NOT IN ('Converted', 'Closed')) AS due_today FROM enquiries`),
       context.role === 'enquiry_manager' ? Promise.resolve([]) : queryRows('SELECT id, program, batch_name, time_slot, seats, starts, published FROM coaching_batches ORDER BY id ASC'),
+      context.role === 'content_editor' ? Promise.resolve([]) : queryRows('SELECT status, COUNT(*) AS count FROM enquiries GROUP BY status'),
+      context.role === 'content_editor' ? Promise.resolve([]) : queryRows('SELECT source, COUNT(*) AS count FROM enquiries GROUP BY source'),
     ])
     const activityRows = enquiryRows.length
       ? await queryRows(
@@ -92,11 +85,13 @@ export const getAdminSnapshot = createServerFn({ method: 'GET' })
       activitiesByEnquiry.set(activity.enquiryId, existing)
     }
     const stats = statRows[0] ?? {}
+    const byStatus = Object.fromEntries(statusRows.map((row) => [String(row.status), Number(row.count ?? 0)]))
+    const bySource = Object.fromEntries(sourceRows.map((row) => [String(row.source || 'unknown'), Number(row.count ?? 0)]))
     return {
       user: { name: context.user.name, email: context.user.email, role: context.role },
-      enquiries: enquiryRows.map((row) => mapEnquiry(row, activitiesByEnquiry.get(Number(row.id)) ?? [])), posts: postRows.map(mapAdminPost), stories: storyRows.map(mapAdminStory), settings: mapSettings(settingsRows[0]),
+      enquiries: enquiryRows.map((row) => mapEnquiry(row, activitiesByEnquiry.get(Number(row.id)) ?? [])), posts: postRows.map(mapAdminPost), stories: storyRows.map(mapAdminStory), settings: readSiteSettings(settingsRows[0]),
       users: userRows.map((row) => ({ openId: String(row.open_id || row.id || row.email), email: String(row.email), name: String(row.name || row.email), role: (row.role === 'admin' ? 'super_admin' : String(row.role)) as AdminRole })),
-      enquiryStats: { total: Number(stats.total ?? 0), newCount: Number(stats.new_count ?? 0), followUps: Number(stats.follow_ups ?? 0), dueToday: Number(stats.due_today ?? 0), converted: Number(stats.converted ?? 0) },
+      enquiryStats: { total: Number(stats.total ?? 0), newCount: Number(stats.new_count ?? 0), followUps: Number(stats.follow_ups ?? 0), dueToday: Number(stats.due_today ?? 0), converted: Number(stats.converted ?? 0), newLast7Days: Number(stats.new_last_7_days ?? 0), demoRequests: Number(stats.demo_requests ?? 0), byStatus, bySource },
       batches: batchRows.map(mapBatch),
     }
   })
@@ -265,10 +260,20 @@ export const deleteBatch = createServerFn({ method: 'POST' }).middleware([adminM
 
 export const updateSettings = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
   const input = (data ?? {}) as Record<string, unknown>
-  return { popupEnabled: Boolean(input.popupEnabled), popupDelaySeconds: Math.min(60, Math.max(3, numberValue(input.popupDelaySeconds, 8))), whatsappEnabled: Boolean(input.whatsappEnabled), approvalsMarqueeEnabled: Boolean(input.approvalsMarqueeEnabled) }
+  const phones = Array.isArray(input.phones) ? input.phones.map((item) => stringValue(item, 24)).filter(Boolean).slice(0, 3) : []
+  const emails = Array.isArray(input.emails) ? input.emails.map((item) => stringValue(item, 190).toLowerCase()).filter(Boolean).slice(0, 3) : []
+  const officeHours = stringValue(input.officeHours, 120)
+  const faqs = asFaqList(input.faqs).map((item) => ({ q: stringValue(item.q, 220), a: stringValue(item.a, 1200) })).filter((item) => item.q && item.a).slice(0, 20)
+  const trustStats = asTrustStatList(input.trustStats).map((item) => ({ value: stringValue(item.value, 40), label: stringValue(item.label, 80) })).filter((item) => item.value && item.label).slice(0, 6)
+  if (!phones.length || phones.some((phone) => !/^[0-9+() -]{7,24}$/.test(phone))) throw new Error('Add at least one valid phone number.')
+  if (!emails.length || emails.some((email) => !/^\S+@\S+\.\S+$/.test(email))) throw new Error('Add at least one valid email address.')
+  if (!officeHours) throw new Error('Office hours cannot be empty.')
+  if (!faqs.length || !trustStats.length) throw new Error('Keep at least one FAQ and one homepage trust statistic.')
+  const publicSettings = { phones, emails, officeHours, faqs, trustStats }
+  return { popupEnabled: Boolean(input.popupEnabled), popupDelaySeconds: Math.min(60, Math.max(3, numberValue(input.popupDelaySeconds, 8))), whatsappEnabled: Boolean(input.whatsappEnabled), approvalsMarqueeEnabled: Boolean(input.approvalsMarqueeEnabled), publicSettingsJson: JSON.stringify(publicSettings) }
 }).handler(async ({ data, context }) => {
   assertCapability(context.role, 'settings')
-  await execute('UPDATE site_settings SET popup_enabled = ?, popup_delay_seconds = ?, whatsapp_enabled = ?, approvals_marquee_enabled = ? WHERE id = 1', [data.popupEnabled ? 1 : 0, data.popupDelaySeconds, data.whatsappEnabled ? 1 : 0, data.approvalsMarqueeEnabled ? 1 : 0])
+  await execute('UPDATE site_settings SET popup_enabled = ?, popup_delay_seconds = ?, whatsapp_enabled = ?, approvals_marquee_enabled = ?, public_settings_json = ? WHERE id = 1', [data.popupEnabled ? 1 : 0, data.popupDelaySeconds, data.whatsappEnabled ? 1 : 0, data.approvalsMarqueeEnabled ? 1 : 0, data.publicSettingsJson])
   return { ok: true }
 })
 

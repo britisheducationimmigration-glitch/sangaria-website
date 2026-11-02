@@ -4,9 +4,10 @@ import { Facebook, Instagram } from './BrandIcons'
 import { CountryFlag } from './CountryFlag'
 import { countries } from '@/data/fixtures'
 import { navLinks, site } from '@/data/site'
+import type { SiteSettings } from '@/lib/content-types'
 import { Logo } from './Logo'
 
-export function SiteFooter() {
+export function SiteFooter({ settings }: { settings: SiteSettings }) {
   return (
     <footer className="bg-forest-950 bg-grain text-forest-100">
       <div className="mx-auto max-w-7xl px-6 pt-20 pb-10">
@@ -65,12 +66,12 @@ export function SiteFooter() {
               <MapPin className="mt-0.5 size-4 shrink-0 text-coral-400" />
               {site.address}
             </p>
-            {site.phones.map((p) => (
-              <a key={p} href={`tel:+91${p}`} className="mt-3 flex items-center gap-3 text-sm hover:text-white">
-                <Phone className="size-4 text-coral-400" /> +91 {p}
+            {settings.phones.map((p) => (
+              <a key={p} href={`tel:${p.startsWith('+') ? p : '+91' + p}`} className="mt-3 flex items-center gap-3 text-sm hover:text-white">
+                <Phone className="size-4 text-coral-400" /> {p.startsWith('+') ? p : '+91 ' + p}
               </a>
             ))}
-            {site.emails.map((email) => (
+            {settings.emails.map((email) => (
               <a
                 key={email}
                 href={`https://mail.google.com/mail/?view=cm&fs=1&to=${email}`}
@@ -81,7 +82,7 @@ export function SiteFooter() {
                 <Mail className="mt-0.5 size-4 shrink-0 text-coral-400" /> {email}
               </a>
             ))}
-            <p className="mt-3 text-sm text-forest-100/60">{site.hours}</p>
+            <p className="mt-3 text-sm text-forest-100/60">{settings.officeHours}</p>
           </div>
         </div>
         <p className="mt-16 border-t border-white/10 pt-6 text-xs text-forest-100/50">
