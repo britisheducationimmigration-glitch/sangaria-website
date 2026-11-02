@@ -366,6 +366,56 @@ export const updateSettings = createServerFn({ method: 'POST' }).middleware([adm
   return { ok: true }
 })
 
+export const saveContactDetails = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
+  const input = (data ?? {}) as Record<string, unknown>
+  const phones = Array.isArray(input.phones) ? input.phones.map((item) => stringValue(item, 24)).filter(Boolean).slice(0, 3) : []
+  const emails = Array.isArray(input.emails) ? input.emails.map((item) => stringValue(item, 190).toLowerCase()).filter(Boolean).slice(0, 3) : []
+  const officeHours = stringValue(input.officeHours, 120)
+  if (!phones.length || phones.some((phone) => !/^[0-9+() -]{7,24}$/.test(phone))) throw new Error('Add at least one valid phone number.')
+  if (!emails.length || emails.some((email) => !/^\S+@\S+\.\S+$/.test(email))) throw new Error('Add at least one valid email address.')
+  if (!officeHours) throw new Error('Office hours cannot be empty.')
+  return { phones, emails, officeHours }
+}).handler(async ({ data, context }) => {
+  assertCapability(context.role, 'settings')
+  const rows = await queryRows('SELECT public_settings_json FROM site_settings WHERE id = 1 LIMIT 1')
+  const current = readSiteSettings(rows[0])
+  const publicSettings = { phones: data.phones, emails: data.emails, officeHours: data.officeHours, faqs: current.faqs, trustStats: current.trustStats }
+  await execute('UPDATE site_settings SET public_settings_json = ? WHERE id = 1', [JSON.stringify(publicSettings)])
+  return { phones: data.phones, emails: data.emails, officeHours: data.officeHours }
+})
+
+export const saveTrustStat = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
+  const input = (data ?? {}) as Record<string, unknown>
+  const action = stringValue(input.action, 12)
+  const index = numberValue(input.index, -1)
+  if (!['save', 'remove'].includes(action) || !Number.isInteger(index) || index < 0 || index > 5) throw new Error('Invalid trust number action.')
+  const statInput = (input.trustStat ?? {}) as Record<string, unknown>
+  const trustStat = { value: stringValue(statInput.value, 40), label: stringValue(statInput.label, 80) }
+  if (action === 'save' && (!trustStat.value || !trustStat.label)) throw new Error('Enter both a trust number and its label before saving.')
+  return { action: action as 'save' | 'remove', index, trustStat }
+}).handler(async ({ data, context }) => {
+  assertCapability(context.role, 'settings')
+  const rows = await queryRows('SELECT public_settings_json FROM site_settings WHERE id = 1 LIMIT 1')
+  const current = readSiteSettings(rows[0])
+  const trustStats = [...current.trustStats]
+  if (data.action === 'save') {
+    if (data.index > trustStats.length) throw new Error('The trust numbers changed. Reload settings and try again.')
+    if (data.index === trustStats.length) {
+      if (trustStats.length >= 6) throw new Error('You can show up to six homepage trust numbers.')
+      trustStats.push(data.trustStat)
+    } else {
+      trustStats[data.index] = data.trustStat
+    }
+  } else {
+    if (data.index >= trustStats.length) throw new Error('This trust number is no longer available. Reload settings and try again.')
+    if (trustStats.length <= 1) throw new Error('Keep at least one homepage trust number.')
+    trustStats.splice(data.index, 1)
+  }
+  const publicSettings = { phones: current.phones, emails: current.emails, officeHours: current.officeHours, faqs: current.faqs, trustStats }
+  await execute('UPDATE site_settings SET public_settings_json = ? WHERE id = 1', [JSON.stringify(publicSettings)])
+  return { trustStats }
+})
+
 export const saveFaq = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
   const input = (data ?? {}) as Record<string, unknown>
   const action = stringValue(input.action, 12)

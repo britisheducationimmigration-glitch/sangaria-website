@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { ApprovalCard, TestimonialCard } from '@/components/Cards'
 import { useEffect, useState, type FormEvent, type MouseEvent, type ReactNode } from 'react'
-import { getAdminCashflow, getAdminSnapshot, addEnquiryActivity, deleteAdminUser, deleteBatch, deleteEnquiry, deleteEnquiryActivity, deletePost, deleteStory, exportEnquiries, saveAdminUser, saveBatch, saveCashflow, savePost, saveStory, updateEnquiry, updateEnquiryActivity, updateSettings, saveFaq } from '@/lib/admin-functions'
+import { getAdminCashflow, getAdminSnapshot, addEnquiryActivity, deleteAdminUser, deleteBatch, deleteEnquiry, deleteEnquiryActivity, deletePost, deleteStory, exportEnquiries, saveAdminUser, saveBatch, saveCashflow, savePost, saveStory, updateEnquiry, updateEnquiryActivity, updateSettings, saveFaq, saveTrustStat, saveContactDetails } from '@/lib/admin-functions'
 import { CertificatePanel } from '@/components/admin/CertificatePanel'
 import type { AdminPost, AdminRole, AdminSnapshot, AdminStory, AdminUser, CoachingBatch, Enquiry, EnquiryActivity, EnquiryStatus } from '@/lib/content-types'
 import { defaultCashflowData, CountryCashflow } from '@/data/cashflow'
@@ -1022,10 +1022,20 @@ function SettingsPanel({ settings, onReload, onNotice, onDirtyChange }: { settin
   const [faqBusy, setFaqBusy] = useState(false)
   const [editingFaqIndex, setEditingFaqIndex] = useState<number | null>(null)
   const [faqDraft, setFaqDraft] = useState({ q: '', a: '' })
+  const [editingStatIndex, setEditingStatIndex] = useState<number | null>(null)
+  const [statDraft, setStatDraft] = useState({ value: '', label: '' })
+  const [statBusy, setStatBusy] = useState(false)
+  const [isEditingContactDetails, setIsEditingContactDetails] = useState(false)
+  const [contactDraft, setContactDraft] = useState({ phones: [...settings.phones], emails: [...settings.emails], officeHours: settings.officeHours })
+  const [contactBusy, setContactBusy] = useState(false)
   const isDirty = JSON.stringify(form) !== JSON.stringify(settings)
   const faqOriginal = editingFaqIndex === null ? null : form.faqs[editingFaqIndex] ?? { q: '', a: '' }
   const faqDraftDirty = editingFaqIndex !== null && JSON.stringify(faqDraft) !== JSON.stringify(faqOriginal)
-  const hasUnsavedChanges = isDirty || faqDraftDirty
+  const statOriginal = editingStatIndex === null ? null : form.trustStats[editingStatIndex] ?? { value: '', label: '' }
+  const statDraftDirty = editingStatIndex !== null && JSON.stringify(statDraft) !== JSON.stringify(statOriginal)
+  const contactOriginal = { phones: form.phones, emails: form.emails, officeHours: form.officeHours }
+  const contactDraftDirty = isEditingContactDetails && JSON.stringify(contactDraft) !== JSON.stringify(contactOriginal)
+  const hasUnsavedChanges = isDirty || faqDraftDirty || statDraftDirty || contactDraftDirty
 
   useEffect(() => { onDirtyChange(hasUnsavedChanges) }, [hasUnsavedChanges, onDirtyChange])
   useEffect(() => {
@@ -1038,8 +1048,73 @@ function SettingsPanel({ settings, onReload, onNotice, onDirtyChange }: { settin
     return () => window.removeEventListener('beforeunload', warnBeforeLeaving)
   }, [hasUnsavedChanges])
 
-  function updateStat(index: number, key: 'value' | 'label', value: string) {
-    setForm({ ...form, trustStats: form.trustStats.map((item, current) => current === index ? { ...item, [key]: value } : item) })
+  function beginTrustStatEdit(index: number) {
+    setStatDraft({ ...form.trustStats[index] })
+    setEditingStatIndex(index)
+  }
+  function beginNewTrustStat() {
+    setStatDraft({ value: '', label: '' })
+    setEditingStatIndex(form.trustStats.length)
+  }
+  function cancelTrustStatEdit() {
+    if (statDraftDirty && !window.confirm('Discard your unsaved homepage trust number changes?')) return
+    setStatDraft({ value: '', label: '' })
+    setEditingStatIndex(null)
+  }
+  async function saveTrustStatDraft() {
+    if (editingStatIndex === null) return
+    const trustStat = { value: statDraft.value.trim(), label: statDraft.label.trim() }
+    if (!trustStat.value || !trustStat.label) { onNotice('Enter both a trust number and its label before saving.'); return }
+    setStatBusy(true)
+    try {
+      const result = await saveTrustStat({ data: { action: 'save', index: editingStatIndex, trustStat } })
+      setForm((current) => ({ ...current, trustStats: result.trustStats }))
+      setStatDraft({ value: '', label: '' })
+      setEditingStatIndex(null)
+      await onReload()
+      onNotice('Homepage trust number saved.')
+    } catch (cause) {
+      onNotice(cause instanceof Error ? cause.message : 'Could not save this trust number.')
+    } finally {
+      setStatBusy(false)
+    }
+  }
+  async function removeTrustStat(index: number) {
+    if (!window.confirm('Remove this trust number from the homepage?')) return
+    setStatBusy(true)
+    try {
+      const result = await saveTrustStat({ data: { action: 'remove', index } })
+      setForm((current) => ({ ...current, trustStats: result.trustStats }))
+      await onReload()
+      onNotice('Homepage trust number removed.')
+    } catch (cause) {
+      onNotice(cause instanceof Error ? cause.message : 'Could not remove this trust number.')
+    } finally {
+      setStatBusy(false)
+    }
+  }
+  function beginContactEdit() {
+    setContactDraft({ phones: [...form.phones], emails: [...form.emails], officeHours: form.officeHours })
+    setIsEditingContactDetails(true)
+  }
+  function cancelContactEdit() {
+    if (contactDraftDirty && !window.confirm('Discard your unsaved contact detail changes?')) return
+    setIsEditingContactDetails(false)
+  }
+  async function saveContactEdit() {
+    setContactBusy(true)
+    try {
+      const result = await saveContactDetails({ data: contactDraft })
+      setForm((current) => ({ ...current, ...result }))
+      setContactDraft({ phones: result.phones, emails: result.emails, officeHours: result.officeHours })
+      setIsEditingContactDetails(false)
+      await onReload()
+      onNotice('Contact details updated on the public site.')
+    } catch (cause) {
+      onNotice(cause instanceof Error ? cause.message : 'Could not save contact details.')
+    } finally {
+      setContactBusy(false)
+    }
   }
   function beginFaqEdit(index: number) {
     setFaqDraft({ ...form.faqs[index] })
@@ -1085,7 +1160,7 @@ function SettingsPanel({ settings, onReload, onNotice, onDirtyChange }: { settin
     }
   }
   async function save() {
-    if (editingFaqIndex !== null) { onNotice('Save or cancel the FAQ edit before saving the other site settings.'); return }
+    if (editingFaqIndex !== null || editingStatIndex !== null || isEditingContactDetails) { onNotice('Save or cancel the open settings editor before saving the other site settings.'); return }
     if (form.trustStats.some((item) => !item.value.trim() || !item.label.trim())) { onNotice('Complete or remove each homepage trust number before saving.'); return }
     setBusy(true)
     try {
@@ -1108,20 +1183,74 @@ function SettingsPanel({ settings, onReload, onNotice, onDirtyChange }: { settin
       {hasUnsavedChanges && <p role="status" className="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">You have unsaved changes. Save the FAQ draft or site settings before leaving; otherwise you’ll be asked to discard them.</p>}
       <div className="mt-6 grid gap-5 rounded-3xl bg-white p-6 ring-1 ring-forest-900/10">
         <section className="grid gap-4 border-b border-forest-900/10 pb-5">
-          <h3 className="text-lg font-extrabold">Contact details</h3>
-          <label><span className="mb-2 block text-sm font-bold">Phone numbers (one per line)</span><textarea className="field min-h-20" value={form.phones.join('\n')} onChange={(event) => setForm({ ...form, phones: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean) })} /></label>
-          <label><span className="mb-2 block text-sm font-bold">Email addresses (one per line)</span><textarea className="field min-h-20" value={form.emails.join('\n')} onChange={(event) => setForm({ ...form, emails: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean) })} /></label>
-          <label><span className="mb-2 block text-sm font-bold">Office hours</span><input className="field" maxLength={120} value={form.officeHours} onChange={(event) => setForm({ ...form, officeHours: event.target.value })} placeholder="Mon – Sat · 9:30 AM – 7:30 PM" /></label>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-extrabold">Contact details</h3>
+              <p className="mt-1 text-xs text-forest-900/55">Choose Edit, make your changes, then save them to update the public site.</p>
+            </div>
+            {!isEditingContactDetails && <button type="button" disabled={contactBusy || editingFaqIndex !== null || editingStatIndex !== null} onClick={beginContactEdit} className="min-h-11 rounded-full bg-forest-900 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">Edit contact details</button>}
+          </div>
+          {isEditingContactDetails ? (
+            <>
+              <label><span className="mb-2 block text-sm font-bold">Phone numbers (one per line)</span><textarea className="field min-h-20" value={contactDraft.phones.join('\n')} onChange={(event) => setContactDraft((current) => ({ ...current, phones: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean) }))} /></label>
+              <label><span className="mb-2 block text-sm font-bold">Email addresses (one per line)</span><textarea className="field min-h-20" value={contactDraft.emails.join('\n')} onChange={(event) => setContactDraft((current) => ({ ...current, emails: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean) }))} /></label>
+              <label><span className="mb-2 block text-sm font-bold">Office hours</span><input className="field" maxLength={120} value={contactDraft.officeHours} onChange={(event) => setContactDraft((current) => ({ ...current, officeHours: event.target.value }))} placeholder="Mon – Sat · 9:30 AM – 7:30 PM" /></label>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" disabled={contactBusy} onClick={() => void saveContactEdit()} className="min-h-11 rounded-full bg-forest-900 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">{contactBusy ? 'Saving…' : 'Save contact details'}</button>
+                <button type="button" disabled={contactBusy} onClick={cancelContactEdit} className="min-h-11 rounded-full border border-forest-900/15 px-4 py-2 text-xs font-bold disabled:opacity-50">Cancel</button>
+              </div>
+            </>
+          ) : (
+            <dl className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl bg-cream p-4"><dt className="text-xs font-bold uppercase tracking-wide text-forest-900/55">Phone numbers</dt><dd className="mt-1 break-words text-sm font-semibold">{form.phones.join(' · ')}</dd></div>
+              <div className="rounded-2xl bg-cream p-4"><dt className="text-xs font-bold uppercase tracking-wide text-forest-900/55">Email addresses</dt><dd className="mt-1 break-words text-sm font-semibold">{form.emails.join(' · ')}</dd></div>
+              <div className="rounded-2xl bg-cream p-4"><dt className="text-xs font-bold uppercase tracking-wide text-forest-900/55">Office hours</dt><dd className="mt-1 break-words text-sm font-semibold">{form.officeHours}</dd></div>
+            </dl>
+          )}
         </section>
 
         <section className="grid gap-3 border-b border-forest-900/10 pb-5">
-          <div><h3 className="text-lg font-extrabold">Homepage trust numbers</h3><p className="text-xs text-forest-900/55">Edit the proof points shown in the home page hero.</p></div>
-          {form.trustStats.map((item, index) => <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1.5fr_auto]">
-            <input className="field" aria-label={`Trust number ${index + 1}`} value={item.value} onChange={(event) => updateStat(index, 'value', event.target.value)} placeholder="2,500+" />
-            <input className="field" aria-label={`Trust number label ${index + 1}`} value={item.label} onChange={(event) => updateStat(index, 'label', event.target.value)} placeholder="Visas approved" />
-            <button type="button" disabled={form.trustStats.length <= 1} onClick={() => setForm({ ...form, trustStats: form.trustStats.filter((_, current) => current !== index) })} className="rounded-full border border-forest-900/15 px-3 py-2 text-xs font-bold disabled:opacity-40">Remove</button>
-          </div>)}
-          <button type="button" disabled={form.trustStats.length >= 6} onClick={() => setForm({ ...form, trustStats: [...form.trustStats, { value: '', label: '' }] })} className="w-fit rounded-full bg-forest-50 px-4 py-2 text-xs font-bold text-forest-900 disabled:opacity-40">Add trust number</button>
+          <div>
+            <h3 className="text-lg font-extrabold">Homepage trust numbers</h3>
+            <p className="text-xs text-forest-900/55">Edit or add a number, then choose Save trust number. Removing a number asks you to confirm first.</p>
+          </div>
+          {form.trustStats.map((item, index) => {
+            const editing = editingStatIndex === index
+            return (
+              <div key={index} className="grid gap-3 rounded-2xl bg-cream p-4">
+                {editing ? (
+                  <>
+                    <label><span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-forest-900/60">Trust number</span><input className="field" maxLength={40} aria-label={"Homepage trust number " + (index + 1)} value={statDraft.value} onChange={(event) => setStatDraft((current) => ({ ...current, value: event.target.value }))} placeholder="2,500+" /></label>
+                    <label><span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-forest-900/60">Label</span><input className="field" maxLength={80} aria-label={"Homepage trust number label " + (index + 1)} value={statDraft.label} onChange={(event) => setStatDraft((current) => ({ ...current, label: event.target.value }))} placeholder="Visas approved" /></label>
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" disabled={statBusy || !statDraft.value.trim() || !statDraft.label.trim()} onClick={() => void saveTrustStatDraft()} className="min-h-11 rounded-full bg-forest-900 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">{statBusy ? 'Saving…' : 'Save trust number'}</button>
+                      <button type="button" disabled={statBusy} onClick={cancelTrustStatEdit} className="min-h-11 rounded-full border border-forest-900/15 px-4 py-2 text-xs font-bold disabled:opacity-50">Cancel</button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div><p className="text-lg font-extrabold text-forest-900">{item.value}</p><p className="text-sm text-forest-900/65">{item.label}</p></div>
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" disabled={statBusy || editingStatIndex !== null || editingFaqIndex !== null || isEditingContactDetails} onClick={() => beginTrustStatEdit(index)} aria-label={"Edit homepage trust number " + (index + 1)} className="min-h-11 rounded-full bg-forest-900 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">Edit</button>
+                      <button type="button" disabled={form.trustStats.length <= 1 || statBusy || editingStatIndex !== null || editingFaqIndex !== null || isEditingContactDetails} onClick={() => void removeTrustStat(index)} className="min-h-11 rounded-full border border-forest-900/15 px-4 py-2 text-xs font-bold disabled:opacity-40">Remove</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+          {editingStatIndex === form.trustStats.length && (
+            <div className="grid gap-3 rounded-2xl border border-coral-300 bg-coral-50/40 p-4">
+              <p className="text-sm font-bold text-forest-900">New trust number draft — it appears on the homepage after you save it.</p>
+              <label><span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-forest-900/60">Trust number</span><input className="field" maxLength={40} aria-label="New homepage trust number" value={statDraft.value} onChange={(event) => setStatDraft((current) => ({ ...current, value: event.target.value }))} placeholder="2,500+" /></label>
+              <label><span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-forest-900/60">Label</span><input className="field" maxLength={80} aria-label="New homepage trust number label" value={statDraft.label} onChange={(event) => setStatDraft((current) => ({ ...current, label: event.target.value }))} placeholder="Visas approved" /></label>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" disabled={statBusy || !statDraft.value.trim() || !statDraft.label.trim()} onClick={() => void saveTrustStatDraft()} className="min-h-11 rounded-full bg-forest-900 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">{statBusy ? 'Saving…' : 'Save trust number'}</button>
+                <button type="button" disabled={statBusy} onClick={cancelTrustStatEdit} className="min-h-11 rounded-full border border-forest-900/15 px-4 py-2 text-xs font-bold disabled:opacity-50">Cancel</button>
+              </div>
+            </div>
+          )}
+          <button type="button" disabled={form.trustStats.length >= 6 || statBusy || editingStatIndex !== null || editingFaqIndex !== null || isEditingContactDetails} onClick={beginNewTrustStat} className="w-fit min-h-11 rounded-full bg-forest-50 px-4 py-2 text-xs font-bold text-forest-900 disabled:opacity-40">Add trust number</button>
         </section>
 
         <section className="grid gap-3 border-b border-forest-900/10 pb-5">
@@ -1145,8 +1274,8 @@ function SettingsPanel({ settings, onReload, onNotice, onDirtyChange }: { settin
                 <>
                   <div><p className="font-bold">{item.q}</p><p className="mt-1 text-sm text-forest-900/65">{item.a}</p></div>
                   <div className="flex flex-wrap gap-2">
-                    <button type="button" disabled={faqBusy || editingFaqIndex !== null} onClick={() => beginFaqEdit(index)} className="rounded-full bg-forest-900 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">Edit FAQ</button>
-                    <button type="button" disabled={faqBusy || editingFaqIndex !== null || form.faqs.length <= 1} onClick={() => void removeFaq(index)} className="rounded-full border border-forest-900/15 px-4 py-2 text-xs font-bold disabled:opacity-40">Remove</button>
+                    <button type="button" disabled={faqBusy || editingFaqIndex !== null || editingStatIndex !== null || isEditingContactDetails} onClick={() => beginFaqEdit(index)} className="rounded-full bg-forest-900 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">Edit FAQ</button>
+                    <button type="button" disabled={faqBusy || editingFaqIndex !== null || editingStatIndex !== null || isEditingContactDetails || form.faqs.length <= 1} onClick={() => void removeFaq(index)} className="rounded-full border border-forest-900/15 px-4 py-2 text-xs font-bold disabled:opacity-40">Remove</button>
                   </div>
                 </>
               )}
@@ -1163,7 +1292,7 @@ function SettingsPanel({ settings, onReload, onNotice, onDirtyChange }: { settin
               </div>
             </div>
           )}
-          <button type="button" disabled={form.faqs.length >= 20 || faqBusy || editingFaqIndex !== null} onClick={beginNewFaq} className="w-fit rounded-full bg-forest-50 px-4 py-2 text-xs font-bold text-forest-900 disabled:opacity-40">Add FAQ</button>
+          <button type="button" disabled={form.faqs.length >= 20 || faqBusy || editingFaqIndex !== null || editingStatIndex !== null || isEditingContactDetails} onClick={beginNewFaq} className="w-fit rounded-full bg-forest-50 px-4 py-2 text-xs font-bold text-forest-900 disabled:opacity-40">Add FAQ</button>
         </section>
 
         <section className="grid gap-4">
@@ -1173,7 +1302,7 @@ function SettingsPanel({ settings, onReload, onNotice, onDirtyChange }: { settin
           <label className="flex items-center justify-between gap-4 border-b border-forest-900/10 pb-4"><span><strong className="block">Approvals marquee</strong><small className="text-forest-900/60">Show the moving recent-approval strip on the home page.</small></span><input type="checkbox" checked={form.approvalsMarqueeEnabled} onChange={(event) => setForm({ ...form, approvalsMarqueeEnabled: event.target.checked })} /></label>
           <label><span className="mb-2 block font-bold">Popup delay (seconds)</span><input className="field max-w-40" type="number" min="3" max="60" value={form.popupDelaySeconds} onChange={(event) => setForm({ ...form, popupDelaySeconds: Number(event.target.value) })} /></label>
         </section>
-        <button type="button" disabled={busy || !isDirty || editingFaqIndex !== null} onClick={() => void save()} className="w-fit rounded-full bg-forest-900 px-5 py-3 text-sm font-bold text-white disabled:opacity-60">{busy ? 'Saving…' : 'Save site settings'}</button>
+        <button type="button" disabled={busy || !isDirty || editingFaqIndex !== null || editingStatIndex !== null || isEditingContactDetails} onClick={() => void save()} className="w-fit rounded-full bg-forest-900 px-5 py-3 text-sm font-bold text-white disabled:opacity-60">{busy ? 'Saving…' : 'Save site settings'}</button>
       </div>
     </section>
   )
