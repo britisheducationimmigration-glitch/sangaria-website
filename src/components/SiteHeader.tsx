@@ -58,10 +58,10 @@ export function SiteHeader() {
             <div className="flex items-center gap-2">
               <a
                 href={`tel:+91${site.phones[0]}`}
-                className="grid size-10 shrink-0 place-items-center rounded-full border border-forest-900/15 text-forest-900 transition hover:bg-forest-900 hover:text-white sm:size-11"
+                className="group grid size-10 shrink-0 place-items-center rounded-full border border-forest-900/15 text-forest-900 transition-colors hover:border-coral-500 hover:bg-coral-500 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500 active:bg-coral-600 sm:size-11"
                 aria-label="Call us"
               >
-                <Phone className="size-4" />
+                <Phone className="size-4 text-forest-900 transition-colors group-hover:text-white group-focus-visible:text-white group-active:text-white" />
               </a>
               <Link
                 to="/contact"
