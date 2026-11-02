@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CertificatesRouteImport } from './routes/certificates'
+import { Route as CertificatesImageRouteImport } from './routes/certificates.image.$id'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as CoachingRouteImport } from './routes/coaching'
 import { Route as ContactRouteImport } from './routes/contact'
@@ -27,6 +29,16 @@ import { Route as AdminOauthStartRouteImport } from './routes/admin.oauth.start'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CertificatesRoute = CertificatesRouteImport.update({
+  id: '/certificates',
+  path: '/certificates',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CertificatesImageRoute = CertificatesImageRouteImport.update({
+  id: '/certificates/image/$id',
+  path: '/certificates/image/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -100,6 +112,8 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/coaching': typeof CoachingRoute
   '/contact': typeof ContactRoute
+  '/certificates': typeof CertificatesRoute
+  '/certificates/image/$id': typeof CertificatesImageRoute
   '/eligibility': typeof EligibilityRoute
   '/success-stories': typeof SuccessStoriesRoute
   '/visas': typeof VisasRoute
@@ -116,6 +130,8 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRouteWithChildren
   '/coaching': typeof CoachingRoute
   '/contact': typeof ContactRoute
+  '/certificates': typeof CertificatesRoute
+  '/certificates/image/$id': typeof CertificatesImageRoute
   '/eligibility': typeof EligibilityRoute
   '/success-stories': typeof SuccessStoriesRoute
   '/visas': typeof VisasRoute
@@ -133,6 +149,8 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/coaching': typeof CoachingRoute
   '/contact': typeof ContactRoute
+  '/certificates': typeof CertificatesRoute
+  '/certificates/image/$id': typeof CertificatesImageRoute
   '/eligibility': typeof EligibilityRoute
   '/success-stories': typeof SuccessStoriesRoute
   '/visas': typeof VisasRoute
@@ -151,6 +169,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/coaching'
     | '/contact'
+    | '/certificates'
+    | '/certificates/image/$id'
     | '/eligibility'
     | '/success-stories'
     | '/visas'
@@ -167,6 +187,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/coaching'
     | '/contact'
+    | '/certificates'
+    | '/certificates/image/$id'
     | '/eligibility'
     | '/success-stories'
     | '/visas'
@@ -183,6 +205,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/coaching'
     | '/contact'
+    | '/certificates'
+    | '/certificates/image/$id'
     | '/eligibility'
     | '/success-stories'
     | '/visas'
@@ -200,6 +224,8 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   CoachingRoute: typeof CoachingRoute
   ContactRoute: typeof ContactRoute
+  CertificatesRoute: typeof CertificatesRoute
+  CertificatesImageRoute: typeof CertificatesImageRoute
   EligibilityRoute: typeof EligibilityRoute
   SuccessStoriesRoute: typeof SuccessStoriesRoute
   VisasRoute: typeof VisasRoute
@@ -237,6 +263,20 @@ declare module '@tanstack/react-router' {
       path: '/contact'
       fullPath: '/contact'
       preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/certificates': {
+      id: '/certificates'
+      path: '/certificates'
+      fullPath: '/certificates'
+      preLoaderRoute: typeof CertificatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/certificates/image/$id': {
+      id: '/certificates/image/$id'
+      path: '/certificates/image/$id'
+      fullPath: '/certificates/image/$id'
+      preLoaderRoute: typeof CertificatesImageRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/eligibility': {
@@ -331,6 +371,8 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   CoachingRoute: CoachingRoute,
   ContactRoute: ContactRoute,
+  CertificatesRoute: CertificatesRoute,
+  CertificatesImageRoute: CertificatesImageRoute,
   EligibilityRoute: EligibilityRoute,
   SuccessStoriesRoute: SuccessStoriesRoute,
   VisasRoute: VisasRoute,

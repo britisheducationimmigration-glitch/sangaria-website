@@ -10,6 +10,7 @@ const staticPages = [
   ['/eligibility', 'monthly', '0.85'],
   ['/coaching', 'weekly', '0.85'],
   ['/success-stories', 'weekly', '0.8'],
+  ['/certificates', 'monthly', '0.6'],
   ['/updates', 'weekly', '0.8'],
   ['/contact', 'monthly', '0.7'],
 ] as const

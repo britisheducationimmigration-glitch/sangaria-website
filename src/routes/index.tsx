@@ -12,6 +12,7 @@ import { img } from '@/lib/utils'
 import { getPublicContent } from '@/lib/public-functions'
 import { BoardingPassGenerator } from '@/components/BoardingPassGenerator'
 import { FamilyCashflowPlanner } from '@/components/FamilyCashflowPlanner'
+import { CertificateCarousel } from '@/components/CertificateCarousel'
 
 import { createPageSeo } from '@/lib/seo'
 
@@ -41,7 +42,7 @@ const rotatingWords = [
 ]
 
 function Home() {
-  const { approvals, posts, testimonials, settings } = Route.useLoaderData()
+  const { approvals, posts, testimonials, certificates, settings } = Route.useLoaderData()
   const [selectedCountry, setSelectedCountry] = useState('canada')
   const [selectedVisa, setSelectedVisa] = useState('study')
   const [showAllTestimonials, setShowAllTestimonials] = useState(false)
@@ -326,6 +327,7 @@ function Home() {
               <a href="#destinations-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">🌍 Countries</a>
               <a href="#coaching-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">📚 IELTS & PTE</a>
               <a href="#approvals-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">🎉 Visas</a>
+              <a href="#certificates-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">🏅 Certificates</a>
               <a href="#reviews-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">⭐ Reviews</a>
               <a href="#enquiry-m" className="shrink-0 rounded-full bg-coral-500 px-3.5 py-1 text-xs font-bold text-white shadow-md">🔴 Free Enquiry</a>
             </div>
@@ -538,6 +540,8 @@ function Home() {
             ))}
           </div>
         </section>
+
+        <CertificateCarousel certificates={certificates} id="certificates-m" />
 
         {/* TESTIMONIALS (MOBILE) */}
         <section id="reviews-m" className="bg-sand/60 px-5 py-20 border-b border-forest-900/10">
@@ -849,7 +853,8 @@ function Home() {
                 <a href="#destinations-desktop" className="hover:text-coral-400 transition">🌍 Countries</a>
                 <a href="#coaching-desktop" className="hover:text-coral-400 transition">📚 IELTS & PTE</a>
                 <a href="#approvals-desktop" className="hover:text-coral-400 transition">🎉 Recent Visas</a>
-                <a href="#reviews-desktop" className="hover:text-coral-400 transition">⭐ Reviews</a>
+                <a href="#certificates-desktop" className="hover:text-coral-400 transition">🏅 Certificates</a>
+              <a href="#reviews-desktop" className="hover:text-coral-400 transition">⭐ Reviews</a>
               </div>
               <Link to="/contact" className="rounded-full bg-coral-500 px-5 py-2 text-xs font-bold text-white hover:bg-coral-600 transition shadow-sm">
                 🔴 Free Enquiry
@@ -1032,6 +1037,8 @@ function Home() {
             ))}
           </div>
         </section>
+
+        <CertificateCarousel certificates={certificates} id="certificates-desktop" />
 
         {/* DESKTOP TESTIMONIALS */}
         <section id="reviews-desktop" className="bg-sand/60 py-24">

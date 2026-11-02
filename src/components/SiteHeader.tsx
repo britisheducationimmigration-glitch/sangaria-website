@@ -91,6 +91,9 @@ export function SiteHeader({ settings }: { settings: SiteSettings }) {
                   {l.label}
                 </Link>
               ))}
+              <Link to="/certificates" onClick={() => setOpen(false)} className="rounded-xl px-4 py-3 font-display text-lg font-semibold text-forest-900 hover:bg-forest-900/5">
+                Certificates & partnerships
+              </Link>
               <Link to="/contact" onClick={() => setOpen(false)} className="rounded-xl px-4 py-3 font-display text-lg font-semibold text-coral-600">
                 Contact us
               </Link>

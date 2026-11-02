@@ -45,6 +45,7 @@ export function SiteFooter({ settings }: { settings: SiteSettings }) {
                   </Link>
                 </li>
               ))}
+              <li><Link to="/certificates" className="hover:text-white">Certificates & partnerships</Link></li>
             </ul>
           </div>
           <div>

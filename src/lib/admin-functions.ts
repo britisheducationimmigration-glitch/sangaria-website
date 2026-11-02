@@ -1,6 +1,7 @@
 import { createMiddleware, createServerFn } from '@tanstack/react-start'
 import { execute, jsonArray, queryRows } from './db.server'
-import type { AdminPost, AdminRole, AdminSnapshot, AdminStory, CoachingBatch, Enquiry, EnquiryActivity, EnquiryStatus } from './content-types'
+import type { AdminCertificate, AdminPost, AdminRole, AdminSnapshot, AdminStory, CoachingBatch, Enquiry, EnquiryActivity, EnquiryStatus } from './content-types'
+import { Buffer } from 'node:buffer'
 import { asFaqList, asTrustStatList, readSiteSettings } from './site-settings'
 import { defaultCashflowData, mergeNewCashflowDestinations, type CountryCashflow } from '@/data/cashflow'
 import { isValidBatchStartDate } from '@/lib/batch-dates'
@@ -54,10 +55,29 @@ function mapBatch(row: Record<string, unknown>): CoachingBatch {
   return { id: Number(row.id), program: String(row.program), batch: String(row.batch_name), time: String(row.time_slot), seats: Number(row.seats), starts: String(row.starts), published: Boolean(row.published) }
 }
 
+function mapCertificate(row: Record<string, unknown>): AdminCertificate {
+  const id = Number(row.id)
+  const hasDatabaseImage = Boolean(row.has_database_image)
+  return {
+    id,
+    title: String(row.title),
+    issuer: String(row.issuer),
+    category: String(row.category),
+    credentialDate: String(row.credential_date ?? ''),
+    altText: String(row.alt_text),
+    imageSrc: hasDatabaseImage ? '/certificates/image/' + id : String(row.image_path ?? ''),
+    homepageFeatured: Boolean(row.homepage_featured),
+    published: Boolean(row.published),
+    sortOrder: Number(row.sort_order),
+    collection: String(row.collection ?? 'certificates'),
+    hasDatabaseImage,
+  }
+}
+
 export const getAdminSnapshot = createServerFn({ method: 'GET' })
   .middleware([adminMiddleware])
   .handler(async ({ context }): Promise<AdminSnapshot> => {
-    const [enquiryRows, postRows, storyRows, settingsRows, userRows, statRows, batchRows, statusRows, sourceRows] = await Promise.all([
+    const [enquiryRows, postRows, storyRows, settingsRows, userRows, statRows, batchRows, statusRows, sourceRows, certificateRows] = await Promise.all([
       context.role === 'content_editor' ? Promise.resolve([]) : queryRows('SELECT id, name, phone, email, city, interest, country, message, source, summary, status, notes, assigned_to, next_follow_up_at, created_at, updated_at FROM enquiries ORDER BY created_at DESC LIMIT 150'),
       context.role === 'enquiry_manager' ? Promise.resolve([]) : queryRows('SELECT * FROM content_posts ORDER BY publish_date DESC, id DESC LIMIT 100'),
       context.role === 'enquiry_manager' ? Promise.resolve([]) : queryRows('SELECT * FROM success_stories ORDER BY story_date DESC, id DESC LIMIT 100'),
@@ -67,6 +87,7 @@ export const getAdminSnapshot = createServerFn({ method: 'GET' })
       context.role === 'enquiry_manager' ? Promise.resolve([]) : queryRows('SELECT id, program, batch_name, time_slot, seats, starts, published FROM coaching_batches ORDER BY id ASC'),
       context.role === 'content_editor' ? Promise.resolve([]) : queryRows('SELECT status, COUNT(*) AS count FROM enquiries GROUP BY status'),
       context.role === 'content_editor' ? Promise.resolve([]) : queryRows('SELECT source, COUNT(*) AS count FROM enquiries GROUP BY source'),
+      context.role === 'enquiry_manager' ? Promise.resolve([]) : queryRows('SELECT id, collection, title, issuer, category, credential_date, alt_text, image_path, image_data IS NOT NULL AS has_database_image, homepage_featured, published, sort_order FROM certificate_items WHERE collection = \'certificates\' ORDER BY sort_order ASC, id ASC'),
     ])
     const activityRows = enquiryRows.length
       ? await queryRows(
@@ -93,6 +114,7 @@ export const getAdminSnapshot = createServerFn({ method: 'GET' })
       users: userRows.map((row) => ({ openId: String(row.open_id || row.id || row.email), email: String(row.email), name: String(row.name || row.email), role: (row.role === 'admin' ? 'super_admin' : String(row.role)) as AdminRole })),
       enquiryStats: { total: Number(stats.total ?? 0), newCount: Number(stats.new_count ?? 0), followUps: Number(stats.follow_ups ?? 0), dueToday: Number(stats.due_today ?? 0), converted: Number(stats.converted ?? 0), newLast7Days: Number(stats.new_last_7_days ?? 0), demoRequests: Number(stats.demo_requests ?? 0), byStatus, bySource },
       batches: batchRows.map(mapBatch),
+      certificates: certificateRows.map(mapCertificate),
     }
   })
 
@@ -257,6 +279,73 @@ export const deleteBatch = createServerFn({ method: 'POST' }).middleware([adminM
   await execute('DELETE FROM coaching_batches WHERE id = ?', [data.id])
   return { ok: true }
 })
+
+const certificateInput = (data: unknown) => {
+  const input = (data ?? {}) as Record<string, unknown>
+  const id = numberValue(input.id)
+  const title = stringValue(input.title, 220)
+  const issuer = stringValue(input.issuer, 180)
+  const category = stringValue(input.category, 100)
+  const credentialDate = stringValue(input.credentialDate, 80)
+  const altText = stringValue(input.altText, 500)
+  const rawImageBase64 = typeof input.imageBase64 === 'string' ? input.imageBase64 : ''
+  if (rawImageBase64.length > 4_200_000) throw new Error('Choose a smaller image (maximum 3 MB after compression)')
+  const imageBase64 = stringValue(rawImageBase64, 4_200_000)
+  const imageMimeType = stringValue(input.imageMimeType, 40)
+  const published = Boolean(input.published)
+  const homepageFeatured = Boolean(input.homepageFeatured)
+  const sortOrder = Math.max(0, Math.min(9999, numberValue(input.sortOrder)))
+  if (id < 0 || !title || !category || !altText) throw new Error('Title, category and image description are required')
+  if (!id && !imageBase64) throw new Error('Choose a certificate photo before saving')
+  if (imageBase64 && (!/^[A-Za-z0-9+/]+={0,2}$/.test(imageBase64) || imageBase64.length > 4_200_000)) throw new Error('Choose a smaller image (maximum 3 MB after compression)')
+  if (imageBase64 && !['image/webp', 'image/jpeg', 'image/png'].includes(imageMimeType)) throw new Error('Use a WebP, JPEG or PNG image')
+  return { id, title, issuer, category, credentialDate, altText, imageBase64, imageMimeType, published, homepageFeatured, sortOrder }
+}
+
+export const saveCertificate = createServerFn({ method: 'POST' })
+  .middleware([adminMiddleware])
+  .validator(certificateInput)
+  .handler(async ({ data, context }) => {
+    assertCapability(context.role, 'content')
+    let image: Buffer | null = null
+    if (data.imageBase64) {
+      image = Buffer.from(data.imageBase64, 'base64')
+      if (!image.length || image.length > 3 * 1024 * 1024) throw new Error('Choose a smaller image (maximum 3 MB after compression)')
+      const webp = image.toString('ascii', 0, 4) === 'RIFF' && image.toString('ascii', 8, 12) === 'WEBP'
+      const png = image.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
+      const jpeg = image[0] === 255 && image[1] === 216 && image[2] === 255
+      if ((data.imageMimeType === 'image/webp' && !webp) || (data.imageMimeType === 'image/png' && !png) || (data.imageMimeType === 'image/jpeg' && !jpeg)) throw new Error('The selected file is not a valid image')
+    }
+    if (data.id) {
+      if (image) {
+        await execute(
+          'UPDATE certificate_items SET title = ?, issuer = ?, category = ?, credential_date = ?, alt_text = ?, image_path = NULL, image_mime_type = ?, image_data = ?, homepage_featured = ?, published = ?, sort_order = ? WHERE id = ? AND collection = \'certificates\'',
+          [data.title, data.issuer, data.category, data.credentialDate, data.altText, data.imageMimeType, image, data.homepageFeatured ? 1 : 0, data.published ? 1 : 0, data.sortOrder, data.id],
+        )
+      } else {
+        await execute(
+          'UPDATE certificate_items SET title = ?, issuer = ?, category = ?, credential_date = ?, alt_text = ?, homepage_featured = ?, published = ?, sort_order = ? WHERE id = ? AND collection = \'certificates\'',
+          [data.title, data.issuer, data.category, data.credentialDate, data.altText, data.homepageFeatured ? 1 : 0, data.published ? 1 : 0, data.sortOrder, data.id],
+        )
+      }
+    } else {
+      await execute(
+        'INSERT INTO certificate_items (collection, title, issuer, category, credential_date, alt_text, image_mime_type, image_data, homepage_featured, published, sort_order) VALUES (\'certificates\', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [data.title, data.issuer, data.category, data.credentialDate, data.altText, data.imageMimeType, image, data.homepageFeatured ? 1 : 0, data.published ? 1 : 0, data.sortOrder],
+      )
+    }
+    return { ok: true }
+  })
+
+export const deleteCertificate = createServerFn({ method: 'POST' })
+  .middleware([adminMiddleware])
+  .validator((data: unknown) => ({ id: numberValue((data as Record<string, unknown>)?.id) }))
+  .handler(async ({ data, context }) => {
+    assertCapability(context.role, 'content')
+    await execute('DELETE FROM certificate_items WHERE id = ? AND collection = \'certificates\'', [data.id])
+    return { ok: true }
+  })
+
 
 export const updateSettings = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
   const input = (data ?? {}) as Record<string, unknown>
