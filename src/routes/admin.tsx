@@ -31,6 +31,7 @@ function AdminPage() {
   const [selectedBatch, setSelectedBatch] = useState<CoachingBatch | null>(null)
   const [notice, setNotice] = useState('')
   const [showChangePass, setShowChangePass] = useState(false)
+  const [settingsDirty, setSettingsDirty] = useState(false)
 
   async function reload() {
     try {
@@ -80,7 +81,11 @@ function AdminPage() {
       </header>
       <main className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
         <nav className="mb-8 flex gap-2 overflow-x-auto pb-2" aria-label="Admin sections">
-          {tabs.map(([value, label]) => <button key={value} type="button" onClick={() => setTab(value)} className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold ${tab === value ? 'bg-forest-900 text-white' : 'bg-white ring-1 ring-forest-900/10'}`}>{label}</button>)}
+          {tabs.map(([value, label]) => <button key={value} type="button" onClick={() => {
+            if (settingsDirty && value !== 'settings' && !window.confirm('You have unsaved changes in Site settings. Leave this section and discard them?')) return
+            if (value !== 'settings') setSettingsDirty(false)
+            setTab(value)
+          }} className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold ${tab === value ? 'bg-forest-900 text-white' : 'bg-white ring-1 ring-forest-900/10'}`}>{label}</button>)}
         </nav>
         {notice && <p className="mb-5 rounded-xl bg-emerald-100 px-4 py-3 text-sm font-bold text-emerald-900">{notice}</p>}
         {tab === 'enquiries' && <EnquiriesPanel enquiries={filtered} stats={snapshot.enquiryStats} query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter} dateFrom={dateFrom} setDateFrom={setDateFrom} dateTo={dateTo} setDateTo={setDateTo} onReload={reload} onNotice={showNotice} canDelete={snapshot.user.role === 'super_admin'} canManageComments={snapshot.user.role === 'super_admin'} />}
@@ -91,7 +96,7 @@ function AdminPage() {
         {tab === 'stories' && <ContentPanel type="stories" items={snapshot.stories} selected={selectedStory} onSelect={(item) => setSelectedStory(item as AdminStory | null)} onReload={reload} onNotice={showNotice} />}
         {tab === 'batches' && <BatchPanel items={snapshot.batches} selected={selectedBatch} onSelect={setSelectedBatch} onReload={reload} onNotice={showNotice} />}
 		{tab === 'budget' && <CashflowAdminPanel onNotice={showNotice} />}
-        {tab === 'settings' && <SettingsPanel settings={snapshot.settings} onReload={reload} onNotice={showNotice} />}
+        {tab === 'settings' && <SettingsPanel settings={snapshot.settings} onReload={reload} onNotice={showNotice} onDirtyChange={setSettingsDirty} />}
         {tab === 'users' && <UsersPanel users={snapshot.users} currentEmail={snapshot.user.email} onReload={reload} onNotice={showNotice} />}
         {showChangePass && <ChangePasswordModal onClose={() => setShowChangePass(false)} onNotice={showNotice} />}
       </main>
@@ -974,9 +979,22 @@ function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
   )
 }
 
-function SettingsPanel({ settings, onReload, onNotice }: { settings: AdminSnapshot['settings']; onReload: () => Promise<void>; onNotice: (message: string) => void }) {
+function SettingsPanel({ settings, onReload, onNotice, onDirtyChange }: { settings: AdminSnapshot['settings']; onReload: () => Promise<void>; onNotice: (message: string) => void; onDirtyChange: (dirty: boolean) => void }) {
   const [form, setForm] = useState(settings)
   const [busy, setBusy] = useState(false)
+  const [editingFaqs, setEditingFaqs] = useState<Set<number>>(() => new Set())
+  const isDirty = JSON.stringify(form) !== JSON.stringify(settings)
+
+  useEffect(() => { onDirtyChange(isDirty) }, [isDirty, onDirtyChange])
+  useEffect(() => {
+    if (!isDirty) return
+    const warnBeforeLeaving = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', warnBeforeLeaving)
+    return () => window.removeEventListener('beforeunload', warnBeforeLeaving)
+  }, [isDirty])
 
   function updateFaq(index: number, key: 'q' | 'a', value: string) {
     setForm({ ...form, faqs: form.faqs.map((item, current) => current === index ? { ...item, [key]: value } : item) })
@@ -984,12 +1002,33 @@ function SettingsPanel({ settings, onReload, onNotice }: { settings: AdminSnapsh
   function updateStat(index: number, key: 'value' | 'label', value: string) {
     setForm({ ...form, trustStats: form.trustStats.map((item, current) => current === index ? { ...item, [key]: value } : item) })
   }
+  function toggleFaqEditor(index: number) {
+    setEditingFaqs((current) => {
+      const next = new Set(current)
+      if (next.has(index)) next.delete(index)
+      else next.add(index)
+      return next
+    })
+  }
+  function removeFaq(index: number) {
+    setForm({ ...form, faqs: form.faqs.filter((_, current) => current !== index) })
+    setEditingFaqs((current) => new Set([...current].filter((current) => current !== index).map((current) => current > index ? current - 1 : current)))
+  }
+  function addFaq() {
+    const index = form.faqs.length
+    setForm({ ...form, faqs: [...form.faqs, { q: '', a: '' }] })
+    setEditingFaqs((current) => new Set(current).add(index))
+  }
   async function save() {
+    if (form.faqs.some((item) => !item.q.trim() || !item.a.trim())) { onNotice('Complete or remove each FAQ draft before saving.'); return }
+    if (form.trustStats.some((item) => !item.value.trim() || !item.label.trim())) { onNotice('Complete or remove each homepage trust number before saving.'); return }
     setBusy(true)
     try {
       await updateSettings({ data: form })
       await onReload()
-      onNotice('Site settings saved.')
+      setEditingFaqs(new Set())
+      onDirtyChange(false)
+      onNotice('Site settings saved. Public pages now use these values.')
     } catch (cause) {
       onNotice(cause instanceof Error ? cause.message : 'Could not save settings.')
     } finally {
@@ -1001,7 +1040,8 @@ function SettingsPanel({ settings, onReload, onNotice }: { settings: AdminSnapsh
     <section className="max-w-3xl">
       <p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">Controls</p>
       <h2 className="mt-2 text-3xl font-extrabold">Website settings</h2>
-      <p className="mt-2 text-sm text-forest-900/60">These values update the public pages after saving. Existing popup and WhatsApp controls remain here too.</p>
+      <p className="mt-2 text-sm text-forest-900/60">These values update the public pages only after they are saved. Existing popup and WhatsApp controls remain here too.</p>
+      {isDirty && <p role="status" className="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">You have unsaved changes. Press “Save all site settings” to publish them. Leaving this section will ask before discarding them.</p>}
       <div className="mt-6 grid gap-5 rounded-3xl bg-white p-6 ring-1 ring-forest-900/10">
         <section className="grid gap-4 border-b border-forest-900/10 pb-5">
           <h3 className="text-lg font-extrabold">Contact details</h3>
@@ -1011,7 +1051,7 @@ function SettingsPanel({ settings, onReload, onNotice }: { settings: AdminSnapsh
         </section>
 
         <section className="grid gap-3 border-b border-forest-900/10 pb-5">
-          <div><h3 className="text-lg font-extrabold">Homepage trust numbers</h3><p className="text-xs text-forest-900/55">Edit the four small proof points shown in the home page hero.</p></div>
+          <div><h3 className="text-lg font-extrabold">Homepage trust numbers</h3><p className="text-xs text-forest-900/55">Edit the proof points shown in the home page hero.</p></div>
           {form.trustStats.map((item, index) => <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1.5fr_auto]">
             <input className="field" aria-label={`Trust number ${index + 1}`} value={item.value} onChange={(event) => updateStat(index, 'value', event.target.value)} placeholder="2,500+" />
             <input className="field" aria-label={`Trust number label ${index + 1}`} value={item.label} onChange={(event) => updateStat(index, 'label', event.target.value)} placeholder="Visas approved" />
@@ -1021,15 +1061,28 @@ function SettingsPanel({ settings, onReload, onNotice }: { settings: AdminSnapsh
         </section>
 
         <section className="grid gap-3 border-b border-forest-900/10 pb-5">
-          <div><h3 className="text-lg font-extrabold">Homepage FAQs</h3><p className="text-xs text-forest-900/55">Questions and answers appear in both FAQ sections on the home page.</p></div>
-          {form.faqs.map((item, index) => <div key={index} className="grid gap-2 rounded-2xl bg-cream p-4">
-            <div className="flex items-start gap-2">
-              <input className="field" aria-label={`FAQ question ${index + 1}`} value={item.q} onChange={(event) => updateFaq(index, 'q', event.target.value)} placeholder="Question" />
-              <button type="button" disabled={form.faqs.length <= 1} onClick={() => setForm({ ...form, faqs: form.faqs.filter((_, current) => current !== index) })} className="rounded-full border border-forest-900/15 px-3 py-2 text-xs font-bold disabled:opacity-40">Remove</button>
+          <div>
+            <h3 className="text-lg font-extrabold">Homepage FAQs</h3>
+            <p className="text-xs text-forest-900/55">Use “Edit FAQ” to change an existing entry. “Add FAQ” creates a draft. New or edited FAQs appear publicly only after you press “Save all site settings”.</p>
+          </div>
+          {form.faqs.map((item, index) => {
+            const editing = editingFaqs.has(index)
+            return <div key={index} className="grid gap-2 rounded-2xl bg-cream p-4">
+              {editing ? (
+                <>
+                  <input className="field" aria-label={`FAQ question ${index + 1}`} value={item.q} onChange={(event) => updateFaq(index, 'q', event.target.value)} placeholder="Question" />
+                  <textarea className="field min-h-20" aria-label={`FAQ answer ${index + 1}`} value={item.a} onChange={(event) => updateFaq(index, 'a', event.target.value)} placeholder="Answer" />
+                </>
+              ) : (
+                <div><p className="font-bold">{item.q}</p><p className="mt-1 text-sm text-forest-900/65">{item.a}</p></div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => toggleFaqEditor(index)} className="rounded-full bg-forest-900 px-4 py-2 text-xs font-bold text-white">{editing ? 'Hide editor' : 'Edit FAQ'}</button>
+                <button type="button" disabled={form.faqs.length <= 1} onClick={() => removeFaq(index)} className="rounded-full border border-forest-900/15 px-4 py-2 text-xs font-bold disabled:opacity-40">Remove</button>
+              </div>
             </div>
-            <textarea className="field min-h-20" aria-label={`FAQ answer ${index + 1}`} value={item.a} onChange={(event) => updateFaq(index, 'a', event.target.value)} placeholder="Answer" />
-          </div>)}
-          <button type="button" disabled={form.faqs.length >= 20} onClick={() => setForm({ ...form, faqs: [...form.faqs, { q: '', a: '' }] })} className="w-fit rounded-full bg-forest-50 px-4 py-2 text-xs font-bold text-forest-900 disabled:opacity-40">Add FAQ</button>
+          })}
+          <button type="button" disabled={form.faqs.length >= 20} onClick={addFaq} className="w-fit rounded-full bg-forest-50 px-4 py-2 text-xs font-bold text-forest-900 disabled:opacity-40">Add FAQ</button>
         </section>
 
         <section className="grid gap-4">
@@ -1039,7 +1092,7 @@ function SettingsPanel({ settings, onReload, onNotice }: { settings: AdminSnapsh
           <label className="flex items-center justify-between gap-4 border-b border-forest-900/10 pb-4"><span><strong className="block">Approvals marquee</strong><small className="text-forest-900/60">Show the moving recent-approval strip on the home page.</small></span><input type="checkbox" checked={form.approvalsMarqueeEnabled} onChange={(event) => setForm({ ...form, approvalsMarqueeEnabled: event.target.checked })} /></label>
           <label><span className="mb-2 block font-bold">Popup delay (seconds)</span><input className="field max-w-40" type="number" min="3" max="60" value={form.popupDelaySeconds} onChange={(event) => setForm({ ...form, popupDelaySeconds: Number(event.target.value) })} /></label>
         </section>
-        <button type="button" disabled={busy} onClick={() => void save()} className="w-fit rounded-full bg-forest-900 px-5 py-3 text-sm font-bold text-white disabled:opacity-60">{busy ? 'Saving…' : 'Save settings'}</button>
+        <button type="button" disabled={busy || !isDirty} onClick={() => void save()} className="w-fit rounded-full bg-forest-900 px-5 py-3 text-sm font-bold text-white disabled:opacity-60">{busy ? 'Saving…' : 'Save all site settings'}</button>
       </div>
     </section>
   )
