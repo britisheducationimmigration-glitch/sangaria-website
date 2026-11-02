@@ -4,7 +4,6 @@ import { Link, createFileRoute } from '@tanstack/react-router'
 import { PageHero } from '@/components/Section'
 import { CountryFlag } from '@/components/CountryFlag'
 import { countries } from '@/data/fixtures'
-import { visaGuidance } from '@/data/visa-guidance'
 
 import { createPageSeo } from '@/lib/seo'
 
@@ -21,7 +20,8 @@ function CountriesPage() {
   const [selectedSlugs, setSelectedSlugs] = useState<string[]>([])
   const [showComparison, setShowComparison] = useState(false)
   const [compareNotice, setCompareNotice] = useState('')
-  const selectedCountries = countries.filter((country) => selectedSlugs.includes(country.slug))
+  const studyDestinations = countries.filter((country) => country.studyGuide)
+  const selectedCountries = studyDestinations.filter((country) => selectedSlugs.includes(country.slug))
 
   function toggleCompare(slug: string, name: string) {
     if (selectedSlugs.includes(slug)) {
@@ -51,14 +51,14 @@ function CountriesPage() {
         eyebrow="Destinations"
         title={
           <>
-            Seven destinations. <span className="text-coral-500">One team</span> that knows them all.
+            Six study destinations. <span className="text-coral-500">One team</span> to help plan your next step.
           </>
         }
-        intro="Compare post-study work rights, costs and intakes — then let us build the strongest possible file for the country you choose."
+        intro="Compare tuition estimates, visa funds, admission routes, student work conditions, post-study options and common intakes."
       />
-      <section className="mx-auto mt-8 max-w-7xl px-6 pb-40 md:mt-10" aria-label="Compare destinations">
+      <section className="mx-auto mt-8 max-w-7xl px-6 pb-40 md:mt-10" aria-label="Compare study destinations">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-          <p className="max-w-2xl text-sm text-forest-900/65">Choose two or three destinations to compare their existing fee snapshots, intakes and English guidance.</p>
+          <p className="max-w-2xl text-sm text-forest-900/65">Choose two or three study destinations. The comparison separates tuition estimates from visa funds and shows when work or post-study options depend on eligibility.</p>
           <p className="rounded-full bg-forest-50 px-3 py-1.5 font-mono text-xs font-bold text-forest-700" aria-live="polite">{selectedSlugs.length} / 3 selected</p>
         </div>
         {compareNotice && <p className="mb-4 rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900" role="status">{compareNotice}</p>}
@@ -93,15 +93,19 @@ function CountriesPage() {
                       </div>
                     ))}
                   </div>
-                  <button
-                    type="button"
-                    aria-pressed={selected}
-                    aria-label={(selected ? 'Remove ' : 'Add ') + country.name + (selected ? ' from comparison' : ' to comparison')}
-                    onClick={() => toggleCompare(country.slug, country.name)}
-                    className={'flex min-h-11 w-fit self-start items-center justify-center gap-2 rounded-full border px-4 py-2 text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500 lg:w-full lg:self-stretch ' + (selected ? 'border-forest-900 bg-forest-900 text-white hover:bg-forest-800' : 'border-forest-900/15 bg-white text-forest-900 hover:border-coral-500 hover:bg-coral-50')}
-                  >
-                    {selected ? <><Check aria-hidden="true" className="size-4" /> Selected</> : '＋ Compare'}
-                  </button>
+                  {country.studyGuide ? (
+                    <button
+                      type="button"
+                      aria-pressed={selected}
+                      aria-label={(selected ? 'Remove ' : 'Add ') + country.name + (selected ? ' from study comparison' : ' to study comparison')}
+                      onClick={() => toggleCompare(country.slug, country.name)}
+                      className={'flex min-h-11 w-fit self-start items-center justify-center gap-2 rounded-full border px-4 py-2 text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500 lg:w-full lg:self-stretch ' + (selected ? 'border-forest-900 bg-forest-900 text-white hover:bg-forest-800' : 'border-forest-900/15 bg-white text-forest-900 hover:border-coral-500 hover:bg-coral-50')}
+                    >
+                      {selected ? <><Check aria-hidden="true" className="size-4" /> Selected</> : '＋ Compare study'}
+                    </button>
+                  ) : (
+                    <p className="max-w-48 text-xs leading-relaxed text-forest-900/60">Visitor guide · study over 90 days uses a country-specific route.</p>
+                  )}
                 </div>
               </article>
             )
@@ -112,47 +116,54 @@ function CountriesPage() {
           <section id="country-comparison" aria-labelledby="country-comparison-title" className="mt-12 scroll-mt-28 rounded-[2rem] bg-forest-900 bg-grain p-5 text-white md:p-8">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-coral-400">Side-by-side guide</p>
-                <h2 id="country-comparison-title" className="mt-2 text-2xl font-extrabold md:text-3xl">Compare destinations</h2>
-                <p className="mt-2 max-w-2xl text-sm text-forest-100/70">Uses the country details and fee snapshots already on this site. Figures can vary by route and circumstances.</p>
+                <p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-coral-400">Study guide · side by side</p>
+                <h2 id="country-comparison-title" className="mt-2 text-2xl font-extrabold md:text-3xl">Compare study destinations</h2>
+                <p className="mt-2 max-w-2xl text-sm text-forest-100/70">Compare tuition estimates, student visa charges, proof of funds, admissions and English requirements, work conditions, post-study routes and common intake windows. Each item links to official guidance.</p>
               </div>
               <button type="button" onClick={() => setShowComparison(false)} className="min-h-11 rounded-full border border-white/25 px-4 py-2 text-xs font-bold text-white hover:bg-white/10">Close comparison</button>
             </div>
             <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {selectedCountries.map((country) => {
-                const guidance = visaGuidance[country.slug]
+                const guide = country.studyGuide
+                if (!guide) return null
+                const facts = [
+                  { label: 'Tuition estimate', value: guide.tuitionEstimate },
+                  { label: 'Student visa fee', value: guide.studentVisaFee },
+                  { label: 'Proof of funds', value: guide.proofOfFunds },
+                  { label: 'Admission & English', value: guide.admissionAndEnglish },
+                  { label: 'Work while studying', value: guide.workWhileStudying },
+                  { label: 'Post-study option', value: guide.postStudyOption },
+                ]
                 return (
                   <article key={country.slug} className="rounded-2xl bg-white p-5 text-forest-900 ring-1 ring-white/20">
                     <div className="flex items-center gap-3 border-b border-forest-900/10 pb-4">
                       <CountryFlag code={country.code} flag={country.flag} country={country.name} className="h-8 w-12 shrink-0 shadow-sm" />
-                      <div><h3 className="font-display text-xl font-extrabold">{country.name}</h3><p className="text-xs text-forest-900/55">{country.headline}</p></div>
+                      <div><h3 className="font-display text-xl font-extrabold">{country.name}</h3><p className="text-xs text-forest-900/55">Study destination · checked {guide.lastVerified}</p></div>
                     </div>
                     <div className="mt-4">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-forest-900/55">Intakes</h4>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-forest-900/55">Common intake windows</h4>
                       <div className="mt-2 flex flex-wrap gap-2">{country.intakes.map((intake) => <span key={intake} className="rounded-full bg-forest-50 px-3 py-1 text-xs font-semibold text-forest-700">{intake}</span>)}</div>
+                      <p className="mt-2 text-xs leading-relaxed text-forest-900/60">{guide.intakesNote}</p>
                     </div>
-                    <div className="mt-4 rounded-xl bg-cream p-3">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-forest-900/55">English guidance</h4>
-                      <p className="mt-1 text-sm leading-relaxed text-forest-900/80">{country.english}</p>
-                    </div>
-                    <div className="mt-4">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-forest-900/55">Fee snapshot</h4>
-                        {guidance?.lastVerified && <span className="text-[10px] text-forest-900/50">Verified {guidance.lastVerified}</span>}
+                    <dl className="mt-4 space-y-3">
+                      {facts.map((fact) => (
+                        <div key={fact.label} className="rounded-xl bg-cream p-3">
+                          <dt className="text-xs font-bold uppercase tracking-wider text-forest-900/55">{fact.label}</dt>
+                          <dd className="mt-1 text-sm leading-relaxed text-forest-900/80">{fact.value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                    <div className="mt-4 border-t border-forest-900/10 pt-3">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-forest-900/55">Official sources</h4>
+                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                        {guide.sources.map((source) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center gap-1 text-xs font-bold text-coral-600 underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500">{source.label} <ArrowRight aria-hidden="true" className="size-3" /></a>)}
                       </div>
-                      {guidance?.feeRows?.length ? (
-                        <dl className="mt-2 divide-y divide-forest-900/10">
-                          {guidance.feeRows.map((fee) => <div key={fee.label} className="flex items-start justify-between gap-3 py-2 text-xs"><dt className="text-forest-900/65">{fee.label}</dt><dd className="text-right font-bold text-forest-900">{fee.value}</dd></div>)}
-                        </dl>
-                      ) : (
-                        <p className="mt-2 rounded-xl bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">A fee snapshot is not listed for this destination yet. Check its official source before relying on a cost estimate.</p>
-                      )}
-                      {guidance?.sources?.[0] && <a href={guidance.sources[0].url} target="_blank" rel="noreferrer" className="mt-3 inline-flex min-h-11 items-center gap-2 text-xs font-bold text-coral-600 underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500">{guidance.sources[0].label} <ArrowRight aria-hidden="true" className="size-3" /></a>}
                     </div>
                   </article>
                 )
               })}
             </div>
+            <p className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs leading-relaxed text-forest-100/75">Tuition estimates are for planning and vary by provider, programme and location. Proof-of-funds figures are visa evidence amounts, separate from tuition and actual living costs. Work and post-study routes depend on your visa, course and personal eligibility. Check linked official rules before making an application.</p>
           </section>
         )}
       </section>
