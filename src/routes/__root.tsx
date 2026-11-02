@@ -5,6 +5,8 @@ import { SiteFooter } from '@/components/SiteFooter'
 import { SiteHeader } from '@/components/SiteHeader'
 import { WhatsAppButton } from '@/components/WhatsAppButton'
 import { EnquiryPopup } from '@/components/EnquiryPopup'
+import { getPublicContent } from '@/lib/public-functions'
+import { defaultSiteSettings } from '@/lib/site-settings'
 import appCss from '../styles.css?url'
 
 const localBusinessSchema = {
@@ -48,8 +50,30 @@ const localBusinessSchema = {
   },
 }
 
+function businessTime(hour: string, minute: string | undefined, meridiem: string) {
+  const value = Number(hour) % 12 + (meridiem.toUpperCase() === 'PM' ? 12 : 0)
+  return String(value).padStart(2, '0') + ':' + (minute || '00')
+}
+
+function schemaOpeningHours(label: string) {
+  const match = label.match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)\s*[–-]\s*(\d{1,2})(?::(\d{2}))?\s*(AM|PM)/i)
+  if (!match) return localBusinessSchema.openingHoursSpecification
+  return {
+    ...localBusinessSchema.openingHoursSpecification,
+    opens: businessTime(match[1], match[2], match[3]),
+    closes: businessTime(match[4], match[5], match[6]),
+  }
+}
+
 export const Route = createRootRoute({
-  head: () => ({
+  loader: async () => {
+    try {
+      return { settings: (await getPublicContent()).settings }
+    } catch {
+      return { settings: defaultSiteSettings }
+    }
+  },
+  head: ({ loaderData }) => ({
     meta: [
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
@@ -91,7 +115,12 @@ export const Route = createRootRoute({
     scripts: [
       {
         type: 'application/ld+json',
-        children: JSON.stringify(localBusinessSchema),
+        children: JSON.stringify({
+          ...localBusinessSchema,
+          telephone: (loaderData?.settings.phones ?? defaultSiteSettings.phones).map((phone) => phone.startsWith('+') ? phone : '+91' + phone),
+          email: (loaderData?.settings.emails ?? defaultSiteSettings.emails)[0],
+          openingHoursSpecification: schemaOpeningHours(loaderData?.settings.officeHours ?? defaultSiteSettings.officeHours),
+        }),
       },
     ],
   }),
@@ -102,15 +131,16 @@ export const Route = createRootRoute({
 function RootDocument({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const isAdmin = pathname.startsWith('/admin')
+  const { settings } = Route.useLoaderData()
   return (
     <html lang="en">
       <head>
         <HeadContent />
       </head>
       <body>
-        {!isAdmin && <SiteHeader />}
+        {!isAdmin && <SiteHeader settings={settings} />}
         <main>{children}</main>
-        {!isAdmin && <SiteFooter />}
+        {!isAdmin && <SiteFooter settings={settings} />}
         {!isAdmin && <WhatsAppButton />}
         {!isAdmin && <EnquiryPopup />}
         <Analytics />

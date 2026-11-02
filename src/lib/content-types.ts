@@ -1,10 +1,18 @@
 import type { Approval, Post, Testimonial } from '@/data/fixtures'
 
+export type SiteFaq = { q: string; a: string }
+export type SiteTrustStat = { value: string; label: string }
+
 export type SiteSettings = {
   popupEnabled: boolean
   popupDelaySeconds: number
   whatsappEnabled: boolean
   approvalsMarqueeEnabled: boolean
+  phones: string[]
+  emails: string[]
+  officeHours: string
+  faqs: SiteFaq[]
+  trustStats: SiteTrustStat[]
 }
 
 export type PublicContent = {
@@ -93,6 +101,10 @@ export type AdminSnapshot = {
     followUps: number
     dueToday: number
     converted: number
+    newLast7Days: number
+    demoRequests: number
+    byStatus: Record<string, number>
+    bySource: Record<string, number>
   }
 }
 

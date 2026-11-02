@@ -1,16 +1,10 @@
 import { createServerFn } from '@tanstack/react-start'
 import { execute, jsonArray, queryRows } from './db.server'
-import type { PublicContent, PublicCoachingContent, SiteSettings } from './content-types'
+import type { PublicContent, PublicCoachingContent } from './content-types'
+import { readSiteSettings } from './site-settings'
 import { approvals as fixtureApprovals, coachingSchedule as fixtureCoachingSchedule, posts as fixturePosts, testimonials as fixtureTestimonials } from '@/data/fixtures'
 import { defaultCashflowData, mergeNewCashflowDestinations, type CountryCashflow } from '@/data/cashflow'
 import { isBatchExpired } from '@/lib/batch-dates'
-
-const defaultSettings: SiteSettings = {
-  popupEnabled: true,
-  popupDelaySeconds: 8,
-  whatsappEnabled: true,
-  approvalsMarqueeEnabled: true,
-}
 
 let publicContentCache: { expiresAt: number; data: PublicContent } | null = null
 
@@ -47,15 +41,6 @@ export const submitEnquiry = createServerFn({ method: 'POST' })
     )
     return { ok: true, id: Number(result.insertId) }
   })
-
-function mapSettings(row?: Record<string, unknown>): SiteSettings {
-  return {
-    popupEnabled: row ? Boolean(row.popup_enabled) : defaultSettings.popupEnabled,
-    popupDelaySeconds: row ? Math.min(60, Math.max(3, Number(row.popup_delay_seconds) || 8)) : defaultSettings.popupDelaySeconds,
-    whatsappEnabled: row ? Boolean(row.whatsapp_enabled) : defaultSettings.whatsappEnabled,
-    approvalsMarqueeEnabled: row ? Boolean(row.approvals_marquee_enabled) : defaultSettings.approvalsMarqueeEnabled,
-  }
-}
 
 function dateOnly(value: unknown) {
   if (value instanceof Date) return value.toISOString().slice(0, 10)
@@ -123,7 +108,7 @@ export const getPublicContent = createServerFn({ method: 'GET' }).handler(async 
   if (publicContentCache && publicContentCache.expiresAt > Date.now()) return publicContentCache.data
   const postRows = await queryRows('SELECT slug, title, category, publish_date, excerpt, read_mins, body_json FROM content_posts WHERE published = 1 ORDER BY publish_date DESC, id DESC')
   const storyRows = await queryRows('SELECT id, kind, name, city, country, visa, quote, rating, initials, flag, story_date, note FROM success_stories WHERE published = 1 ORDER BY story_date DESC, id DESC')
-  const settingsRows = await queryRows('SELECT popup_enabled, popup_delay_seconds, whatsapp_enabled, approvals_marquee_enabled FROM site_settings WHERE id = 1 LIMIT 1')
+  const settingsRows = await queryRows('SELECT popup_enabled, popup_delay_seconds, whatsapp_enabled, approvals_marquee_enabled, public_settings_json FROM site_settings WHERE id = 1 LIMIT 1')
   const posts = postRows.length
     ? postRows.map((row) =>
         applyEditorialReview({
@@ -147,7 +132,7 @@ export const getPublicContent = createServerFn({ method: 'GET' }).handler(async 
         name: String(row.name), city: String(row.city), country: String(row.country), visa: String(row.visa), quote: String(row.quote), rating: Number(row.rating), initials: String(row.initials),
       }))
     : fixtureTestimonials
-  const data = { posts, approvals, testimonials, settings: mapSettings(settingsRows[0]) }
+  const data = { posts, approvals, testimonials, settings: readSiteSettings(settingsRows[0]) }
   publicContentCache = { data, expiresAt: Date.now() + 8_000 }
   return data
 })

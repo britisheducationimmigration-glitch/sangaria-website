@@ -6,7 +6,7 @@ import { CountryFlag } from '@/components/CountryFlag'
 import { EnquiryForm } from '@/components/EnquiryForm'
 import { Eyebrow } from '@/components/Section'
 import { ServiceIcon } from '@/components/ServiceIcon'
-import { countries, faqs, visaServices } from '@/data/fixtures'
+import { countries, visaServices } from '@/data/fixtures'
 import { site } from '@/data/site'
 import { img } from '@/lib/utils'
 import { getPublicContent } from '@/lib/public-functions'
@@ -24,13 +24,6 @@ export const Route = createFileRoute('/')({
   }),
   component: Home,
 })
-
-const stats = [
-  { value: '2,500+', label: 'Visas approved' },
-  { value: '98%', label: 'Success ratio' },
-  { value: '7', label: 'Destinations' },
-  { value: '7.0', label: 'Avg. IELTS band' },
-]
 
 const steps = [
   { n: '01', title: 'Free counselling', text: 'Visit our Sangaria office or call — we assess your profile honestly.' },
@@ -243,7 +236,7 @@ function Home() {
             </div>
 
             <dl className="mt-7 grid grid-cols-2 gap-3.5">
-              {stats.map((s) => (
+              {settings.trustStats.map((s) => (
                 <div key={s.label} className="rounded-2xl bg-white/5 border border-white/10 p-4 text-center">
                   <dt className="font-display text-2xl font-extrabold text-white">{s.value}</dt>
                   <dd className="mt-1 text-[10px] uppercase tracking-wider text-forest-100/70">{s.label}</dd>
@@ -599,7 +592,7 @@ function Home() {
             <p className="mt-2 text-xs text-forest-900/70">Tap any question below to see full answer.</p>
 
             <div className="mt-6 space-y-3.5">
-              {faqs.map((f) => (
+              {settings.faqs.map((f) => (
                 <details
                   key={f.q}
                   className="group rounded-3xl bg-white p-5 shadow-sm border border-forest-900/10 transition [&_summary::-webkit-details-marker]:hidden"
@@ -790,7 +783,7 @@ function Home() {
           </div>
 
           <dl className="mx-auto mt-12 grid max-w-7xl grid-cols-2 gap-6 px-6 pb-16 sm:grid-cols-4">
-            {stats.map((s) => (
+            {settings.trustStats.map((s) => (
               <div key={s.label}>
                 <dt className="font-display text-3xl font-extrabold text-white">{s.value}</dt>
                 <dd className="mt-1 text-xs uppercase tracking-wider text-forest-100/60">{s.label}</dd>
@@ -1089,7 +1082,7 @@ function Home() {
             <Eyebrow>FAQs</Eyebrow>
             <h2 className="mt-4 text-4xl font-extrabold text-forest-900">Questions we hear every day.</h2>
             <div className="mt-8 divide-y divide-forest-900/10 rounded-3xl bg-white ring-1 ring-forest-900/10 shadow-sm">
-              {faqs.map((f) => (
+              {settings.faqs.map((f) => (
                 <details key={f.q} className="group p-6 [&_summary::-webkit-details-marker]:hidden">
                   <summary className="flex cursor-pointer items-center justify-between gap-4 font-display text-lg font-bold text-forest-900">
                     {f.q}
