@@ -30,6 +30,17 @@ export type EnquiryStatus = 'New' | 'Contacted' | 'Follow-up' | 'Documents Pendi
 
 export type AdminRole = 'super_admin' | 'content_editor' | 'enquiry_manager'
 
+export type EnquiryActivity = {
+  id: number
+  enquiryId: number
+  authorName: string
+  authorEmail: string
+  body: string
+  createdAt: string
+  updatedAt: string
+  editedBy: string
+}
+
 export type Enquiry = {
   id: number
   name: string
@@ -43,6 +54,7 @@ export type Enquiry = {
   summary: string
   status: EnquiryStatus
   notes: string
+  activities: EnquiryActivity[]
   assignedTo: string
   nextFollowUpAt: string
   createdAt: string
