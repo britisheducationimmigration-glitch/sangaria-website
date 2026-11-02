@@ -66,7 +66,13 @@ function schemaOpeningHours(label: string) {
 }
 
 export const Route = createRootRoute({
-  loader: async () => ({ settings: (await getPublicContent()).settings }),
+  loader: async () => {
+    try {
+      return { settings: (await getPublicContent()).settings }
+    } catch {
+      return { settings: defaultSiteSettings }
+    }
+  },
   head: ({ loaderData }) => ({
     meta: [
       { charSet: 'utf-8' },
