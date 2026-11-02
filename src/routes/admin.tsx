@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { ApprovalCard, TestimonialCard } from '@/components/Cards'
 import { useEffect, useState, type FormEvent, type MouseEvent, type ReactNode } from 'react'
-import { getAdminCashflow, getAdminSnapshot, addEnquiryActivity, deleteAdminUser, deleteBatch, deleteEnquiry, deleteEnquiryActivity, deletePost, deleteStory, exportEnquiries, saveAdminUser, saveBatch, saveCashflow, savePost, saveStory, updateEnquiry, updateEnquiryActivity, updateSettings } from '@/lib/admin-functions'
+import { getAdminCashflow, getAdminSnapshot, addEnquiryActivity, deleteAdminUser, deleteBatch, deleteEnquiry, deleteEnquiryActivity, deletePost, deleteStory, exportEnquiries, saveAdminUser, saveBatch, saveCashflow, savePost, saveStory, updateEnquiry, updateEnquiryActivity, updateSettings, saveFaq } from '@/lib/admin-functions'
 import type { AdminPost, AdminRole, AdminSnapshot, AdminStory, AdminUser, CoachingBatch, Enquiry, EnquiryActivity, EnquiryStatus } from '@/lib/content-types'
 import { defaultCashflowData, CountryCashflow } from '@/data/cashflow'
 import { formatBatchStartDate, getBatchDateStatus, isValidBatchStartDate } from '@/lib/batch-dates'
@@ -982,53 +982,80 @@ function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
 function SettingsPanel({ settings, onReload, onNotice, onDirtyChange }: { settings: AdminSnapshot['settings']; onReload: () => Promise<void>; onNotice: (message: string) => void; onDirtyChange: (dirty: boolean) => void }) {
   const [form, setForm] = useState(settings)
   const [busy, setBusy] = useState(false)
-  const [editingFaqs, setEditingFaqs] = useState<Set<number>>(() => new Set())
+  const [faqBusy, setFaqBusy] = useState(false)
+  const [editingFaqIndex, setEditingFaqIndex] = useState<number | null>(null)
+  const [faqDraft, setFaqDraft] = useState({ q: '', a: '' })
   const isDirty = JSON.stringify(form) !== JSON.stringify(settings)
+  const faqOriginal = editingFaqIndex === null ? null : form.faqs[editingFaqIndex] ?? { q: '', a: '' }
+  const faqDraftDirty = editingFaqIndex !== null && JSON.stringify(faqDraft) !== JSON.stringify(faqOriginal)
+  const hasUnsavedChanges = isDirty || faqDraftDirty
 
-  useEffect(() => { onDirtyChange(isDirty) }, [isDirty, onDirtyChange])
+  useEffect(() => { onDirtyChange(hasUnsavedChanges) }, [hasUnsavedChanges, onDirtyChange])
   useEffect(() => {
-    if (!isDirty) return
+    if (!hasUnsavedChanges) return
     const warnBeforeLeaving = (event: BeforeUnloadEvent) => {
       event.preventDefault()
       event.returnValue = ''
     }
     window.addEventListener('beforeunload', warnBeforeLeaving)
     return () => window.removeEventListener('beforeunload', warnBeforeLeaving)
-  }, [isDirty])
+  }, [hasUnsavedChanges])
 
-  function updateFaq(index: number, key: 'q' | 'a', value: string) {
-    setForm({ ...form, faqs: form.faqs.map((item, current) => current === index ? { ...item, [key]: value } : item) })
-  }
   function updateStat(index: number, key: 'value' | 'label', value: string) {
     setForm({ ...form, trustStats: form.trustStats.map((item, current) => current === index ? { ...item, [key]: value } : item) })
   }
-  function toggleFaqEditor(index: number) {
-    setEditingFaqs((current) => {
-      const next = new Set(current)
-      if (next.has(index)) next.delete(index)
-      else next.add(index)
-      return next
-    })
+  function beginFaqEdit(index: number) {
+    setFaqDraft({ ...form.faqs[index] })
+    setEditingFaqIndex(index)
   }
-  function removeFaq(index: number) {
-    setForm({ ...form, faqs: form.faqs.filter((_, current) => current !== index) })
-    setEditingFaqs((current) => new Set([...current].filter((current) => current !== index).map((current) => current > index ? current - 1 : current)))
+  function beginNewFaq() {
+    setFaqDraft({ q: '', a: '' })
+    setEditingFaqIndex(form.faqs.length)
   }
-  function addFaq() {
-    const index = form.faqs.length
-    setForm({ ...form, faqs: [...form.faqs, { q: '', a: '' }] })
-    setEditingFaqs((current) => new Set(current).add(index))
+  function cancelFaqEdit() {
+    setFaqDraft({ q: '', a: '' })
+    setEditingFaqIndex(null)
+  }
+  async function saveFaqDraft() {
+    if (editingFaqIndex === null) return
+    const faq = { q: faqDraft.q.trim(), a: faqDraft.a.trim() }
+    if (!faq.q || !faq.a) { onNotice('Enter both a question and an answer, or cancel this FAQ draft.'); return }
+    setFaqBusy(true)
+    try {
+      const result = await saveFaq({ data: { action: 'save', index: editingFaqIndex, faq } })
+      setForm((current) => ({ ...current, faqs: result.faqs }))
+      cancelFaqEdit()
+      await onReload()
+      onNotice('FAQ saved and published.')
+    } catch (cause) {
+      onNotice(cause instanceof Error ? cause.message : 'Could not save this FAQ.')
+    } finally {
+      setFaqBusy(false)
+    }
+  }
+  async function removeFaq(index: number) {
+    if (!window.confirm('Remove this FAQ from the homepage? This takes effect after you confirm.')) return
+    setFaqBusy(true)
+    try {
+      const result = await saveFaq({ data: { action: 'remove', index } })
+      setForm((current) => ({ ...current, faqs: result.faqs }))
+      await onReload()
+      onNotice('FAQ removed from the homepage.')
+    } catch (cause) {
+      onNotice(cause instanceof Error ? cause.message : 'Could not remove this FAQ.')
+    } finally {
+      setFaqBusy(false)
+    }
   }
   async function save() {
-    if (form.faqs.some((item) => !item.q.trim() || !item.a.trim())) { onNotice('Complete or remove each FAQ draft before saving.'); return }
+    if (editingFaqIndex !== null) { onNotice('Save or cancel the FAQ edit before saving the other site settings.'); return }
     if (form.trustStats.some((item) => !item.value.trim() || !item.label.trim())) { onNotice('Complete or remove each homepage trust number before saving.'); return }
     setBusy(true)
     try {
       await updateSettings({ data: form })
       await onReload()
-      setEditingFaqs(new Set())
       onDirtyChange(false)
-      onNotice('Site settings saved. Public pages now use these values.')
+      onNotice('Site settings saved.')
     } catch (cause) {
       onNotice(cause instanceof Error ? cause.message : 'Could not save settings.')
     } finally {
@@ -1040,8 +1067,8 @@ function SettingsPanel({ settings, onReload, onNotice, onDirtyChange }: { settin
     <section className="max-w-3xl">
       <p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">Controls</p>
       <h2 className="mt-2 text-3xl font-extrabold">Website settings</h2>
-      <p className="mt-2 text-sm text-forest-900/60">These values update the public pages only after they are saved. Existing popup and WhatsApp controls remain here too.</p>
-      {isDirty && <p role="status" className="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">You have unsaved changes. Press “Save all site settings” to publish them. Leaving this section will ask before discarding them.</p>}
+      <p className="mt-2 text-sm text-forest-900/60">These values update the public pages only after you choose a save action. Existing popup and WhatsApp controls remain here too.</p>
+      {hasUnsavedChanges && <p role="status" className="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">You have unsaved changes. Save the FAQ draft or site settings before leaving; otherwise you’ll be asked to discard them.</p>}
       <div className="mt-6 grid gap-5 rounded-3xl bg-white p-6 ring-1 ring-forest-900/10">
         <section className="grid gap-4 border-b border-forest-900/10 pb-5">
           <h3 className="text-lg font-extrabold">Contact details</h3>
@@ -1063,26 +1090,43 @@ function SettingsPanel({ settings, onReload, onNotice, onDirtyChange }: { settin
         <section className="grid gap-3 border-b border-forest-900/10 pb-5">
           <div>
             <h3 className="text-lg font-extrabold">Homepage FAQs</h3>
-            <p className="text-xs text-forest-900/55">Use “Edit FAQ” to change an existing entry. “Add FAQ” creates a draft. New or edited FAQs appear publicly only after you press “Save all site settings”.</p>
+            <p className="text-xs text-forest-900/55">Click “Edit FAQ” to open an entry. Use its “Save FAQ” button to publish that change. “Add FAQ” opens a draft and does not publish it until you press “Save FAQ”.</p>
           </div>
           {form.faqs.map((item, index) => {
-            const editing = editingFaqs.has(index)
-            return <div key={index} className="grid gap-2 rounded-2xl bg-cream p-4">
+            const editing = editingFaqIndex === index
+            return <div key={index} className="grid gap-3 rounded-2xl bg-cream p-4">
               {editing ? (
                 <>
-                  <input className="field" aria-label={`FAQ question ${index + 1}`} value={item.q} onChange={(event) => updateFaq(index, 'q', event.target.value)} placeholder="Question" />
-                  <textarea className="field min-h-20" aria-label={`FAQ answer ${index + 1}`} value={item.a} onChange={(event) => updateFaq(index, 'a', event.target.value)} placeholder="Answer" />
+                  <input className="field" aria-label={`FAQ question ${index + 1}`} value={faqDraft.q} onChange={(event) => setFaqDraft({ ...faqDraft, q: event.target.value })} placeholder="Question" />
+                  <textarea className="field min-h-20" aria-label={`FAQ answer ${index + 1}`} value={faqDraft.a} onChange={(event) => setFaqDraft({ ...faqDraft, a: event.target.value })} placeholder="Answer" />
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" disabled={faqBusy} onClick={() => void saveFaqDraft()} className="rounded-full bg-forest-900 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">{faqBusy ? 'Saving…' : 'Save FAQ'}</button>
+                    <button type="button" disabled={faqBusy} onClick={cancelFaqEdit} className="rounded-full border border-forest-900/15 px-4 py-2 text-xs font-bold disabled:opacity-50">Cancel</button>
+                  </div>
                 </>
               ) : (
-                <div><p className="font-bold">{item.q}</p><p className="mt-1 text-sm text-forest-900/65">{item.a}</p></div>
+                <>
+                  <div><p className="font-bold">{item.q}</p><p className="mt-1 text-sm text-forest-900/65">{item.a}</p></div>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" disabled={faqBusy || editingFaqIndex !== null} onClick={() => beginFaqEdit(index)} className="rounded-full bg-forest-900 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">Edit FAQ</button>
+                    <button type="button" disabled={faqBusy || editingFaqIndex !== null || form.faqs.length <= 1} onClick={() => void removeFaq(index)} className="rounded-full border border-forest-900/15 px-4 py-2 text-xs font-bold disabled:opacity-40">Remove</button>
+                  </div>
+                </>
               )}
-              <div className="flex flex-wrap gap-2">
-                <button type="button" onClick={() => toggleFaqEditor(index)} className="rounded-full bg-forest-900 px-4 py-2 text-xs font-bold text-white">{editing ? 'Hide editor' : 'Edit FAQ'}</button>
-                <button type="button" disabled={form.faqs.length <= 1} onClick={() => removeFaq(index)} className="rounded-full border border-forest-900/15 px-4 py-2 text-xs font-bold disabled:opacity-40">Remove</button>
-              </div>
             </div>
           })}
-          <button type="button" disabled={form.faqs.length >= 20} onClick={addFaq} className="w-fit rounded-full bg-forest-50 px-4 py-2 text-xs font-bold text-forest-900 disabled:opacity-40">Add FAQ</button>
+          {editingFaqIndex === form.faqs.length && (
+            <div className="grid gap-3 rounded-2xl border border-coral-300 bg-coral-50/40 p-4">
+              <p className="text-sm font-bold text-forest-900">New FAQ draft — it will not appear publicly until saved.</p>
+              <input className="field" aria-label="New FAQ question" value={faqDraft.q} onChange={(event) => setFaqDraft({ ...faqDraft, q: event.target.value })} placeholder="Question" />
+              <textarea className="field min-h-20" aria-label="New FAQ answer" value={faqDraft.a} onChange={(event) => setFaqDraft({ ...faqDraft, a: event.target.value })} placeholder="Answer" />
+              <div className="flex flex-wrap gap-2">
+                <button type="button" disabled={faqBusy} onClick={() => void saveFaqDraft()} className="rounded-full bg-forest-900 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">{faqBusy ? 'Saving…' : 'Save FAQ'}</button>
+                <button type="button" disabled={faqBusy} onClick={cancelFaqEdit} className="rounded-full border border-forest-900/15 px-4 py-2 text-xs font-bold disabled:opacity-50">Cancel</button>
+              </div>
+            </div>
+          )}
+          <button type="button" disabled={form.faqs.length >= 20 || faqBusy || editingFaqIndex !== null} onClick={beginNewFaq} className="w-fit rounded-full bg-forest-50 px-4 py-2 text-xs font-bold text-forest-900 disabled:opacity-40">Add FAQ</button>
         </section>
 
         <section className="grid gap-4">
@@ -1092,7 +1136,7 @@ function SettingsPanel({ settings, onReload, onNotice, onDirtyChange }: { settin
           <label className="flex items-center justify-between gap-4 border-b border-forest-900/10 pb-4"><span><strong className="block">Approvals marquee</strong><small className="text-forest-900/60">Show the moving recent-approval strip on the home page.</small></span><input type="checkbox" checked={form.approvalsMarqueeEnabled} onChange={(event) => setForm({ ...form, approvalsMarqueeEnabled: event.target.checked })} /></label>
           <label><span className="mb-2 block font-bold">Popup delay (seconds)</span><input className="field max-w-40" type="number" min="3" max="60" value={form.popupDelaySeconds} onChange={(event) => setForm({ ...form, popupDelaySeconds: Number(event.target.value) })} /></label>
         </section>
-        <button type="button" disabled={busy || !isDirty} onClick={() => void save()} className="w-fit rounded-full bg-forest-900 px-5 py-3 text-sm font-bold text-white disabled:opacity-60">{busy ? 'Saving…' : 'Save all site settings'}</button>
+        <button type="button" disabled={busy || !isDirty || editingFaqIndex !== null} onClick={() => void save()} className="w-fit rounded-full bg-forest-900 px-5 py-3 text-sm font-bold text-white disabled:opacity-60">{busy ? 'Saving…' : 'Save site settings'}</button>
       </div>
     </section>
   )

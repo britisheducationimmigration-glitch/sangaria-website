@@ -277,6 +277,34 @@ export const updateSettings = createServerFn({ method: 'POST' }).middleware([adm
   return { ok: true }
 })
 
+export const saveFaq = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
+  const input = (data ?? {}) as Record<string, unknown>
+  const action = stringValue(input.action, 12)
+  const index = numberValue(input.index, -1)
+  if (!['save', 'remove'].includes(action) || !Number.isInteger(index) || index < 0 || index > 19) throw new Error('Invalid FAQ action.')
+  const faqInput = (input.faq ?? {}) as Record<string, unknown>
+  const faq = { q: stringValue(faqInput.q, 220), a: stringValue(faqInput.a, 1200) }
+  if (action === 'save' && (!faq.q || !faq.a)) throw new Error('Enter both a question and an answer before saving.')
+  return { action: action as 'save' | 'remove', index, faq }
+}).handler(async ({ data, context }) => {
+  assertCapability(context.role, 'settings')
+  const rows = await queryRows('SELECT public_settings_json FROM site_settings WHERE id = 1 LIMIT 1')
+  const current = readSiteSettings(rows[0])
+  const faqs = [...current.faqs]
+  if (data.action === 'save') {
+    if (data.index > faqs.length) throw new Error('This FAQ list changed. Reload the settings and try again.')
+    if (data.index === faqs.length) faqs.push(data.faq)
+    else faqs[data.index] = data.faq
+  } else {
+    if (data.index >= faqs.length) throw new Error('This FAQ is no longer available. Reload the settings and try again.')
+    if (faqs.length <= 1) throw new Error('Keep at least one homepage FAQ.')
+    faqs.splice(data.index, 1)
+  }
+  const publicSettings = { phones: current.phones, emails: current.emails, officeHours: current.officeHours, faqs, trustStats: current.trustStats }
+  await execute('UPDATE site_settings SET public_settings_json = ? WHERE id = 1', [JSON.stringify(publicSettings)])
+  return { faqs }
+})
+
 export const saveCashflow = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
   const input = (data ?? {}) as Record<string, unknown>
   if (!Array.isArray(input.cashflowData) || input.cashflowData.length === 0) throw new Error('Cashflow data is required')
