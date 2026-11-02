@@ -147,7 +147,7 @@ export const visaGuidance: Record<string, VisaGuidance> = {
     feeSummary: 'EUR 90 is the common adult Schengen short-stay government fee. EUR 75 is Germany’s national-visa fee for long stays such as study or skilled employment. Neither figure is a total immigration cost.',
     requirements: [
       'Visitor: valid passport, application, photo, medical travel insurance, purpose and itinerary, accommodation, financial means, return intention and fingerprints unless exempt.',
-      'Student: university admission and secure financing such as parents’ finances, qualifying commitment, blocked account, bank guarantee or scholarship. For 2026, official study guidance lists €1,091/month (€13,092 for 12 months) as the baseline; verify accepted proof and the current checklist with the responsible mission.',
+      'Student: university admission and secure financing such as parents’ finances, qualifying commitment, blocked account, bank guarantee or scholarship. For admitted students, 2026 official guidance lists €11,904 for 12 months (€992/month). A separate visa to seek a university place uses €1,091/month. Verify which route applies and check the current mission checklist.',
       'Skilled employment or EU Blue Card: comparable qualification, matching job offer generally lasting at least six months, required licence where applicable, and route-specific salary/market requirements.',
       'After entry for a long stay, non-EU nationals generally apply for the relevant residence permit with the competent foreigners authority.',
     ],
