@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { execute, jsonArray, queryRows } from './db.server'
-import type { PublicContent, PublicCoachingContent } from './content-types'
+import type { PublicContent, PublicCoachingContent, PublicCertificate } from './content-types'
+import { defaultCertificates } from '@/data/certificates'
 import { readSiteSettings } from './site-settings'
 import { approvals as fixtureApprovals, coachingSchedule as fixtureCoachingSchedule, posts as fixturePosts, testimonials as fixtureTestimonials } from '@/data/fixtures'
 import { defaultCashflowData, mergeNewCashflowDestinations, type CountryCashflow } from '@/data/cashflow'
@@ -109,6 +110,7 @@ export const getPublicContent = createServerFn({ method: 'GET' }).handler(async 
   const postRows = await queryRows('SELECT slug, title, category, publish_date, excerpt, read_mins, body_json FROM content_posts WHERE published = 1 ORDER BY publish_date DESC, id DESC')
   const storyRows = await queryRows('SELECT id, kind, name, city, country, visa, quote, rating, initials, flag, story_date, note FROM success_stories WHERE published = 1 ORDER BY story_date DESC, id DESC')
   const settingsRows = await queryRows('SELECT popup_enabled, popup_delay_seconds, whatsapp_enabled, approvals_marquee_enabled, public_settings_json FROM site_settings WHERE id = 1 LIMIT 1')
+  const certificateRows = await queryRows('SELECT id, title, issuer, category, credential_date, alt_text, image_path, image_data IS NOT NULL AS has_database_image, homepage_featured, published, sort_order FROM certificate_items WHERE collection = \'certificates\' AND published = 1 ORDER BY sort_order ASC, id ASC')
   const posts = postRows.length
     ? postRows.map((row) =>
         applyEditorialReview({
@@ -132,7 +134,36 @@ export const getPublicContent = createServerFn({ method: 'GET' }).handler(async 
         name: String(row.name), city: String(row.city), country: String(row.country), visa: String(row.visa), quote: String(row.quote), rating: Number(row.rating), initials: String(row.initials),
       }))
     : fixtureTestimonials
-  const data = { posts, approvals, testimonials, settings: readSiteSettings(settingsRows[0]) }
+  const certificates: PublicCertificate[] = certificateRows.length
+    ? certificateRows.map((row) => {
+        const id = Number(row.id)
+        const hasDatabaseImage = Boolean(row.has_database_image)
+        return {
+          id,
+          title: String(row.title),
+          issuer: String(row.issuer),
+          category: String(row.category),
+          credentialDate: String(row.credential_date ?? ''),
+          altText: String(row.alt_text),
+          imageSrc: hasDatabaseImage ? '/certificates/image/' + id : String(row.image_path ?? ''),
+          homepageFeatured: Boolean(row.homepage_featured),
+          published: Boolean(row.published),
+          sortOrder: Number(row.sort_order),
+        }
+      })
+    : settingsRows.length ? [] : defaultCertificates.map((item, index) => ({
+        id: index + 1,
+        title: item.title,
+        issuer: item.issuer,
+        category: item.category,
+        credentialDate: item.credentialDate,
+        altText: item.altText,
+        imageSrc: item.imagePath,
+        homepageFeatured: item.homepageFeatured,
+        published: item.published,
+        sortOrder: item.sortOrder,
+      }))
+  const data = { posts, approvals, testimonials, certificates, settings: readSiteSettings(settingsRows[0]) }
   publicContentCache = { data, expiresAt: Date.now() + 8_000 }
   return data
 })

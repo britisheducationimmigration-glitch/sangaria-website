@@ -3,6 +3,39 @@ import type { Approval, Post, Testimonial } from '@/data/fixtures'
 export type SiteFaq = { q: string; a: string }
 export type SiteTrustStat = { value: string; label: string }
 
+export type CertificateCategory = string
+
+export type PublicCertificate = {
+  id: number
+  title: string
+  issuer: string
+  category: CertificateCategory
+  credentialDate: string
+  altText: string
+  imageSrc: string
+  homepageFeatured: boolean
+  published: boolean
+  sortOrder: number
+}
+
+export type AdminCertificate = PublicCertificate & {
+  collection: string
+  hasDatabaseImage: boolean
+}
+
+export type CertificateSeed = {
+  slug: string
+  title: string
+  issuer: string
+  category: CertificateCategory
+  credentialDate: string
+  altText: string
+  imagePath: string
+  homepageFeatured: boolean
+  published: boolean
+  sortOrder: number
+}
+
 export type SiteSettings = {
   popupEnabled: boolean
   popupDelaySeconds: number
@@ -19,6 +52,7 @@ export type PublicContent = {
   posts: Post[]
   approvals: Approval[]
   testimonials: Testimonial[]
+  certificates: PublicCertificate[]
   settings: SiteSettings
 }
 
@@ -93,6 +127,7 @@ export type AdminSnapshot = {
   posts: AdminPost[]
   stories: AdminStory[]
   batches: CoachingBatch[]
+  certificates: AdminCertificate[]
   settings: SiteSettings
   users: AdminUser[]
   enquiryStats: {

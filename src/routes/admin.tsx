@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { ApprovalCard, TestimonialCard } from '@/components/Cards'
 import { useEffect, useState, type FormEvent, type MouseEvent, type ReactNode } from 'react'
 import { getAdminCashflow, getAdminSnapshot, addEnquiryActivity, deleteAdminUser, deleteBatch, deleteEnquiry, deleteEnquiryActivity, deletePost, deleteStory, exportEnquiries, saveAdminUser, saveBatch, saveCashflow, savePost, saveStory, updateEnquiry, updateEnquiryActivity, updateSettings, saveFaq } from '@/lib/admin-functions'
+import { CertificatePanel } from '@/components/admin/CertificatePanel'
 import type { AdminPost, AdminRole, AdminSnapshot, AdminStory, AdminUser, CoachingBatch, Enquiry, EnquiryActivity, EnquiryStatus } from '@/lib/content-types'
 import { defaultCashflowData, CountryCashflow } from '@/data/cashflow'
 import { formatBatchStartDate, getBatchDateStatus, isValidBatchStartDate } from '@/lib/batch-dates'
@@ -11,7 +12,7 @@ export const Route = createFileRoute('/admin')({
   component: AdminPage,
 })
 
-type Tab = 'enquiries' | 'news' | 'stories' | 'batches' | 'budget' | 'settings' | 'users' | 'demo' | 'review' | 'reports'
+type Tab = 'enquiries' | 'news' | 'stories' | 'certificates' | 'batches' | 'budget' | 'settings' | 'users' | 'demo' | 'review' | 'reports'
 
 const roleLabels: Record<AdminRole, string> = { super_admin: 'Super Admin', content_editor: 'Content Editor', enquiry_manager: 'Enquiry Manager' }
 
@@ -61,9 +62,9 @@ function AdminPage() {
   const newLeadQueue = snapshot.enquiries.filter((item) => item.status === 'New')
   const draftQueue = snapshot.posts.filter((item) => !item.published)
   const tabs: Array<[Tab, string]> = snapshot.user.role === 'super_admin'
-    ? [['enquiries', `Enquiries (${snapshot.enquiryStats.total})`], ['demo', `Demo requests (${snapshot.enquiryStats.demoRequests})`], ['review', `Review queue (${newLeadQueue.length + draftQueue.length})`], ['reports', 'Reports'], ['news', 'News & Updates'], ['stories', 'Success Stories'], ['batches', 'Coaching batches'], ['budget', '💰 Cashflow Budget'], ['settings', 'Site settings'], ['users', 'Users & roles']]
+    ? [['enquiries', `Enquiries (${snapshot.enquiryStats.total})`], ['demo', `Demo requests (${snapshot.enquiryStats.demoRequests})`], ['review', `Review queue (${newLeadQueue.length + draftQueue.length})`], ['reports', 'Reports'], ['news', 'News & Updates'], ['stories', 'Success Stories'], ['certificates', 'Certificates'], ['batches', 'Coaching batches'], ['budget', '💰 Cashflow Budget'], ['settings', 'Site settings'], ['users', 'Users & roles']]
     : snapshot.user.role === 'content_editor'
-      ? [['review', `Review queue (${draftQueue.length})`], ['news', 'News & Updates'], ['stories', 'Success Stories'], ['batches', 'Coaching batches']]
+      ? [['review', `Review queue (${draftQueue.length})`], ['news', 'News & Updates'], ['stories', 'Success Stories'], ['certificates', 'Certificates'], ['batches', 'Coaching batches']]
       : [['enquiries', `Enquiries (${snapshot.enquiries.length})`], ['demo', `Demo requests (${snapshot.enquiryStats.demoRequests})`], ['review', `Review queue (${newLeadQueue.length})`], ['reports', 'Reports']]
 
   function showNotice(message: string) {
@@ -94,6 +95,7 @@ function AdminPage() {
         {tab === 'reports' && <ReportsPanel stats={snapshot.enquiryStats} />}
         {tab === 'news' && <ContentPanel type="news" items={snapshot.posts} selected={selectedPost} onSelect={(item) => setSelectedPost(item as AdminPost | null)} onReload={reload} onNotice={showNotice} />}
         {tab === 'stories' && <ContentPanel type="stories" items={snapshot.stories} selected={selectedStory} onSelect={(item) => setSelectedStory(item as AdminStory | null)} onReload={reload} onNotice={showNotice} />}
+        {tab === 'certificates' && <CertificatePanel items={snapshot.certificates} onReload={reload} onNotice={showNotice} />}
         {tab === 'batches' && <BatchPanel items={snapshot.batches} selected={selectedBatch} onSelect={setSelectedBatch} onReload={reload} onNotice={showNotice} />}
 		{tab === 'budget' && <CashflowAdminPanel onNotice={showNotice} />}
         {tab === 'settings' && <SettingsPanel settings={snapshot.settings} onReload={reload} onNotice={showNotice} onDirtyChange={setSettingsDirty} />}

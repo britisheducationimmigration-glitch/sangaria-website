@@ -3,6 +3,7 @@ import '@tanstack/react-start/server-only'
 import mysql, { type Pool, type ResultSetHeader, type RowDataPacket } from 'mysql2/promise'
 import { approvals as fixtureApprovals, coachingSchedule as fixtureCoachingSchedule, posts as fixturePosts, testimonials as fixtureTestimonials } from '@/data/fixtures'
 import { hashPassword } from './auth.server'
+import { defaultCertificates } from '@/data/certificates'
 
 let pool: Pool | null = null
 let schemaPromise: Promise<Pool | null> | null = null
@@ -86,6 +87,22 @@ async function seed(poolInstance: Pool) {
   }
 
   const [adminRows] = await poolInstance.query<DbRow[]>('SELECT open_id FROM admin_users LIMIT 1')
+  const [certificateSeedRows] = await poolInstance.query<DbRow[]>('SELECT certificates_seeded FROM site_settings WHERE id = 1 LIMIT 1')
+  if (!Boolean(certificateSeedRows[0]?.certificates_seeded)) {
+    const [existingCertificates] = await poolInstance.query<DbRow[]>('SELECT id FROM certificate_items WHERE collection = \'certificates\' LIMIT 1')
+    if (existingCertificates.length === 0) {
+      for (const certificate of defaultCertificates) {
+        await poolInstance.query(
+          `INSERT INTO certificate_items (collection, title, issuer, category, credential_date, alt_text, image_path, homepage_featured, published, sort_order)
+           VALUES ('certificates', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [certificate.title, certificate.issuer, certificate.category, certificate.credentialDate, certificate.altText, certificate.imagePath, certificate.homepageFeatured ? 1 : 0, certificate.published ? 1 : 0, certificate.sortOrder],
+        )
+      }
+    }
+    await poolInstance.query('UPDATE site_settings SET certificates_seeded = 1 WHERE id = 1')
+  }
+
+
   if (adminRows.length === 0) {
     const initialEmail = (process.env.ADMIN_EMAIL || 'admin@britisheducationandimmigration.com').toLowerCase()
     const initialPass = process.env.ADMIN_PASSWORD || 'Admin@Sangaria2026'
@@ -112,11 +129,13 @@ export async function getDb() {
           approvals_marquee_enabled BOOLEAN NOT NULL DEFAULT TRUE,
           cashflow_json LONGTEXT NULL,
           public_settings_json LONGTEXT NULL,
+          certificates_seeded BOOLEAN NOT NULL DEFAULT FALSE,
           updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         )
       `)
       await ensureColumn(poolInstance, 'site_settings', 'cashflow_json', 'LONGTEXT NULL')
       await ensureColumn(poolInstance, 'site_settings', 'public_settings_json', 'LONGTEXT NULL')
+      await ensureColumn(poolInstance, 'site_settings', 'certificates_seeded', 'BOOLEAN NOT NULL DEFAULT FALSE')
       await poolInstance.query(`
         CREATE TABLE IF NOT EXISTS enquiries (
           id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -169,6 +188,27 @@ export async function getDb() {
           INDEX coaching_program_idx (program)
         )
       `)
+      await poolInstance.query(`
+        CREATE TABLE IF NOT EXISTS certificate_items (
+          id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+          collection VARCHAR(40) NOT NULL DEFAULT 'certificates',
+          title VARCHAR(220) NOT NULL,
+          issuer VARCHAR(180) NOT NULL DEFAULT '',
+          category VARCHAR(100) NOT NULL DEFAULT 'Partner authorisations',
+          credential_date VARCHAR(80) NOT NULL DEFAULT '',
+          alt_text VARCHAR(500) NOT NULL DEFAULT '',
+          image_path VARCHAR(500) NULL,
+          image_mime_type VARCHAR(40) NULL,
+          image_data MEDIUMBLOB NULL,
+          homepage_featured BOOLEAN NOT NULL DEFAULT FALSE,
+          published BOOLEAN NOT NULL DEFAULT FALSE,
+          sort_order INT NOT NULL DEFAULT 0,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX certificate_public_idx (collection, published, sort_order)
+        )
+      `)
+
       await poolInstance.query(`
         CREATE TABLE IF NOT EXISTS content_posts (
           id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
