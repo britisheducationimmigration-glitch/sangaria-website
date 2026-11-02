@@ -143,7 +143,9 @@ export const countries: Country[] = [
       intakesNote: "Common starts shown; course calendars, trimester options and deadlines vary by provider.",
       lastVerified: "2 November 2026",
       sources: [
-        { label: "Study Australia course search and costs", url: "https://www.studyaustralia.gov.au/en_in/life-in-australia/living-and-education-costs" },
+        { label: "Study Australia course search", url: "https://search.studyaustralia.gov.au/courses" },
+        { label: "Study Australia education-cost guidance", url: "https://www.studyaustralia.gov.au/en_in/life-in-australia/living-and-education-costs" },
+
         { label: "Subclass 500 and financial capacity", url: "https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing/student-500" },
         { label: "Student visa charges", url: "https://www.studyaustralia.gov.au/en/tools-and-resources/news/student-visa-application-charge-increase" },
         { label: "Subclass 485 post-higher-education work", url: "https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing/temporary-graduate-485/post-higher-education-work" },
@@ -185,7 +187,9 @@ export const countries: Country[] = [
       sources: [
         { label: "EducationUSA study costs", url: "https://educationusa.state.gov/your-5-steps-us-study/finance-your-studies" },
         { label: "U.S. Department of State student visas", url: "https://travel.state.gov/content/travel/en/us-visas/study/student-visa.html" },
+        { label: "F-1 student employment regulations", url: "https://www.ecfr.gov/current/title-8/section-214.2" },
         { label: "DHS F-1 practical training overview", url: "https://studyinthestates.dhs.gov/assets/SEVP_PracticalTrainingOverview_1-pager.pdf" },
+
         { label: "DHS SEVIS fee guidance", url: "https://studyinthestates.dhs.gov/students/prepare/paying-the-i-901-sevis-fee" },
       ],
     },
@@ -201,7 +205,7 @@ export const countries: Country[] = [
     stats: [
       { label: 'Post-study work', value: 'Up to 3 yrs' },
       { label: 'Work while studying', value: '25 hrs / week' },
-      { label: 'Avg. tuition', value: 'NZD 22–35k' },
+      { label: 'Living funds (student visa, 2026)', value: '€992 / month' },
     ],
     intakes: ['February', 'July'],
     visas: ['Student Visa', 'Post-Study Work', 'Visitor Visa'],
@@ -239,14 +243,14 @@ export const countries: Country[] = [
       'Germany is Europe’s engineering powerhouse — public universities charge little or no tuition and graduates get 18 months to find work.',
     stats: [
       { label: 'Job-seeker period', value: '18 months' },
-      { label: 'Public tuition', value: '€0 – €3k' },
-      { label: 'Living funds (2026 baseline)', value: '€1,091 / month · €13,092 / yr' },
+      { label: 'Public tuition', value: 'Usually none at most public universities' },
+      { label: 'Living funds (student visa, 2026)', value: '€11,904 / yr' },
     ],
     intakes: ['April (Summer)', 'October (Winter)'],
     visas: ['Student Visa', 'Opportunity Card', 'EU Blue Card', 'Schengen Visitor'],
     highlights: ['English-taught masters', 'Strong STEM job market', 'Path to EU Blue Card'],
     costs: [
-      { label: 'Living funds (2026 baseline)', value: '€1,091 / month' },
+      { label: 'Living funds (student visa, 2026)', value: '€992 / month' },
       { label: 'Visa fee', value: '€75' },
       { label: 'Health insurance', value: '€120 / month' },
     ],
@@ -254,7 +258,7 @@ export const countries: Country[] = [
     studyGuide: {
       tuitionEstimate: "Most public universities charge no tuition for bachelor’s and many master’s programmes. A semester contribution is usually €70–€430; exceptions, private universities and special programmes can charge tuition.",
       studentVisaFee: "German national long-stay study visa: €75; service-centre and residence-permit costs may be separate.",
-      proofOfFunds: "2026 living-funds baseline: €1,091/month (€13,092 for 12 months). A blocked account is common; scholarship, declaration of commitment or another accepted proof may be possible. Follow the responsible mission’s checklist.",
+      proofOfFunds: "For an admitted student visa in 2026, the living-funds baseline is €11,904 for 12 months (equivalent to €992/month). A blocked account is common, and a scholarship or declaration of commitment may be accepted. The separate visa to seek a university place uses a different €1,091/month baseline; follow the responsible mission’s checklist.",
       admissionAndEnglish: "Admission from a German university and a recognised prior qualification are required. German/English language proof depends on the programme and teaching language; check the university and embassy requirements.",
       workWhileStudying: "Third-country students may work up to 140 full days or 280 half days/year, or alternatively up to 20 hours/week during the lecture period; conditions and student status apply.",
       postStudyOption: "After successfully completing a German degree, graduates may apply for a residence permit of up to 18 months to seek qualified employment; the permit and next work route have eligibility requirements.",
