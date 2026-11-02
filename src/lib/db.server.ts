@@ -140,6 +140,19 @@ export async function getDb() {
       await ensureColumn(poolInstance, 'enquiries', 'assigned_to', "VARCHAR(190) NOT NULL DEFAULT ''")
       await ensureColumn(poolInstance, 'enquiries', 'next_follow_up_at', 'DATETIME NULL')
       await poolInstance.query(`
+        CREATE TABLE IF NOT EXISTS enquiry_activities (
+          id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+          enquiry_id BIGINT UNSIGNED NOT NULL,
+          author_name VARCHAR(160) NOT NULL DEFAULT '',
+          author_email VARCHAR(190) NOT NULL DEFAULT '',
+          body TEXT NOT NULL,
+          edited_by VARCHAR(190) NOT NULL DEFAULT '',
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX enquiry_activities_timeline_idx (enquiry_id, created_at, id)
+        )
+      `)
+      await poolInstance.query(`
         CREATE TABLE IF NOT EXISTS coaching_batches (
           id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
           program VARCHAR(80) NOT NULL,

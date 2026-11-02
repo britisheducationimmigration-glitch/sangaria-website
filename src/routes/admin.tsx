@@ -1,8 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { ApprovalCard, TestimonialCard } from '@/components/Cards'
 import { useEffect, useState, type FormEvent, type MouseEvent, type ReactNode } from 'react'
-import { getAdminCashflow, getAdminSnapshot, deleteAdminUser, deleteBatch, deleteEnquiry, deletePost, deleteStory, exportEnquiries, saveAdminUser, saveBatch, saveCashflow, savePost, saveStory, updateEnquiry, updateSettings } from '@/lib/admin-functions'
-import type { AdminPost, AdminRole, AdminSnapshot, AdminStory, AdminUser, CoachingBatch, Enquiry, EnquiryStatus } from '@/lib/content-types'
+import { getAdminCashflow, getAdminSnapshot, addEnquiryActivity, deleteAdminUser, deleteBatch, deleteEnquiry, deleteEnquiryActivity, deletePost, deleteStory, exportEnquiries, saveAdminUser, saveBatch, saveCashflow, savePost, saveStory, updateEnquiry, updateEnquiryActivity, updateSettings } from '@/lib/admin-functions'
+import type { AdminPost, AdminRole, AdminSnapshot, AdminStory, AdminUser, CoachingBatch, Enquiry, EnquiryActivity, EnquiryStatus } from '@/lib/content-types'
 import { defaultCashflowData, CountryCashflow } from '@/data/cashflow'
 import { formatBatchStartDate, getBatchDateStatus, isValidBatchStartDate } from '@/lib/batch-dates'
 
@@ -81,7 +81,7 @@ function AdminPage() {
           {tabs.map(([value, label]) => <button key={value} type="button" onClick={() => setTab(value)} className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold ${tab === value ? 'bg-forest-900 text-white' : 'bg-white ring-1 ring-forest-900/10'}`}>{label}</button>)}
         </nav>
         {notice && <p className="mb-5 rounded-xl bg-emerald-100 px-4 py-3 text-sm font-bold text-emerald-900">{notice}</p>}
-        {tab === 'enquiries' && <EnquiriesPanel enquiries={filtered} stats={snapshot.enquiryStats} query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter} dateFrom={dateFrom} setDateFrom={setDateFrom} dateTo={dateTo} setDateTo={setDateTo} onReload={reload} onNotice={showNotice} canDelete={snapshot.user.role === 'super_admin'} />}
+        {tab === 'enquiries' && <EnquiriesPanel enquiries={filtered} stats={snapshot.enquiryStats} query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter} dateFrom={dateFrom} setDateFrom={setDateFrom} dateTo={dateTo} setDateTo={setDateTo} onReload={reload} onNotice={showNotice} canDelete={snapshot.user.role === 'super_admin'} canManageComments={snapshot.user.role === 'super_admin'} />}
         {tab === 'news' && <ContentPanel type="news" items={snapshot.posts} selected={selectedPost} onSelect={(item) => setSelectedPost(item as AdminPost | null)} onReload={reload} onNotice={showNotice} />}
         {tab === 'stories' && <ContentPanel type="stories" items={snapshot.stories} selected={selectedStory} onSelect={(item) => setSelectedStory(item as AdminStory | null)} onReload={reload} onNotice={showNotice} />}
         {tab === 'batches' && <BatchPanel items={snapshot.batches} selected={selectedBatch} onSelect={setSelectedBatch} onReload={reload} onNotice={showNotice} />}
@@ -377,7 +377,7 @@ function ChangePasswordModal({ onClose, onNotice }: { onClose: () => void; onNot
   )
 }
 
-function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setStatusFilter, dateFrom, setDateFrom, dateTo, setDateTo, onReload, onNotice, canDelete }: { enquiries: Enquiry[]; stats: AdminSnapshot['enquiryStats']; query: string; setQuery: (value: string) => void; statusFilter: EnquiryStatus | 'All'; setStatusFilter: (value: EnquiryStatus | 'All') => void; dateFrom: string; setDateFrom: (value: string) => void; dateTo: string; setDateTo: (value: string) => void; onReload: () => Promise<void>; onNotice: (message: string) => void; canDelete: boolean }) {
+function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setStatusFilter, dateFrom, setDateFrom, dateTo, setDateTo, onReload, onNotice, canDelete, canManageComments }: { enquiries: Enquiry[]; stats: AdminSnapshot['enquiryStats']; query: string; setQuery: (value: string) => void; statusFilter: EnquiryStatus | 'All'; setStatusFilter: (value: EnquiryStatus | 'All') => void; dateFrom: string; setDateFrom: (value: string) => void; dateTo: string; setDateTo: (value: string) => void; onReload: () => Promise<void>; onNotice: (message: string) => void; canDelete: boolean; canManageComments: boolean }) {
   const [viewMode, setViewMode] = useState<'list' | 'board'>('list')
   const [selectedBoardLeadId, setSelectedBoardLeadId] = useState<number | null>(null)
   async function downloadExcel() {
@@ -415,7 +415,7 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
       </div>
       <div className="mb-4 flex flex-wrap gap-2 text-xs font-bold text-forest-900/60"><span className="rounded-full bg-white px-3 py-1.5 ring-1 ring-forest-900/10">Showing {enquiries.length} loaded leads</span><span className="rounded-full bg-white px-3 py-1.5 ring-1 ring-forest-900/10">Excel includes Summary + Follow-ups sheets</span></div>
       {viewMode === 'list' ? (
-        <div className="grid gap-4">{enquiries.map((item) => <EnquiryCard key={item.id} item={item} onReload={onReload} onNotice={onNotice} canDelete={canDelete} />)}{enquiries.length === 0 && <p className="rounded-2xl bg-white p-8 text-center text-forest-900/60">No enquiries match these filters.</p>}</div>
+        <div className="grid gap-4">{enquiries.map((item) => <EnquiryCard key={item.id} item={item} onReload={onReload} onNotice={onNotice} canDelete={canDelete} canManageComments={canManageComments} />)}{enquiries.length === 0 && <p className="rounded-2xl bg-white p-8 text-center text-forest-900/60">No enquiries match these filters.</p>}</div>
       ) : (
         <div className="space-y-5">
           <div className="overflow-x-auto pb-3">
@@ -451,7 +451,7 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
                 <div><p className="font-mono text-[10px] font-bold uppercase tracking-widest text-coral-600">Selected lead</p><h3 className="mt-1 text-lg font-extrabold text-forest-900">{selectedBoardLead.name}</h3></div>
                 <button type="button" onClick={() => setSelectedBoardLeadId(null)} className="rounded-full bg-white px-4 py-2 text-xs font-bold text-forest-900 ring-1 ring-forest-900/10">Close details</button>
               </div>
-              <EnquiryCard key={selectedBoardLead.id} item={selectedBoardLead} onReload={onReload} onNotice={onNotice} canDelete={canDelete} />
+              <EnquiryCard key={selectedBoardLead.id} item={selectedBoardLead} onReload={onReload} onNotice={onNotice} canDelete={canDelete} canManageComments={canManageComments} />
             </section>
           ) : <p className="rounded-2xl bg-white p-6 text-center text-sm text-forest-900/55">Choose a lead card to update its stage, owner or follow-up.</p>}
         </div>
@@ -460,15 +460,182 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
   )
 }
 
-function EnquiryCard({ item, onReload, onNotice, canDelete }: { item: Enquiry; onReload: () => Promise<void>; onNotice: (message: string) => void; canDelete: boolean }) {
+function EnquiryCard({ item, onReload, onNotice, canDelete, canManageComments }: { item: Enquiry; onReload: () => Promise<void>; onNotice: (message: string) => void; canDelete: boolean; canManageComments: boolean }) {
   const [status, setStatus] = useState<EnquiryStatus>(item.status)
-  const [notes, setNotes] = useState(item.notes)
   const [assignedTo, setAssignedTo] = useState(item.assignedTo)
   const [nextFollowUpAt, setNextFollowUpAt] = useState(item.nextFollowUpAt ? item.nextFollowUpAt.slice(0, 16) : '')
+  const [newComment, setNewComment] = useState('')
+  const [editingActivityId, setEditingActivityId] = useState<number | null>(null)
+  const [editingBody, setEditingBody] = useState('')
   const [busy, setBusy] = useState(false)
-  async function save() { setBusy(true); try { await updateEnquiry({ data: { id: item.id, status, notes, assignedTo, nextFollowUpAt } }); await onReload(); onNotice('Lead updated.') } catch { onNotice('Could not update lead.') } finally { setBusy(false) } }
-  async function remove() { if (!window.confirm('Delete this enquiry permanently?')) return; setBusy(true); try { await deleteEnquiry({ data: { id: item.id } }); await onReload(); onNotice('Enquiry deleted.') } catch { onNotice('Could not delete enquiry.') } finally { setBusy(false) } }
-  return <article className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-forest-900/10"><div className="flex flex-col justify-between gap-5 lg:flex-row"><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="text-xl font-extrabold">{item.name}</h3><span className="rounded-full bg-coral-50 px-3 py-1 text-xs font-bold text-coral-700">{item.status}</span>{item.nextFollowUpAt && <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">Follow-up {new Date(item.nextFollowUpAt).toLocaleString()}</span>}</div><p className="mt-1 text-sm text-forest-900/60">{new Date(item.createdAt).toLocaleString()} · {item.source || 'website'}{item.assignedTo && <> · Assigned to {item.assignedTo}</>}</p><p className="mt-4 text-sm"><strong>{item.phone}</strong>{item.email && <> · {item.email}</>}{item.city && <> · {item.city}</>}</p><p className="mt-2 text-sm font-semibold">{item.interest || 'General counselling'}{item.country && <> · {item.country}</>}</p>{item.message && <p className="mt-3 max-w-3xl text-sm leading-relaxed text-forest-900/75">{item.message}</p>}{item.summary && <p className="mt-2 text-xs text-forest-900/50">Context: {item.summary}</p>}</div><div className="grid gap-2 lg:w-80"><select value={status} onChange={(event) => setStatus(event.target.value as EnquiryStatus)} className="field bg-cream"><option>New</option><option>Contacted</option><option>Follow-up</option><option>Documents Pending</option><option>Applied</option><option>Converted</option><option>Closed</option></select><div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1"><input value={assignedTo} onChange={(event) => setAssignedTo(event.target.value)} className="field bg-cream" placeholder="Assigned counsellor" /><input type="datetime-local" value={nextFollowUpAt} onChange={(event) => setNextFollowUpAt(event.target.value)} className="field bg-cream" aria-label="Next follow-up" /></div><textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} className="field bg-cream" placeholder="Counsellor notes" /><div className="flex flex-wrap gap-2"><button type="button" disabled={busy} onClick={() => void save()} className="rounded-full bg-forest-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Save lead</button><a href={`https://wa.me/91${item.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="rounded-full bg-[#25D366] px-4 py-2 text-sm font-bold text-white">WhatsApp</a>{canDelete && <button type="button" disabled={busy} onClick={() => void remove()} className="rounded-full border border-red-200 px-4 py-2 text-sm font-bold text-red-700">Delete</button>}</div></div></div></article>
+
+  async function save() {
+    setBusy(true)
+    try {
+      await updateEnquiry({ data: { id: item.id, status, assignedTo, nextFollowUpAt } })
+      await onReload()
+      onNotice('Lead updated.')
+    } catch {
+      onNotice('Could not update lead.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function addComment(event: FormEvent) {
+    event.preventDefault()
+    const body = newComment.trim()
+    if (!body) return
+    setBusy(true)
+    try {
+      await addEnquiryActivity({ data: { enquiryId: item.id, body } })
+      setNewComment('')
+      await onReload()
+      onNotice('Timeline comment added.')
+    } catch {
+      onNotice('Could not add timeline comment.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function saveComment(activityId: number) {
+    const body = editingBody.trim()
+    if (!body) return
+    setBusy(true)
+    try {
+      await updateEnquiryActivity({ data: { id: activityId, body } })
+      setEditingActivityId(null)
+      setEditingBody('')
+      await onReload()
+      onNotice('Timeline comment updated.')
+    } catch {
+      onNotice('Could not update timeline comment.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function removeComment(activityId: number) {
+    if (!window.confirm('Delete this timeline comment?')) return
+    setBusy(true)
+    try {
+      await deleteEnquiryActivity({ data: { id: activityId } })
+      await onReload()
+      onNotice('Timeline comment deleted.')
+    } catch {
+      onNotice('Could not delete timeline comment.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function remove() {
+    if (!window.confirm('Delete this enquiry permanently?')) return
+    setBusy(true)
+    try {
+      await deleteEnquiry({ data: { id: item.id } })
+      await onReload()
+      onNotice('Enquiry deleted.')
+    } catch {
+      onNotice('Could not delete enquiry.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const formatActivityTime = (value: string) => new Date(value).toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  })
+
+  return (
+    <article className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-forest-900/10">
+      <div className="flex flex-col justify-between gap-5 lg:flex-row">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-xl font-extrabold">{item.name}</h3>
+            <span className="rounded-full bg-coral-50 px-3 py-1 text-xs font-bold text-coral-700">{item.status}</span>
+            {item.nextFollowUpAt && <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">Follow-up {new Date(item.nextFollowUpAt).toLocaleString()}</span>}
+          </div>
+          <p className="mt-1 text-sm text-forest-900/60">{new Date(item.createdAt).toLocaleString()} · {item.source || 'website'}{item.assignedTo && <> · Assigned to {item.assignedTo}</>}</p>
+          <p className="mt-4 text-sm"><strong>{item.phone}</strong>{item.email && <> · {item.email}</>}{item.city && <> · {item.city}</>}</p>
+          <p className="mt-2 text-sm font-semibold">{item.interest || 'General counselling'}{item.country && <> · {item.country}</>}</p>
+          {item.message && <p className="mt-3 max-w-3xl text-sm leading-relaxed text-forest-900/75">{item.message}</p>}
+          {item.summary && <p className="mt-2 text-xs text-forest-900/50">Context: {item.summary}</p>}
+        </div>
+        <div className="grid content-start gap-2 lg:w-80">
+          <select value={status} onChange={(event) => setStatus(event.target.value as EnquiryStatus)} className="field bg-cream"><option>New</option><option>Contacted</option><option>Follow-up</option><option>Documents Pending</option><option>Applied</option><option>Converted</option><option>Closed</option></select>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+            <input value={assignedTo} onChange={(event) => setAssignedTo(event.target.value)} className="field bg-cream" placeholder="Assigned counsellor" />
+            <input type="datetime-local" value={nextFollowUpAt} onChange={(event) => setNextFollowUpAt(event.target.value)} className="field bg-cream" aria-label="Next follow-up" />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={busy} onClick={() => void save()} className="rounded-full bg-forest-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Save lead</button>
+            <a href={`https://wa.me/91${item.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="rounded-full bg-[#25D366] px-4 py-2 text-sm font-bold text-white">WhatsApp</a>
+            {canDelete && <button type="button" disabled={busy} onClick={() => void remove()} className="rounded-full border border-red-200 px-4 py-2 text-sm font-bold text-red-700">Delete</button>}
+          </div>
+        </div>
+      </div>
+
+      <section className="mt-6 border-t border-forest-900/10 pt-5" aria-labelledby={`lead-timeline-${item.id}`}>
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-coral-600">Lead history</p>
+            <h4 id={`lead-timeline-${item.id}`} className="mt-1 text-lg font-extrabold">Follow-up timeline</h4>
+          </div>
+          <span className="text-xs text-forest-900/50">{item.activities.length} {item.activities.length === 1 ? 'entry' : 'entries'}</span>
+        </div>
+
+        <ol className="mt-4 grid gap-3">
+          {item.notes && (
+            <li className="rounded-xl border border-dashed border-amber-300 bg-amber-50 p-4">
+              <p className="text-xs font-bold text-amber-900">Previous note · original timestamp unavailable</p>
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-forest-900/80">{item.notes}</p>
+            </li>
+          )}
+          {item.activities.map((activity) => (
+            <li key={activity.id} className="rounded-xl bg-forest-50 p-4 ring-1 ring-forest-900/5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-forest-900">
+                    {activity.authorName || activity.authorEmail || 'Team member'}
+                    <span className="font-normal text-forest-900/55"> · {formatActivityTime(activity.createdAt)}</span>
+                    {activity.editedBy && <span className="font-normal text-forest-900/55"> · Edited by {activity.editedBy} on {formatActivityTime(activity.updatedAt)}</span>}
+                  </p>
+                  {editingActivityId === activity.id ? (
+                    <div className="mt-3 grid gap-2">
+                      <textarea value={editingBody} onChange={(event) => setEditingBody(event.target.value)} rows={3} maxLength={5000} className="field bg-white" aria-label="Edit timeline comment" />
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" disabled={busy || !editingBody.trim()} onClick={() => void saveComment(activity.id)} className="rounded-full bg-forest-900 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">Save edit</button>
+                        <button type="button" disabled={busy} onClick={() => { setEditingActivityId(null); setEditingBody('') }} className="rounded-full border border-forest-900/15 px-4 py-2 text-xs font-bold text-forest-900">Cancel</button>
+                      </div>
+                    </div>
+                  ) : <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-forest-900/80">{activity.body}</p>}
+                </div>
+                {canManageComments && editingActivityId !== activity.id && (
+                  <div className="flex shrink-0 gap-2">
+                    <button type="button" disabled={busy} onClick={() => { setEditingActivityId(activity.id); setEditingBody(activity.body) }} className="rounded-full border border-forest-900/15 px-3 py-1.5 text-xs font-bold text-forest-900 disabled:opacity-50">Edit</button>
+                    <button type="button" disabled={busy} onClick={() => void removeComment(activity.id)} className="rounded-full border border-red-200 px-3 py-1.5 text-xs font-bold text-red-700 disabled:opacity-50">Delete</button>
+                  </div>
+                )}
+              </div>
+            </li>
+          ))}
+          {!item.notes && item.activities.length === 0 && (
+            <li className="rounded-xl border border-dashed border-forest-900/15 px-4 py-5 text-center text-sm text-forest-900/55">No timeline entries yet. Add a note after each call or follow-up to build the lead history.</li>
+          )}
+        </ol>
+
+        <form onSubmit={addComment} className="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+          <textarea value={newComment} onChange={(event) => setNewComment(event.target.value)} rows={2} maxLength={5000} className="field bg-cream" placeholder="Log a call, message, document update or next follow-up…" aria-label="Add lead timeline comment" />
+          <button type="submit" disabled={busy || !newComment.trim()} className="min-h-11 rounded-full bg-coral-500 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{busy ? 'Saving…' : 'Add comment'}</button>
+        </form>
+        <p className="mt-2 text-[11px] text-forest-900/50">Comments are timestamped and attributed to your admin account. Only a Super Admin can edit or delete them.</p>
+      </section>
+    </article>
+  )
 }
 
 function BatchPanel({ items, selected, onSelect, onReload, onNotice }: { items: CoachingBatch[]; selected: CoachingBatch | null; onSelect: (item: CoachingBatch | null) => void; onReload: () => Promise<void>; onNotice: (message: string) => void }) {

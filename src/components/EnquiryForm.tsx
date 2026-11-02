@@ -1,5 +1,5 @@
 import { CheckCircle2, Loader2, MessageCircle, Send } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { countries, visaServices } from '@/data/fixtures'
 import { cn } from '@/lib/utils'
 import { submitEnquiry } from '@/lib/public-functions'
@@ -28,6 +28,16 @@ export function EnquiryForm({
 }) {
   const [state, setState] = useState<'idle' | 'sending' | 'done' | 'error'>('idle')
   const [whatsappUrl, setWhatsappUrl] = useState('')
+  const [showSharePrompt, setShowSharePrompt] = useState(false)
+
+  useEffect(() => {
+    if (state !== 'done' || !showSharePrompt) return
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setShowSharePrompt(false)
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [state, showSharePrompt])
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -78,12 +88,7 @@ export function EnquiryForm({
       })
 
       setState('done')
-      onSuccess?.()
-
-      // 3. Automatically open WhatsApp in new tab/app with pre-filled details
-      if (typeof window !== 'undefined') {
-        window.open(waUrl, '_blank')
-      }
+      setShowSharePrompt(true)
     } catch {
       setState('error')
     }
@@ -91,22 +96,63 @@ export function EnquiryForm({
 
   if (state === 'done') {
     return (
-      <div className={cn('rounded-3xl p-8 sm:p-10 text-center', dark ? 'bg-white/10 text-white' : 'bg-forest-50 text-forest-900')}>
-        <CheckCircle2 className="mx-auto size-14 text-emerald-500 animate-bounce" />
-        <h3 className="mt-4 text-2xl font-extrabold">Enquiry Submitted!</h3>
-        <p className={cn('mt-2 text-sm leading-relaxed max-w-md mx-auto', dark ? 'text-forest-100/80' : 'text-forest-900/70')}>
-          Your details are saved. WhatsApp has been opened with your pre-filled enquiry. If it didn't open automatically, tap below:
-        </p>
-        <a
-          href={whatsappUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-6 inline-flex items-center justify-center gap-2.5 rounded-full bg-[#25D366] px-8 py-4 text-sm font-bold text-white shadow-xl transition hover:brightness-105 active:scale-95"
-        >
-          <MessageCircle className="size-5 fill-white text-white" />
-          Send Details on WhatsApp Now →
-        </a>
-      </div>
+      <>
+        <div className={cn('rounded-3xl p-8 sm:p-10 text-center', dark ? 'bg-white/10 text-white' : 'bg-forest-50 text-forest-900')}>
+          <CheckCircle2 className="mx-auto size-14 text-emerald-500" />
+          <h3 className="mt-4 text-2xl font-extrabold">Enquiry Submitted!</h3>
+          <p className={cn('mt-2 text-sm leading-relaxed max-w-md mx-auto', dark ? 'text-forest-100/80' : 'text-forest-900/70')}>
+            Your details are saved. Our team will contact you soon.
+          </p>
+        </div>
+
+        {showSharePrompt && (
+          <div
+            className="fixed inset-0 z-[100] grid place-items-center bg-forest-950/70 p-4 backdrop-blur-sm"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={`${source}-enquiry-confirmation-title`}
+            aria-describedby={`${source}-enquiry-confirmation-description`}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') setShowSharePrompt(false)
+            }}
+          >
+            <div className="w-full max-w-md rounded-3xl bg-white p-6 text-center text-forest-900 shadow-2xl sm:p-8">
+              <CheckCircle2 className="mx-auto size-12 text-emerald-600" />
+              <h3 id={`${source}-enquiry-confirmation-title`} className="mt-4 text-2xl font-extrabold">
+                Enquiry submitted successfully
+              </h3>
+              <p id={`${source}-enquiry-confirmation-description`} className="mt-2 text-sm leading-relaxed text-forest-900/70">
+                Your details are saved. Would you also like to share this pre-filled enquiry with us on WhatsApp?
+              </p>
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => {
+                    setShowSharePrompt(false)
+                    onSuccess?.()
+                  }}
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#25D366] px-5 py-3 text-sm font-bold text-white shadow-md transition hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-900 active:scale-[0.98]"
+                >
+                  <MessageCircle className="size-5" />
+                  Share on WhatsApp
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSharePrompt(false)
+                    onSuccess?.()
+                  }}
+                  className="min-h-12 rounded-full border border-forest-900/15 bg-forest-50 px-5 py-3 text-sm font-bold text-forest-900 transition hover:bg-forest-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-900 active:scale-[0.98]"
+                >
+                  No thanks
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
     )
   }
 

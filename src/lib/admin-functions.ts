@@ -1,6 +1,6 @@
 import { createMiddleware, createServerFn } from '@tanstack/react-start'
 import { execute, jsonArray, queryRows } from './db.server'
-import type { AdminPost, AdminRole, AdminSnapshot, AdminStory, CoachingBatch, Enquiry, EnquiryStatus, SiteSettings } from './content-types'
+import type { AdminPost, AdminRole, AdminSnapshot, AdminStory, CoachingBatch, Enquiry, EnquiryActivity, EnquiryStatus, SiteSettings } from './content-types'
 import { defaultCashflowData, mergeNewCashflowDestinations, type CountryCashflow } from '@/data/cashflow'
 import { isValidBatchStartDate } from '@/lib/batch-dates'
 
@@ -47,8 +47,11 @@ function dateOnly(value: unknown) {
   return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString().slice(0, 10)
 }
 
-function mapEnquiry(row: Record<string, unknown>): Enquiry {
-  return { id: Number(row.id), name: String(row.name), phone: String(row.phone), email: String(row.email), city: String(row.city), interest: String(row.interest), country: String(row.country), message: String(row.message), source: String(row.source), summary: String(row.summary), status: String(row.status) as EnquiryStatus, notes: String(row.notes), assignedTo: String(row.assigned_to ?? ''), nextFollowUpAt: row.next_follow_up_at ? new Date(String(row.next_follow_up_at)).toISOString() : '', createdAt: new Date(String(row.created_at)).toISOString(), updatedAt: new Date(String(row.updated_at)).toISOString() }
+function mapActivity(row: Record<string, unknown>): EnquiryActivity {
+  return { id: Number(row.id), enquiryId: Number(row.enquiry_id), authorName: String(row.author_name), authorEmail: String(row.author_email), body: String(row.body), createdAt: new Date(String(row.created_at)).toISOString(), updatedAt: new Date(String(row.updated_at)).toISOString(), editedBy: String(row.edited_by ?? '') }
+}
+function mapEnquiry(row: Record<string, unknown>, activities: EnquiryActivity[] = []): Enquiry {
+  return { id: Number(row.id), name: String(row.name), phone: String(row.phone), email: String(row.email), city: String(row.city), interest: String(row.interest), country: String(row.country), message: String(row.message), source: String(row.source), summary: String(row.summary), status: String(row.status) as EnquiryStatus, notes: String(row.notes), activities, assignedTo: String(row.assigned_to ?? ''), nextFollowUpAt: row.next_follow_up_at ? new Date(String(row.next_follow_up_at)).toISOString() : '', createdAt: new Date(String(row.created_at)).toISOString(), updatedAt: new Date(String(row.updated_at)).toISOString() }
 }
 function mapAdminPost(row: Record<string, unknown>): AdminPost {
   return { id: Number(row.id), slug: String(row.slug), title: String(row.title), category: String(row.category) as AdminPost['category'], date: dateOnly(row.publish_date), excerpt: String(row.excerpt), readMins: Number(row.read_mins), body: jsonArray(row.body_json).map(String), published: Boolean(row.published) }
@@ -72,10 +75,26 @@ export const getAdminSnapshot = createServerFn({ method: 'GET' })
       context.role === 'content_editor' ? Promise.resolve([]) : queryRows(`SELECT COUNT(*) AS total, SUM(status = 'New') AS new_count, SUM(status IN ('Follow-up', 'Documents Pending', 'Applied')) AS follow_ups, SUM(status = 'Converted') AS converted, SUM(next_follow_up_at IS NOT NULL AND DATE(next_follow_up_at) = CURRENT_DATE() AND status NOT IN ('Converted', 'Closed')) AS due_today FROM enquiries`),
       context.role === 'enquiry_manager' ? Promise.resolve([]) : queryRows('SELECT id, program, batch_name, time_slot, seats, starts, published FROM coaching_batches ORDER BY id ASC'),
     ])
+    const activityRows = enquiryRows.length
+      ? await queryRows(
+          `SELECT id, enquiry_id, author_name, author_email, body, edited_by, created_at, updated_at
+           FROM enquiry_activities
+           WHERE enquiry_id IN (${enquiryRows.map(() => '?').join(',')})
+           ORDER BY created_at ASC, id ASC`,
+          enquiryRows.map((row) => Number(row.id)),
+        )
+      : []
+    const activitiesByEnquiry = new Map<number, EnquiryActivity[]>()
+    for (const row of activityRows) {
+      const activity = mapActivity(row)
+      const existing = activitiesByEnquiry.get(activity.enquiryId) ?? []
+      existing.push(activity)
+      activitiesByEnquiry.set(activity.enquiryId, existing)
+    }
     const stats = statRows[0] ?? {}
     return {
       user: { name: context.user.name, email: context.user.email, role: context.role },
-      enquiries: enquiryRows.map(mapEnquiry), posts: postRows.map(mapAdminPost), stories: storyRows.map(mapAdminStory), settings: mapSettings(settingsRows[0]),
+      enquiries: enquiryRows.map((row) => mapEnquiry(row, activitiesByEnquiry.get(Number(row.id)) ?? [])), posts: postRows.map(mapAdminPost), stories: storyRows.map(mapAdminStory), settings: mapSettings(settingsRows[0]),
       users: userRows.map((row) => ({ openId: String(row.open_id || row.id || row.email), email: String(row.email), name: String(row.name || row.email), role: (row.role === 'admin' ? 'super_admin' : String(row.role)) as AdminRole })),
       enquiryStats: { total: Number(stats.total ?? 0), newCount: Number(stats.new_count ?? 0), followUps: Number(stats.follow_ups ?? 0), dueToday: Number(stats.due_today ?? 0), converted: Number(stats.converted ?? 0) },
       batches: batchRows.map(mapBatch),
@@ -88,15 +107,58 @@ export const updateEnquiry = createServerFn({ method: 'POST' }).middleware([admi
   if (!['New', 'Contacted', 'Follow-up', 'Documents Pending', 'Applied', 'Converted', 'Closed'].includes(status)) throw new Error('Invalid enquiry status')
   const followUp = stringValue(input.nextFollowUpAt, 32)
   if (followUp && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(followUp)) throw new Error('Invalid follow-up date')
-  return { id: numberValue(input.id), status, notes: stringValue(input.notes, 5000), assignedTo: stringValue(input.assignedTo, 190), nextFollowUpAt: followUp ? followUp.replace('T', ' ') : null }
+  return { id: numberValue(input.id), status, assignedTo: stringValue(input.assignedTo, 190), nextFollowUpAt: followUp ? followUp.replace('T', ' ') : null }
 }).handler(async ({ data, context }) => {
   assertCapability(context.role, 'enquiries')
-  await execute('UPDATE enquiries SET status = ?, notes = ?, assigned_to = ?, next_follow_up_at = ? WHERE id = ?', [data.status, data.notes, data.assignedTo, data.nextFollowUpAt, data.id])
+  await execute('UPDATE enquiries SET status = ?, assigned_to = ?, next_follow_up_at = ? WHERE id = ?', [data.status, data.assignedTo, data.nextFollowUpAt, data.id])
+  return { ok: true }
+})
+
+export const addEnquiryActivity = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
+  const input = (data ?? {}) as Record<string, unknown>
+  const enquiryId = numberValue(input.enquiryId)
+  const body = stringValue(input.body, 5000)
+  if (enquiryId <= 0 || !body) throw new Error('Lead and comment are required')
+  return { enquiryId, body }
+}).handler(async ({ data, context }) => {
+  assertCapability(context.role, 'enquiries')
+  const lead = await queryRows('SELECT id FROM enquiries WHERE id = ? LIMIT 1', [data.enquiryId])
+  if (!lead.length) throw new Error('Lead not found')
+  await execute(
+    'INSERT INTO enquiry_activities (enquiry_id, author_name, author_email, body) VALUES (?, ?, ?, ?)',
+    [data.enquiryId, context.user.name, context.user.email, data.body],
+  )
+  return { ok: true }
+})
+
+export const updateEnquiryActivity = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
+  const input = (data ?? {}) as Record<string, unknown>
+  const id = numberValue(input.id)
+  const body = stringValue(input.body, 5000)
+  if (id <= 0 || !body) throw new Error('Comment and text are required')
+  return { id, body }
+}).handler(async ({ data, context }) => {
+  if (context.role !== 'super_admin') throw new Error('Only a super admin can edit lead comments')
+  const result = await execute(
+    'UPDATE enquiry_activities SET body = ?, edited_by = ? WHERE id = ?',
+    [data.body, context.user.email, data.id],
+  )
+  if (result.affectedRows === 0) throw new Error('Comment not found')
+  return { ok: true }
+})
+
+export const deleteEnquiryActivity = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => ({
+  id: numberValue((data as Record<string, unknown>)?.id),
+})).handler(async ({ data, context }) => {
+  if (context.role !== 'super_admin') throw new Error('Only a super admin can delete lead comments')
+  const result = await execute('DELETE FROM enquiry_activities WHERE id = ?', [data.id])
+  if (result.affectedRows === 0) throw new Error('Comment not found')
   return { ok: true }
 })
 
 export const deleteEnquiry = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => ({ id: numberValue((data as Record<string, unknown>)?.id) })).handler(async ({ data, context }) => {
   if (context.role !== 'super_admin') throw new Error('Only a super admin can delete enquiries')
+  await execute('DELETE FROM enquiry_activities WHERE enquiry_id = ?', [data.id])
   await execute('DELETE FROM enquiries WHERE id = ?', [data.id])
   return { ok: true }
 })
