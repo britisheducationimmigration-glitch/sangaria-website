@@ -51,14 +51,14 @@ function CountriesPage() {
         eyebrow="Destinations"
         title={
           <>
-            Six study destinations. <span className="text-coral-500">One team</span> to help plan your next step.
+            Study abroad with a plan. <span className="text-coral-500">One team</span> to guide your next step.
           </>
         }
-        intro="Compare tuition estimates, visa funds, admission routes, student work conditions, post-study options and common intakes."
+        intro="Explore destination guides, compare a shortlist, and talk with our team about the country you have in mind."
       />
       <section className="mx-auto mt-8 max-w-7xl px-6 pb-40 md:mt-10" aria-label="Compare study destinations">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-          <p className="max-w-2xl text-sm text-forest-900/65">Choose two or three study destinations. The comparison separates tuition estimates from visa funds and shows when work or post-study options depend on eligibility.</p>
+          <p className="max-w-2xl text-sm text-forest-900/65">Build a shortlist of two or three destinations. Compare cost estimates, visa funds and route conditions side by side.</p>
           <p className="rounded-full bg-forest-50 px-3 py-1.5 font-mono text-xs font-bold text-forest-700" aria-live="polite">{selectedSlugs.length} / 3 selected</p>
         </div>
         {compareNotice && <p className="mb-4 rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900" role="status">{compareNotice}</p>}
@@ -112,12 +112,22 @@ function CountriesPage() {
           })}
         </div>
 
+        <div className="mt-8 flex flex-col gap-3 rounded-2xl border border-forest-900/10 bg-cream px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="font-display text-base font-extrabold text-forest-900">Looking at another study destination?</h2>
+            <p className="mt-1 text-sm text-forest-900/65">We guide students on study routes beyond the guides shown here. Tell us which country you’re considering.</p>
+          </div>
+          <Link to="/contact" className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-forest-900 px-5 py-3 text-xs font-bold text-white transition hover:bg-forest-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500">
+            Ask our team <ArrowRight aria-hidden="true" className="size-4" />
+          </Link>
+        </div>
+
         {showComparison && selectedCountries.length >= 2 && (
           <section id="country-comparison" aria-labelledby="country-comparison-title" className="mt-12 scroll-mt-28 rounded-[2rem] bg-forest-900 bg-grain p-5 text-white md:p-8">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-coral-400">Study guide · side by side</p>
-                <h2 id="country-comparison-title" className="mt-2 text-2xl font-extrabold md:text-3xl">Compare study destinations</h2>
+                <h2 id="country-comparison-title" className="mt-2 text-2xl font-extrabold md:text-3xl">Compare your shortlist</h2>
                 <p className="mt-2 max-w-2xl text-sm text-forest-100/70">Compare tuition estimates, student visa charges, proof of funds, admissions and English requirements, work conditions, post-study routes and common intake windows. Each item links to official guidance.</p>
               </div>
               <button type="button" onClick={() => setShowComparison(false)} className="min-h-11 rounded-full border border-white/25 px-4 py-2 text-xs font-bold text-white hover:bg-white/10">Close comparison</button>
