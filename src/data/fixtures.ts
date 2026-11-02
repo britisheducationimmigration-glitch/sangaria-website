@@ -4,6 +4,18 @@
  * from the admin panel (see PLAN.md). Keep the shapes stable.
  */
 
+export type StudyGuide = {
+  tuitionEstimate: string
+  studentVisaFee: string
+  proofOfFunds: string
+  admissionAndEnglish: string
+  workWhileStudying: string
+  postStudyOption: string
+  intakesNote: string
+  lastVerified: string
+  sources: { label: string; url: string }[]
+}
+
 export type Country = {
   slug: string
   name: string
@@ -17,6 +29,7 @@ export type Country = {
   highlights: string[]
   costs: { label: string; value: string }[]
   english: string
+  studyGuide?: StudyGuide
 }
 
 export const countries: Country[] = [
@@ -42,6 +55,22 @@ export const countries: Country[] = [
       { label: 'Biometrics', value: 'CAD 85' },
     ],
     english: 'Set by the school and programme; some PGWP applicants also need language results.',
+    studyGuide: {
+      tuitionEstimate: "2026 averages: CAD 41,746/year undergraduate and CAD 24,028/year graduate. College diploma programmes are often about CAD 16,000–25,000/year; your offer sets the actual tuition.",
+      studentVisaFee: "Study permit CAD 150; biometrics CAD 85 when required.",
+      proofOfFunds: "CAD 23,448 for one person outside Quebec from 1 September 2026. Tuition and travel are additional; family size and Quebec rules change the amount.",
+      admissionAndEnglish: "Admission from a Designated Learning Institution and a PAL/TAL in most cases (exceptions apply). The school/programme sets admission English; some PGWP applicants have separate IRCC language and field-of-study rules.",
+      workWhileStudying: "Eligible students may work off campus up to 24 hours/week while classes are in session and full-time during scheduled breaks.",
+      postStudyOption: "An eligible graduate may qualify for a PGWP of up to 3 years. School, programme, application-date, field-of-study and language rules can affect eligibility and duration.",
+      intakesNote: "Common starts shown; dates and availability vary by institution and programme. Confirm the selected course calendar.",
+      lastVerified: "2 November 2026",
+      sources: [
+        { label: "EduCanada tuition and study costs", url: "https://www.educanada.ca/programs-programmes/education_cost-cout_education.aspx?lang=eng" },
+        { label: "IRCC proof of funds", url: "https://www.canada.ca/en/immigration-refugees-citizenship/services/study-canada/study-permit/get-documents/financial-support.html" },
+        { label: "IRCC student work conditions", url: "https://www.canada.ca/en/immigration-refugees-citizenship/services/study-canada/work/work-off-campus.html" },
+        { label: "IRCC PGWP eligibility", url: "https://www.canada.ca/en/immigration-refugees-citizenship/services/study-canada/work/after-graduation/eligibility.html" },
+      ],
+    },
   },
   {
     slug: 'uk',
@@ -65,6 +94,22 @@ export const countries: Country[] = [
       { label: 'IHS (health surcharge)', value: '£776 / year' },
     ],
     english: 'Usually CEFR B2 at degree level or B1 below; exemptions and provider assessment may apply.',
+    studyGuide: {
+      tuitionEstimate: "Study UK’s published guide range: undergraduate £11,400–£38,000/year; postgraduate £9,000–£30,000/year. This is indicative; the current course quote from the university controls.",
+      studentVisaFee: "Student visa £558 from outside the UK; student Immigration Health Surcharge is £776/year. Total IHS depends on visa length.",
+      proofOfFunds: "£1,171/month outside London or £1,529/month in London, for up to 9 months, plus course fees. Exemptions and individual circumstances apply.",
+      admissionAndEnglish: "A Confirmation of Acceptance for Studies (CAS) from a licensed Student sponsor is required. English evidence depends on course level, sponsor and visa rules; exemptions may apply.",
+      workWhileStudying: "Usually up to 20 hours/week in term for eligible degree-level students at qualifying sponsors; some below-degree courses allow 10 hours, while other courses allow no work. Follow the visa conditions.",
+      postStudyOption: "Eligible graduates may get 2 years if they apply by 31 December 2026, 18 months from 1 January 2027, or 3 years for a doctorate. The course must be eligible and the provider must report completion.",
+      intakesNote: "Common starts shown; course starts and application deadlines vary by university and programme.",
+      lastVerified: "2 November 2026",
+      sources: [
+        { label: "Study UK tuition guidance", url: "https://study-uk.britishcouncil.org/moving-uk/cost-studying" },
+        { label: "GOV.UK student visa funds", url: "https://www.gov.uk/student-visa/money" },
+        { label: "GOV.UK student work conditions", url: "https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-student" },
+        { label: "GOV.UK Graduate visa", url: "https://www.gov.uk/graduate-visa" },
+      ],
+    },
   },
   {
     slug: 'australia',
@@ -88,6 +133,25 @@ export const countries: Country[] = [
       { label: 'OSHC', value: 'AUD ~600 / yr' },
     ],
     english: 'IELTS 6.0 / PTE 50',
+    studyGuide: {
+      tuitionEstimate: "The site’s AUD 25,000–45,000/year band is a planning estimate, not a national fee rule. Provider, course and city affect tuition; use the official course search for an exact course quote.",
+      studentVisaFee: "Subclass 500 starts at AUD 2,500 from 1 July 2026; concessions and extra applicants can change the total.",
+      proofOfFunds: "AUD 29,710 for 12 months of the primary student’s living costs, plus first-year tuition and travel. Higher evidence can be needed for accompanying family.",
+      admissionAndEnglish: "A Confirmation of Enrolment (CoE) from a CRICOS-registered provider and the Genuine Student assessment are key requirements. English test evidence is required only where applicable; course admission requirements can be higher.",
+      workWhileStudying: "Student visa holders may work up to 48 hours per fortnight while their course is in session; check the conditions on the visa. Different rules apply during scheduled breaks.",
+      postStudyOption: "Subclass 485 usually allows 2 years after a bachelor’s or coursework master’s, and 3 years after a research master’s or doctorate. Indian nationals may have treaty-specific periods. Age, recent eligible study and other requirements apply. A regional second visa needs qualifying regional study and residence.",
+      intakesNote: "Common starts shown; course calendars, trimester options and deadlines vary by provider.",
+      lastVerified: "2 November 2026",
+      sources: [
+        { label: "Study Australia course search", url: "https://search.studyaustralia.gov.au/courses" },
+        { label: "Study Australia education-cost guidance", url: "https://www.studyaustralia.gov.au/en_in/life-in-australia/living-and-education-costs" },
+
+        { label: "Subclass 500 and financial capacity", url: "https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing/student-500" },
+        { label: "Student visa charges", url: "https://www.studyaustralia.gov.au/en/tools-and-resources/news/student-visa-application-charge-increase" },
+        { label: "Subclass 485 post-higher-education work", url: "https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing/temporary-graduate-485/post-higher-education-work" },
+        { label: "Regional graduate visa options", url: "https://immi.homeaffairs.gov.au/visas/working-in-australia/regional-migration" },
+      ],
+    },
   },
   {
     slug: 'usa',
@@ -111,6 +175,24 @@ export const countries: Country[] = [
       { label: 'Living', value: 'USD 12–18k / yr' },
     ],
     english: 'IELTS 6.5 / PTE 58 / Duolingo 110',
+    studyGuide: {
+      tuitionEstimate: "The site’s USD 20,000–45,000/year band is a planning estimate only. Tuition and living costs vary widely by school, programme and location; use the school’s current cost estimate on Form I-20.",
+      studentVisaFee: "F/M visa application US$185 plus separate I-901 SEVIS fee US$350; reciprocity or other costs may apply.",
+      proofOfFunds: "There is no single national living-funds figure. The SEVP-certified school records estimated tuition and living expenses on Form I-20; applicants must show funding for the school’s required amount.",
+      admissionAndEnglish: "Acceptance from an SEVP-certified school and Form I-20 are needed. Each school sets its admission and English evidence; there is no single federal IELTS/PTE score.",
+      workWhileStudying: "F-1 on-campus work is generally limited to 20 hours/week while school is in session. Off-campus CPT/OPT requires the correct school/USCIS authorization and must meet its rules.",
+      postStudyOption: "Eligible students may get up to 12 months of OPT per higher education level. A qualifying STEM degree may support a further 24-month STEM OPT extension with an eligible E-Verify employer.",
+      intakesNote: "Spring and fall are common starts; some programmes have summer or rolling entry. Confirm each school’s calendar and deadline.",
+      lastVerified: "2 November 2026",
+      sources: [
+        { label: "EducationUSA study costs", url: "https://educationusa.state.gov/your-5-steps-us-study/finance-your-studies" },
+        { label: "U.S. Department of State student visas", url: "https://travel.state.gov/content/travel/en/us-visas/study/student-visa.html" },
+        { label: "F-1 student employment regulations", url: "https://www.ecfr.gov/current/title-8/section-214.2" },
+        { label: "DHS F-1 practical training overview", url: "https://studyinthestates.dhs.gov/assets/SEVP_PracticalTrainingOverview_1-pager.pdf" },
+
+        { label: "DHS SEVIS fee guidance", url: "https://studyinthestates.dhs.gov/students/prepare/paying-the-i-901-sevis-fee" },
+      ],
+    },
   },
   {
     slug: 'new-zealand',
@@ -123,7 +205,7 @@ export const countries: Country[] = [
     stats: [
       { label: 'Post-study work', value: 'Up to 3 yrs' },
       { label: 'Work while studying', value: '25 hrs / week' },
-      { label: 'Avg. tuition', value: 'NZD 22–35k' },
+      { label: 'Living funds (student visa, 2026)', value: '€992 / month' },
     ],
     intakes: ['February', 'July'],
     visas: ['Student Visa', 'Post-Study Work', 'Visitor Visa'],
@@ -134,6 +216,22 @@ export const countries: Country[] = [
       { label: 'Insurance', value: 'NZD ~700 / yr' },
     ],
     english: 'IELTS 6.0 / PTE 50',
+    studyGuide: {
+      tuitionEstimate: "Published Study with New Zealand estimates: bachelor’s NZD 35,000–55,000/year; postgraduate NZD 20,000–45,000/year (tuition figures last updated March 2025). Confirm current fees with the provider.",
+      studentVisaFee: "Fee Paying Student Visa from NZD 850; the final fee can vary by citizenship, application location and levies.",
+      proofOfFunds: "Tertiary students generally show NZD 20,000/year, or NZD 1,667/month for shorter study; tuition is separate. Check current INZ rules for your course and family.",
+      admissionAndEnglish: "An offer of place from an approved education provider is required. The provider sets academic and English admission evidence; acceptable insurance and other visa criteria also apply.",
+      workWhileStudying: "Eligible visa conditions may allow up to 25 hours/week and full-time work in specified holidays. Rights depend on the visa and course conditions.",
+      postStudyOption: "A Post Study Work Visa may last up to 3 years depending on the completed qualification. Eligible master’s/doctoral study of at least 30 weeks can qualify for 3 years; other qualifications have separate rules.",
+      intakesNote: "Common starts shown; provider and programme calendars vary.",
+      lastVerified: "2 November 2026",
+      sources: [
+        { label: "Study with New Zealand costs", url: "https://www.studywithnewzealand.govt.nz/en/plan-your-studies/cost-of-living" },
+        { label: "INZ Fee Paying Student Visa", url: "https://www.immigration.govt.nz/visas/fee-paying-student-visa/" },
+        { label: "INZ student work conditions", url: "https://www.immigration.govt.nz/study/once-you-have-a-student-visa/working-on-a-student-visa/" },
+        { label: "INZ Post Study Work Visa", url: "https://www.immigration.govt.nz/visas/post-study-work-visa/" },
+      ],
+    },
   },
   {
     slug: 'germany',
@@ -145,18 +243,34 @@ export const countries: Country[] = [
       'Germany is Europe’s engineering powerhouse — public universities charge little or no tuition and graduates get 18 months to find work.',
     stats: [
       { label: 'Job-seeker period', value: '18 months' },
-      { label: 'Public tuition', value: '€0 – €3k' },
-      { label: 'Blocked account', value: '€11,904 / yr' },
+      { label: 'Public tuition', value: 'Usually none at most public universities' },
+      { label: 'Living funds (student visa, 2026)', value: '€11,904 / yr' },
     ],
     intakes: ['April (Summer)', 'October (Winter)'],
     visas: ['Student Visa', 'Opportunity Card', 'EU Blue Card', 'Schengen Visitor'],
     highlights: ['English-taught masters', 'Strong STEM job market', 'Path to EU Blue Card'],
     costs: [
-      { label: 'Blocked account', value: '€992 / month' },
+      { label: 'Living funds (student visa, 2026)', value: '€992 / month' },
       { label: 'Visa fee', value: '€75' },
       { label: 'Health insurance', value: '€120 / month' },
     ],
     english: 'IELTS 6.5 / basic German helps',
+    studyGuide: {
+      tuitionEstimate: "Most public universities charge no tuition for bachelor’s and many master’s programmes. A semester contribution is usually €70–€430; exceptions, private universities and special programmes can charge tuition.",
+      studentVisaFee: "German national long-stay study visa: €75; service-centre and residence-permit costs may be separate.",
+      proofOfFunds: "For an admitted student visa in 2026, the living-funds baseline is €11,904 for 12 months (equivalent to €992/month). A blocked account is common, and a scholarship or declaration of commitment may be accepted. The separate visa to seek a university place uses a different €1,091/month baseline; follow the responsible mission’s checklist.",
+      admissionAndEnglish: "Admission from a German university and a recognised prior qualification are required. German/English language proof depends on the programme and teaching language; check the university and embassy requirements.",
+      workWhileStudying: "Third-country students may work up to 140 full days or 280 half days/year, or alternatively up to 20 hours/week during the lecture period; conditions and student status apply.",
+      postStudyOption: "After successfully completing a German degree, graduates may apply for a residence permit of up to 18 months to seek qualified employment; the permit and next work route have eligibility requirements.",
+      intakesNote: "Common starts are April (summer) and October (winter); exact dates, deadlines and available programmes vary by university.",
+      lastVerified: "2 November 2026",
+      sources: [
+        { label: "Make it in Germany study and visa guidance", url: "https://www.make-it-in-germany.com/en/visa-recognition/visa-types/studying" },
+        { label: "DAAD tuition and semester contributions", url: "https://www.daad.de/en/studying-in-germany/living-in-germany/finances/" },
+        { label: "Make it in Germany student work rules", url: "https://www.make-it-in-germany.com/en/study-vocational-training/studying-in-germany/work" },
+        { label: "German Federal Foreign Office visa service", url: "https://www.auswaertiges-amt.de/en/visa-service/215870-215870" },
+      ],
+    },
   },
   {
     slug: 'europe',
@@ -409,7 +523,7 @@ export const posts: Post[] = [
     excerpt: 'Blocked account, APS certificate and English-taught masters — your step-by-step guide to Germany.',
     readMins: 7,
     body: [
-      'German public universities charge little or no tuition, even for international students. You will need a blocked account to show living funds.',
+      'Most German public universities charge little or no tuition, though semester contributions and programme exceptions apply. A blocked account is one common way to show living funds; check the current official amount and any accepted alternatives before applying.',
       'Indian students need an APS certificate before applying for the student visa. Start the process at least 3 months in advance.',
     ],
   },
