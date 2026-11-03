@@ -9,6 +9,9 @@ import { isTrustedPolicySourceUrl, readPolicyWatchState, scanOfficialPolicySourc
 import { isValidBatchStartDate } from '@/lib/batch-dates'
 import { getSupportedVideoEmbedUrl } from './video'
 import { invalidateCoachingCache, invalidatePublicContentCache } from './public-functions'
+import { discardCountryDraft, getAdminCountryCatalog, revertCountryToDefault, saveCountryDraft, type CountryPageContent } from './country-catalog.server'
+import type { Country, StudyGuide } from '@/data/fixtures'
+import type { VisaGuidance } from '@/data/visa-guidance'
 
 function stringValue(value: unknown, max = 5000) {
   return typeof value === 'string' ? value.trim().slice(0, max) : ''
@@ -213,6 +216,140 @@ export const markPolicySourceReview = createServerFn({ method: 'POST' }).middlew
 export const scanPolicySourcesNow = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).handler(async ({ context }) => {
   if (context.role !== 'super_admin') throw new Error('Only a super admin can scan policy sources')
   return scanOfficialPolicySources()
+})
+
+function objectValue(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? value as Record<string, unknown> : {}
+}
+
+function cleanStringList(value: unknown, maxItems = 24, maxLength = 600): string[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((item): item is string => typeof item === 'string').map((item) => item.trim().slice(0, maxLength)).filter(Boolean).slice(0, maxItems)
+}
+
+function cleanCountryRows(value: unknown, maxItems = 20): { label: string; value: string }[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((item) => !!item && typeof item === 'object').map((item) => {
+    const row = item as Record<string, unknown>
+    return { label: stringValue(row.label, 140), value: stringValue(row.value, 1200) }
+  }).filter((row) => row.label || row.value).slice(0, maxItems)
+}
+
+function cleanCountrySources(value: unknown): { label: string; url: string }[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((item) => !!item && typeof item === 'object').map((item) => {
+    const row = item as Record<string, unknown>
+    return { label: stringValue(row.label, 180), url: stringValue(row.url, 500) }
+  }).filter((row) => row.label || row.url).slice(0, 30)
+}
+
+function normalizeCountryPageContent(value: unknown): CountryPageContent {
+  const input = objectValue(value)
+  const countryInput = objectValue(input.country)
+  const guidanceInput = objectValue(input.guidance)
+  const guideInput = objectValue(countryInput.studyGuide)
+  const stats = cleanCountryRows(countryInput.stats, 6)
+  const costs = cleanCountryRows(countryInput.costs, 24)
+  const feeRows = cleanCountryRows(guidanceInput.feeRows, 30)
+  const guideSources = cleanCountrySources(guideInput.sources)
+  const sources = cleanCountrySources(guidanceInput.sources)
+  const hasStudyGuide = Object.values(guideInput).some((item) => typeof item === 'string' && item.trim()) || guideSources.length > 0
+  const studyGuide: StudyGuide | undefined = hasStudyGuide ? {
+    tuitionEstimate: stringValue(guideInput.tuitionEstimate, 1800),
+    studentVisaFee: stringValue(guideInput.studentVisaFee, 1200),
+    proofOfFunds: stringValue(guideInput.proofOfFunds, 1800),
+    admissionAndEnglish: stringValue(guideInput.admissionAndEnglish, 1800),
+    workWhileStudying: stringValue(guideInput.workWhileStudying, 1800),
+    postStudyOption: stringValue(guideInput.postStudyOption, 1800),
+    intakesNote: stringValue(guideInput.intakesNote, 1200),
+    lastVerified: stringValue(guideInput.lastVerified, 80),
+    sources: guideSources,
+  } : undefined
+  const country: Country = {
+    slug: stringValue(countryInput.slug, 80).toLowerCase(),
+    name: stringValue(countryInput.name, 100),
+    flag: stringValue(countryInput.flag, 24),
+    code: stringValue(countryInput.code, 2).toUpperCase(),
+    headline: stringValue(countryInput.headline, 180),
+    intro: stringValue(countryInput.intro, 1800),
+    stats,
+    intakes: cleanStringList(countryInput.intakes, 24, 100),
+    visas: cleanStringList(countryInput.visas, 24, 120),
+    highlights: cleanStringList(countryInput.highlights, 16, 400),
+    costs,
+    english: stringValue(countryInput.english, 1200),
+    studyGuide,
+  }
+  const guidance: VisaGuidance = {
+    lastVerified: stringValue(guidanceInput.lastVerified, 80),
+    feeRows,
+    feeSummary: stringValue(guidanceInput.feeSummary, 1800),
+    requirements: cleanStringList(guidanceInput.requirements, 24, 1800),
+    caveat: stringValue(guidanceInput.caveat, 1800),
+    sources,
+  }
+  return { country, guidance }
+}
+
+function validateCountryPageForPublish(content: CountryPageContent) {
+  const { country, guidance } = content
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(country.slug)) throw new Error('Use a lowercase URL slug such as japan or south-korea')
+  if (!country.name || !country.flag || !/^[A-Z]{2}$/.test(country.code)) throw new Error('Add a country name, flag emoji and two-letter country code')
+  if (!country.headline || !country.intro || !country.english) throw new Error('Complete the page headline, introduction and English/admission guidance')
+  if (!country.visas.length || !country.highlights.length || !country.costs.length) throw new Error('Add visa types, highlights and destination costs')
+  if (!guidance.lastVerified || !guidance.feeRows.length || !guidance.feeSummary || !guidance.requirements.length || !guidance.caveat || !guidance.sources.length) {
+    throw new Error('Complete the visa fees, core requirements, caution, last-verified date and official sources')
+  }
+  for (const source of [...guidance.sources, ...(country.studyGuide?.sources ?? [])]) {
+    if (!source.label || !source.url.startsWith('https://')) throw new Error('Every published source needs a label and HTTPS link')
+  }
+  if (country.slug !== 'europe' && !country.studyGuide) throw new Error('Study destinations also need their study guide and admission details')
+  if (country.studyGuide) {
+    const guide = country.studyGuide
+    if (!guide.tuitionEstimate || !guide.studentVisaFee || !guide.proofOfFunds || !guide.admissionAndEnglish || !guide.workWhileStudying || !guide.postStudyOption || !guide.intakesNote || !guide.lastVerified || !guide.sources.length) {
+      throw new Error('Complete all study guide fields, verification date and sources')
+    }
+  }
+}
+
+export const getAdminCountryPages = createServerFn({ method: 'GET' }).middleware([adminMiddleware]).handler(async ({ context }) => {
+  if (context.role !== 'super_admin') throw new Error('Only a super admin can manage country pages')
+  return getAdminCountryCatalog()
+})
+
+export const saveCountryPage = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
+  const input = objectValue(data)
+  const content = normalizeCountryPageContent(input.content)
+  const status = stringValue(input.status, 20)
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(content.country.slug)) throw new Error('Add a URL slug before saving')
+  if (!content.country.name) throw new Error('Add a destination name before saving')
+  if (!['draft', 'published'].includes(status)) throw new Error('Choose save draft or publish')
+  if (status === 'published') validateCountryPageForPublish(content)
+  return { content, status: status as 'draft' | 'published' }
+}).handler(async ({ data, context }) => {
+  if (context.role !== 'super_admin') throw new Error('Only a super admin can manage country pages')
+  await saveCountryDraft(data.content, data.status)
+  return { ok: true }
+})
+
+export const discardCountryPageDraft = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
+  const slug = stringValue(objectValue(data).slug, 80).toLowerCase()
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) throw new Error('Invalid country slug')
+  return { slug }
+}).handler(async ({ data, context }) => {
+  if (context.role !== 'super_admin') throw new Error('Only a super admin can manage country pages')
+  await discardCountryDraft(data.slug)
+  return { ok: true }
+})
+
+export const resetCountryPage = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
+  const slug = stringValue(objectValue(data).slug, 80).toLowerCase()
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) throw new Error('Invalid country slug')
+  return { slug }
+}).handler(async ({ data, context }) => {
+  if (context.role !== 'super_admin') throw new Error('Only a super admin can manage country pages')
+  await revertCountryToDefault(data.slug)
+  return { ok: true }
 })
 
 export const updateEnquiry = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
