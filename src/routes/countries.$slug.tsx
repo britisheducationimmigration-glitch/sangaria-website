@@ -2,22 +2,20 @@ import { Link, createFileRoute, notFound } from '@tanstack/react-router'
 import { CalendarDays, Check, Languages, Wallet } from 'lucide-react'
 import { EnquiryForm } from '@/components/EnquiryForm'
 import { Eyebrow } from '@/components/Section'
-import { countries, getCurrentCountry } from '@/data/fixtures'
-import { visaGuidance } from '@/data/visa-guidance'
-import { applyScheduledVisaPolicy } from '@/data/policy-watch'
-import { getPublicPolicyNotices } from '@/lib/public-functions'
+import { getPublicPolicyNotices, getPublicCountryPage } from '@/lib/public-functions'
 import { CountryFlag } from '@/components/CountryFlag'
 
 import { createPageSeo } from '@/lib/seo'
 
 export const Route = createFileRoute('/countries/$slug')({
   loader: async ({ params }) => {
-    const country = countries.find((c) => c.slug === params.slug)
-    if (!country) throw notFound()
+    const content = await getPublicCountryPage({ data: { slug: params.slug } })
+    if (!content) throw notFound()
     const notices = await getPublicPolicyNotices()
     return {
-      country: getCurrentCountry(country),
-      notices: notices.filter((notice) => notice.countrySlug === 'all' || notice.countrySlug === country.slug),
+      country: content.country,
+      guidance: content.guidance,
+      notices: notices.filter((notice) => notice.countrySlug === 'all' || notice.countrySlug === content.country.slug),
     }
   },
   head: ({ loaderData }) => {
@@ -36,8 +34,7 @@ export const Route = createFileRoute('/countries/$slug')({
 })
 
 function CountryPage() {
-  const { country: c, notices } = Route.useLoaderData()
-  const guidance = applyScheduledVisaPolicy(c.slug, visaGuidance[c.slug])
+  const { country: c, guidance, notices } = Route.useLoaderData()
   return (
     <>
       <section className="relative overflow-hidden bg-forest-900 bg-grain text-white">
