@@ -142,21 +142,28 @@ function RootDocument({ children }: { children: ReactNode }) {
     if (!sections.length) return
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
-        (entry.target as HTMLElement).classList.toggle('is-scroll-visible', entry.isIntersecting)
+        if (!entry.isIntersecting) continue
+        // Reveal once on entry, then stop observing so scroll direction changes
+        // do not repeatedly hide, repaint, or animate the same section.
+        const section = entry.target as HTMLElement
+        section.classList.add('is-scroll-visible')
+        observer.unobserve(section)
       }
-    }, { threshold: 0.08, rootMargin: '0px 0px -48px 0px' })
+    }, { threshold: 0.01 })
 
     sections.forEach((section) => {
       section.classList.add('scroll-reveal')
       const rect = section.getBoundingClientRect()
-      if (section.getClientRects().length > 0 && rect.top < window.innerHeight * 0.9 && rect.bottom > 0) {
+      const alreadyVisible = section.getClientRects().length > 0 && rect.top < window.innerHeight && rect.bottom > 0
+      if (alreadyVisible) {
         section.classList.add('is-scroll-visible')
+      } else {
+        observer.observe(section)
       }
       section.querySelectorAll<HTMLElement>('.grid > article, .grid > a').forEach((item, index) => {
         item.classList.add('scroll-reveal-item')
         item.style.setProperty('--scroll-reveal-order', String(Math.min(index, 5)))
       })
-      observer.observe(section)
     })
 
     return () => {
