@@ -116,7 +116,15 @@ export const getPublicPolicyNotices = createServerFn({ method: 'GET' }).handler(
   const state = await readPolicyWatchState()
   return state.notices
     .filter((notice) => isPolicyNoticeVisible(notice))
-    .sort((left, right) => left.showFrom.localeCompare(right.showFrom))
+    .map((notice) => ({
+      id: notice.id,
+      countrySlug: notice.countrySlug,
+      title: notice.title,
+      message: notice.message,
+      sourceLabel: notice.sourceLabel,
+      sourceUrl: notice.sourceUrl,
+    }))
+    .sort((left, right) => left.title.localeCompare(right.title))
 })
 
 export const getPublicContent = createServerFn({ method: 'GET' }).handler(async (): Promise<PublicContent> => {
