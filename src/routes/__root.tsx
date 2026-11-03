@@ -5,7 +5,7 @@ import { SiteFooter } from '@/components/SiteFooter'
 import { SiteHeader } from '@/components/SiteHeader'
 import { WhatsAppButton } from '@/components/WhatsAppButton'
 import { EnquiryPopup } from '@/components/EnquiryPopup'
-import { getPublicContent } from '@/lib/public-functions'
+import { getPublicSiteSettings } from '@/lib/public-functions'
 import { defaultSiteSettings } from '@/lib/site-settings'
 import appCss from '../styles.css?url'
 
@@ -68,7 +68,7 @@ function schemaOpeningHours(label: string) {
 export const Route = createRootRoute({
   loader: async () => {
     try {
-      return { settings: (await getPublicContent()).settings }
+      return { settings: await getPublicSiteSettings() }
     } catch {
       return { settings: defaultSiteSettings }
     }
@@ -187,8 +187,8 @@ function RootDocument({ children }: { children: ReactNode }) {
         {!isAdmin && <SiteHeader settings={settings} />}
         <main className={isAdmin ? 'admin-main' : 'public-main'}>{children}</main>
         {!isAdmin && <SiteFooter settings={settings} />}
-        {!isAdmin && <WhatsAppButton />}
-        {!isAdmin && <EnquiryPopup />}
+        {!isAdmin && <WhatsAppButton settings={settings} />}
+        {!isAdmin && <EnquiryPopup settings={settings} />}
         <Analytics />
         <Scripts />
       </body>
