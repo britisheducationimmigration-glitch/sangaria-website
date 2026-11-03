@@ -9,6 +9,7 @@ import { defaultCashflowData, mergeNewCashflowDestinations, type CountryCashflow
 import { isBatchExpired } from '@/lib/batch-dates'
 import { applyScheduledCashflowPolicy, isPolicyNoticeVisible } from '@/data/policy-watch'
 import { readPolicyWatchState } from './policy-watch.server'
+import { getPublicCountryBySlug, getPublicCountryCatalog } from './country-catalog.server'
 
 let publicContentCache: { expiresAt: number; data: PublicContent } | null = null
 
@@ -111,6 +112,16 @@ function applyEditorialReview(post: PublicContent['posts'][number]): PublicConte
 
   return { ...post, lastReviewed: reviewed.lastReviewed, sources: reviewed.sources }
 }
+
+export const getPublicCountryCatalogue = createServerFn({ method: 'GET' }).handler(async () => getPublicCountryCatalog())
+
+export const getPublicCountryPage = createServerFn({ method: 'GET' })
+  .validator((data: unknown) => {
+    const slug = stringValue((data as Record<string, unknown>)?.slug, 80).toLowerCase()
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) throw new Error('Invalid destination')
+    return { slug }
+  })
+  .handler(async ({ data }) => getPublicCountryBySlug(data.slug))
 
 export const getPublicPolicyNotices = createServerFn({ method: 'GET' }).handler(async () => {
   const state = await readPolicyWatchState()
