@@ -1,3 +1,5 @@
+import { applyScheduledCountryPolicy } from './policy-watch'
+
 /**
  * Stubbed content for the public site.
  * Everything here is intended to move into Netlify Database and be edited
@@ -32,7 +34,7 @@ export type Country = {
   studyGuide?: StudyGuide
 }
 
-export const countries: Country[] = [
+const baseCountries: Country[] = [
   {
     slug: 'canada',
     name: 'Canada',
@@ -97,7 +99,7 @@ export const countries: Country[] = [
     studyGuide: {
       tuitionEstimate: "Study UK’s published guide range: undergraduate £11,400–£38,000/year; postgraduate £9,000–£30,000/year. This is indicative; the current course quote from the university controls.",
       studentVisaFee: "Student visa £558 from outside the UK; student Immigration Health Surcharge is £776/year. Total IHS depends on visa length.",
-      proofOfFunds: "£1,171/month outside London or £1,529/month in London, for up to 9 months, plus course fees. Exemptions and individual circumstances apply.",
+      proofOfFunds: "£1,171/month outside London or £1,529/month in London, for up to 9 months, plus course fees. From 30 November 2026 the amounts become £1,203 outside London and £1,570 in London. Applications made before that date are assessed under the rules in force on 29 November; exemptions and individual circumstances apply.",
       admissionAndEnglish: "A Confirmation of Acceptance for Studies (CAS) from a licensed Student sponsor is required. English evidence depends on course level, sponsor and visa rules; exemptions may apply.",
       workWhileStudying: "Usually up to 20 hours/week in term for eligible degree-level students at qualifying sponsors; some below-degree courses allow 10 hours, while other courses allow no work. Follow the visa conditions.",
       postStudyOption: "Eligible graduates may get 2 years if they apply by 31 December 2026, 18 months from 1 January 2027, or 3 years for a doctorate. The course must be eligible and the provider must report completion.",
@@ -118,7 +120,7 @@ export const countries: Country[] = [
     code: 'AU',
     headline: 'Sunshine, top-100 universities and skilled migration',
     intro:
-      'Australia rewards skills. Study in a regional area for extra post-study work years and points towards skilled migration.',
+      'Eligible graduates who study and live in qualifying regional areas may have additional post-study work options. Regional study does not guarantee a visa extension or skilled migration points.',
     stats: [
       { label: 'Post-study work', value: '2–4 yrs' },
       { label: 'Work while studying', value: '48 hrs / fortnight' },
@@ -126,7 +128,7 @@ export const countries: Country[] = [
     ],
     intakes: ['February', 'July', 'November'],
     visas: ['Student (500)', 'Temporary Graduate (485)', 'Skilled (189/190/491)', 'Visitor (600)'],
-    highlights: ['Regional study bonus', 'High minimum wages', 'Points-tested PR system'],
+    highlights: ['Conditional regional post-study options', 'High minimum wages', 'Points-tested PR system'],
     costs: [
       { label: 'Living funds', value: 'AUD 29,710 / yr' },
       { label: 'Visa fee', value: 'AUD 2,500' },
@@ -137,7 +139,7 @@ export const countries: Country[] = [
       tuitionEstimate: "The site’s AUD 25,000–45,000/year band is a planning estimate, not a national fee rule. Provider, course and city affect tuition; use the official course search for an exact course quote.",
       studentVisaFee: "Subclass 500 starts at AUD 2,500 from 1 July 2026; concessions and extra applicants can change the total.",
       proofOfFunds: "AUD 29,710 for 12 months of the primary student’s living costs, plus first-year tuition and travel. Higher evidence can be needed for accompanying family.",
-      admissionAndEnglish: "A Confirmation of Enrolment (CoE) from a CRICOS-registered provider and the Genuine Student assessment are key requirements. English test evidence is required only where applicable; course admission requirements can be higher.",
+      admissionAndEnglish: "A Confirmation of Enrolment (CoE) from a CRICOS-registered provider and the Genuine Student assessment are key requirements. English test evidence is required only where applicable; course admission requirements can be higher. Rules effective 2 October 2026 also change some in-Australia applications and family inclusion; check the Home Affairs decision tools for your situation.",
       workWhileStudying: "Student visa holders may work up to 48 hours per fortnight while their course is in session; check the conditions on the visa. Different rules apply during scheduled breaks.",
       postStudyOption: "Subclass 485 usually allows 2 years after a bachelor’s or coursework master’s, and 3 years after a research master’s or doctorate. Indian nationals may have treaty-specific periods. Age, recent eligible study and other requirements apply. A regional second visa needs qualifying regional study and residence.",
       intakesNote: "Common starts shown; course calendars, trimester options and deadlines vary by provider.",
@@ -205,7 +207,7 @@ export const countries: Country[] = [
     stats: [
       { label: 'Post-study work', value: 'Up to 3 yrs' },
       { label: 'Work while studying', value: '25 hrs / week' },
-      { label: 'Living funds (student visa, 2026)', value: '€992 / month' },
+      { label: 'Living funds (student visa, 2026)', value: 'NZD 20,000 / year' },
     ],
     intakes: ['February', 'July'],
     visas: ['Student Visa', 'Post-Study Work', 'Visitor Visa'],
@@ -220,12 +222,13 @@ export const countries: Country[] = [
       tuitionEstimate: "Published Study with New Zealand estimates: bachelor’s NZD 35,000–55,000/year; postgraduate NZD 20,000–45,000/year (tuition figures last updated March 2025). Confirm current fees with the provider.",
       studentVisaFee: "Fee Paying Student Visa from NZD 850; the final fee can vary by citizenship, application location and levies.",
       proofOfFunds: "Tertiary students generally show NZD 20,000/year, or NZD 1,667/month for shorter study; tuition is separate. Check current INZ rules for your course and family.",
-      admissionAndEnglish: "An offer of place from an approved education provider is required. The provider sets academic and English admission evidence; acceptable insurance and other visa criteria also apply.",
-      workWhileStudying: "Eligible visa conditions may allow up to 25 hours/week and full-time work in specified holidays. Rights depend on the visa and course conditions.",
-      postStudyOption: "A Post Study Work Visa may last up to 3 years depending on the completed qualification. Eligible master’s/doctoral study of at least 30 weeks can qualify for 3 years; other qualifications have separate rules.",
+      admissionAndEnglish: "An offer of place from an approved education provider is required. The provider sets academic and English admission evidence. From 27 October 2026, INZ also expressly treats English ability as a key factor in meeting student visa conditions.",
+      workWhileStudying: "Eligible visa conditions may allow up to 25 hours/week and full-time work in specified holidays. From 27 October 2026, new master’s students (including master’s-by-research students) have the 25-hour weekly limit; unlimited in-study work no longer applies to new applications. Check the exact visa conditions.",
+      postStudyOption: "A Post Study Work Visa may last up to 3 years depending on the completed qualification. Eligible master’s/doctoral study of at least 30 weeks can qualify for 3 years; other qualifications have separate rules. For affected student visas, INZ extended the usual post-course period from 1 to 2 months from 27 October 2026; exact visa expiry still depends on course and visa conditions.",
       intakesNote: "Common starts shown; provider and programme calendars vary.",
-      lastVerified: "2 November 2026",
+      lastVerified: "3 November 2026",
       sources: [
+        { label: "INZ changes to student visas (27 October 2026)", url: "https://www.immigration.govt.nz/about-us/news-centre/changes-to-student-visas/" },
         { label: "Study with New Zealand costs", url: "https://www.studywithnewzealand.govt.nz/en/plan-your-studies/cost-of-living" },
         { label: "INZ Fee Paying Student Visa", url: "https://www.immigration.govt.nz/visas/fee-paying-student-visa/" },
         { label: "INZ student work conditions", url: "https://www.immigration.govt.nz/study/once-you-have-a-student-visa/working-on-a-student-visa/" },
@@ -250,7 +253,7 @@ export const countries: Country[] = [
     visas: ['Student Visa', 'Opportunity Card', 'EU Blue Card', 'Schengen Visitor'],
     highlights: ['English-taught masters', 'Strong STEM job market', 'Path to EU Blue Card'],
     costs: [
-      { label: 'Living funds (student visa, 2026)', value: '€992 / month' },
+      { label: 'Living funds (student visa, 2026)', value: 'NZD 20,000 / year' },
       { label: 'Visa fee', value: '€75' },
       { label: 'Health insurance', value: '€120 / month' },
     ],
@@ -296,6 +299,12 @@ export const countries: Country[] = [
     english: 'Not required',
   },
 ]
+
+export function getCurrentCountry(country: Country): Country {
+  return applyScheduledCountryPolicy(country)
+}
+
+export const countries: Country[] = baseCountries
 
 export type VisaService = {
   slug: string
