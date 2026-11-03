@@ -275,3 +275,20 @@ main .scroll-reveal:focus-within .scroll-reveal-item {
     transition: none !important;
   }
 }
+
+/* Give public content more room on large monitors without changing phone/tablet layouts. */
+@media (min-width: 1536px) {
+  .public-main .max-w-7xl,
+  #site-main-header .max-w-7xl,
+  footer .max-w-7xl {
+    max-width: 90rem;
+  }
+}
+
+@media (min-width: 1920px) {
+  .public-main .max-w-7xl,
+  #site-main-header .max-w-7xl,
+  footer .max-w-7xl {
+    max-width: 100rem;
+  }
+}
