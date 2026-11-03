@@ -5,16 +5,20 @@ import { Eyebrow } from '@/components/Section'
 import { countries, getCurrentCountry } from '@/data/fixtures'
 import { visaGuidance } from '@/data/visa-guidance'
 import { applyScheduledVisaPolicy } from '@/data/policy-watch'
-import { getUKStudentMaintenance } from '@/data/policy-watch'
+import { getPublicPolicyNotices } from '@/lib/public-functions'
 import { CountryFlag } from '@/components/CountryFlag'
 
 import { createPageSeo } from '@/lib/seo'
 
 export const Route = createFileRoute('/countries/$slug')({
-  loader: ({ params }) => {
+  loader: async ({ params }) => {
     const country = countries.find((c) => c.slug === params.slug)
     if (!country) throw notFound()
-    return { country: getCurrentCountry(country) }
+    const notices = await getPublicPolicyNotices()
+    return {
+      country: getCurrentCountry(country),
+      notices: notices.filter((notice) => notice.countrySlug === 'all' || notice.countrySlug === country.slug),
+    }
   },
   head: ({ loaderData }) => {
     const isEuropeGuide = loaderData.country.slug === 'europe'
@@ -32,9 +36,8 @@ export const Route = createFileRoute('/countries/$slug')({
 })
 
 function CountryPage() {
-  const { country: c } = Route.useLoaderData()
+  const { country: c, notices } = Route.useLoaderData()
   const guidance = applyScheduledVisaPolicy(c.slug, visaGuidance[c.slug])
-  const ukFunds = c.slug === 'uk' ? getUKStudentMaintenance() : null
   return (
     <>
       <section className="relative overflow-hidden bg-forest-900 bg-grain text-white">
@@ -91,12 +94,14 @@ function CountryPage() {
               </Link>
             </div>
           </div>
-          {ukFunds && !ukFunds.isEffective && (
-            <aside role="status" className="mb-5 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm leading-relaxed text-forest-900/80">
-              <strong className="text-amber-900">Upcoming UK change — 30 November 2026:</strong> monthly Student visa funds rise to £1,203 outside London and £1,570 in London, for up to 9 months. Applications made before that date use the current rules. <a href="https://www.gov.uk/government/publications/statement-of-changes-to-the-immigration-rules-hc-584-3-september-2026/statement-of-changes-to-the-immigration-rules-hc-584-3-september-2026-accessible" target="_blank" rel="noreferrer" className="font-bold text-coral-700 underline underline-offset-2">Read the official rule change</a>.
+          {notices.map((notice) => (
+            <aside key={notice.id} role="status" className="mb-5 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm leading-relaxed text-forest-900/80">
+              <strong className="block text-amber-900">{notice.title}</strong>
+              <p className="mt-1">{notice.message}</p>
+              <a href={notice.sourceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex min-h-10 items-center font-bold text-coral-700 underline underline-offset-2">{notice.sourceLabel} ↗</a>
             </aside>
-          )}
-          <div className="rounded-3xl bg-forest-50 p-8">
+          ))}
+                    <div className="rounded-3xl bg-forest-50 p-8">
             <Wallet className="size-6 text-forest-700" />
             <h3 className="mt-4 text-lg font-bold text-forest-900">Official fee snapshot</h3>
             <table className="mt-4 w-full text-left">
