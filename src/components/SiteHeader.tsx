@@ -5,21 +5,28 @@ import { navLinks } from '@/data/site'
 import type { SiteSettings } from '@/lib/content-types'
 import { Logo } from './Logo'
 
+const headerLinks = [...navLinks, { to: '/certificates', label: 'Certificates' }] as const
+
 export function SiteHeader({ settings }: { settings: SiteSettings }) {
   const [open, setOpen] = useState(false)
   const headerRef = useRef<HTMLElement>(null)
   const [headerHeight, setHeaderHeight] = useState(69)
 
   useEffect(() => {
-    const updateHeight = () => {
-      if (headerRef.current) {
-        setHeaderHeight(headerRef.current.offsetHeight)
-      }
-    }
+    const header = headerRef.current
+    if (!header) return
+
+    const updateHeight = () => setHeaderHeight(header.offsetHeight)
     updateHeight()
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(updateHeight)
+    observer?.observe(header)
     window.addEventListener('resize', updateHeight)
-    return () => window.removeEventListener('resize', updateHeight)
-  }, [open])
+
+    return () => {
+      observer?.disconnect()
+      window.removeEventListener('resize', updateHeight)
+    }
+  }, [open, settings.officeHours, settings.phones])
 
   return (
     <>
@@ -44,8 +51,8 @@ export function SiteHeader({ settings }: { settings: SiteSettings }) {
             <Link to="/" onClick={() => setOpen(false)}>
               <Logo />
             </Link>
-            <nav className="hidden items-center gap-1 lg:flex">
-              {navLinks.map((l) => (
+            <nav className="hidden items-center gap-1 xl:flex">
+              {headerLinks.map((l) => (
                 <Link
                   key={l.to}
                   to={l.to}
@@ -71,17 +78,19 @@ export function SiteHeader({ settings }: { settings: SiteSettings }) {
                 Free Enquiry
               </Link>
               <button
-                className="grid size-10 shrink-0 place-items-center rounded-full bg-forest-900 text-white lg:hidden sm:size-11"
+                className="grid size-10 shrink-0 place-items-center rounded-full bg-forest-900 text-white xl:hidden sm:size-11"
                 onClick={() => setOpen((v) => !v)}
                 aria-label="Menu"
+                aria-expanded={open}
+                aria-controls="mobile-site-nav"
               >
                 {open ? <X className="size-5" /> : <Menu className="size-5" />}
               </button>
             </div>
           </div>
           {open && (
-            <nav className="grid gap-1 border-t border-forest-900/10 bg-cream px-6 py-4 shadow-xl lg:hidden">
-              {navLinks.map((l) => (
+            <nav id="mobile-site-nav" className="grid gap-1 border-t border-forest-900/10 bg-cream px-6 py-4 shadow-xl xl:hidden">
+              {headerLinks.map((l) => (
                 <Link
                   key={l.to}
                   to={l.to}
@@ -91,9 +100,6 @@ export function SiteHeader({ settings }: { settings: SiteSettings }) {
                   {l.label}
                 </Link>
               ))}
-              <Link to="/certificates" onClick={() => setOpen(false)} className="rounded-xl px-4 py-3 font-display text-lg font-semibold text-forest-900 hover:bg-forest-900/5">
-                Certificates & partnerships
-              </Link>
               <Link to="/contact" onClick={() => setOpen(false)} className="rounded-xl px-4 py-3 font-display text-lg font-semibold text-coral-600">
                 Contact us
               </Link>
