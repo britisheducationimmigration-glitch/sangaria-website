@@ -41,6 +41,19 @@ const rotatingWords = [
   { text: 'IELTS 7.5+.', icon: '📚' },
 ]
 
+function HeroFlightPath() {
+  const route = 'M-80 420 C100 180 245 170 390 330 S700 475 825 270 S980 165 1080 260'
+  return (
+    <svg className="hero-flight-scene" viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true">
+      <path className="hero-flight-route" d={route} />
+      <g className="hero-flight-plane">
+        <path d="M0 46L39 43L57 9L66 6L62 43L94 51L100 56L94 61L62 69L66 92L57 89L39 63L0 60L8 54Z" />
+        <animateMotion dur="34s" repeatCount="indefinite" rotate="auto" path={route} />
+      </g>
+    </svg>
+  )
+}
+
 function Home() {
   const { approvals, posts, testimonials, certificates, settings } = Route.useLoaderData()
   const homepageApprovals = approvals.filter((story) => story.homepageFeatured !== false)
@@ -109,7 +122,8 @@ function Home() {
       <div className="block md:hidden bg-cream text-forest-900">
         {/* MOBILE HERO */}
         <section className="relative overflow-hidden bg-forest-900 bg-grain text-white px-5 pt-8 pb-16">
-          <div>
+          <HeroFlightPath />
+          <div className="relative z-10">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-forest-950/80 border border-white/20 px-3.5 py-1 text-[11px] font-bold text-coral-400 shadow-sm">
               📍 Sangaria · Hanumangarh · Since Day 1
             </span>
@@ -679,7 +693,8 @@ function Home() {
       <div className="hidden md:block bg-cream text-forest-900">
         {/* DESKTOP HERO */}
         <section className="relative overflow-hidden bg-forest-900 bg-grain text-white">
-          <div className="mx-auto grid max-w-7xl items-center gap-14 px-6 pt-16 pb-24 lg:grid-cols-[1.15fr_1fr] lg:pt-24">
+          <HeroFlightPath />
+          <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-14 px-6 pt-16 pb-24 lg:grid-cols-[1.15fr_1fr] lg:pt-24">
             <div>
               <div className="animate-rise">
                 <Eyebrow light>Sangaria · Hanumangarh · Since day one</Eyebrow>
@@ -804,7 +819,7 @@ function Home() {
             </div>
           </div>
 
-          <dl className="mx-auto mt-12 grid max-w-7xl grid-cols-2 gap-6 px-6 pb-16 sm:grid-cols-4">
+          <dl className="relative z-10 mx-auto mt-12 grid max-w-7xl grid-cols-2 gap-6 px-6 pb-16 sm:grid-cols-4">
             {settings.trustStats.map((s) => (
               <div key={s.label}>
                 <dt className="font-display text-3xl font-extrabold text-white">{s.value}</dt>
