@@ -4,7 +4,8 @@ import type { AdminCertificate, AdminPost, AdminRole, AdminSnapshot, AdminStory,
 import { Buffer } from 'node:buffer'
 import { asFaqList, asTrustStatList, readSiteSettings } from './site-settings'
 import { defaultCashflowData, mergeNewCashflowDestinations, type CountryCashflow } from '@/data/cashflow'
-import { applyScheduledCashflowPolicy } from '@/data/policy-watch'
+import { applyScheduledCashflowPolicy, type PolicyNotice } from '@/data/policy-watch'
+import { isTrustedPolicySourceUrl, readPolicyWatchState, scanOfficialPolicySources, writePolicyWatchState } from './policy-watch.server'
 import { isValidBatchStartDate } from '@/lib/batch-dates'
 import { getSupportedVideoEmbedUrl } from './video'
 import { invalidateCoachingCache, invalidatePublicContentCache } from './public-functions'
@@ -123,6 +124,96 @@ export const getAdminSnapshot = createServerFn({ method: 'GET' })
       certificates: certificateRows.map(mapCertificate),
     }
   })
+
+export const getAdminPolicyWatch = createServerFn({ method: 'GET' })
+  .middleware([adminMiddleware])
+  .handler(async ({ context }) => {
+    if (context.role !== 'super_admin') throw new Error('Only a super admin can manage policy notices')
+    const state = await readPolicyWatchState()
+    return { items: policyWatchItems, notices: state.notices, reviews: state.reviews }
+  })
+
+export const savePolicyNotice = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
+  const input = (data ?? {}) as Record<string, unknown>
+  const id = stringValue(input.id, 120)
+  const countrySlug = stringValue(input.countrySlug, 40)
+  const title = stringValue(input.title, 180)
+  const message = stringValue(input.message, 1400)
+  const showFrom = stringValue(input.showFrom, 10)
+  const expiresOn = stringValue(input.expiresOn, 10)
+  const sourceLabel = stringValue(input.sourceLabel, 180)
+  const sourceUrl = stringValue(input.sourceUrl, 500)
+  const status = stringValue(input.status, 20)
+  const sourceVerified = Boolean(input.sourceVerified)
+  if (!['all', 'canada', 'uk', 'australia', 'usa', 'new-zealand', 'germany', 'europe'].includes(countrySlug)) throw new Error('Choose a valid destination')
+  if (!title || !message) throw new Error('Add a title and notice text')
+  if (!['draft', 'published'].includes(status)) throw new Error('Choose draft or published')
+  if (status === 'published') {
+    if (!sourceVerified) throw new Error('Check the official source before publishing')
+    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(showFrom) || !/^\\d{4}-\\d{2}-\\d{2}$/.test(expiresOn) || expiresOn <= showFrom) throw new Error('Set a valid start date and a later hide date before publishing')
+    if (!isTrustedPolicySourceUrl(sourceUrl) || !sourceLabel) throw new Error('Published notices need a verified official HTTPS source link')
+  }
+  return { id, countrySlug, title, message, showFrom, expiresOn, sourceLabel, sourceUrl, status: status as 'draft' | 'published', sourceVerified }
+}).handler(async ({ data, context }): Promise<PolicyNotice> => {
+  if (context.role !== 'super_admin') throw new Error('Only a super admin can manage policy notices')
+  const state = await readPolicyWatchState()
+  const id = data.id || 'notice-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8)
+  const previous = state.notices.find((item) => item.id === id)
+  const notice: PolicyNotice = {
+    ...previous,
+    ...data,
+    id,
+    status: data.status,
+    sourceVerified: data.status === 'published' && data.sourceVerified,
+    guidanceUpdatedAt: previous?.guidanceUpdatedAt,
+    guidanceUpdatedBy: previous?.guidanceUpdatedBy,
+    sourceItemId: previous?.sourceItemId,
+  }
+  const index = state.notices.findIndex((item) => item.id === id)
+  if (index < 0) state.notices.unshift(notice)
+  else state.notices[index] = notice
+  await writePolicyWatchState(state)
+  return notice
+})
+
+export const deletePolicyNotice = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => ({
+  id: stringValue((data as Record<string, unknown>)?.id, 120),
+})).handler(async ({ data, context }) => {
+  if (context.role !== 'super_admin') throw new Error('Only a super admin can remove policy notices')
+  const state = await readPolicyWatchState()
+  state.notices = state.notices.filter((item) => item.id !== data.id)
+  for (const review of Object.values(state.reviews)) {
+    if (review.pendingDraftId === data.id) {
+      review.sourceChangePending = false
+      delete review.pendingDraftId
+    }
+  }
+  await writePolicyWatchState(state)
+  return { ok: true }
+})
+
+export const markPolicySourceReview = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
+  const input = (data ?? {}) as Record<string, unknown>
+  const itemId = stringValue(input.itemId, 120)
+  const action = stringValue(input.action, 30)
+  if (!policyWatchItems.some((item) => item.id === itemId) || !['checked', 'guidance-updated'].includes(action)) throw new Error('Invalid policy review action')
+  return { itemId, action: action as 'checked' | 'guidance-updated' }
+}).handler(async ({ data, context }) => {
+  if (context.role !== 'super_admin') throw new Error('Only a super admin can mark policy reviews')
+  const state = await readPolicyWatchState()
+  const previous = state.reviews[data.itemId] ?? {}
+  const now = new Date().toISOString()
+  state.reviews[data.itemId] = data.action === 'checked'
+    ? { ...previous, checkedAt: now, checkedBy: context.user.email, sourceChangePending: false, pendingDraftId: undefined }
+    : { ...previous, guidanceUpdatedAt: now, guidanceUpdatedBy: context.user.email }
+  await writePolicyWatchState(state)
+  return { ok: true, review: state.reviews[data.itemId] }
+})
+
+export const scanPolicySourcesNow = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).handler(async ({ context }) => {
+  if (context.role !== 'super_admin') throw new Error('Only a super admin can scan policy sources')
+  return scanOfficialPolicySources()
+})
 
 export const updateEnquiry = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
   const input = (data ?? {}) as Record<string, unknown>
