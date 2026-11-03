@@ -100,6 +100,7 @@ export async function getAdminCountryCatalog() {
     countries: await getPublicCountryCatalog(),
     drafts: Object.values(state.drafts),
     customSlugs: Object.keys(state.published).filter((slug) => !countries.some((country) => country.slug === slug)),
+    overrideSlugs: Object.keys(state.published),
   }
 }
 
