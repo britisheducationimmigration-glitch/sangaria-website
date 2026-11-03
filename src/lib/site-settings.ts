@@ -34,7 +34,7 @@ function normalizeTrustStat(stat: SiteTrustStat): SiteTrustStat {
   const label = stat.label.trim().toLowerCase()
   if (label === 'reported visa approvals') return { ...stat, label: 'Visas approved' }
   if (label === 'reported success ratio') return { ...stat, label: 'Success ratio' }
-  if (label === 'destinations') return { ...stat, value: 'Multiple', label: 'Study destinations' }
+  if (label === 'destinations' && stat.value.trim() === '7') return { ...stat, value: 'Multiple', label: 'Study destinations' }
   if (label === 'reported ielts avg.') return { ...stat, label: 'Avg. IELTS band' }
   return stat
 }
