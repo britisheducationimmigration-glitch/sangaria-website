@@ -238,6 +238,7 @@ export async function getDb() {
           flag VARCHAR(10) NOT NULL DEFAULT '',
           story_date DATE NOT NULL,
           note VARCHAR(220) NOT NULL DEFAULT '',
+          homepage_featured BOOLEAN NOT NULL DEFAULT TRUE,
           published BOOLEAN NOT NULL DEFAULT TRUE,
           created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -252,6 +253,7 @@ export async function getDb() {
       await ensureColumn(poolInstance, 'success_stories', 'media_alt', "VARCHAR(500) NOT NULL DEFAULT ''")
       await ensureColumn(poolInstance, 'success_stories', 'media_consent', 'BOOLEAN NOT NULL DEFAULT FALSE')
       await ensureColumn(poolInstance, 'success_stories', 'media_version', 'BIGINT UNSIGNED NOT NULL DEFAULT 0')
+      await ensureColumn(poolInstance, 'success_stories', 'homepage_featured', 'BOOLEAN NOT NULL DEFAULT TRUE')
       await poolInstance.query(`
         CREATE TABLE IF NOT EXISTS admin_users (
           open_id VARCHAR(190) NOT NULL PRIMARY KEY,
