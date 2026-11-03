@@ -12,6 +12,7 @@ type PanelData = {
   items: PolicyWatchItem[]
   notices: PolicyNotice[]
   reviews: Record<string, PolicySourceReview>
+  countries: { slug: string; name: string }[]
 }
 
 const blankNotice = (): PolicyNotice => ({
@@ -175,13 +176,7 @@ export function PolicyWatchPanel() {
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="text-sm font-semibold">Show on
               <select value={form.countrySlug} onChange={(event) => setForm({ ...form, countrySlug: event.currentTarget.value })} className="mt-1 min-h-11 w-full rounded-xl border border-forest-900/15 bg-white px-3">
-                <option value="uk">United Kingdom</option>
-                <option value="canada">Canada</option>
-                <option value="australia">Australia</option>
-                <option value="usa">United States</option>
-                <option value="new-zealand">New Zealand</option>
-                <option value="germany">Germany</option>
-                <option value="europe">Europe / Schengen</option>
+                {(data?.countries ?? []).map((country) => <option key={country.slug} value={country.slug}>{country.name}</option>)}
                 <option value="all">All country pages</option>
               </select>
             </label>
