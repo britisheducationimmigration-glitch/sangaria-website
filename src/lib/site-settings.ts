@@ -16,7 +16,7 @@ export const defaultSiteSettings: SiteSettings = {
   trustStats: [
     { value: '2,500+', label: 'Visas approved' },
     { value: '98%', label: 'Success ratio' },
-    { value: '7', label: 'Destinations' },
+    { value: 'Multiple', label: 'Study destinations' },
     { value: '7.0', label: 'Avg. IELTS band' },
   ],
 }
@@ -28,6 +28,15 @@ function cleanStrings(value: unknown, maxCount: number, maxLength: number) {
     .map((item) => item.trim().slice(0, maxLength))
     .filter(Boolean)
     .slice(0, maxCount)
+}
+
+function normalizeTrustStat(stat: SiteTrustStat): SiteTrustStat {
+  const label = stat.label.trim().toLowerCase()
+  if (label === 'reported visa approvals') return { ...stat, label: 'Visas approved' }
+  if (label === 'reported success ratio') return { ...stat, label: 'Success ratio' }
+  if (label === 'destinations' && stat.value.trim() === '7') return { ...stat, value: 'Multiple', label: 'Study destinations' }
+  if (label === 'reported ielts avg.') return { ...stat, label: 'Avg. IELTS band' }
+  return stat
 }
 
 export function mapPublicSiteSettings(raw: unknown): PublicSiteSettings {
@@ -52,6 +61,7 @@ export function mapPublicSiteSettings(raw: unknown): PublicSiteSettings {
         .map((item) => ({ value: typeof item.value === 'string' ? item.value.trim().slice(0, 40) : '', label: typeof item.label === 'string' ? item.label.trim().slice(0, 80) : '' }))
         .filter((item) => item.value && item.label)
         .slice(0, 6)
+        .map(normalizeTrustStat)
     : []
   return {
     phones: phones.length ? phones : defaultSiteSettings.phones,

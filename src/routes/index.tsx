@@ -401,7 +401,7 @@ function Home() {
           <div className="mb-8">
             <Eyebrow>Destinations</Eyebrow>
             <h2 className="mt-2 text-2xl font-extrabold text-forest-900">Choose where your next chapter begins.</h2>
-            <p className="mt-2 text-xs text-forest-900/70">Top study abroad countries with full guidance in Sangaria.</p>
+            <p className="mt-2 text-xs text-forest-900/70">Explore listed study destinations or ask us about others. Europe / Schengen is visitor guidance.</p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -544,15 +544,15 @@ function Home() {
         <CertificateCarousel certificates={certificates} id="certificates-m" />
 
         {/* TESTIMONIALS (MOBILE) */}
-        <section id="reviews-m" className="bg-sand/60 px-5 py-20 border-b border-forest-900/10">
-          <div className="mb-8">
+        <section id="reviews-m" className="bg-sand/60 px-5 py-12 border-b border-forest-900/10">
+          <div className="mb-6">
             <Eyebrow>Testimonials</Eyebrow>
             <h2 className="mt-2 text-2xl font-extrabold text-forest-900">Real students. Real visas.</h2>
           </div>
 
-          <div className="grid gap-5">
+          <div className={visibleTestimonialsMobile.length > 1 ? 'grid grid-cols-2 gap-4' : 'grid gap-4'}>
             {visibleTestimonialsMobile.map((t, i) => (
-              <TestimonialCard key={t.name} t={t} featured={i === 0} />
+              <TestimonialCard key={t.name} t={t} featured={i === 0} compact />
             ))}
           </div>
 
@@ -585,6 +585,15 @@ function Home() {
             {posts.slice(0, 3).map((p) => (
               <PostCard key={p.slug} p={p} />
             ))}
+          </div>
+
+          <div className="mt-6">
+            <Link
+              to="/updates"
+              className="flex min-h-11 w-full items-center justify-center rounded-full border border-forest-900/15 bg-white py-4 text-xs font-bold text-forest-900 shadow-sm transition hover:bg-forest-900 hover:text-white active:bg-forest-50"
+            >
+              View all articles →
+            </Link>
           </div>
         </section>
 

@@ -40,24 +40,25 @@ export function ApprovalCard({ a, i = 0 }: { a: Approval; i?: number }) {
   )
 }
 
-export function TestimonialCard({ t, featured }: { t: Testimonial; featured?: boolean }) {
+export function TestimonialCard({ t, featured, compact = false }: { t: Testimonial; featured?: boolean; compact?: boolean }) {
   return (
     <figure
       className={cn(
-        'flex h-full flex-col rounded-3xl p-7',
+        'flex h-full flex-col',
+        compact ? 'rounded-2xl p-4' : 'rounded-3xl p-7',
         featured ? 'bg-coral-500 text-white' : 'bg-white text-forest-900 ring-1 ring-forest-900/10',
       )}
     >
-      <Quote className={cn('size-8', featured ? 'text-white/60' : 'text-coral-500')} />
-      <blockquote className="mt-4 flex-1 text-[16.5px] leading-relaxed">“{t.quote}”</blockquote>
-      <div className="mt-5 flex gap-0.5">
+      <Quote className={cn(compact ? 'size-5' : 'size-8', featured ? 'text-white/60' : 'text-coral-500')} />
+      <blockquote className={cn('flex-1 leading-relaxed', compact ? 'mt-3 text-xs' : 'mt-4 text-[16.5px]')}>“{t.quote}”</blockquote>
+      <div className={cn('flex gap-0.5', compact ? 'mt-3' : 'mt-5')}>
         {Array.from({ length: 5 }).map((_, i) => (
-          <Star key={i} className="size-4 fill-amber-400 text-amber-400" />
+          <Star key={i} className={cn(compact ? 'size-3' : 'size-4', 'fill-amber-400 text-amber-400')} />
         ))}
       </div>
-      <figcaption className="mt-5 border-t border-forest-900/10 pt-4">
-        <p className="font-display font-bold">{t.name}</p>
-        <p className={cn('text-xs', featured ? 'text-white/70' : 'text-forest-900/60')}>
+      <figcaption className={cn('border-t border-forest-900/10', compact ? 'mt-auto pt-3' : 'mt-5 pt-4')}>
+        <p className={cn('font-display font-bold', compact && 'text-xs')}>{t.name}</p>
+        <p className={cn('text-xs', featured ? 'text-white/70' : 'text-forest-900/60', compact && 'text-[10px] leading-snug')}>
           {t.city} · {t.country} ({t.visa})
         </p>
       </figcaption>

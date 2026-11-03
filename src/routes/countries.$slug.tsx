@@ -14,11 +14,18 @@ export const Route = createFileRoute('/countries/$slug')({
     if (!country) throw notFound()
     return { country }
   },
-  head: ({ loaderData }) => createPageSeo({
-    title: `${loaderData.country.name} Study Visa & Costs | British Education`,
-    description: `Review ${loaderData.country.name} visa fees, study costs, intakes and guidance from official sources. Get free counselling in Sangaria.`,
-    path: `/countries/${loaderData.country.slug}`,
-  }),
+  head: ({ loaderData }) => {
+    const isEuropeGuide = loaderData.country.slug === 'europe'
+    return createPageSeo({
+      title: isEuropeGuide
+        ? 'Europe / Schengen Visitor Visa & Costs | British Education'
+        : `${loaderData.country.name} Study Visa & Costs | British Education`,
+      description: isEuropeGuide
+        ? 'Find Schengen short-stay visitor visa fees and guidance for tourism, family visits and business travel. For study plans, review the destination country’s study visa requirements.'
+        : `Review ${loaderData.country.name} visa fees, study costs, intakes and guidance from official sources. Get free counselling in Sangaria.`,
+      path: `/countries/${loaderData.country.slug}`,
+    })
+  },
   component: CountryPage,
 })
 
