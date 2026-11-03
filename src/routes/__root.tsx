@@ -1,5 +1,5 @@
 import { HeadContent, Link, Scripts, createRootRoute, useRouterState } from '@tanstack/react-router'
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { Analytics } from '@vercel/analytics/react'
 import { SiteFooter } from '@/components/SiteFooter'
 import { SiteHeader } from '@/components/SiteHeader'
@@ -132,6 +132,45 @@ function RootDocument({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const isAdmin = pathname.startsWith('/admin')
   const { settings } = Route.useLoaderData()
+
+  useEffect(() => {
+    if (isAdmin || window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) return
+    const main = document.querySelector('main')
+    if (!main) return
+
+    const sections = Array.from(main.querySelectorAll<HTMLElement>('section'))
+    if (!sections.length) return
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        (entry.target as HTMLElement).classList.toggle('is-scroll-visible', entry.isIntersecting)
+      }
+    }, { threshold: 0.08, rootMargin: '0px 0px -48px 0px' })
+
+    sections.forEach((section) => {
+      section.classList.add('scroll-reveal')
+      const rect = section.getBoundingClientRect()
+      if (section.getClientRects().length > 0 && rect.top < window.innerHeight * 0.9 && rect.bottom > 0) {
+        section.classList.add('is-scroll-visible')
+      }
+      section.querySelectorAll<HTMLElement>('.grid > article, .grid > a').forEach((item, index) => {
+        item.classList.add('scroll-reveal-item')
+        item.style.setProperty('--scroll-reveal-order', String(Math.min(index, 5)))
+      })
+      observer.observe(section)
+    })
+
+    return () => {
+      observer.disconnect()
+      sections.forEach((section) => {
+        section.classList.remove('scroll-reveal', 'is-scroll-visible')
+        section.querySelectorAll<HTMLElement>('.scroll-reveal-item').forEach((item) => {
+          item.classList.remove('scroll-reveal-item')
+          item.style.removeProperty('--scroll-reveal-order')
+        })
+      })
+    }
+  }, [isAdmin, pathname])
+
   return (
     <html lang="en">
       <head>
