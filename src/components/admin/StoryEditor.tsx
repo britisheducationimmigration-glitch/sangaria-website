@@ -206,7 +206,7 @@ export function StoryEditor({ item, onReload, onNotice, onClose }: {
               )}
               {form.mediaType === 'video' && (
                 <StoryField label="YouTube or Vimeo link" hint="Use an unlisted YouTube link when the video should not appear in YouTube search.">
-                  <input className="field" type="url" maxLength={500} value={form.videoUrl} onChange={(event) => setForm((current) => ({ ...current, videoUrl: event.currentTarget.value, mediaConsent: false }))} placeholder="https://youtu.be/… or https://vimeo.com/…" required />
+                  <input className="field" type="url" maxLength={500} value={form.videoUrl} onChange={(event) => { const videoUrl = event.currentTarget.value; setForm((current) => ({ ...current, videoUrl, mediaConsent: false })) }} placeholder="https://youtu.be/… or https://vimeo.com/…" required />
                 </StoryField>
               )}
               {form.mediaType !== 'none' && (
