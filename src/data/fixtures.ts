@@ -226,7 +226,7 @@ const baseCountries: Country[] = [
       workWhileStudying: "Eligible visa conditions may allow up to 25 hours/week and full-time work in specified holidays. From 27 October 2026, new master’s students (including master’s-by-research students) have the 25-hour weekly limit; unlimited in-study work no longer applies to new applications. Check the exact visa conditions.",
       postStudyOption: "A Post Study Work Visa may last up to 3 years depending on the completed qualification. Eligible master’s/doctoral study of at least 30 weeks can qualify for 3 years; other qualifications have separate rules. For affected student visas, INZ extended the usual post-course period from 1 to 2 months from 27 October 2026; exact visa expiry still depends on course and visa conditions.",
       intakesNote: "Common starts shown; provider and programme calendars vary.",
-      lastVerified: "3 November 2026",
+      lastVerified: "2 November 2026",
       sources: [
         { label: "INZ changes to student visas (27 October 2026)", url: "https://www.immigration.govt.nz/about-us/news-centre/changes-to-student-visas/" },
         { label: "Study with New Zealand costs", url: "https://www.studywithnewzealand.govt.nz/en/plan-your-studies/cost-of-living" },
