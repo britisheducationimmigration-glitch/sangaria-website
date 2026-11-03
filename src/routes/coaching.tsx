@@ -137,9 +137,12 @@ function CoachingPage() {
       </section>
 
       <section id="demo" className="mx-auto max-w-7xl scroll-mt-28 px-6 pb-24">
-        <div className="grid overflow-hidden rounded-[2rem] bg-forest-900 text-white lg:grid-cols-2">
-          <img src={img('/img/coaching.webp', 800, 700)} alt="Students in coaching class" loading="lazy" className="h-full min-h-64 w-full object-cover" />
-          <div className="bg-grain p-8 md:p-12">
+        <div className="grid overflow-hidden rounded-[2rem] bg-forest-900 text-white ring-1 ring-forest-900/10 lg:grid-cols-2">
+          <div className="group relative min-h-72 overflow-hidden sm:min-h-80 lg:min-h-[30rem]">
+            <img src={img('/img/coaching.webp', 800, 700)} alt="Students in coaching class" loading="lazy" className="absolute inset-0 size-full object-cover transition-transform duration-700 motion-reduce:transition-none md:group-hover:scale-[1.03]" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-forest-950/40 via-transparent to-transparent" />
+          </div>
+          <div className="relative overflow-hidden bg-forest-900 bg-grain p-8 md:p-12">
             <h2 className="text-3xl font-extrabold">Book a free demo class</h2>
             <p className="mt-2 mb-8 text-forest-100/70">Try a class and take a free diagnostic mock test.</p>
             <EnquiryForm source="coaching" defaultInterest="IELTS Coaching" dark compact />
