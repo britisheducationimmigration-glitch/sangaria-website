@@ -14,10 +14,10 @@ export const defaultSiteSettings: SiteSettings = {
   officeHours: site.hours,
   faqs: fixtureFaqs.map((item) => ({ q: item.q, a: item.a })),
   trustStats: [
-    { value: '2,500+', label: 'Visas approved' },
-    { value: '98%', label: 'Success ratio' },
-    { value: '7', label: 'Destinations' },
-    { value: '7.0', label: 'Avg. IELTS band' },
+    { value: '2,500+', label: 'Reported visa approvals' },
+    { value: '98%', label: 'Reported success ratio' },
+    { value: 'Multiple', label: 'Study destinations' },
+    { value: '7.0', label: 'Reported IELTS avg.' },
   ],
 }
 
