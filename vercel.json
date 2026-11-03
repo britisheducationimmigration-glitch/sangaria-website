@@ -296,5 +296,11 @@
       "source": "/(.*)",
       "destination": "/"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/policy-watch",
+      "schedule": "0 8 * * 1"
+    }
   ]
 }
