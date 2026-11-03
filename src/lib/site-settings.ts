@@ -14,10 +14,10 @@ export const defaultSiteSettings: SiteSettings = {
   officeHours: site.hours,
   faqs: fixtureFaqs.map((item) => ({ q: item.q, a: item.a })),
   trustStats: [
-    { value: '2,500+', label: 'Reported visa approvals' },
-    { value: '98%', label: 'Reported success ratio' },
+    { value: '2,500+', label: 'Visas approved' },
+    { value: '98%', label: 'Success ratio' },
     { value: 'Multiple', label: 'Study destinations' },
-    { value: '7.0', label: 'Reported IELTS avg.' },
+    { value: '7.0', label: 'Avg. IELTS band' },
   ],
 }
 
@@ -32,10 +32,10 @@ function cleanStrings(value: unknown, maxCount: number, maxLength: number) {
 
 function normalizeTrustStat(stat: SiteTrustStat): SiteTrustStat {
   const label = stat.label.trim().toLowerCase()
-  if (label === 'visas approved') return { ...stat, label: 'Reported visa approvals' }
-  if (label === 'success ratio') return { ...stat, label: 'Reported success ratio' }
+  if (label === 'reported visa approvals') return { ...stat, label: 'Visas approved' }
+  if (label === 'reported success ratio') return { ...stat, label: 'Success ratio' }
   if (label === 'destinations') return { ...stat, value: 'Multiple', label: 'Study destinations' }
-  if (label === 'avg. ielts band') return { ...stat, label: 'Reported IELTS avg.' }
+  if (label === 'reported ielts avg.') return { ...stat, label: 'Avg. IELTS band' }
   return stat
 }
 
