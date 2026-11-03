@@ -3,11 +3,13 @@ import { Check } from 'lucide-react'
 import { PageHero } from '@/components/Section'
 import { ServiceIcon } from '@/components/ServiceIcon'
 import { CountryFlag } from '@/components/CountryFlag'
-import { countries, visaServices } from '@/data/fixtures'
+import { visaServices } from '@/data/fixtures'
+import { getPublicCountryCatalogue } from '@/lib/public-functions'
 
 import { createPageSeo } from '@/lib/seo'
 
 export const Route = createFileRoute('/visas')({
+  loader: async () => ({ countryPages: await getPublicCountryCatalogue() }),
   head: () => createPageSeo({
     title: 'Study, Visitor & Work Visa Services | British Education Sangaria',
     description: 'Explore study, visitor, work and permanent residence guidance for Canada, the UK, Australia, New Zealand, the USA and Europe.',
@@ -17,6 +19,7 @@ export const Route = createFileRoute('/visas')({
 })
 
 function VisasPage() {
+  const { countryPages } = Route.useLoaderData()
   return (
     <>
       <PageHero
@@ -65,7 +68,7 @@ function VisasPage() {
       </section>
       <section className="bg-sand/60 py-16">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-3 px-6">
-          {countries.map((c) => (
+          {countryPages.map(({ country: c }) => (
             <Link
               key={c.slug}
               to="/countries/$slug"
