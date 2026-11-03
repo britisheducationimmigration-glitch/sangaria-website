@@ -560,12 +560,12 @@ export const getAdminCashflow = createServerFn({ method: 'GET' }).middleware([ad
   if (context.role !== 'super_admin') throw new Error('Only a super admin can view cashflow settings')
   const rows = await queryRows('SELECT cashflow_json FROM site_settings WHERE id = 1 LIMIT 1')
   const raw = rows[0]?.cashflow_json
-  if (typeof raw !== 'string' || !raw.trim()) return defaultCashflowData
+  if (typeof raw !== 'string' || !raw.trim()) return defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country))
   try {
     const parsed = JSON.parse(raw) as unknown
-    return Array.isArray(parsed) && parsed.length > 0 ? mergeNewCashflowDestinations(parsed as CountryCashflow[]) : defaultCashflowData
+    return (Array.isArray(parsed) && parsed.length > 0 ? mergeNewCashflowDestinations(parsed as CountryCashflow[]) : defaultCashflowData).map((country) => applyScheduledCashflowPolicy(country))
   } catch {
-    return defaultCashflowData
+    return defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country))
   }
 })
 
