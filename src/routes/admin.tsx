@@ -1,8 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { ApprovalCard, TestimonialCard } from '@/components/Cards'
 import { useEffect, useState, type FormEvent, type MouseEvent, type ReactNode } from 'react'
-import { getAdminCashflow, getAdminSnapshot, addEnquiryActivity, deleteAdminUser, deleteBatch, deleteEnquiry, deleteEnquiryActivity, deletePost, deleteStory, exportEnquiries, saveAdminUser, saveBatch, saveCashflow, savePost, saveStory, updateEnquiry, updateEnquiryActivity, updateSettings, saveFaq, saveTrustStat, saveContactDetails } from '@/lib/admin-functions'
+import { getAdminCashflow, getAdminSnapshot, addEnquiryActivity, deleteAdminUser, deleteBatch, deleteEnquiry, deleteEnquiryActivity, deletePost, exportEnquiries, saveAdminUser, saveBatch, saveCashflow, savePost, updateEnquiry, updateEnquiryActivity, updateSettings, saveFaq, saveTrustStat, saveContactDetails } from '@/lib/admin-functions'
 import { CertificatePanel } from '@/components/admin/CertificatePanel'
+import { StoryEditor } from '@/components/admin/StoryEditor'
 import type { AdminPost, AdminRole, AdminSnapshot, AdminStory, AdminUser, CoachingBatch, Enquiry, EnquiryActivity, EnquiryStatus } from '@/lib/content-types'
 import { defaultCashflowData, CountryCashflow } from '@/data/cashflow'
 import { formatBatchStartDate, getBatchDateStatus, isValidBatchStartDate } from '@/lib/batch-dates'
@@ -17,7 +17,7 @@ type Tab = 'enquiries' | 'news' | 'stories' | 'certificates' | 'batches' | 'budg
 const roleLabels: Record<AdminRole, string> = { super_admin: 'Super Admin', content_editor: 'Content Editor', enquiry_manager: 'Enquiry Manager' }
 
 const blankPost: Omit<AdminPost, 'id'> = { slug: '', title: '', category: 'Visa News', date: new Date().toISOString().slice(0, 10), excerpt: '', readMins: 4, body: [], published: false }
-const blankStory: Omit<AdminStory, 'id'> = { kind: 'testimonial', name: '', city: '', country: '', visa: '', quote: '', rating: 5, initials: '', flag: '', date: new Date().toISOString().slice(0, 10), note: '', published: false }
+const blankStory: Omit<AdminStory, 'id'> = { kind: 'testimonial', name: '', city: '', country: '', visa: '', quote: '', rating: 5, initials: '', flag: '', date: new Date().toISOString().slice(0, 10), note: '', mediaType: 'none', photoSrc: '', videoUrl: '', mediaAlt: '', mediaConsent: false, published: false }
 
 function AdminPage() {
   const [snapshot, setSnapshot] = useState<AdminSnapshot | null>(null)
@@ -825,43 +825,6 @@ function PostEditor({ item, onReload, onNotice, onClose }: { item: AdminPost; on
       <div className="mt-5 grid gap-4 border-t border-forest-900/10 pt-4">
         <label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={form.published} onChange={(e) => update('published', e.target.checked)} /> Publish on website</label>
         <div className="flex flex-wrap gap-2"><button disabled={busy || preview} className="rounded-full bg-forest-900 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">{busy ? 'Saving…' : 'Save article'}</button>{form.id > 0 && <button type="button" disabled={busy} onClick={() => void remove()} className="rounded-full border border-red-200 px-5 py-3 text-sm font-bold text-red-700 disabled:opacity-50">Delete</button>}</div>
-      </div>
-    </form>
-  )
-}
-function StoryEditor({ item, onReload, onNotice, onClose }: { item: AdminStory; onReload: () => Promise<void>; onNotice: (message: string) => void; onClose: () => void }) {
-  const [form, setForm] = useState(item)
-  const [busy, setBusy] = useState(false)
-  const [preview, setPreview] = useState(false)
-  function update<K extends keyof AdminStory>(key: K, value: AdminStory[K]) { setForm((current) => ({ ...current, [key]: value })) }
-  async function submit(event: FormEvent) { event.preventDefault(); setBusy(true); try { await saveStory({ data: form }); await onReload(); onNotice('Success story saved.'); onClose() } catch { onNotice('Could not save story. Check the fields.') } finally { setBusy(false) } }
-  async function remove() { if (!form.id || !window.confirm('Delete this story?')) return; setBusy(true); try { await deleteStory({ data: { id: form.id } }); await onReload(); onNotice('Story deleted.'); onClose() } catch { onNotice('Could not delete story.') } finally { setBusy(false) } }
-  return (
-    <form onSubmit={submit} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-forest-900/10">
-      <div className="mb-5 flex items-start justify-between gap-4">
-        <div><p className="font-mono text-[10px] uppercase tracking-[0.18em] text-coral-600">Success stories</p><h3 className="text-xl font-extrabold">Story editor</h3><p className="mt-1 text-xs leading-relaxed text-forest-900/55">Use this for a visa approval or a client testimonial. Published entries appear on the Success Stories page and home page.</p></div>
-        <div className="flex shrink-0 items-center gap-2"><button type="button" aria-pressed={preview} onClick={() => setPreview((value) => !value)} className={'rounded-full px-4 py-2 text-xs font-bold ring-1 ring-forest-900/15 ' + (preview ? 'bg-coral-500 text-white ring-coral-500' : 'bg-white text-forest-900')}>{preview ? 'Back to edit' : 'Preview'}</button><button type="button" onClick={onClose} className="text-sm font-bold text-forest-900/50">Close</button></div>
-      </div>
-      {preview ? (
-        <div className="rounded-2xl bg-forest-50 p-4 sm:p-5">
-          <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-coral-600">Public card preview · unsaved changes</p>
-          <div className="mx-auto mt-3 max-w-md">{form.kind === 'approval' ? <ApprovalCard a={form} /> : <TestimonialCard t={form} />}</div>
-          <p className="mt-3 text-xs text-forest-900/55">Preview changes only; they reach the website after you return to edit and save.</p>
-        </div>
-      ) : (
-        <div className="grid gap-4">
-          <div className="grid gap-4 sm:grid-cols-2"><EditorField label="Story type" hint="Choose approval for a result card or testimonial for a client quote"><select className="field" value={form.kind} onChange={(e) => update('kind', e.target.value as AdminStory['kind'])}><option value="testimonial">Client testimonial</option><option value="approval">Visa approval</option></select></EditorField><EditorField label="Person / family name" hint="Example: Harpreet Kaur or Pooja & Family"><input className="field" value={form.name} onChange={(e) => update('name', e.target.value)} placeholder="Client name" required /></EditorField></div>
-          <div className="grid gap-4 sm:grid-cols-2"><EditorField label="City" hint="Example: Sangaria"><input className="field" value={form.city} onChange={(e) => update('city', e.target.value)} placeholder="Client city" /></EditorField><EditorField label="Destination country" hint="Example: Canada, United Kingdom or Australia"><input className="field" value={form.country} onChange={(e) => update('country', e.target.value)} placeholder="Country reached / applied to" /></EditorField></div>
-          <div className="grid gap-4 sm:grid-cols-2"><EditorField label="Visa / course"><input className="field" value={form.visa} onChange={(e) => update('visa', e.target.value)} placeholder="Study Permit, Student Visa, IELTS…" /></EditorField><EditorField label="Flag code / emoji (optional)" hint="Optional; use CA, UK, AU or an emoji. The footer uses reliable code badges."><input className="field" value={form.flag} onChange={(e) => update('flag', e.target.value)} placeholder="CA or 🇨🇦" /></EditorField></div>
-          <div className="grid gap-4 sm:grid-cols-2"><EditorField label="Initials" hint="Two letters shown on the story card; example: HK"><input className="field" value={form.initials} onChange={(e) => update('initials', e.target.value)} placeholder="HK" /></EditorField><EditorField label="Approval / story date"><input className="field" type="date" value={form.date} onChange={(e) => update('date', e.target.value)} /></EditorField></div>
-          <EditorField label="Rating (1 to 5 stars)"><input className="field" type="number" min="1" max="5" value={form.rating} onChange={(e) => update('rating', Number(e.target.value))} /></EditorField>
-          <EditorField label="Client quote" hint="Write the exact short testimonial. For an approval, describe the result in one or two sentences."><textarea className="field" rows={6} value={form.quote} onChange={(e) => update('quote', e.target.value)} placeholder="My visa was approved..." /></EditorField>
-          <EditorField label="Short result note" hint="Example: Sept intake · Conestoga or MSc Data Science"><input className="field" value={form.note} onChange={(e) => update('note', e.target.value)} placeholder="Extra result detail shown on the card" /></EditorField>
-        </div>
-      )}
-      <div className="mt-5 grid gap-4 border-t border-forest-900/10 pt-4">
-        <label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={form.published} onChange={(e) => update('published', e.target.checked)} /> Publish on website</label>
-        <div className="flex flex-wrap gap-2"><button disabled={busy || preview} className="rounded-full bg-forest-900 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">{busy ? 'Saving…' : 'Save story'}</button>{form.id > 0 && <button type="button" disabled={busy} onClick={() => void remove()} className="rounded-full border border-red-200 px-5 py-3 text-sm font-bold text-red-700 disabled:opacity-50">Delete</button>}</div>
       </div>
     </form>
   )

@@ -17,6 +17,7 @@ import { Route as CoachingRouteImport } from './routes/coaching'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as EligibilityRouteImport } from './routes/eligibility'
 import { Route as SuccessStoriesRouteImport } from './routes/success-stories'
+import { Route as SuccessStoriesMediaRouteImport } from './routes/success-stories.media.$id'
 import { Route as VisasRouteImport } from './routes/visas'
 import { Route as CountriesIndexRouteImport } from './routes/countries.index'
 import { Route as CountriesSlugRouteImport } from './routes/countries.$slug'
@@ -64,6 +65,11 @@ const EligibilityRoute = EligibilityRouteImport.update({
 const SuccessStoriesRoute = SuccessStoriesRouteImport.update({
   id: '/success-stories',
   path: '/success-stories',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SuccessStoriesMediaRoute = SuccessStoriesMediaRouteImport.update({
+  id: '/success-stories/media/$id',
+  path: '/success-stories/media/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const VisasRoute = VisasRouteImport.update({
@@ -116,6 +122,7 @@ export interface FileRoutesByFullPath {
   '/certificates/image/$id': typeof CertificatesImageRoute
   '/eligibility': typeof EligibilityRoute
   '/success-stories': typeof SuccessStoriesRoute
+  '/success-stories/media/$id': typeof SuccessStoriesMediaRoute
   '/visas': typeof VisasRoute
   '/countries/$slug': typeof CountriesSlugRoute
   '/updates/$slug': typeof UpdatesSlugRoute
@@ -134,6 +141,7 @@ export interface FileRoutesByTo {
   '/certificates/image/$id': typeof CertificatesImageRoute
   '/eligibility': typeof EligibilityRoute
   '/success-stories': typeof SuccessStoriesRoute
+  '/success-stories/media/$id': typeof SuccessStoriesMediaRoute
   '/visas': typeof VisasRoute
   '/countries/$slug': typeof CountriesSlugRoute
   '/updates/$slug': typeof UpdatesSlugRoute
@@ -153,6 +161,7 @@ export interface FileRoutesById {
   '/certificates/image/$id': typeof CertificatesImageRoute
   '/eligibility': typeof EligibilityRoute
   '/success-stories': typeof SuccessStoriesRoute
+  '/success-stories/media/$id': typeof SuccessStoriesMediaRoute
   '/visas': typeof VisasRoute
   '/countries/$slug': typeof CountriesSlugRoute
   '/updates/$slug': typeof UpdatesSlugRoute
@@ -173,6 +182,7 @@ export interface FileRouteTypes {
     | '/certificates/image/$id'
     | '/eligibility'
     | '/success-stories'
+    | '/success-stories/media/$id'
     | '/visas'
     | '/countries/$slug'
     | '/updates/$slug'
@@ -191,6 +201,7 @@ export interface FileRouteTypes {
     | '/certificates/image/$id'
     | '/eligibility'
     | '/success-stories'
+    | '/success-stories/media/$id'
     | '/visas'
     | '/countries/$slug'
     | '/updates/$slug'
@@ -209,6 +220,7 @@ export interface FileRouteTypes {
     | '/certificates/image/$id'
     | '/eligibility'
     | '/success-stories'
+    | '/success-stories/media/$id'
     | '/visas'
     | '/countries/$slug'
     | '/updates/$slug'
@@ -228,6 +240,7 @@ export interface RootRouteChildren {
   CertificatesImageRoute: typeof CertificatesImageRoute
   EligibilityRoute: typeof EligibilityRoute
   SuccessStoriesRoute: typeof SuccessStoriesRoute
+  SuccessStoriesMediaRoute: typeof SuccessStoriesMediaRoute
   VisasRoute: typeof VisasRoute
   CountriesSlugRoute: typeof CountriesSlugRoute
   UpdatesSlugRoute: typeof UpdatesSlugRoute
@@ -291,6 +304,13 @@ declare module '@tanstack/react-router' {
       path: '/success-stories'
       fullPath: '/success-stories'
       preLoaderRoute: typeof SuccessStoriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/success-stories/media/$id': {
+      id: '/success-stories/media/$id'
+      path: '/success-stories/media/$id'
+      fullPath: '/success-stories/media/$id'
+      preLoaderRoute: typeof SuccessStoriesMediaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/visas': {
@@ -375,6 +395,7 @@ const rootRouteChildren: RootRouteChildren = {
   CertificatesImageRoute: CertificatesImageRoute,
   EligibilityRoute: EligibilityRoute,
   SuccessStoriesRoute: SuccessStoriesRoute,
+  SuccessStoriesMediaRoute: SuccessStoriesMediaRoute,
   VisasRoute: VisasRoute,
   CountriesSlugRoute: CountriesSlugRoute,
   UpdatesSlugRoute: UpdatesSlugRoute,

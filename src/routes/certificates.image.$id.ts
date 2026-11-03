@@ -24,7 +24,7 @@ export const Route = createFileRoute('/certificates/image/$id')({
           return new Response(body, {
             headers: {
               'Content-Type': mimeType,
-              'Cache-Control': Boolean(row.published) ? 'public, max-age=60, s-maxage=60' : 'private, no-store',
+              'Cache-Control': Boolean(row.published) ? 'public, max-age=31536000, immutable' : 'private, no-store',
               'X-Content-Type-Options': 'nosniff',
             },
           })

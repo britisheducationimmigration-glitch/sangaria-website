@@ -425,6 +425,9 @@ export type Approval = {
   visa: string
   date: string
   note?: string
+  photoSrc?: string
+  videoUrl?: string
+  mediaAlt?: string
 }
 
 export const approvals: Approval[] = [

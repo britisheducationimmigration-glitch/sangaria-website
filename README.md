@@ -31,8 +31,9 @@ The private dashboard is available at `/admin`. Sign-in is restricted to authori
 - **Demo requests:** Review IELTS/PTE demo enquiries and follow-up status.
 - **Review queue and reports:** Surface new leads and unpublished articles; view lead totals by pipeline stage and source.
 - **Excel export:** Download filtered leads as an XLSX workbook with lead, summary and follow-up sheets.
-- **Content management:** Create and edit updates, success stories, testimonials and approval records.
-- **Certificates:** Upload certificate images, edit their details, publish or hide them, and choose which ones appear in the homepage carousel.
+- **Content management:** Create and edit updates, success stories, testimonials and visa approval records.
+- **Visa approval media:** Add an optional compressed student photo or a hosted YouTube/Vimeo video. Publishing media requires confirming student consent; hosted videos autoplay muted when visible and lazy-load near the viewport; visitors can pause or unmute them.
+- **Certificates:** Upload certificate images, edit their details, publish or hide them, and choose which ones appear in the homepage carousel. Pale scans receive a mild display-only contrast and colour boost.
 - **Coaching batches:** Manage the public IELTS/PTE batch schedule.
 - **Cashflow planner:** Edit destination budget estimates and payment stages used by the public planner.
 - **Website settings:** Manage public phone numbers, email addresses, office hours, homepage FAQs and trust figures, plus the enquiry-popup, WhatsApp-button and approvals-strip controls.
@@ -48,7 +49,7 @@ The site is **partly database-managed**. Public defaults and frequently updated 
 | --- | --- |
 | Enquiries and timestamped lead activity | MySQL tables managed through the admin lead workflow. |
 | Updates, success stories, testimonials and approvals | MySQL-backed admin editors; fixture records can seed an empty database. |
-| Coaching batches and certificates | MySQL-backed admin editors. Certificate uploads are stored with their database records. |
+| Coaching batches, certificates and visa approval media | MySQL-backed admin editors. Compressed certificate and approval photos are stored with their records; video playback uses a validated external YouTube/Vimeo link rather than a video blob in MySQL. |
 | Public site settings and cashflow budgets | MySQL-backed settings, editable from the admin dashboard. |
 | Country profiles, destination summaries and service copy | Source files, primarily `src/data/fixtures.ts`. These are not general-purpose admin editors. |
 | Visa fees, requirements, official source links and `lastVerified` dates | `src/data/visa-guidance.ts`; update in code after checking the official government source. |
@@ -126,7 +127,7 @@ Run `pnpm start` after a successful production build.
 
 ## Deployment
 
-The repository includes a Vercel rewrite configuration and is built as a server-capable application. Deploy it to a Node.js hosting platform that can reach the configured MySQL database; a static-only host such as GitHub Pages cannot run the admin and enquiry server functions.
+Page responses revalidate on visits, while fingerprinted build assets remain safely cached; uploaded certificate and approval photos use versioned URLs. The repository includes a Vercel rewrite configuration and is built as a server-capable application. Deploy it to a Node.js hosting platform that can reach the configured MySQL database; a static-only host such as GitHub Pages cannot run the admin and enquiry server functions.
 
 The application initialises its database schema from `src/lib/db.server.ts`. The database user must be allowed to create tables and apply the small schema updates used by the app. Configure environment variables separately for preview and production, and use an isolated or non-production database for preview deployments.
 

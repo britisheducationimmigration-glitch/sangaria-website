@@ -5,6 +5,8 @@ import { Buffer } from 'node:buffer'
 import { asFaqList, asTrustStatList, readSiteSettings } from './site-settings'
 import { defaultCashflowData, mergeNewCashflowDestinations, type CountryCashflow } from '@/data/cashflow'
 import { isValidBatchStartDate } from '@/lib/batch-dates'
+import { getSupportedVideoEmbedUrl } from './video'
+import { invalidateCoachingCache, invalidatePublicContentCache } from './public-functions'
 
 function stringValue(value: unknown, max = 5000) {
   return typeof value === 'string' ? value.trim().slice(0, max) : ''
@@ -49,7 +51,10 @@ function mapAdminPost(row: Record<string, unknown>): AdminPost {
   return { id: Number(row.id), slug: String(row.slug), title: String(row.title), category: String(row.category) as AdminPost['category'], date: dateOnly(row.publish_date), excerpt: String(row.excerpt), readMins: Number(row.read_mins), body: jsonArray(row.body_json).map(String), published: Boolean(row.published) }
 }
 function mapAdminStory(row: Record<string, unknown>): AdminStory {
-  return { id: Number(row.id), kind: String(row.kind) as AdminStory['kind'], name: String(row.name), city: String(row.city), country: String(row.country), visa: String(row.visa), quote: String(row.quote), rating: Number(row.rating), initials: String(row.initials), flag: String(row.flag), date: dateOnly(row.story_date), note: String(row.note), published: Boolean(row.published) }
+  const photoSrc = Boolean(row.has_photo) ? '/success-stories/media/' + Number(row.id) + '?v=' + Number(row.media_version ?? 0) : ''
+  const videoUrl = String(row.video_url ?? '')
+  const mediaType: AdminStory['mediaType'] = photoSrc ? 'photo' : getSupportedVideoEmbedUrl(videoUrl) ? 'video' : 'none'
+  return { id: Number(row.id), kind: String(row.kind) as AdminStory['kind'], name: String(row.name), city: String(row.city), country: String(row.country), visa: String(row.visa), quote: String(row.quote), rating: Number(row.rating), initials: String(row.initials), flag: String(row.flag), date: dateOnly(row.story_date), note: String(row.note), mediaType, photoSrc, videoUrl: mediaType === 'video' ? videoUrl : '', mediaAlt: String(row.media_alt ?? ''), mediaConsent: Boolean(row.media_consent), published: Boolean(row.published) }
 }
 function mapBatch(row: Record<string, unknown>): CoachingBatch {
   return { id: Number(row.id), program: String(row.program), batch: String(row.batch_name), time: String(row.time_slot), seats: Number(row.seats), starts: String(row.starts), published: Boolean(row.published) }
@@ -65,7 +70,7 @@ function mapCertificate(row: Record<string, unknown>): AdminCertificate {
     category: String(row.category),
     credentialDate: String(row.credential_date ?? ''),
     altText: String(row.alt_text),
-    imageSrc: hasDatabaseImage ? '/certificates/image/' + id : String(row.image_path ?? ''),
+    imageSrc: hasDatabaseImage ? '/certificates/image/' + id + '?v=' + Number(row.image_version ?? 0) : String(row.image_path ?? ''),
     homepageFeatured: Boolean(row.homepage_featured),
     published: Boolean(row.published),
     sortOrder: Number(row.sort_order),
@@ -80,14 +85,14 @@ export const getAdminSnapshot = createServerFn({ method: 'GET' })
     const [enquiryRows, postRows, storyRows, settingsRows, userRows, statRows, batchRows, statusRows, sourceRows, certificateRows] = await Promise.all([
       context.role === 'content_editor' ? Promise.resolve([]) : queryRows('SELECT id, name, phone, email, city, interest, country, message, source, summary, status, notes, assigned_to, next_follow_up_at, created_at, updated_at FROM enquiries ORDER BY created_at DESC LIMIT 150'),
       context.role === 'enquiry_manager' ? Promise.resolve([]) : queryRows('SELECT * FROM content_posts ORDER BY publish_date DESC, id DESC LIMIT 100'),
-      context.role === 'enquiry_manager' ? Promise.resolve([]) : queryRows('SELECT * FROM success_stories ORDER BY story_date DESC, id DESC LIMIT 100'),
+      context.role === 'enquiry_manager' ? Promise.resolve([]) : queryRows('SELECT id, kind, name, city, country, visa, quote, rating, initials, flag, story_date, note, photo_data IS NOT NULL AS has_photo, video_url, media_alt, media_consent, media_version, published FROM success_stories ORDER BY story_date DESC, id DESC LIMIT 100'),
       context.role === 'super_admin' ? queryRows('SELECT popup_enabled, popup_delay_seconds, whatsapp_enabled, approvals_marquee_enabled, public_settings_json FROM site_settings WHERE id = 1 LIMIT 1') : Promise.resolve([]),
       context.role === 'super_admin' ? queryRows('SELECT * FROM admin_users ORDER BY email ASC') : Promise.resolve([]),
       context.role === 'content_editor' ? Promise.resolve([]) : queryRows(`SELECT COUNT(*) AS total, SUM(status = 'New') AS new_count, SUM(status IN ('Follow-up', 'Documents Pending', 'Applied')) AS follow_ups, SUM(status = 'Converted') AS converted, SUM(created_at >= CURRENT_DATE - INTERVAL 6 DAY) AS new_last_7_days, SUM(source = 'coaching') AS demo_requests, SUM(next_follow_up_at IS NOT NULL AND DATE(next_follow_up_at) = CURRENT_DATE() AND status NOT IN ('Converted', 'Closed')) AS due_today FROM enquiries`),
       context.role === 'enquiry_manager' ? Promise.resolve([]) : queryRows('SELECT id, program, batch_name, time_slot, seats, starts, published FROM coaching_batches ORDER BY id ASC'),
       context.role === 'content_editor' ? Promise.resolve([]) : queryRows('SELECT status, COUNT(*) AS count FROM enquiries GROUP BY status'),
       context.role === 'content_editor' ? Promise.resolve([]) : queryRows('SELECT source, COUNT(*) AS count FROM enquiries GROUP BY source'),
-      context.role === 'enquiry_manager' ? Promise.resolve([]) : queryRows('SELECT id, collection, title, issuer, category, credential_date, alt_text, image_path, image_data IS NOT NULL AS has_database_image, homepage_featured, published, sort_order FROM certificate_items WHERE collection = \'certificates\' ORDER BY sort_order ASC, id ASC'),
+      context.role === 'enquiry_manager' ? Promise.resolve([]) : queryRows('SELECT id, collection, title, issuer, category, credential_date, alt_text, image_path, image_data IS NOT NULL AS has_database_image, image_version, homepage_featured, published, sort_order FROM certificate_items WHERE collection = \'certificates\' ORDER BY sort_order ASC, id ASC'),
     ])
     const activityRows = enquiryRows.length
       ? await queryRows(
@@ -230,12 +235,14 @@ export const savePost = createServerFn({ method: 'POST' }).middleware([adminMidd
   assertCapability(context.role, 'content')
   if (data.id) await execute('UPDATE content_posts SET slug = ?, title = ?, category = ?, publish_date = ?, excerpt = ?, read_mins = ?, body_json = ?, published = ? WHERE id = ?', [data.slug, data.title, data.category, data.date, data.excerpt, data.readMins, JSON.stringify(data.body), data.published ? 1 : 0, data.id])
   else await execute('INSERT INTO content_posts (slug, title, category, publish_date, excerpt, read_mins, body_json, published) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [data.slug, data.title, data.category, data.date, data.excerpt, data.readMins, JSON.stringify(data.body), data.published ? 1 : 0])
+  invalidatePublicContentCache()
   return { ok: true }
 })
 
 export const deletePost = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => ({ id: numberValue((data as Record<string, unknown>)?.id) })).handler(async ({ data, context }) => {
   assertCapability(context.role, 'content')
   await execute('DELETE FROM content_posts WHERE id = ?', [data.id])
+  invalidatePublicContentCache()
   return { ok: true }
 })
 
@@ -245,17 +252,101 @@ export const saveStory = createServerFn({ method: 'POST' }).middleware([adminMid
   if (kind !== 'approval' && kind !== 'testimonial') throw new Error('Choose a story type')
   const name = stringValue(input.name, 160)
   if (!name) throw new Error('Name is required')
-  return { id: numberValue(input.id), kind, name, city: stringValue(input.city, 120), country: stringValue(input.country, 120), visa: stringValue(input.visa, 160), quote: stringValue(input.quote, 10000), rating: Math.max(1, Math.min(5, numberValue(input.rating, 5))), initials: stringValue(input.initials, 10), flag: stringValue(input.flag, 10), date: stringValue(input.date, 10) || new Date().toISOString().slice(0, 10), note: stringValue(input.note, 220), published: Boolean(input.published) }
+  const mediaType = kind === 'approval' ? stringValue(input.mediaType, 10) as AdminStory['mediaType'] : 'none'
+  if (!['none', 'photo', 'video'].includes(mediaType)) throw new Error('Choose a valid approval media type')
+  const photoBase64 = typeof input.photoBase64 === 'string' ? input.photoBase64 : ''
+  if (photoBase64.length > 2_200_000 || (photoBase64 && !/^[A-Za-z0-9+/]+={0,2}$/.test(photoBase64))) throw new Error('Choose a smaller student photo')
+  const photoMimeType = stringValue(input.photoMimeType, 40)
+  const videoUrl = stringValue(input.videoUrl, 500)
+  const mediaAlt = stringValue(input.mediaAlt, 500)
+  const mediaConsent = Boolean(input.mediaConsent)
+  const published = Boolean(input.published)
+  if (mediaType === 'photo' && !mediaAlt) throw new Error('Add a photo description for accessibility')
+  if (mediaType === 'video' && !getSupportedVideoEmbedUrl(videoUrl)) throw new Error('Use a valid HTTPS YouTube or Vimeo link')
+  if (photoBase64 && (mediaType !== 'photo' || photoMimeType !== 'image/webp')) throw new Error('Select a photo in JPG, PNG or WebP format')
+  if (published && mediaType !== 'none' && !mediaConsent) throw new Error('Confirm the student agreed to publish this media')
+  return {
+    id: numberValue(input.id),
+    kind,
+    name,
+    city: stringValue(input.city, 120),
+    country: stringValue(input.country, 120),
+    visa: stringValue(input.visa, 160),
+    quote: stringValue(input.quote, 10000),
+    rating: Math.max(1, Math.min(5, numberValue(input.rating, 5))),
+    initials: stringValue(input.initials, 10),
+    flag: stringValue(input.flag, 10),
+    date: stringValue(input.date, 10) || new Date().toISOString().slice(0, 10),
+    note: stringValue(input.note, 220),
+    mediaType,
+    photoBase64,
+    photoMimeType,
+    videoUrl,
+    mediaAlt,
+    mediaConsent,
+    published,
+  }
 }).handler(async ({ data, context }) => {
   assertCapability(context.role, 'content')
-  if (data.id) await execute('UPDATE success_stories SET kind = ?, name = ?, city = ?, country = ?, visa = ?, quote = ?, rating = ?, initials = ?, flag = ?, story_date = ?, note = ?, published = ? WHERE id = ?', [data.kind, data.name, data.city, data.country, data.visa, data.quote, data.rating, data.initials, data.flag, data.date, data.note, data.published ? 1 : 0, data.id])
-  else await execute('INSERT INTO success_stories (kind, name, city, country, visa, quote, rating, initials, flag, story_date, note, published) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [data.kind, data.name, data.city, data.country, data.visa, data.quote, data.rating, data.initials, data.flag, data.date, data.note, data.published ? 1 : 0])
+  let photo: Buffer | null = null
+  if (data.photoBase64) {
+    photo = Buffer.from(data.photoBase64, 'base64')
+    if (!photo.length || photo.length > 1.5 * 1024 * 1024) throw new Error('Choose a smaller student photo (maximum 1.5 MB after compression)')
+    const webp = photo.toString('ascii', 0, 4) === 'RIFF' && photo.toString('ascii', 8, 12) === 'WEBP'
+    if (!webp) throw new Error('The selected photo is not a valid WebP image')
+  }
+
+  let existingHasPhoto = false
+  if (data.id && data.mediaType === 'photo' && !photo) {
+    const existingRows = await queryRows('SELECT photo_data IS NOT NULL AS has_photo FROM success_stories WHERE id = ? LIMIT 1', [data.id])
+    existingHasPhoto = Boolean(existingRows[0]?.has_photo)
+    if (!existingHasPhoto) throw new Error('Choose a student photo before saving this approval')
+  }
+
+  const mediaType = data.kind === 'approval' ? data.mediaType : 'none'
+  const mediaConsent = mediaType !== 'none' && data.mediaConsent ? 1 : 0
+  const base = [data.kind, data.name, data.city, data.country, data.visa, data.quote, data.rating, data.initials, data.flag, data.date, data.note, data.published ? 1 : 0]
+  if (data.id) {
+    if (mediaType === 'photo' && photo) {
+      await execute(
+        'UPDATE success_stories SET kind = ?, name = ?, city = ?, country = ?, visa = ?, quote = ?, rating = ?, initials = ?, flag = ?, story_date = ?, note = ?, published = ?, photo_mime_type = ?, photo_data = ?, video_url = NULL, media_alt = ?, media_consent = ?, media_version = ? WHERE id = ?',
+        [...base, data.photoMimeType, photo, data.mediaAlt, mediaConsent, Date.now(), data.id],
+      )
+    } else if (mediaType === 'photo') {
+      await execute(
+        'UPDATE success_stories SET kind = ?, name = ?, city = ?, country = ?, visa = ?, quote = ?, rating = ?, initials = ?, flag = ?, story_date = ?, note = ?, published = ?, video_url = NULL, media_alt = ?, media_consent = ?, media_version = ? WHERE id = ?',
+        [...base, data.mediaAlt, mediaConsent, Date.now(), data.id],
+      )
+    } else if (mediaType === 'video') {
+      await execute(
+        'UPDATE success_stories SET kind = ?, name = ?, city = ?, country = ?, visa = ?, quote = ?, rating = ?, initials = ?, flag = ?, story_date = ?, note = ?, published = ?, photo_mime_type = NULL, photo_data = NULL, video_url = ?, media_alt = ?, media_consent = ?, media_version = ? WHERE id = ?',
+        [...base, data.videoUrl, '', mediaConsent, Date.now(), data.id],
+      )
+    } else {
+      await execute(
+        'UPDATE success_stories SET kind = ?, name = ?, city = ?, country = ?, visa = ?, quote = ?, rating = ?, initials = ?, flag = ?, story_date = ?, note = ?, published = ?, photo_mime_type = NULL, photo_data = NULL, video_url = NULL, media_alt = ?, media_consent = ?, media_version = ? WHERE id = ?',
+        [...base, '', 0, Date.now(), data.id],
+      )
+    }
+  } else {
+    const photoMimeType = mediaType === 'photo' ? data.photoMimeType : null
+    const photoData = mediaType === 'photo' ? photo : null
+    if (mediaType === 'photo' && !photoData) throw new Error('Choose a student photo before saving this approval')
+    const videoUrl = mediaType === 'video' ? data.videoUrl : null
+    const mediaAlt = mediaType === 'photo' ? data.mediaAlt : ''
+    await execute(
+      'INSERT INTO success_stories (kind, name, city, country, visa, quote, rating, initials, flag, story_date, note, photo_mime_type, photo_data, video_url, media_alt, media_consent, media_version, published) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [data.kind, data.name, data.city, data.country, data.visa, data.quote, data.rating, data.initials, data.flag, data.date, data.note, photoMimeType, photoData, videoUrl, mediaAlt, mediaConsent, photoData ? Date.now() : 0, data.published ? 1 : 0],
+    )
+  }
+  invalidatePublicContentCache()
   return { ok: true }
 })
 
 export const deleteStory = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => ({ id: numberValue((data as Record<string, unknown>)?.id) })).handler(async ({ data, context }) => {
   assertCapability(context.role, 'content')
   await execute('DELETE FROM success_stories WHERE id = ?', [data.id])
+  invalidatePublicContentCache()
   return { ok: true }
 })
 
@@ -271,12 +362,14 @@ export const saveBatch = createServerFn({ method: 'POST' }).middleware([adminMid
   assertCapability(context.role, 'content')
   if (data.id) await execute('UPDATE coaching_batches SET program = ?, batch_name = ?, time_slot = ?, seats = ?, starts = ?, published = ? WHERE id = ?', [data.program, data.batch, data.time, data.seats, data.starts, data.published ? 1 : 0, data.id])
   else await execute('INSERT INTO coaching_batches (program, batch_name, time_slot, seats, starts, published) VALUES (?, ?, ?, ?, ?, ?)', [data.program, data.batch, data.time, data.seats, data.starts, data.published ? 1 : 0])
+  invalidateCoachingCache()
   return { ok: true }
 })
 
 export const deleteBatch = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => ({ id: numberValue((data as Record<string, unknown>)?.id) })).handler(async ({ data, context }) => {
   assertCapability(context.role, 'content')
   await execute('DELETE FROM coaching_batches WHERE id = ?', [data.id])
+  invalidateCoachingCache()
   return { ok: true }
 })
 
@@ -319,8 +412,8 @@ export const saveCertificate = createServerFn({ method: 'POST' })
     if (data.id) {
       if (image) {
         await execute(
-          'UPDATE certificate_items SET title = ?, issuer = ?, category = ?, credential_date = ?, alt_text = ?, image_path = NULL, image_mime_type = ?, image_data = ?, homepage_featured = ?, published = ?, sort_order = ? WHERE id = ? AND collection = \'certificates\'',
-          [data.title, data.issuer, data.category, data.credentialDate, data.altText, data.imageMimeType, image, data.homepageFeatured ? 1 : 0, data.published ? 1 : 0, data.sortOrder, data.id],
+          'UPDATE certificate_items SET title = ?, issuer = ?, category = ?, credential_date = ?, alt_text = ?, image_path = NULL, image_mime_type = ?, image_data = ?, image_version = ?, homepage_featured = ?, published = ?, sort_order = ? WHERE id = ? AND collection = \'certificates\'',
+          [data.title, data.issuer, data.category, data.credentialDate, data.altText, data.imageMimeType, image, Date.now(), data.homepageFeatured ? 1 : 0, data.published ? 1 : 0, data.sortOrder, data.id],
         )
       } else {
         await execute(
@@ -330,10 +423,11 @@ export const saveCertificate = createServerFn({ method: 'POST' })
       }
     } else {
       await execute(
-        'INSERT INTO certificate_items (collection, title, issuer, category, credential_date, alt_text, image_mime_type, image_data, homepage_featured, published, sort_order) VALUES (\'certificates\', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [data.title, data.issuer, data.category, data.credentialDate, data.altText, data.imageMimeType, image, data.homepageFeatured ? 1 : 0, data.published ? 1 : 0, data.sortOrder],
+        'INSERT INTO certificate_items (collection, title, issuer, category, credential_date, alt_text, image_mime_type, image_data, image_version, homepage_featured, published, sort_order) VALUES (\'certificates\', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [data.title, data.issuer, data.category, data.credentialDate, data.altText, data.imageMimeType, image, image ? Date.now() : 0, data.homepageFeatured ? 1 : 0, data.published ? 1 : 0, data.sortOrder],
       )
     }
+    invalidatePublicContentCache()
     return { ok: true }
   })
 
@@ -343,6 +437,7 @@ export const deleteCertificate = createServerFn({ method: 'POST' })
   .handler(async ({ data, context }) => {
     assertCapability(context.role, 'content')
     await execute('DELETE FROM certificate_items WHERE id = ? AND collection = \'certificates\'', [data.id])
+    invalidatePublicContentCache()
     return { ok: true }
   })
 
@@ -363,6 +458,7 @@ export const updateSettings = createServerFn({ method: 'POST' }).middleware([adm
 }).handler(async ({ data, context }) => {
   assertCapability(context.role, 'settings')
   await execute('UPDATE site_settings SET popup_enabled = ?, popup_delay_seconds = ?, whatsapp_enabled = ?, approvals_marquee_enabled = ?, public_settings_json = ? WHERE id = 1', [data.popupEnabled ? 1 : 0, data.popupDelaySeconds, data.whatsappEnabled ? 1 : 0, data.approvalsMarqueeEnabled ? 1 : 0, data.publicSettingsJson])
+  invalidatePublicContentCache()
   return { ok: true }
 })
 
@@ -381,6 +477,7 @@ export const saveContactDetails = createServerFn({ method: 'POST' }).middleware(
   const current = readSiteSettings(rows[0])
   const publicSettings = { phones: data.phones, emails: data.emails, officeHours: data.officeHours, faqs: current.faqs, trustStats: current.trustStats }
   await execute('UPDATE site_settings SET public_settings_json = ? WHERE id = 1', [JSON.stringify(publicSettings)])
+  invalidatePublicContentCache()
   return { phones: data.phones, emails: data.emails, officeHours: data.officeHours }
 })
 
@@ -413,6 +510,7 @@ export const saveTrustStat = createServerFn({ method: 'POST' }).middleware([admi
   }
   const publicSettings = { phones: current.phones, emails: current.emails, officeHours: current.officeHours, faqs: current.faqs, trustStats }
   await execute('UPDATE site_settings SET public_settings_json = ? WHERE id = 1', [JSON.stringify(publicSettings)])
+  invalidatePublicContentCache()
   return { trustStats }
 })
 
@@ -441,6 +539,7 @@ export const saveFaq = createServerFn({ method: 'POST' }).middleware([adminMiddl
   }
   const publicSettings = { phones: current.phones, emails: current.emails, officeHours: current.officeHours, faqs, trustStats: current.trustStats }
   await execute('UPDATE site_settings SET public_settings_json = ? WHERE id = 1', [JSON.stringify(publicSettings)])
+  invalidatePublicContentCache()
   return { faqs }
 })
 

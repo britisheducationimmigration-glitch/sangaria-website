@@ -118,6 +118,11 @@ export type AdminStory = {
   flag: string
   date: string
   note: string
+  mediaType: 'none' | 'photo' | 'video'
+  photoSrc: string
+  videoUrl: string
+  mediaAlt: string
+  mediaConsent: boolean
   published: boolean
 }
 
