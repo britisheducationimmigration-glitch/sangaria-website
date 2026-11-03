@@ -65,6 +65,7 @@ export function PolicyWatchPanel() {
     setFormOpen(true)
     setError('')
     setMessage('')
+    window.setTimeout(() => document.getElementById('country-notices')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
   }
 
   async function saveNotice(status: 'draft' | 'published') {
@@ -156,7 +157,7 @@ export function PolicyWatchPanel() {
       {message && <p role="status" className="mb-4 rounded-xl bg-emerald-100 px-4 py-3 text-sm font-bold text-emerald-900">{message}</p>}
       {error && <p role="alert" className="mb-4 rounded-xl bg-red-100 px-4 py-3 text-sm font-bold text-red-900">{error}</p>}
 
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
+      <div id="country-notices" className="mb-8 flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-xl font-extrabold">Country notices</h3>
         <button type="button" onClick={startNewNotice} className="min-h-11 rounded-xl bg-forest-900 px-4 py-2 text-sm font-bold text-white hover:bg-forest-800">+ New notice</button>
       </div>
@@ -258,6 +259,7 @@ export function PolicyWatchPanel() {
       <div className="space-y-3">
         {(data?.items ?? []).map((item) => {
           const review = data?.reviews[item.id] ?? {}
+          const pendingNotice = review.pendingDraftId ? data?.notices.find((notice) => notice.id === review.pendingDraftId) : undefined
           const status = getPolicyWatchStatus(item)
           return (
             <article key={item.id} className="rounded-2xl bg-white p-4 ring-1 ring-forest-900/10 sm:p-5">
@@ -276,6 +278,15 @@ export function PolicyWatchPanel() {
                 <button type="button" disabled={busy} onClick={() => void markReview(item, 'checked')} className="min-h-10 rounded-lg border border-forest-900/15 px-3 text-sm font-bold hover:bg-forest-50 disabled:opacity-60">Mark source checked</button>
                 <button type="button" disabled={busy || !review.checkedAt} onClick={() => void markReview(item, 'guidance-updated')} className="min-h-10 rounded-lg bg-forest-900 px-3 text-sm font-bold text-white hover:bg-forest-800 disabled:opacity-40">Mark website updated</button>
               </div>
+              {review.sourceChangePending && pendingNotice && (
+                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                  <p className="text-sm font-bold text-amber-900">A source-change draft is waiting for review.</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button type="button" onClick={() => editNotice(pendingNotice)} className="min-h-10 rounded-lg bg-forest-900 px-3 text-sm font-bold text-white hover:bg-forest-800">Review / edit / publish</button>
+                    <button type="button" onClick={() => void removeNotice(pendingNotice)} disabled={busy} className="min-h-10 rounded-lg border border-red-300 px-3 text-sm font-bold text-red-700 hover:bg-red-50 disabled:opacity-60">Delete alert</button>
+                  </div>
+                </div>
+              )}
               {review.guidanceUpdatedAt && <p className="mt-2 text-xs text-forest-900/60">Updated {displayDate(review.guidanceUpdatedAt)}{review.guidanceUpdatedBy ? ` by ${review.guidanceUpdatedBy}` : ''}</p>}
             </article>
           )
