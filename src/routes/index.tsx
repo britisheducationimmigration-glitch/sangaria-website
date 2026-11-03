@@ -138,7 +138,7 @@ function Home() {
       {/* ========================================================================= */}
       {/* MOBILE-ONLY VIEW                                                          */}
       {/* ========================================================================= */}
-      <div className="block md:hidden bg-cream text-forest-900">
+      <div className="block lg:hidden bg-cream text-forest-900">
         {/* MOBILE HERO */}
         <section className="relative overflow-hidden bg-forest-900 bg-grain text-white px-5 pt-8 pb-16">
           <div>
@@ -711,7 +711,7 @@ function Home() {
       {/* ========================================================================= */}
       {/* DESKTOP-ONLY VIEW                                                         */}
       {/* ========================================================================= */}
-      <div className="hidden md:block bg-cream text-forest-900">
+      <div className="hidden lg:block bg-cream text-forest-900">
         {/* DESKTOP HERO */}
         <section className="relative overflow-hidden bg-forest-900 bg-grain text-white">
           <div className="mx-auto grid max-w-7xl items-center gap-14 px-6 pt-16 pb-24 lg:grid-cols-[1.15fr_1fr] lg:pt-24">
