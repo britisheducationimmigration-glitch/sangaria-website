@@ -145,6 +145,73 @@ export function getUKStudentMaintenance(asOf = new Date()) {
   }
 }
 
+
+export function applyScheduledCountryPolicy<T extends {
+  slug: string
+  costs: { label: string; value: string }[]
+  studyGuide?: { lastVerified: string; proofOfFunds: string }
+}>(country: T, asOf = new Date()): T {
+  if (country.slug !== 'uk') return country
+  const figures = getUKStudentMaintenance(asOf)
+  const newOutside = `£${figures.outsideLondon.toLocaleString('en-GB')} / month`
+  const nextNote = figures.isEffective ? '' : ' (up to 29 Nov; £1,203 from 30 Nov)'
+  return {
+    ...country,
+    costs: country.costs.map((item) => item.label === 'Student living funds, outside London (up to 9 months)'
+      ? { ...item, value: newOutside + nextNote }
+      : item),
+    studyGuide: country.studyGuide
+      ? {
+          ...country.studyGuide,
+          lastVerified: '3 November 2026',
+          proofOfFunds: getUKStudentMaintenanceCopy(asOf),
+        }
+      : country.studyGuide,
+  }
+}
+
+export function applyScheduledVisaPolicy<T extends { lastVerified: string; requirements: string[] }>(
+  destination: string,
+  guidance: T,
+  asOf = new Date(),
+): T {
+  if (destination !== 'uk') return guidance
+  return {
+    ...guidance,
+    lastVerified: '3 November 2026',
+    requirements: guidance.requirements.map((item) => item.startsWith('Student:')
+      ? item.replace(
+          'GOV.UK lists living funds of £1,171 per month outside London or £1,529 in London, for up to 9 months; exemptions and personal circumstances apply.',
+          getUKStudentMaintenanceCopy(asOf),
+        )
+      : item),
+  }
+}
+
+export function applyScheduledCashflowPolicy<T extends {
+  slug: string
+  officialRuleNote: string
+  stages: { stageNumber: number; officialCost: string }[]
+}>(country: T, asOf = new Date()): T {
+  if (country.slug !== 'uk') return country
+  const figures = getUKStudentMaintenance(asOf)
+  const stageThree = figures.isEffective
+    ? `£${(figures.outsideLondon * 9).toLocaleString('en-GB')} - £${(figures.london * 9).toLocaleString('en-GB')} Living proof`
+    : `£${(figures.outsideLondon * 9).toLocaleString('en-GB')} - £${(figures.london * 9).toLocaleString('en-GB')} Living proof (from 30 Nov: £10,827 - £14,130)`
+  const before = country.officialRuleNote.replace(/\\s*Student visa funds snapshot:.*$/, '')
+  const current = `£${figures.outsideLondon.toLocaleString('en-GB')}/month outside London and £${figures.london.toLocaleString('en-GB')}/month in London`
+  const note = figures.isEffective
+    ? `Student visa funds snapshot: ${current} for up to 9 months, plus course fees.`
+    : `Student visa funds snapshot: ${current} through 29 November; from 30 November 2026 the figures become £1,203/month outside London and £1,570/month in London, for up to 9 months, plus course fees.`
+  return {
+    ...country,
+    officialRuleNote: `${before.trim()} ${note}`.trim(),
+    stages: country.stages.map((stage) => stage.stageNumber === 3
+      ? { ...stage, officialCost: stageThree }
+      : stage),
+  }
+}
+
 export function getUKStudentMaintenanceCopy(asOf = new Date()) {
   const figures = getUKStudentMaintenance(asOf)
   if (figures.isEffective) {
