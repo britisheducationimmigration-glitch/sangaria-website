@@ -35,7 +35,7 @@ The eligibility checker’s factors, points and country thresholds were not chan
 
 ## Policy change calendar and automatic effective dates
 
-\`src/data/policy-watch.ts\` is the code-managed source for confirmed changes, official announcements and items still awaiting detail. The Super Admin dashboard shows these records under **Policy watch**, including the effective date, what to review and the official source.
+`src/data/policy-watch.ts` is the code-managed source for confirmed changes, official announcements and items still awaiting detail. The Super Admin dashboard shows these records under **Policy watch**, including the effective date, what to review and the official source.
 
 Only a change with an official effective date and exact published values is applied automatically. The UK Student maintenance figures are scheduled to change on 30 November 2026. The date-aware overlay covers the country guide, country comparison, visa fee/requirements snapshot, and database-backed public/admin cashflow reads. Before the date, the site shows the current figures and the scheduled figures; on or after the date, the new monthly figures and nine-month cashflow range become current. The overlay does not require a database migration and does not rewrite saved records.
 
