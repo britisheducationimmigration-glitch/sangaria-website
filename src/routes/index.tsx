@@ -41,20 +41,8 @@ const rotatingWords = [
   { text: 'IELTS 7.5+.', icon: '📚' },
 ]
 
-function getHomepageTrustStats(stats: { value: string; label: string }[]) {
-  return stats.map((stat) => {
-    const label = stat.label.trim().toLowerCase()
-    if (label === 'visas approved') return { ...stat, label: 'Reported visa approvals' }
-    if (label === 'success ratio') return { ...stat, label: 'Reported success ratio' }
-    if (label === 'destinations') return { ...stat, value: 'Multiple', label: 'Study destinations' }
-    if (label === 'avg. ielts band') return { ...stat, label: 'Reported IELTS avg.' }
-    return stat
-  })
-}
-
 function Home() {
   const { approvals, posts, testimonials, certificates, settings } = Route.useLoaderData()
-  const trustStats = getHomepageTrustStats(settings.trustStats)
   const [selectedCountry, setSelectedCountry] = useState('canada')
   const [selectedVisa, setSelectedVisa] = useState('study')
   const [showAllTestimonials, setShowAllTestimonials] = useState(false)
@@ -249,7 +237,7 @@ function Home() {
             </div>
 
             <dl className="mt-7 grid grid-cols-2 gap-3.5">
-              {trustStats.map((s) => (
+              {settings.trustStats.map((s) => (
                 <div key={s.label} className="rounded-2xl bg-white/5 border border-white/10 p-4 text-center">
                   <dt className="font-display text-2xl font-extrabold text-white">{s.value}</dt>
                   <dd className="mt-1 text-[10px] uppercase tracking-wider text-forest-100/70">{s.label}</dd>
@@ -799,7 +787,7 @@ function Home() {
           </div>
 
           <dl className="mx-auto mt-12 grid max-w-7xl grid-cols-2 gap-6 px-6 pb-16 sm:grid-cols-4">
-            {trustStats.map((s) => (
+            {settings.trustStats.map((s) => (
               <div key={s.label}>
                 <dt className="font-display text-3xl font-extrabold text-white">{s.value}</dt>
                 <dd className="mt-1 text-xs uppercase tracking-wider text-forest-100/60">{s.label}</dd>
