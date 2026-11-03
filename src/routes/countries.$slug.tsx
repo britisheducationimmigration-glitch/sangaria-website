@@ -2,8 +2,9 @@ import { Link, createFileRoute, notFound } from '@tanstack/react-router'
 import { CalendarDays, Check, Languages, Wallet } from 'lucide-react'
 import { EnquiryForm } from '@/components/EnquiryForm'
 import { Eyebrow } from '@/components/Section'
-import { countries } from '@/data/fixtures'
+import { countries, getCurrentCountry } from '@/data/fixtures'
 import { visaGuidance } from '@/data/visa-guidance'
+import { applyScheduledVisaPolicy } from '@/data/policy-watch'
 import { CountryFlag } from '@/components/CountryFlag'
 
 import { createPageSeo } from '@/lib/seo'
@@ -12,7 +13,7 @@ export const Route = createFileRoute('/countries/$slug')({
   loader: ({ params }) => {
     const country = countries.find((c) => c.slug === params.slug)
     if (!country) throw notFound()
-    return { country }
+    return { country: getCurrentCountry(country) }
   },
   head: ({ loaderData }) => {
     const isEuropeGuide = loaderData.country.slug === 'europe'
@@ -31,7 +32,7 @@ export const Route = createFileRoute('/countries/$slug')({
 
 function CountryPage() {
   const { country: c } = Route.useLoaderData()
-  const guidance = visaGuidance[c.slug]
+  const guidance = applyScheduledVisaPolicy(c.slug, visaGuidance[c.slug])
   return (
     <>
       <section className="relative overflow-hidden bg-forest-900 bg-grain text-white">
