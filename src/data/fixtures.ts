@@ -358,6 +358,7 @@ export type Testimonial = {
   quote: string
   rating: number
   initials: string
+  homepageFeatured?: boolean
 }
 
 export const testimonials: Testimonial[] = [
@@ -428,6 +429,7 @@ export type Approval = {
   photoSrc?: string
   videoUrl?: string
   mediaAlt?: string
+  homepageFeatured?: boolean
 }
 
 export const approvals: Approval[] = [
