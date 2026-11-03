@@ -245,6 +245,13 @@ export async function getDb() {
           INDEX success_date_idx (story_date)
         )
       `)
+      await ensureColumn(poolInstance, 'certificate_items', 'image_version', 'BIGINT UNSIGNED NOT NULL DEFAULT 0')
+      await ensureColumn(poolInstance, 'success_stories', 'photo_mime_type', 'VARCHAR(40) NULL')
+      await ensureColumn(poolInstance, 'success_stories', 'photo_data', 'MEDIUMBLOB NULL')
+      await ensureColumn(poolInstance, 'success_stories', 'video_url', 'VARCHAR(500) NULL')
+      await ensureColumn(poolInstance, 'success_stories', 'media_alt', "VARCHAR(500) NOT NULL DEFAULT ''")
+      await ensureColumn(poolInstance, 'success_stories', 'media_consent', 'BOOLEAN NOT NULL DEFAULT FALSE')
+      await ensureColumn(poolInstance, 'success_stories', 'media_version', 'BIGINT UNSIGNED NOT NULL DEFAULT 0')
       await poolInstance.query(`
         CREATE TABLE IF NOT EXISTS admin_users (
           open_id VARCHAR(190) NOT NULL PRIMARY KEY,

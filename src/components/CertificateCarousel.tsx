@@ -81,7 +81,7 @@ export function CertificateCarousel({ certificates, id }: { certificates: Public
               className="block min-w-0 rounded-2xl bg-white p-3 ring-1 ring-forest-900/10 transition-shadow hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-700 sm:p-4"
             >
               <div className="grid aspect-[4/3] min-h-0 w-full place-items-center overflow-hidden rounded-xl bg-cream p-3">
-                <img src={item.imageSrc} alt={item.altText} loading="lazy" decoding="async" className="block h-full w-full min-h-0 min-w-0 object-contain" />
+                <img src={item.imageSrc} alt={item.altText} loading="lazy" decoding="async" className="certificate-image-enhanced block h-full w-full min-h-0 min-w-0 object-contain" />
               </div>
               <div className="px-1 pb-1 pt-4">
                 <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-coral-600">{item.category}</p>

@@ -227,3 +227,9 @@ a.text-forest-900:visited {
   outline: 3px solid #c4515d;
   outline-offset: 2px;
 }
+
+
+/* Mildly restores contrast in pale certificate scans without changing their saved files. */
+.certificate-image-enhanced {
+  filter: contrast(1.07) saturate(1.12);
+}

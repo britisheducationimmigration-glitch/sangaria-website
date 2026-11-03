@@ -186,7 +186,7 @@ export function CertificatePanel({ items, onReload, onNotice }: {
               <p className="mt-2 text-xs text-forest-900/60">JPG, PNG or WebP. The photo is resized and stored in the site database (up to 3 MB).</p>
             </div>
             {draft.imageSrc
-              ? <div className="flex aspect-[4/3] items-center justify-center rounded-xl bg-cream p-3"><img src={draft.imageSrc} alt="Selected certificate preview" className="max-h-full max-w-full object-contain" /></div>
+              ? <div className="flex aspect-[4/3] items-center justify-center rounded-xl bg-cream p-3"><img src={draft.imageSrc} alt="Selected certificate preview" className="certificate-image-enhanced max-h-full max-w-full object-contain" /></div>
               : <div className="grid aspect-[4/3] place-items-center rounded-xl border border-dashed border-forest-900/20 bg-cream text-xs text-forest-900/55">Choose a certificate photo</div>}
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
@@ -204,7 +204,7 @@ export function CertificatePanel({ items, onReload, onNotice }: {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {sortedItems.map((item) => (
           <article key={item.id} className="overflow-hidden rounded-2xl bg-white ring-1 ring-forest-900/10">
-            <div className="flex aspect-[4/3] items-center justify-center bg-cream p-3"><img src={item.imageSrc} alt={item.altText} loading="lazy" className="max-h-full max-w-full object-contain" /></div>
+            <div className="flex aspect-[4/3] items-center justify-center bg-cream p-3"><img src={item.imageSrc} alt={item.altText} loading="lazy" className="certificate-image-enhanced max-h-full max-w-full object-contain" /></div>
             <div className="p-4">
               <div className="flex flex-wrap gap-2">
                 <span className="rounded-full bg-forest-50 px-2.5 py-1 text-[10px] font-bold text-forest-700">{item.category}</span>
