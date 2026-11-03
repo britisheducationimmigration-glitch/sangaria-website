@@ -42,13 +42,13 @@ const rotatingWords = [
 ]
 
 function HeroFlightPath() {
-  const route = 'M-80 420 C100 180 245 170 390 330 S700 475 825 270 S980 165 1080 260'
+  const route = 'M-80 48 C100 8 245 88 390 38 S700 12 825 55 S980 24 1080 50'
   return (
-    <svg className="hero-flight-scene" viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true">
+    <svg className="hero-flight-scene" viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true">
       <path className="hero-flight-route" d={route} />
       <g className="hero-flight-plane">
         <path d="M0 46L39 43L57 9L66 6L62 43L94 51L100 56L94 61L62 69L66 92L57 89L39 63L0 60L8 54Z" />
-        <animateMotion dur="34s" repeatCount="indefinite" rotate="auto" path={route} />
+        <animateMotion dur="19s" repeatCount="indefinite" rotate="auto" path={route} />
       </g>
     </svg>
   )
