@@ -538,7 +538,7 @@ function Home() {
               ))}
             </div>
 
-            <Link to="/success-stories" className="mt-6 flex min-h-12 w-full items-center justify-center rounded-full border border-forest-900/15 bg-white px-4 py-3 text-sm font-bold text-forest-900 shadow-sm transition hover:bg-forest-900 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-900">
+            <Link to="/success-stories" className="mt-6 flex min-h-12 w-full items-center justify-center rounded-full border border-forest-900/15 bg-white px-4 py-3 text-sm font-bold text-forest-900 hover-contrast-cta shadow-sm transition hover:bg-forest-900 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-900">
               See all visa stories →
             </Link>
           </section>
@@ -564,7 +564,7 @@ function Home() {
               <button
                 type="button"
                 onClick={() => setShowAllTestimonialsMobile(!showAllTestimonialsMobile)}
-                className="mt-6 w-full rounded-full border border-forest-900/15 bg-white py-4 text-xs font-bold text-forest-900 shadow-sm transition hover:bg-forest-900 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-900 active:bg-forest-900 active:text-white"
+                className="mt-6 w-full rounded-full border border-forest-900/15 bg-white py-4 text-xs font-bold text-forest-900 hover-contrast-cta shadow-sm transition hover:bg-forest-900 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-900 active:bg-forest-900 active:text-white"
               >
                 {showAllTestimonialsMobile
                   ? 'Show Fewer Reviews ↑'
@@ -572,7 +572,7 @@ function Home() {
               </button>
             )}
 
-            <Link to="/success-stories" className="mt-3 flex min-h-12 w-full items-center justify-center rounded-full border border-forest-900/15 bg-white px-4 py-3 text-sm font-bold text-forest-900 shadow-sm transition hover:bg-forest-900 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-900">
+            <Link to="/success-stories" className="mt-3 flex min-h-12 w-full items-center justify-center rounded-full border border-forest-900/15 bg-white px-4 py-3 text-sm font-bold text-forest-900 hover-contrast-cta shadow-sm transition hover:bg-forest-900 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-900">
               View all testimonials →
             </Link>
           </section>
@@ -599,7 +599,7 @@ function Home() {
           <div className="mt-6">
             <Link
               to="/updates"
-              className="flex min-h-11 w-full items-center justify-center rounded-full border border-forest-900/15 bg-white py-4 text-xs font-bold text-forest-900 shadow-sm transition hover:bg-forest-900 hover:text-white active:bg-forest-50"
+              className="flex min-h-11 w-full items-center justify-center rounded-full border border-forest-900/15 bg-white py-4 text-xs font-bold text-forest-900 hover-contrast-cta shadow-sm transition hover:bg-forest-900 hover:text-white active:bg-forest-50"
             >
               View all articles →
             </Link>
@@ -1077,7 +1077,7 @@ function Home() {
                   <button
                     type="button"
                     onClick={() => setShowAllTestimonials(!showAllTestimonials)}
-                    className="rounded-full border border-forest-900/20 bg-white px-7 py-3.5 font-bold text-forest-900 shadow-sm transition hover:bg-forest-900 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-900"
+                    className="rounded-full border border-forest-900/20 bg-white px-7 py-3.5 font-bold text-forest-900 hover-contrast-cta shadow-sm transition hover:bg-forest-900 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-900"
                   >
                     {showAllTestimonials ? 'Show Fewer Reviews ↑' : `Show More Reviews (${homepageTestimonials.length - 3}+ और देखें) ↓`}
                   </button>
@@ -1085,7 +1085,7 @@ function Home() {
               )}
 
               <div className="mt-6 text-center">
-                <Link to="/success-stories" className="inline-flex min-h-12 items-center justify-center rounded-full border border-forest-900/15 bg-white px-6 py-3 text-sm font-bold text-forest-900 shadow-sm transition hover:bg-forest-900 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-900">
+                <Link to="/success-stories" className="inline-flex min-h-12 items-center justify-center rounded-full border border-forest-900/15 bg-white px-6 py-3 text-sm font-bold text-forest-900 hover-contrast-cta shadow-sm transition hover:bg-forest-900 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-900">
                   View all testimonials →
                 </Link>
               </div>
