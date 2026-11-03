@@ -39,7 +39,7 @@ export const visaGuidance: Record<string, VisaGuidance> = {
     ],
   },
   uk: {
-    lastVerified: '3 November 2026',
+    lastVerified: '31 October 2026',
     feeRows: [
       { label: 'Student visa', value: '£558' },
       { label: 'Standard Visitor, 6 months', value: '£135' },
@@ -115,7 +115,7 @@ export const visaGuidance: Record<string, VisaGuidance> = {
     ],
   },
   'new-zealand': {
-    lastVerified: '3 November 2026',
+    lastVerified: '26 October 2026',
     feeRows: [
       { label: 'Fee Paying Student Visa', value: 'From NZD 850' },
       { label: 'Visitor Visa, common case', value: 'From NZD 441 incl. IVL' },
