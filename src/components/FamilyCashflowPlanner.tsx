@@ -137,7 +137,7 @@ export function FamilyCashflowPlanner() {
   }
 
   return (
-    <section className="mx-auto mt-8 w-full rounded-3xl bg-forest-900 p-5 text-white sm:p-8 md:w-[calc(100%-3rem)] md:max-w-7xl">
+    <section className="mx-auto mt-8 w-full rounded-3xl bg-forest-900 p-5 text-white sm:p-8 md:w-[calc(100%-3rem)] max-w-7xl">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-white/10 pb-5">
         <div>
