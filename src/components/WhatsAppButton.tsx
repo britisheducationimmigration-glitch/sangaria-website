@@ -1,12 +1,10 @@
 import { MessageCircle } from 'lucide-react'
-import { useEffect, useState } from 'react'
 import { site } from '@/data/site'
-import { getPublicContent } from '@/lib/public-functions'
 
-export function WhatsAppButton() {
-  const [enabled, setEnabled] = useState(true)
-  useEffect(() => { getPublicContent().then((content) => setEnabled(content.settings.whatsappEnabled)).catch(() => undefined) }, [])
-  if (!enabled) return null
+import type { SiteSettings } from '@/lib/content-types'
+
+export function WhatsAppButton({ settings }: { settings: Pick<SiteSettings, 'whatsappEnabled'> }) {
+  if (!settings.whatsappEnabled) return null
   const text = encodeURIComponent('Hello British Education and Immigration, I would like to know more about visas.')
   return (
     <a
