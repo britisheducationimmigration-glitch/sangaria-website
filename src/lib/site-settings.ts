@@ -30,6 +30,15 @@ function cleanStrings(value: unknown, maxCount: number, maxLength: number) {
     .slice(0, maxCount)
 }
 
+function normalizeTrustStat(stat: SiteTrustStat): SiteTrustStat {
+  const label = stat.label.trim().toLowerCase()
+  if (label === 'visas approved') return { ...stat, label: 'Reported visa approvals' }
+  if (label === 'success ratio') return { ...stat, label: 'Reported success ratio' }
+  if (label === 'destinations') return { ...stat, value: 'Multiple', label: 'Study destinations' }
+  if (label === 'avg. ielts band') return { ...stat, label: 'Reported IELTS avg.' }
+  return stat
+}
+
 export function mapPublicSiteSettings(raw: unknown): PublicSiteSettings {
   let parsed = raw
   if (typeof parsed === 'string') {
@@ -52,6 +61,7 @@ export function mapPublicSiteSettings(raw: unknown): PublicSiteSettings {
         .map((item) => ({ value: typeof item.value === 'string' ? item.value.trim().slice(0, 40) : '', label: typeof item.label === 'string' ? item.label.trim().slice(0, 80) : '' }))
         .filter((item) => item.value && item.label)
         .slice(0, 6)
+        .map(normalizeTrustStat)
     : []
   return {
     phones: phones.length ? phones : defaultSiteSettings.phones,
