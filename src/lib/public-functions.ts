@@ -113,7 +113,7 @@ function applyEditorialReview(post: PublicContent['posts'][number]): PublicConte
 export const getPublicContent = createServerFn({ method: 'GET' }).handler(async (): Promise<PublicContent> => {
   if (publicContentCache && publicContentCache.expiresAt > Date.now()) return publicContentCache.data
   const postRows = await queryRows('SELECT slug, title, category, publish_date, excerpt, read_mins, body_json FROM content_posts WHERE published = 1 ORDER BY publish_date DESC, id DESC')
-  const storyRows = await queryRows('SELECT id, kind, name, city, country, visa, quote, rating, initials, flag, story_date, note, photo_data IS NOT NULL AS has_photo, video_url, media_alt, media_version FROM success_stories WHERE published = 1 ORDER BY story_date DESC, id DESC')
+  const storyRows = await queryRows('SELECT id, kind, name, city, country, visa, quote, rating, initials, flag, story_date, note, photo_data IS NOT NULL AS has_photo, video_url, media_alt, media_version, homepage_featured FROM success_stories WHERE published = 1 ORDER BY story_date DESC, id DESC')
   const settingsRows = await queryRows('SELECT popup_enabled, popup_delay_seconds, whatsapp_enabled, approvals_marquee_enabled, public_settings_json FROM site_settings WHERE id = 1 LIMIT 1')
   const certificateRows = await queryRows('SELECT id, title, issuer, category, credential_date, alt_text, image_path, image_data IS NOT NULL AS has_database_image, image_version, homepage_featured, published, sort_order FROM certificate_items WHERE collection = \'certificates\' AND published = 1 ORDER BY sort_order ASC, id ASC')
   const posts = postRows.length
@@ -135,11 +135,12 @@ export const getPublicContent = createServerFn({ method: 'GET' }).handler(async 
         photoSrc: Boolean(row.has_photo) ? '/success-stories/media/' + Number(row.id) + '?v=' + Number(row.media_version ?? 0) : undefined,
         videoUrl: getSupportedVideoEmbedUrl(String(row.video_url ?? '')) ? String(row.video_url ?? '') : undefined,
         mediaAlt: String(row.media_alt ?? '') || undefined,
+        homepageFeatured: Boolean(row.homepage_featured),
       }))
     : fixtureApprovals
   const testimonials = storyRows.length
     ? storyRows.filter((row) => row.kind === 'testimonial').map((row) => ({
-        name: String(row.name), city: String(row.city), country: String(row.country), visa: String(row.visa), quote: String(row.quote), rating: Number(row.rating), initials: String(row.initials),
+        name: String(row.name), city: String(row.city), country: String(row.country), visa: String(row.visa), quote: String(row.quote), rating: Number(row.rating), initials: String(row.initials), homepageFeatured: Boolean(row.homepage_featured),
       }))
     : fixtureTestimonials
   const certificates: PublicCertificate[] = certificateRows.length

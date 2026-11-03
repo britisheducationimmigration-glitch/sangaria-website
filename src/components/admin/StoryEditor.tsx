@@ -129,7 +129,7 @@ export function StoryEditor({ item, onReload, onNotice, onClose }: {
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-coral-600">Success stories</p>
           <h3 className="text-xl font-extrabold">Story editor</h3>
-          <p className="mt-1 text-xs leading-relaxed text-forest-900/55">Add approval details and, when available, a student photo or hosted video. Published entries appear on the home page and Success Stories page.</p>
+          <p className="mt-1 text-xs leading-relaxed text-forest-900/55">Add approval details and, when available, a student photo or hosted video. Published entries appear on Success Stories; choose separately whether each story is highlighted on the home page.</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <button type="button" aria-pressed={preview} onClick={() => setPreview((value) => !value)} className={'rounded-full px-4 py-2 text-xs font-bold ring-1 ring-forest-900/15 ' + (preview ? 'bg-coral-500 text-white ring-coral-500' : 'bg-white text-forest-900')}>{preview ? 'Back to edit' : 'Preview'}</button>
@@ -220,6 +220,7 @@ export function StoryEditor({ item, onReload, onNotice, onClose }: {
         </div>
       )}
       <div className="mt-5 grid gap-4 border-t border-forest-900/10 pt-4">
+        <label className="flex items-start gap-3 rounded-xl border border-forest-900/10 bg-forest-50 p-3 text-sm font-bold"><input type="checkbox" checked={form.homepageFeatured} onChange={(event) => update('homepageFeatured', event.currentTarget.checked)} className="mt-0.5 size-4 shrink-0 accent-forest-900" /><span>Show on homepage<span className="mt-1 block text-xs font-normal leading-relaxed text-forest-900/60">Turn off to keep this published story on the Success Stories page only.</span></span></label>
         <label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={form.published} onChange={(event) => update('published', event.currentTarget.checked)} /> Publish on website</label>
         <div className="flex flex-wrap gap-2">
           <button disabled={busy || preview} className="rounded-full bg-forest-900 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">{busy ? 'Saving…' : 'Save story'}</button>

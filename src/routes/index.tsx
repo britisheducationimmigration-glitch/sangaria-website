@@ -43,6 +43,8 @@ const rotatingWords = [
 
 function Home() {
   const { approvals, posts, testimonials, certificates, settings } = Route.useLoaderData()
+  const homepageApprovals = approvals.filter((story) => story.homepageFeatured !== false)
+  const homepageTestimonials = testimonials.filter((story) => story.homepageFeatured !== false)
   const [selectedCountry, setSelectedCountry] = useState('canada')
   const [selectedVisa, setSelectedVisa] = useState('study')
   const [showAllTestimonials, setShowAllTestimonials] = useState(false)
@@ -96,8 +98,8 @@ function Home() {
       window.removeEventListener('resize', handleScroll)
     }
   }, [])
-  const visibleTestimonialsDesktop = showAllTestimonials ? testimonials : testimonials.slice(0, 3)
-  const visibleTestimonialsMobile = showAllTestimonialsMobile ? testimonials : testimonials.slice(0, 2)
+  const visibleTestimonialsDesktop = showAllTestimonials ? homepageTestimonials : homepageTestimonials.slice(0, 3)
+  const visibleTestimonialsMobile = showAllTestimonialsMobile ? homepageTestimonials : homepageTestimonials.slice(0, 2)
 
   return (
     <>
@@ -335,10 +337,10 @@ function Home() {
         </div>
 
         {/* APPROVALS MARQUEE (MOBILE) */}
-        {settings.approvalsMarqueeEnabled && (
+        {settings.approvalsMarqueeEnabled && homepageApprovals.length > 0 && (
           <section className="overflow-hidden border-b border-forest-900/10 bg-coral-500 py-3.5 text-white">
             <div className="flex w-max animate-marquee gap-8 whitespace-nowrap font-display text-sm font-bold">
-              {[...approvals, ...approvals].map((a, i) => (
+              {[...homepageApprovals, ...homepageApprovals].map((a, i) => (
                 <span key={i} className="flex items-center gap-2">
                   <CountryFlag
                     flag={a.flag}
@@ -523,51 +525,58 @@ function Home() {
         <FamilyCashflowPlanner />
 
         {/* RECENT APPROVALS (MOBILE) */}
-        <section id="approvals-m" className="px-5 py-20 border-b border-forest-900/10 bg-white">
-          <div className="flex items-end justify-between mb-8">
-            <div>
+        {homepageApprovals.length > 0 && (
+          <section id="approvals-m" className="px-5 py-20 border-b border-forest-900/10 bg-white">
+            <div className="mb-8">
               <Eyebrow>Fresh approvals</Eyebrow>
               <h2 className="mt-2 text-2xl font-extrabold text-forest-900">Visas that landed this month.</h2>
             </div>
-            <Link to="/success-stories" className="text-xs font-bold text-coral-600 hover:underline shrink-0">
-              See all →
-            </Link>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            {approvals.slice(0, 4).map((a, i) => (
-              <ApprovalCard key={a.name} a={a} i={i} />
-            ))}
-          </div>
-        </section>
+            <div className="grid grid-cols-2 gap-4">
+              {homepageApprovals.slice(0, 4).map((a, i) => (
+                <ApprovalCard key={a.name} a={a} i={i} />
+              ))}
+            </div>
+
+            <Link to="/success-stories" className="mt-6 flex min-h-12 w-full items-center justify-center rounded-full border border-forest-900/15 bg-white px-4 py-3 text-sm font-bold text-forest-900 hover-contrast-cta shadow-sm transition hover:bg-forest-900 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-900">
+              See all visa stories →
+            </Link>
+          </section>
+        )}
 
         <CertificateCarousel certificates={certificates} id="certificates-m" />
 
         {/* TESTIMONIALS (MOBILE) */}
-        <section id="reviews-m" className="bg-sand/60 px-5 py-12 border-b border-forest-900/10">
-          <div className="mb-6">
-            <Eyebrow>Testimonials</Eyebrow>
-            <h2 className="mt-2 text-2xl font-extrabold text-forest-900">Real students. Real visas.</h2>
-          </div>
+        {homepageTestimonials.length > 0 && (
+          <section id="reviews-m" className="bg-sand/60 px-5 py-12 border-b border-forest-900/10">
+            <div className="mb-6">
+              <Eyebrow>Testimonials</Eyebrow>
+              <h2 className="mt-2 text-2xl font-extrabold text-forest-900">Real students. Real visas.</h2>
+            </div>
 
-          <div className={visibleTestimonialsMobile.length > 1 ? 'grid grid-cols-2 gap-4' : 'grid gap-4'}>
-            {visibleTestimonialsMobile.map((t, i) => (
-              <TestimonialCard key={t.name} t={t} featured={i === 0} compact />
-            ))}
-          </div>
+            <div className={visibleTestimonialsMobile.length > 1 ? 'grid grid-cols-2 gap-4' : 'grid gap-4'}>
+              {visibleTestimonialsMobile.map((t, i) => (
+                <TestimonialCard key={t.name} t={t} featured={i === 0} compact />
+              ))}
+            </div>
 
-          {testimonials.length > 2 && (
-            <button
-              type="button"
-              onClick={() => setShowAllTestimonialsMobile(!showAllTestimonialsMobile)}
-              className="mt-6 w-full rounded-full border border-forest-900/15 bg-white py-4 text-xs font-bold text-forest-900 shadow-sm active:bg-forest-50 transition"
-            >
-              {showAllTestimonialsMobile
-                ? 'Show Fewer Reviews ↑'
-                : `Show More Reviews (${testimonials.length - 2}+ और देखें) ↓`}
-            </button>
-          )}
-        </section>
+            {homepageTestimonials.length > 2 && (
+              <button
+                type="button"
+                onClick={() => setShowAllTestimonialsMobile(!showAllTestimonialsMobile)}
+                className="mt-6 w-full rounded-full border border-forest-900/15 bg-white py-4 text-xs font-bold text-forest-900 hover-contrast-cta shadow-sm transition hover:bg-forest-900 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-900 active:bg-forest-900 active:text-white"
+              >
+                {showAllTestimonialsMobile
+                  ? 'Show Fewer Reviews ↑'
+                  : `Show More Reviews (${homepageTestimonials.length - 2}+ और देखें) ↓`}
+              </button>
+            )}
+
+            <Link to="/success-stories" className="mt-3 flex min-h-12 w-full items-center justify-center rounded-full border border-forest-900/15 bg-white px-4 py-3 text-sm font-bold text-forest-900 hover-contrast-cta shadow-sm transition hover:bg-forest-900 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-900">
+              View all testimonials →
+            </Link>
+          </section>
+        )}
 
         {/* NEWS & BLOG (MOBILE) */}
         <section className="px-5 py-20 border-b border-forest-900/10 bg-white">
@@ -590,7 +599,7 @@ function Home() {
           <div className="mt-6">
             <Link
               to="/updates"
-              className="flex min-h-11 w-full items-center justify-center rounded-full border border-forest-900/15 bg-white py-4 text-xs font-bold text-forest-900 shadow-sm transition hover:bg-forest-900 hover:text-white active:bg-forest-50"
+              className="flex min-h-11 w-full items-center justify-center rounded-full border border-forest-900/15 bg-white py-4 text-xs font-bold text-forest-900 hover-contrast-cta shadow-sm transition hover:bg-forest-900 hover:text-white active:bg-forest-50"
             >
               View all articles →
             </Link>
@@ -873,10 +882,10 @@ function Home() {
         </div>
 
         {/* DESKTOP APPROVALS MARQUEE */}
-        {settings.approvalsMarqueeEnabled && (
+        {settings.approvalsMarqueeEnabled && homepageApprovals.length > 0 && (
           <section className="overflow-hidden border-y border-forest-900/10 bg-coral-500 py-4 text-white">
             <div className="flex w-max animate-marquee gap-10 whitespace-nowrap font-display text-lg font-bold">
-              {[...approvals, ...approvals].map((a, i) => (
+              {[...homepageApprovals, ...homepageApprovals].map((a, i) => (
                 <span key={i} className="flex items-center gap-3">
                   <CountryFlag
                     flag={a.flag}
@@ -1030,49 +1039,59 @@ function Home() {
         <FamilyCashflowPlanner />
 
         {/* DESKTOP RECENT APPROVALS */}
-        <section id="approvals-desktop" className="mx-auto max-w-7xl px-6 py-24">
-          <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-            <div>
-              <Eyebrow>Fresh approvals</Eyebrow>
-              <h2 className="mt-4 text-4xl font-extrabold text-forest-900 md:text-5xl">Visas that landed this month.</h2>
+        {homepageApprovals.length > 0 && (
+          <section id="approvals-desktop" className="mx-auto max-w-7xl px-6 py-24">
+            <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+              <div>
+                <Eyebrow>Fresh approvals</Eyebrow>
+                <h2 className="mt-4 text-4xl font-extrabold text-forest-900 md:text-5xl">Visas that landed this month.</h2>
+              </div>
+              <Link to="/success-stories" className="font-bold text-coral-600 hover:underline">
+                See all success stories →
+              </Link>
             </div>
-            <Link to="/success-stories" className="font-bold text-coral-600 hover:underline">
-              See all success stories →
-            </Link>
-          </div>
-          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {approvals.slice(0, 4).map((a, i) => (
-              <ApprovalCard key={a.name} a={a} i={i} />
-            ))}
-          </div>
-        </section>
+            <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {homepageApprovals.slice(0, 4).map((a, i) => (
+                <ApprovalCard key={a.name} a={a} i={i} />
+              ))}
+            </div>
+          </section>
+        )}
 
         <CertificateCarousel certificates={certificates} id="certificates-desktop" />
 
         {/* DESKTOP TESTIMONIALS */}
-        <section id="reviews-desktop" className="bg-sand/60 py-24">
-          <div className="mx-auto max-w-7xl px-6">
-            <Eyebrow>Testimonials</Eyebrow>
-            <h2 className="mt-4 max-w-2xl text-4xl font-extrabold text-forest-900 md:text-5xl">Real students. Real families. Real visas.</h2>
-            <div className="mt-12 grid gap-6 md:grid-cols-3">
-              {visibleTestimonialsDesktop.map((t, i) => (
-                <TestimonialCard key={t.name} t={t} featured={i === 1} />
-              ))}
-            </div>
-
-            {testimonials.length > 3 && (
-              <div className="mt-10 text-center">
-                <button
-                  type="button"
-                  onClick={() => setShowAllTestimonials(!showAllTestimonials)}
-                  className="rounded-full border border-forest-900/20 bg-white px-7 py-3.5 font-bold text-forest-900 shadow-sm transition hover:bg-forest-900 hover:text-white"
-                >
-                  {showAllTestimonials ? 'Show Fewer Reviews ↑' : `Show More Reviews (${testimonials.length - 3}+ और देखें) ↓`}
-                </button>
+        {homepageTestimonials.length > 0 && (
+          <section id="reviews-desktop" className="bg-sand/60 py-24">
+            <div className="mx-auto max-w-7xl px-6">
+              <Eyebrow>Testimonials</Eyebrow>
+              <h2 className="mt-4 max-w-2xl text-4xl font-extrabold text-forest-900 md:text-5xl">Real students. Real families. Real visas.</h2>
+              <div className="mt-12 grid gap-6 md:grid-cols-3">
+                {visibleTestimonialsDesktop.map((t, i) => (
+                  <TestimonialCard key={t.name} t={t} featured={i === 1} />
+                ))}
               </div>
-            )}
-          </div>
-        </section>
+
+              {homepageTestimonials.length > 3 && (
+                <div className="mt-10 text-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowAllTestimonials(!showAllTestimonials)}
+                    className="rounded-full border border-forest-900/20 bg-white px-7 py-3.5 font-bold text-forest-900 hover-contrast-cta shadow-sm transition hover:bg-forest-900 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-900"
+                  >
+                    {showAllTestimonials ? 'Show Fewer Reviews ↑' : `Show More Reviews (${homepageTestimonials.length - 3}+ और देखें) ↓`}
+                  </button>
+                </div>
+              )}
+
+              <div className="mt-6 text-center">
+                <Link to="/success-stories" className="inline-flex min-h-12 items-center justify-center rounded-full border border-forest-900/15 bg-white px-6 py-3 text-sm font-bold text-forest-900 hover-contrast-cta shadow-sm transition hover:bg-forest-900 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-900">
+                  View all testimonials →
+                </Link>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* DESKTOP UPDATES (News & Blog) */}
         <section className="mx-auto max-w-7xl px-6 py-24">

@@ -233,3 +233,11 @@ a.text-forest-900:visited {
 .certificate-image-enhanced {
   filter: contrast(1.07) saturate(1.12);
 }
+
+
+/* Ensure dark hover/pressed CTA backgrounds never hide forest-colored labels. */
+.text-forest-900.hover-contrast-cta:hover,
+.text-forest-900.hover-contrast-cta:focus-visible,
+.text-forest-900.hover-contrast-cta:active {
+  color: #ffffff !important;
+}
