@@ -319,13 +319,13 @@ export const saveStory = createServerFn({ method: 'POST' }).middleware([adminMid
       )
     } else if (mediaType === 'video') {
       await execute(
-        'UPDATE success_stories SET kind = ?, name = ?, city = ?, country = ?, visa = ?, quote = ?, rating = ?, initials = ?, flag = ?, story_date = ?, note = ?, published = ?, photo_mime_type = NULL, photo_data = NULL, video_url = ?, media_alt = '', media_consent = ?, media_version = ? WHERE id = ?',
-        [...base, data.videoUrl, mediaConsent, Date.now(), data.id],
+        'UPDATE success_stories SET kind = ?, name = ?, city = ?, country = ?, visa = ?, quote = ?, rating = ?, initials = ?, flag = ?, story_date = ?, note = ?, published = ?, photo_mime_type = NULL, photo_data = NULL, video_url = ?, media_alt = ?, media_consent = ?, media_version = ? WHERE id = ?',
+        [...base, data.videoUrl, '', mediaConsent, Date.now(), data.id],
       )
     } else {
       await execute(
-        'UPDATE success_stories SET kind = ?, name = ?, city = ?, country = ?, visa = ?, quote = ?, rating = ?, initials = ?, flag = ?, story_date = ?, note = ?, published = ?, photo_mime_type = NULL, photo_data = NULL, video_url = NULL, media_alt = '', media_consent = 0, media_version = ? WHERE id = ?',
-        [...base, Date.now(), data.id],
+        'UPDATE success_stories SET kind = ?, name = ?, city = ?, country = ?, visa = ?, quote = ?, rating = ?, initials = ?, flag = ?, story_date = ?, note = ?, published = ?, photo_mime_type = NULL, photo_data = NULL, video_url = NULL, media_alt = ?, media_consent = ?, media_version = ? WHERE id = ?',
+        [...base, '', 0, Date.now(), data.id],
       )
     }
   } else {
