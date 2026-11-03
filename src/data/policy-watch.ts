@@ -163,7 +163,6 @@ export function applyScheduledCountryPolicy<T extends {
     studyGuide: country.studyGuide
       ? {
           ...country.studyGuide,
-          lastVerified: '3 November 2026',
           proofOfFunds: getUKStudentMaintenanceCopy(asOf),
         }
       : country.studyGuide,
@@ -178,7 +177,6 @@ export function applyScheduledVisaPolicy<T extends { lastVerified: string; requi
   if (destination !== 'uk') return guidance
   return {
     ...guidance,
-    lastVerified: '3 November 2026',
     requirements: guidance.requirements.map((item) => item.startsWith('Student:')
       ? item.replace(
           'GOV.UK lists living funds of £1,171 per month outside London or £1,529 in London, for up to 9 months; exemptions and personal circumstances apply.',
