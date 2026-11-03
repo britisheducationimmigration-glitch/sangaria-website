@@ -544,15 +544,15 @@ function Home() {
         <CertificateCarousel certificates={certificates} id="certificates-m" />
 
         {/* TESTIMONIALS (MOBILE) */}
-        <section id="reviews-m" className="bg-sand/60 px-5 py-20 border-b border-forest-900/10">
-          <div className="mb-8">
+        <section id="reviews-m" className="bg-sand/60 px-5 py-12 border-b border-forest-900/10">
+          <div className="mb-6">
             <Eyebrow>Testimonials</Eyebrow>
             <h2 className="mt-2 text-2xl font-extrabold text-forest-900">Real students. Real visas.</h2>
           </div>
 
-          <div className="grid gap-5">
+          <div className={visibleTestimonialsMobile.length > 1 ? 'grid grid-cols-2 gap-4' : 'grid gap-4'}>
             {visibleTestimonialsMobile.map((t, i) => (
-              <TestimonialCard key={t.name} t={t} featured={i === 0} />
+              <TestimonialCard key={t.name} t={t} featured={i === 0} compact />
             ))}
           </div>
 
