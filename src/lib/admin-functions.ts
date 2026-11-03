@@ -5,7 +5,7 @@ import { Buffer } from 'node:buffer'
 import { asFaqList, asTrustStatList, readSiteSettings } from './site-settings'
 import { defaultCashflowData, mergeNewCashflowDestinations, type CountryCashflow } from '@/data/cashflow'
 import { applyScheduledCashflowPolicy, policyWatchItems, type PolicyNotice } from '@/data/policy-watch'
-import { isTrustedPolicySourceUrl, readPolicyWatchState, scanOfficialPolicySources, writePolicyWatchState } from './policy-watch.server'
+import { readPolicyWatchState, scanOfficialPolicySources, writePolicyWatchState } from './policy-watch.server'
 import { isValidBatchStartDate } from '@/lib/batch-dates'
 import { getSupportedVideoEmbedUrl } from './video'
 import { invalidateCoachingCache, invalidatePublicContentCache } from './public-functions'
@@ -154,7 +154,7 @@ export const savePolicyNotice = createServerFn({ method: 'POST' }).middleware([a
   if (status === 'published') {
     if (!sourceVerified) throw new Error('Check the official source before publishing')
     if (!/^\d{4}-\d{2}-\d{2}$/.test(showFrom) || !/^\d{4}-\d{2}-\d{2}$/.test(expiresOn) || expiresOn <= showFrom) throw new Error('Set a valid start date and a later hide date before publishing')
-    if (!isTrustedPolicySourceUrl(sourceUrl) || !sourceLabel) throw new Error('Published notices need a verified official HTTPS source link')
+    if (!sourceUrl.startsWith('https://') || !sourceLabel) throw new Error('Published notices need an official HTTPS source link')
   }
   return { id, countrySlug, title, message, showFrom, expiresOn, sourceLabel, sourceUrl, status: status as 'draft' | 'published', sourceVerified }
 }).handler(async ({ data, context }): Promise<PolicyNotice> => {
