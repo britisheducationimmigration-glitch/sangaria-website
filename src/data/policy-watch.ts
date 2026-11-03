@@ -198,7 +198,7 @@ export function applyScheduledCashflowPolicy<T extends {
   const stageThree = figures.isEffective
     ? `£${(figures.outsideLondon * 9).toLocaleString('en-GB')} - £${(figures.london * 9).toLocaleString('en-GB')} Living proof`
     : `£${(figures.outsideLondon * 9).toLocaleString('en-GB')} - £${(figures.london * 9).toLocaleString('en-GB')} Living proof (from 30 Nov: £10,827 - £14,130)`
-  const before = country.officialRuleNote.replace(/\\s*Student visa funds snapshot:.*$/, '')
+  const before = country.officialRuleNote.replace(/\s*Student visa funds snapshot:.*$/, '')
   const current = `£${figures.outsideLondon.toLocaleString('en-GB')}/month outside London and £${figures.london.toLocaleString('en-GB')}/month in London`
   const note = figures.isEffective
     ? `Student visa funds snapshot: ${current} for up to 9 months, plus course fees.`
