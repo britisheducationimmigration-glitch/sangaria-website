@@ -174,9 +174,9 @@ const baseCountries: Country[] = [
     costs: [
       { label: 'SEVIS fee', value: 'USD 350' },
       { label: 'Visa fee', value: 'USD 185' },
-      { label: 'Living', value: 'USD 12–18k / yr' },
+      { label: 'Living cost (estimate, not visa funds)', value: 'USD 12–18k / yr' },
     ],
-    english: 'IELTS 6.5 / PTE 58 / Duolingo 110',
+    english: 'Set by the school and programme; no single federal IELTS/PTE score.',
     studyGuide: {
       tuitionEstimate: "The site’s USD 20,000–45,000/year band is a planning estimate only. Tuition and living costs vary widely by school, programme and location; use the school’s current cost estimate on Form I-20.",
       studentVisaFee: "F/M visa application US$185 plus separate I-901 SEVIS fee US$350; reciprocity or other costs may apply.",
