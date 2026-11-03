@@ -2,7 +2,7 @@ import { X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouterState } from '@tanstack/react-router'
 import { EnquiryForm } from './EnquiryForm'
-import { getPublicContent } from '@/lib/public-functions'
+import type { SiteSettings } from '@/lib/content-types'
 
 const POPUP_DONE_KEY = 'bei-enquiry-popup-submitted'
 const POPUP_DISMISSED_KEY = 'bei-enquiry-popup-dismissed'
@@ -34,37 +34,20 @@ function markPopupDismissed() {
   }
 }
 
-export function EnquiryPopup() {
+export function EnquiryPopup({ settings }: { settings: Pick<SiteSettings, 'popupEnabled' | 'popupDelaySeconds'> }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const [open, setOpen] = useState(false)
-  const [enabled, setEnabled] = useState(true)
-  const [delaySeconds, setDelaySeconds] = useState(8)
   const [interacted, setInteracted] = useState(() => hasInteractedWithPopup())
   const dialogRef = useRef<HTMLDivElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
-    let active = true
-    getPublicContent()
-      .then((content) => {
-        if (!active) return
-        setEnabled(content.settings.popupEnabled)
-        setDelaySeconds(content.settings.popupDelaySeconds)
-      })
-      .catch(() => undefined)
+    if (interacted || !settings.popupEnabled || pathname.startsWith('/admin') || open) return
 
-    return () => {
-      active = false
-    }
-  }, [])
-
-  useEffect(() => {
-    if (interacted || !enabled || pathname.startsWith('/admin') || open) return
-
-    const safeDelay = Math.min(60, Math.max(3, Number(delaySeconds) || 8))
+    const safeDelay = Math.min(60, Math.max(3, Number(settings.popupDelaySeconds) || 8))
     const timer = window.setTimeout(() => setOpen(true), safeDelay * 1000)
     return () => window.clearTimeout(timer)
-  }, [interacted, enabled, delaySeconds, pathname, open])
+  }, [interacted, settings.popupEnabled, settings.popupDelaySeconds, pathname, open])
 
   const close = useCallback(() => {
     markPopupDismissed()
