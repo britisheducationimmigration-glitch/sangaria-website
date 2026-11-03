@@ -185,7 +185,7 @@ function RootDocument({ children }: { children: ReactNode }) {
       </head>
       <body>
         {!isAdmin && <SiteHeader settings={settings} />}
-        <main>{children}</main>
+        <main className={isAdmin ? 'admin-main' : 'public-main'}>{children}</main>
         {!isAdmin && <SiteFooter settings={settings} />}
         {!isAdmin && <WhatsAppButton />}
         {!isAdmin && <EnquiryPopup />}
