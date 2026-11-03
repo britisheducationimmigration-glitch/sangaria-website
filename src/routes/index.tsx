@@ -586,6 +586,15 @@ function Home() {
               <PostCard key={p.slug} p={p} />
             ))}
           </div>
+
+          <div className="mt-6">
+            <Link
+              to="/updates"
+              className="flex min-h-11 w-full items-center justify-center rounded-full border border-forest-900/15 bg-white py-4 text-xs font-bold text-forest-900 shadow-sm transition hover:bg-forest-900 hover:text-white active:bg-forest-50"
+            >
+              View all articles →
+            </Link>
+          </div>
         </section>
 
         {/* FAQ + ENQUIRY (MOBILE) */}
