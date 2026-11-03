@@ -830,7 +830,7 @@ function PostEditor({ item, onReload, onNotice, onClose }: { item: AdminPost; on
   )
 }
 function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
-  const [data, setData] = useState<CountryCashflow[]>(defaultCashflowData)
+  const [data, setData] = useState<CountryCashflow[]>(() => defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country)))
   const [selectedSlug, setSelectedSlug] = useState('canada')
   const [busy, setBusy] = useState(false)
 
@@ -869,10 +869,11 @@ function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
   }
 
   const resetToOfficial = async () => {
-    setData(defaultCashflowData)
+    const currentDefaults = defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country))
+    setData(currentDefaults)
     try {
       setBusy(true)
-      await saveCashflow({ data: { cashflowData: defaultCashflowData } })
+      await saveCashflow({ data: { cashflowData: currentDefaults } })
       onNotice('Reset to official 2026/2027 embassy defaults and saved to database.')
     } catch {
       onNotice('Reset locally, but database sync failed.')
