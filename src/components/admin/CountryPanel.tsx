@@ -18,6 +18,7 @@ type PanelData = {
 }
 
 type Editor = {
+  originalSlug: string
   slug: string
   name: string
   code: string
@@ -48,7 +49,7 @@ type Editor = {
 }
 
 const emptyEditor = (): Editor => ({
-  slug: '', name: '', code: '', flag: '', headline: '', intro: '', stats: '', intakes: '', visas: '', highlights: '', costs: '', english: '',
+  originalSlug: '', slug: '', name: '', code: '', flag: '', headline: '', intro: '', stats: '', intakes: '', visas: '', highlights: '', costs: '', english: '',
   guideTuition: '', guideVisaFee: '', guideFunds: '', guideAdmission: '', guideWork: '', guidePostStudy: '', guideIntakes: '', guideVerified: '', guideSources: '',
   visaVerified: '', visaFees: '', visaFeeSummary: '', visaRequirements: '', visaCaveat: '', visaSources: '',
 })
@@ -73,7 +74,7 @@ function fromContent(content: CountryPageContent): Editor {
   const guide = country.studyGuide
   const visa = content.guidance
   return {
-    slug: country.slug, name: country.name, code: country.code, flag: country.flag, headline: country.headline, intro: country.intro,
+    originalSlug: country.slug, slug: country.slug, name: country.name, code: country.code, flag: country.flag, headline: country.headline, intro: country.intro,
     stats: country.stats.map((item) => item.label + ' | ' + item.value).join('\n'),
     intakes: country.intakes.join('\n'), visas: country.visas.join('\n'), highlights: country.highlights.join('\n'),
     costs: country.costs.map((item) => item.label + ' | ' + item.value).join('\n'), english: country.english,
@@ -134,6 +135,7 @@ function Field({ label, value, onChange, textarea = false, rows = 3, required = 
   textarea?: boolean
   rows?: number
   required?: boolean
+  disabled?: boolean
   hint?: string
 }) {
   return (
@@ -142,7 +144,7 @@ function Field({ label, value, onChange, textarea = false, rows = 3, required = 
       {textarea ? (
         <textarea required={required} rows={rows} value={value} onChange={(event) => onChange(event.currentTarget.value)} className="mt-1 block min-h-11 w-full min-w-0 rounded-xl border border-forest-900/15 bg-white p-3 font-normal leading-relaxed" />
       ) : (
-        <input required={required} value={value} onChange={(event) => onChange(event.currentTarget.value)} className="mt-1 block min-h-11 w-full min-w-0 rounded-xl border border-forest-900/15 bg-white px-3 font-normal" />
+        <input required={required} disabled={disabled} value={value} onChange={(event) => onChange(event.currentTarget.value)} className="mt-1 block min-h-11 w-full min-w-0 rounded-xl border border-forest-900/15 bg-white px-3 font-normal" />
       )}
       {hint && <span className="mt-1 block text-xs font-normal leading-relaxed text-forest-900/60">{hint}</span>}
     </label>
@@ -192,7 +194,7 @@ export function CountryPanel() {
     setMessage('')
     try {
       const content = toContent(form)
-      await saveCountryPage({ data: { content, status } })
+      await saveCountryPage({ data: { content, status, isNew: !form.originalSlug } })
       setForm(null)
       setMessage(status === 'published' ? content.country.name + ' page published.' : 'Draft saved. Public content has not changed.')
       await reload()
@@ -270,7 +272,7 @@ export function CountryPanel() {
             <h4 className="mb-3 font-extrabold">Country page</h4>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Destination name" value={form.name} required onChange={(value) => update({ name: value })} />
-              <Field label="URL slug" value={form.slug} required hint="Lowercase letters and hyphens, for example south-korea." onChange={(value) => update({ slug: value.toLowerCase().replace(/[^a-z0-9-]/g, '') })} />
+              <Field label="URL slug" value={form.slug} required disabled={!!form.originalSlug} hint="Lowercase letters and hyphens, for example south-korea. Existing page URLs stay locked to protect links." onChange={(value) => update({ slug: value.toLowerCase().replace(/[^a-z0-9-]/g, '') })} />
               <Field label="Two-letter country code" value={form.code} required hint="ISO code, for example JP." onChange={(value) => update({ code: value.toUpperCase().slice(0, 2) })} />
               <Field label="Flag emoji" value={form.flag} required hint="Use one flag emoji, for example 🇯🇵." onChange={(value) => update({ flag: value.slice(0, 8) })} />
               <Field label="Page headline" value={form.headline} required onChange={(value) => update({ headline: value })} />
@@ -372,7 +374,7 @@ export function CountryPanel() {
               </div>
               <div className="flex flex-wrap gap-2">
                 <button type="button" onClick={() => edit(draft)} className="min-h-10 rounded-lg border border-amber-300 px-3 text-sm font-bold text-amber-900 hover:bg-white">Edit draft</button>
-                <button type="button" disabled={busy} onClick={() => void saveCountryPage({ data: { content: draft, status: 'published' } }).then(() => { setMessage(draft.country.name + ' page published.'); return reload() }).catch((cause) => setError(cause instanceof Error ? cause.message : 'Could not publish country page.'))} className="min-h-10 rounded-lg bg-forest-900 px-3 text-sm font-bold text-white hover:bg-forest-800 disabled:opacity-60">Publish draft</button>
+                <button type="button" disabled={busy} onClick={() => void saveCountryPage({ data: { content: draft, status: 'published', isNew: !countries.some((entry) => entry.country.slug === draft.country.slug) } }).then(() => { setMessage(draft.country.name + ' page published.'); return reload() }).catch((cause) => setError(cause instanceof Error ? cause.message : 'Could not publish country page.'))} className="min-h-10 rounded-lg bg-forest-900 px-3 text-sm font-bold text-white hover:bg-forest-800 disabled:opacity-60">Publish draft</button>
                 <button type="button" disabled={busy} onClick={() => void discardDraft(draft.country.slug)} className="min-h-10 rounded-lg border border-red-300 px-3 text-sm font-bold text-red-700 hover:bg-white disabled:opacity-60">Delete draft</button>
               </div>
             </article>
