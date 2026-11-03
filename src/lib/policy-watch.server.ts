@@ -17,10 +17,10 @@ function parseWatchState(value: unknown): PolicyWatchState {
   }
 }
 
-function currentDeploymentEnvironment() {
-  return process.env.VERCEL_ENV === 'production' || process.env.VERCEL_ENV === 'preview'
-    ? process.env.VERCEL_ENV
-    : 'development'
+function currentDeploymentEnvironment(): 'production' | 'preview' | 'development' {
+  const environment = process.env.VERCEL_ENV
+  if (environment === 'production' || environment === 'preview') return environment
+  return 'development'
 }
 
 function parsePolicyWatchStore(value: unknown): Record<string, PolicyWatchState> {
