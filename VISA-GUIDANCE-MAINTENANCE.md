@@ -30,4 +30,21 @@ On 31 October 2026, the Australia Student visa 500 base fee was checked against 
 
 On 31 October 2026, the Canada and UK entries were reviewed against their official immigration sources. Canada’s one-person living-funds figure is CAD 23,448 for applications from 1 September 2026, excluding tuition and transport; the PAL/TAL exceptions and post-graduation work permit rules were clarified, and spouse open work permits are described as limited to eligible cases. The Student Direct Stream is no longer described as available. The UK Student route living-funds figures now show £1,171 outside London and £1,529 in London per month for up to 9 months, the Student visa fee is £558, and the Graduate Route copy gives the application-date cutoffs and doctoral exception. Both countries’ school-specific English guidance was corrected. See the official sources linked in `src/data/visa-guidance.ts`.
 
-The eligibility checker’s factors, points and country thresholds were not changed. Its result labels now describe internal profile-checklist matches, and the page explains that these are not government criteria, legal eligibility decisions or approval predictions. The rest of the country entries retain their prior verification dates until reviewed in a later monthly pass.
+The eligibility checker’s factors, points and country thresholds were not changed. Its result labels now describe internal profile-checklist matches, and the page explains that these are not government criteria, legal eligibility decisions or approval predictions. The other destination entries retain their full-review dates until each complete country snapshot is reviewed. A change-specific official source check does not reset the full-country `lastVerified` date.
+
+
+## Policy change calendar and automatic effective dates
+
+\`src/data/policy-watch.ts\` is the code-managed source for confirmed changes, official announcements and items still awaiting detail. The Super Admin dashboard shows these records under **Policy watch**, including the effective date, what to review and the official source.
+
+Only a change with an official effective date and exact published values is applied automatically. The UK Student maintenance figures are scheduled to change on 30 November 2026. The date-aware overlay covers the country guide, country comparison, visa fee/requirements snapshot, and database-backed public/admin cashflow reads. Before the date, the site shows the current figures and the scheduled figures; on or after the date, the new monthly figures and nine-month cashflow range become current. The overlay does not require a database migration and does not rewrite saved records.
+
+Other items remain labelled as monitoring or proposals until official rules give an exact start date and requirements. In particular:
+
+- Canada’s 150,000 new student-arrival target for 2027 is not the detailed study-permit application cap or a provincial allocation.
+- The UK CEFR B2 rule from 26 March 2027 applies to settlement on specified routes; it is not a general Student visa English threshold.
+- New Zealand’s 8 March 2027 Green List changes affect occupation-based Work to Residence routes, not the general student visa.
+- UK Budget announcements with implementation detail still pending do not replace the current published route rules.
+- Germany’s official 2026 study-funds figure does not establish a 2027 amount; do not estimate an increase.
+
+On 3 November 2026, the official sources were checked for the UK 30 November maintenance increase, New Zealand’s 27 October student-rule changes, Australia’s 2 October student application/family rules, and 2027 policy notices relevant to Canada and New Zealand. The NZ study-funds card’s incorrect euro figure was corrected to NZD 20,000 per year. This pass covered core study-route requirements and announced changes; course-specific tuition, provider admission scores, intake calendars, nationality-specific exceptions and every non-study visa route still need their own source checks.
