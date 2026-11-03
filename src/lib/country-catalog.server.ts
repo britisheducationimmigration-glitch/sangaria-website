@@ -15,8 +15,9 @@ export type CountryCatalogState = {
   drafts: Record<string, CountryPageContent>
 }
 
-function currentDeploymentEnvironment() {
-  if (process.env.VERCEL_ENV === 'production' || process.env.VERCEL_ENV === 'preview') return process.env.VERCEL_ENV
+function currentDeploymentEnvironment(): 'production' | 'preview' | 'development' {
+  const environment = process.env.VERCEL_ENV
+  if (environment === 'production' || environment === 'preview') return environment
   return 'development'
 }
 
