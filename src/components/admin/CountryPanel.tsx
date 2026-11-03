@@ -14,6 +14,7 @@ type PanelData = {
   countries: CountryPageContent[]
   drafts: CountryPageContent[]
   customSlugs: string[]
+  overrideSlugs: string[]
 }
 
 type Editor = {
@@ -348,7 +349,7 @@ export function CountryPanel() {
                   {draft && <button type="button" onClick={() => edit(draft)} className="min-h-10 rounded-lg border border-amber-300 px-3 text-sm font-bold text-amber-900 hover:bg-amber-50">Edit draft</button>}
                   <button type="button" onClick={() => edit(entry)} className="min-h-10 rounded-lg border border-forest-900/15 px-3 text-sm font-bold hover:bg-forest-50">Edit page</button>
                   {isCustom && <button type="button" disabled={busy} onClick={() => void resetCountry(entry.country.slug, entry.country.name)} className="min-h-10 rounded-lg px-3 text-sm font-bold text-red-700 hover:bg-red-50 disabled:opacity-60">Remove country</button>}
-                  {!isCustom && data?.countries.some((item) => item.country.slug === entry.country.slug) && (
+                  {!isCustom && data?.overrideSlugs.includes(entry.country.slug) && (
                     <button type="button" disabled={busy} onClick={() => void resetCountry(entry.country.slug, entry.country.name)} className="min-h-10 rounded-lg px-3 text-sm font-bold text-forest-900/60 hover:bg-forest-50 disabled:opacity-60">Revert to website version</button>
                   )}
                 </div>
