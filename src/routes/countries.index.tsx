@@ -3,7 +3,7 @@ import { ArrowRight, Check } from 'lucide-react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { PageHero } from '@/components/Section'
 import { CountryFlag } from '@/components/CountryFlag'
-import { countries } from '@/data/fixtures'
+import { countries, getCurrentCountry } from '@/data/fixtures'
 
 import { createPageSeo } from '@/lib/seo'
 
@@ -20,7 +20,8 @@ function CountriesPage() {
   const [selectedSlugs, setSelectedSlugs] = useState<string[]>([])
   const [showComparison, setShowComparison] = useState(false)
   const [compareNotice, setCompareNotice] = useState('')
-  const studyDestinations = countries.filter((country) => country.studyGuide)
+  const currentCountries = countries.map(getCurrentCountry)
+  const studyDestinations = currentCountries.filter((country) => country.studyGuide)
   const selectedCountries = studyDestinations.filter((country) => selectedSlugs.includes(country.slug))
 
   function toggleCompare(slug: string, name: string) {
@@ -63,7 +64,7 @@ function CountriesPage() {
         </div>
         {compareNotice && <p className="mb-4 rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900" role="status">{compareNotice}</p>}
         <div className="grid gap-6 md:grid-cols-2">
-          {countries.map((country) => {
+          {currentCountries.map((country) => {
             const selected = selectedSlugs.includes(country.slug)
             return (
               <article key={country.slug} className="group grid overflow-hidden rounded-3xl bg-white ring-1 ring-forest-900/10 transition hover:-translate-y-1 hover:shadow-[8px_8px_0_0] hover:shadow-forest-900 lg:grid-cols-[1fr_auto]">
