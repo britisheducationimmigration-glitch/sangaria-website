@@ -47,6 +47,12 @@ function parseEnvironmentStore(value: unknown): Record<string, CountryCatalogSta
   return {}
 }
 
+const countryCatalogCache = new Map<string, { expiresAt: number; data: CountryPageContent[] }>()
+
+export function invalidateCountryCatalogCache() {
+  countryCatalogCache.delete(currentDeploymentEnvironment())
+}
+
 async function readAllEnvironments() {
   const rows = await queryRows('SELECT country_catalog_json FROM site_settings WHERE id = 1 LIMIT 1')
   return parseEnvironmentStore(rows[0]?.country_catalog_json)
@@ -61,6 +67,7 @@ export async function writeCountryCatalogState(state: CountryCatalogState) {
   const environments = await readAllEnvironments()
   environments[currentDeploymentEnvironment()] = state
   await execute('UPDATE site_settings SET country_catalog_json = ? WHERE id = 1', [JSON.stringify({ version: 1, environments })])
+  invalidateCountryCatalogCache()
 }
 
 function withScheduledGuidance(entry: CountryPageContent): CountryPageContent {
@@ -78,6 +85,9 @@ function defaultCountryContent(): CountryPageContent[] {
 }
 
 export async function getPublicCountryCatalog(): Promise<CountryPageContent[]> {
+  const environment = currentDeploymentEnvironment()
+  const cached = countryCatalogCache.get(environment)
+  if (cached && cached.expiresAt > Date.now()) return cached.data
   const state = await readCountryCatalogState()
   const defaults = defaultCountryContent()
   const baseSlugs = new Set(defaults.map((entry) => entry.country.slug))
@@ -86,7 +96,9 @@ export async function getPublicCountryCatalog(): Promise<CountryPageContent[]> {
     .filter(([slug]) => !baseSlugs.has(slug))
     .map(([, entry]) => withScheduledGuidance(entry))
     .sort((left, right) => left.country.name.localeCompare(right.country.name))
-  return [...merged, ...added]
+  const data = [...merged, ...added]
+  countryCatalogCache.set(environment, { expiresAt: Date.now() + 8_000, data })
+  return data
 }
 
 export async function getPublicCountryBySlug(slug: string) {
