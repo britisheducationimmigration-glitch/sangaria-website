@@ -123,6 +123,7 @@ export type AdminStory = {
   videoUrl: string
   mediaAlt: string
   mediaConsent: boolean
+  homepageFeatured: boolean
   published: boolean
 }
 
