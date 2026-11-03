@@ -1,6 +1,6 @@
 import '@tanstack/react-start/server-only'
 
-import { createHash, randomUUID } from 'node:crypto'
+import { createHash } from 'node:crypto'
 import { defaultPolicyWatchState, policyWatchItems, type PolicyNotice, type PolicySourceReview, type PolicyWatchState } from '@/data/policy-watch'
 import { execute, queryRows } from './db.server'
 
@@ -88,7 +88,7 @@ export async function scanOfficialPolicySources() {
       }
       const response = await fetch(url, {
         headers: { accept: 'text/html,application/xhtml+xml' },
-        signal: AbortSignal.timeout(12_000),
+        signal: AbortSignal.timeout(6_000),
       })
       if (!response.ok) return { id: item.id, status: 'unavailable' as const, detail: String(response.status) }
       const text = normalizedPageText(await response.text())
@@ -100,7 +100,7 @@ export async function scanOfficialPolicySources() {
         status = 'baselined'
       } else if (previous.sourceHash !== sourceHash && !previous.sourceChangePending) {
         status = 'changed'
-        const noticeId = 'source-change-' + randomUUID()
+        const noticeId = 'source-change-' + item.id + '-' + sourceHash.slice(0, 12)
         state.notices.unshift({
           id: noticeId,
           countrySlug: destinationSlug(item.destination),
