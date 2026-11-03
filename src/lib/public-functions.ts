@@ -110,6 +110,13 @@ function applyEditorialReview(post: PublicContent['posts'][number]): PublicConte
   return { ...post, lastReviewed: reviewed.lastReviewed, sources: reviewed.sources }
 }
 
+export const getPublicSiteSettings = createServerFn({ method: 'GET' }).handler(async () => {
+  const rows = await queryRows(
+    'SELECT popup_enabled, popup_delay_seconds, whatsapp_enabled, approvals_marquee_enabled, public_settings_json FROM site_settings WHERE id = 1 LIMIT 1',
+  )
+  return readSiteSettings(rows[0])
+})
+
 export const getPublicContent = createServerFn({ method: 'GET' }).handler(async (): Promise<PublicContent> => {
   if (publicContentCache && publicContentCache.expiresAt > Date.now()) return publicContentCache.data
   const postRows = await queryRows('SELECT slug, title, category, publish_date, excerpt, read_mins, body_json FROM content_posts WHERE published = 1 ORDER BY publish_date DESC, id DESC')
