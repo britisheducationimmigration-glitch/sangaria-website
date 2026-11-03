@@ -17,13 +17,40 @@ function parseWatchState(value: unknown): PolicyWatchState {
   }
 }
 
+function currentDeploymentEnvironment() {
+  return process.env.VERCEL_ENV === 'production' || process.env.VERCEL_ENV === 'preview'
+    ? process.env.VERCEL_ENV
+    : 'development'
+}
+
+function parsePolicyWatchStore(value: unknown): Record<string, PolicyWatchState> {
+  let parsed = value
+  if (typeof parsed === 'string') {
+    try { parsed = JSON.parse(parsed) as unknown } catch { parsed = null }
+  }
+  if (!parsed || typeof parsed !== 'object') return {}
+  const input = parsed as Record<string, unknown>
+  if (input.version === 1 && input.environments && typeof input.environments === 'object') {
+    return input.environments as Record<string, PolicyWatchState>
+  }
+  // Preserve any pre-environment-scope data as production state during rollout.
+  if (Array.isArray(input.notices) || (input.reviews && typeof input.reviews === 'object')) {
+    return { production: parseWatchState(input) }
+  }
+  return {}
+}
+
 export async function readPolicyWatchState(): Promise<PolicyWatchState> {
   const rows = await queryRows('SELECT policy_watch_json FROM site_settings WHERE id = 1 LIMIT 1')
-  return parseWatchState(rows[0]?.policy_watch_json)
+  const store = parsePolicyWatchStore(rows[0]?.policy_watch_json)
+  return store[currentDeploymentEnvironment()] ?? defaultPolicyWatchState()
 }
 
 export async function writePolicyWatchState(state: PolicyWatchState) {
-  await execute('UPDATE site_settings SET policy_watch_json = ? WHERE id = 1', [JSON.stringify(state)])
+  const rows = await queryRows('SELECT policy_watch_json FROM site_settings WHERE id = 1 LIMIT 1')
+  const store = parsePolicyWatchStore(rows[0]?.policy_watch_json)
+  store[currentDeploymentEnvironment()] = state
+  await execute('UPDATE site_settings SET policy_watch_json = ? WHERE id = 1', [JSON.stringify({ version: 1, environments: store })])
 }
 
 function destinationSlug(destination: string) {
