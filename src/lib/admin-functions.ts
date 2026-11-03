@@ -335,7 +335,7 @@ export const saveCountryPage = createServerFn({ method: 'POST' }).middleware([ad
   if (context.role !== 'super_admin') throw new Error('Only a super admin can manage country pages')
   if (data.isNew) {
     const current = await getAdminCountryCatalog()
-    if (current.countries.some((entry) => entry.country.slug === data.content.country.slug) || current.drafts.some((entry) => entry.country.slug === data.content.country.slug)) throw new Error('That country URL is already in use')
+    if (current.countries.some((entry) => entry.country.slug === data.content.country.slug)) throw new Error('That country URL is already in use')
   }
   await saveCountryDraft(data.content, data.status)
   return { ok: true }
