@@ -7,6 +7,7 @@ import { readSiteSettings } from './site-settings'
 import { approvals as fixtureApprovals, coachingSchedule as fixtureCoachingSchedule, posts as fixturePosts, testimonials as fixtureTestimonials } from '@/data/fixtures'
 import { defaultCashflowData, mergeNewCashflowDestinations, type CountryCashflow } from '@/data/cashflow'
 import { isBatchExpired } from '@/lib/batch-dates'
+import { applyScheduledCashflowPolicy } from '@/data/policy-watch'
 
 let publicContentCache: { expiresAt: number; data: PublicContent } | null = null
 
@@ -180,13 +181,13 @@ export const getPublicContent = createServerFn({ method: 'GET' }).handler(async 
 export const getPublicCashflow = createServerFn({ method: 'GET' }).handler(async (): Promise<CountryCashflow[]> => {
   const rows = await queryRows('SELECT cashflow_json FROM site_settings WHERE id = 1 LIMIT 1')
   const raw = rows[0]?.cashflow_json
-  if (typeof raw !== 'string' || !raw.trim()) return defaultCashflowData
+  if (typeof raw !== 'string' || !raw.trim()) return defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country))
 
   try {
     const parsed = JSON.parse(raw) as unknown
-    return Array.isArray(parsed) && parsed.length > 0 ? mergeNewCashflowDestinations(parsed as CountryCashflow[]) : defaultCashflowData
+    return (Array.isArray(parsed) && parsed.length > 0 ? mergeNewCashflowDestinations(parsed as CountryCashflow[]) : defaultCashflowData).map((country) => applyScheduledCashflowPolicy(country))
   } catch {
-    return defaultCashflowData
+    return defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country))
   }
 })
 
