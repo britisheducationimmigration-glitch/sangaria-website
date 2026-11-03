@@ -7,7 +7,8 @@ import { readSiteSettings } from './site-settings'
 import { approvals as fixtureApprovals, coachingSchedule as fixtureCoachingSchedule, posts as fixturePosts, testimonials as fixtureTestimonials } from '@/data/fixtures'
 import { defaultCashflowData, mergeNewCashflowDestinations, type CountryCashflow } from '@/data/cashflow'
 import { isBatchExpired } from '@/lib/batch-dates'
-import { applyScheduledCashflowPolicy } from '@/data/policy-watch'
+import { applyScheduledCashflowPolicy, isPolicyNoticeVisible } from '@/data/policy-watch'
+import { readPolicyWatchState } from './policy-watch.server'
 
 let publicContentCache: { expiresAt: number; data: PublicContent } | null = null
 
@@ -110,6 +111,13 @@ function applyEditorialReview(post: PublicContent['posts'][number]): PublicConte
 
   return { ...post, lastReviewed: reviewed.lastReviewed, sources: reviewed.sources }
 }
+
+export const getPublicPolicyNotices = createServerFn({ method: 'GET' }).handler(async () => {
+  const state = await readPolicyWatchState()
+  return state.notices
+    .filter((notice) => isPolicyNoticeVisible(notice))
+    .sort((left, right) => left.showFrom.localeCompare(right.showFrom))
+})
 
 export const getPublicContent = createServerFn({ method: 'GET' }).handler(async (): Promise<PublicContent> => {
   if (publicContentCache && publicContentCache.expiresAt > Date.now()) return publicContentCache.data
