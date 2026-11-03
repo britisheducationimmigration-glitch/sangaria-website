@@ -36,6 +36,7 @@ The private dashboard is available at `/admin`. Sign-in is restricted to authori
 - **Certificates:** Upload certificate images, edit their details, publish or hide them, and choose which ones appear in the homepage carousel. Pale scans receive a mild display-only contrast and colour boost.
 - **Coaching batches:** Manage the public IELTS/PTE batch schedule.
 - **Cashflow planner:** Edit destination budget estimates and payment stages used by the public planner.
+- **Visa policy watch:** Super Admins can review confirmed effective dates and pending official announcements with direct source links. Exact scheduled values (currently the UK Student maintenance increase) switch across public country guidance and cashflow when their effective date arrives; proposals do not overwrite current rules.
 - **Website settings:** Manage public phone numbers, email addresses, office hours, homepage FAQs and trust figures, plus the enquiry-popup, WhatsApp-button and approvals-strip controls.
 - **User management:** Create staff accounts, set their initial password, change roles, reset passwords and remove access.
 
@@ -53,10 +54,11 @@ The site is **partly database-managed**. Public defaults and frequently updated 
 | Public site settings and cashflow budgets | MySQL-backed settings, editable from the admin dashboard. |
 | Country profiles, destination summaries and service copy | Source files, primarily `src/data/fixtures.ts`. These are not general-purpose admin editors. |
 | Visa fees, requirements, official source links and `lastVerified` dates | `src/data/visa-guidance.ts`; update in code after checking the official government source. |
+| Confirmed rule changes and announced policy watch items | `src/data/policy-watch.ts`; only exact official values with a published effective date are applied automatically. Other announcements stay marked as monitoring or pending detail. |
 | Preliminary eligibility factors and scoring rules | `src/data/eligibility-rules.ts`; update in code and keep the user-facing disclaimer intact. |
 | Business identity, branding and defaults | `src/data/site.ts` and other source defaults. |
 
-Some database tables are populated from fixtures when first initialised; after that, admin-managed records are authoritative. Changing a country fee or eligibility rule therefore requires a reviewed code change, even though many other parts of the site can be edited in the dashboard.
+Some database tables are populated from fixtures when first initialised; after that, admin-managed records are authoritative. Changing country guidance or eligibility rules therefore requires a reviewed code change, even though many other parts of the site can be edited in the dashboard. Scheduled official policy overlays are applied when public database-backed cashflow is read, so existing saved cashflow does not block a verified effective-date update.
 
 Use the [visa guidance maintenance checklist](./VISA-GUIDANCE-MAINTENANCE.md) for the monthly official-source review process, source/date recording and preview checks.
 
