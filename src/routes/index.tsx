@@ -41,6 +41,15 @@ const rotatingWords = [
   { text: 'IELTS 7.5+.', icon: '📚' },
 ]
 
+const homeJumpSections = [
+  { id: 'services', icon: '✈️', desktopLabel: 'Services', mobileLabel: 'Services' },
+  { id: 'destinations', icon: '🌍', desktopLabel: 'Countries', mobileLabel: 'Countries' },
+  { id: 'coaching', icon: '📚', desktopLabel: 'IELTS & PTE', mobileLabel: 'IELTS & PTE' },
+  { id: 'approvals', icon: '🎉', desktopLabel: 'Recent Visas', mobileLabel: 'Visas' },
+  { id: 'certificates', icon: '🏅', desktopLabel: 'Certificates', mobileLabel: 'Certificates' },
+  { id: 'reviews', icon: '⭐', desktopLabel: 'Reviews', mobileLabel: 'Reviews' },
+] as const
+
 function Home() {
   const { approvals, posts, testimonials, certificates, settings } = Route.useLoaderData()
   const homepageApprovals = approvals.filter((story) => story.homepageFeatured !== false)
@@ -71,8 +80,10 @@ function Home() {
   const [isMobileSticky, setIsMobileSticky] = useState(false)
   const [isDesktopSticky, setIsDesktopSticky] = useState(false)
   const [headerOffset, setHeaderOffset] = useState(68)
+  const [desktopJumpHeight, setDesktopJumpHeight] = useState(52)
   const mobileRef = useRef<HTMLDivElement>(null)
   const desktopRef = useRef<HTMLDivElement>(null)
+  const desktopBarRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -98,6 +109,27 @@ function Home() {
       window.removeEventListener('resize', handleScroll)
     }
   }, [])
+
+  useEffect(() => {
+    const bar = desktopBarRef.current
+    if (!bar) return
+    const measure = () => setDesktopJumpHeight(Math.max(52, Math.ceil(bar.getBoundingClientRect().height)))
+    measure()
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure)
+    observer?.observe(bar)
+    window.addEventListener('resize', measure)
+    return () => {
+      observer?.disconnect()
+      window.removeEventListener('resize', measure)
+    }
+  }, [])
+
+  const visibleJumpSections = homeJumpSections.filter((section) => {
+    if (section.id === 'approvals') return homepageApprovals.length > 0
+    if (section.id === 'certificates') return certificates.some((certificate) => certificate.published && certificate.homepageFeatured)
+    if (section.id === 'reviews') return homepageTestimonials.length > 0
+    return true
+  })
   const visibleTestimonialsDesktop = showAllTestimonials ? homepageTestimonials : homepageTestimonials.slice(0, 3)
   const visibleTestimonialsMobile = showAllTestimonialsMobile ? homepageTestimonials : homepageTestimonials.slice(0, 2)
 
@@ -106,7 +138,7 @@ function Home() {
       {/* ========================================================================= */}
       {/* MOBILE-ONLY VIEW                                                          */}
       {/* ========================================================================= */}
-      <div className="block md:hidden bg-cream text-forest-900">
+      <div className="block lg:hidden bg-cream text-forest-900">
         {/* MOBILE HERO */}
         <section className="relative overflow-hidden bg-forest-900 bg-grain text-white px-5 pt-8 pb-16">
           <div>
@@ -325,12 +357,15 @@ function Home() {
           >
             <div className="flex items-center gap-2.5 w-max">
               <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-coral-400 shrink-0">JUMP:</span>
-              <a href="#services-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">✈️ Services</a>
-              <a href="#destinations-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">🌍 Countries</a>
-              <a href="#coaching-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">📚 IELTS & PTE</a>
-              <a href="#approvals-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">🎉 Visas</a>
-              <a href="#certificates-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">🏅 Certificates</a>
-              <a href="#reviews-m" className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500">⭐ Reviews</a>
+              {visibleJumpSections.map((section) => (
+                <a
+                  key={section.id}
+                  href={`#${section.id}-m`}
+                  className="shrink-0 rounded-full bg-forest-900 border border-white/20 px-3.5 py-1 text-xs font-semibold text-white shadow-sm active:bg-coral-500"
+                >
+                  {section.icon} {section.mobileLabel}
+                </a>
+              ))}
               <a href="#enquiry-m" className="shrink-0 rounded-full bg-coral-500 px-3.5 py-1 text-xs font-bold text-white shadow-md">🔴 Free Enquiry</a>
             </div>
           </div>
@@ -676,7 +711,7 @@ function Home() {
       {/* ========================================================================= */}
       {/* DESKTOP-ONLY VIEW                                                         */}
       {/* ========================================================================= */}
-      <div className="hidden md:block bg-cream text-forest-900">
+      <div className="hidden lg:block bg-cream text-forest-900">
         {/* DESKTOP HERO */}
         <section className="relative overflow-hidden bg-forest-900 bg-grain text-white">
           <div className="mx-auto grid max-w-7xl items-center gap-14 px-6 pt-16 pb-24 lg:grid-cols-[1.15fr_1fr] lg:pt-24">
@@ -855,26 +890,32 @@ function Home() {
 
       {/* DESKTOP FIXED HEADER + JUMP TO BAR COMBO */}
         {/* DESKTOP JUMP TO BAR */}
-        <div ref={desktopRef} className="h-[52px]">
+        <div
+          ref={desktopRef}
+          style={isDesktopSticky ? { height: desktopJumpHeight + 'px' } : undefined}
+          className="min-h-[52px]"
+        >
           <div
-            style={isDesktopSticky ? { top: `${headerOffset}px` } : undefined}
-            className={`${
-              isDesktopSticky
-                ? 'fixed left-0 right-0 z-40 shadow-xl bg-forest-950/95 backdrop-blur-md'
-                : 'relative bg-forest-950'
-            } border-b border-forest-900/10 py-3 text-white`}
+            ref={desktopBarRef}
+            style={isDesktopSticky ? { top: headerOffset + 'px' } : undefined}
+            className={isDesktopSticky
+              ? 'fixed left-0 right-0 z-40 border-b border-forest-900/10 bg-forest-950/95 py-2.5 text-white shadow-xl backdrop-blur-md'
+              : 'relative border-b border-forest-900/10 bg-forest-950 py-2.5 text-white'}
           >
-            <div className="mx-auto flex max-w-7xl items-center justify-between px-6 text-sm">
-              <span className="font-mono text-xs font-bold uppercase tracking-widest text-coral-400">JUMP TO:</span>
-              <div className="flex items-center gap-7 font-semibold">
-                <a href="#services-desktop" className="hover:text-coral-400 transition">✈️ Services</a>
-                <a href="#destinations-desktop" className="hover:text-coral-400 transition">🌍 Countries</a>
-                <a href="#coaching-desktop" className="hover:text-coral-400 transition">📚 IELTS & PTE</a>
-                <a href="#approvals-desktop" className="hover:text-coral-400 transition">🎉 Recent Visas</a>
-                <a href="#certificates-desktop" className="hover:text-coral-400 transition">🏅 Certificates</a>
-              <a href="#reviews-desktop" className="hover:text-coral-400 transition">⭐ Reviews</a>
+            <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-4 gap-y-2 px-3 text-xs xl:justify-between xl:px-6 xl:text-sm">
+              <span className="shrink-0 font-mono text-[11px] font-bold uppercase tracking-widest text-coral-400">JUMP TO:</span>
+              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 font-semibold xl:gap-x-5">
+                {visibleJumpSections.map((section) => (
+                  <a
+                    key={section.id}
+                    href={`#${section.id}-desktop`}
+                    className="whitespace-nowrap transition hover:text-coral-400"
+                  >
+                    {section.icon} {section.desktopLabel}
+                  </a>
+                ))}
               </div>
-              <Link to="/contact" className="rounded-full bg-coral-500 px-5 py-2 text-xs font-bold text-white hover:bg-coral-600 transition shadow-sm">
+              <Link to="/contact" className="shrink-0 whitespace-nowrap rounded-full bg-coral-500 px-4 py-2 text-[11px] font-bold text-white shadow-sm transition hover:bg-coral-600 lg:px-5 lg:text-xs">
                 🔴 Free Enquiry
               </Link>
             </div>

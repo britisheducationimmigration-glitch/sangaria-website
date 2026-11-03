@@ -42,7 +42,7 @@ export function BoardingPassGenerator() {
 
   return (
     <section id="boarding-pass-section" className="relative overflow-hidden bg-forest-950 py-16 px-4 sm:px-6 border-y border-white/10 text-white">
-      <div className="relative mx-auto max-w-2xl">
+      <div className="relative mx-auto max-w-5xl">
         <div className="text-center mb-8">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-forest-900 border border-white/15 px-3.5 py-1 text-xs font-semibold text-coral-400 mb-3 shadow-sm">
             <Plane className="size-3.5" /> Virtual Flight Pass · Sangaria to World

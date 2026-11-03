@@ -137,9 +137,9 @@ export function FamilyCashflowPlanner() {
   }
 
   return (
-    <section className="mt-8 rounded-3xl bg-forest-900 p-5 text-white sm:p-8">
+    <section className="mx-auto mt-8 w-full rounded-3xl bg-forest-900 p-5 text-white sm:p-8 md:w-[calc(100%-3rem)] max-w-7xl">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-white/10 pb-5">
+      <div className="flex flex-col justify-between gap-4 border-b border-white/10 pb-5 lg:flex-row lg:items-end">
         <div>
           <span className="font-mono text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-coral-400">
             Transparent Financial Roadmap
@@ -153,11 +153,11 @@ export function FamilyCashflowPlanner() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-2">
+        <div className="flex w-fit shrink-0 gap-2 sm:ml-auto">
           <button
             type="button"
             onClick={handleDownloadPDF}
-            className="rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-bold text-white ring-1 ring-white/15 hover:bg-white/20 transition flex items-center gap-1.5 cursor-pointer"
+            className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-bold text-white ring-1 ring-white/15 transition hover:bg-white/20 cursor-pointer"
           >
             <span>📄</span>
             <span>Summary</span>
@@ -165,7 +165,7 @@ export function FamilyCashflowPlanner() {
           <button
             type="button"
             onClick={handleWhatsAppShare}
-            className="rounded-full bg-[#25D366] px-4 py-1.5 text-xs font-bold text-white hover:brightness-105 transition flex items-center gap-1.5 cursor-pointer"
+            className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-[#25D366] px-4 py-1.5 text-xs font-bold text-white transition hover:brightness-105 cursor-pointer"
           >
             <span>💬</span>
             <span>WhatsApp</span>
@@ -218,7 +218,7 @@ export function FamilyCashflowPlanner() {
       ) : null}
 
       {/* 2x2 Grid for Mobile (matching What We Do & Destinations size) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
         {country.stages.map((st) => (
           <div
             key={st.stageNumber}
