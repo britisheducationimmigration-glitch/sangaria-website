@@ -9,7 +9,7 @@ import { isTrustedPolicySourceUrl, readPolicyWatchState, scanOfficialPolicySourc
 import { isValidBatchStartDate } from '@/lib/batch-dates'
 import { getSupportedVideoEmbedUrl } from './video'
 import { invalidateCoachingCache, invalidatePublicContentCache } from './public-functions'
-import { discardCountryDraft, getAdminCountryCatalog, revertCountryToDefault, saveCountryDraft, type CountryPageContent } from './country-catalog.server'
+import { discardCountryDraft, getAdminCountryCatalog, getPublicCountryCatalog, revertCountryToDefault, saveCountryDraft, type CountryPageContent } from './country-catalog.server'
 import type { Country, StudyGuide } from '@/data/fixtures'
 import type { VisaGuidance } from '@/data/visa-guidance'
 
@@ -132,8 +132,8 @@ export const getAdminPolicyWatch = createServerFn({ method: 'GET' })
   .middleware([adminMiddleware])
   .handler(async ({ context }) => {
     if (context.role !== 'super_admin') throw new Error('Only a super admin can manage policy notices')
-    const state = await readPolicyWatchState()
-    return { items: policyWatchItems, notices: state.notices, reviews: state.reviews }
+    const [state, countryPages] = await Promise.all([readPolicyWatchState(), getPublicCountryCatalog()])
+    return { items: policyWatchItems, notices: state.notices, reviews: state.reviews, countries: countryPages.map((entry) => ({ slug: entry.country.slug, name: entry.country.name })) }
   })
 
 export const savePolicyNotice = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
@@ -148,7 +148,7 @@ export const savePolicyNotice = createServerFn({ method: 'POST' }).middleware([a
   const sourceUrl = stringValue(input.sourceUrl, 500)
   const status = stringValue(input.status, 20)
   const sourceVerified = Boolean(input.sourceVerified)
-  if (!['all', 'canada', 'uk', 'australia', 'usa', 'new-zealand', 'germany', 'europe'].includes(countrySlug)) throw new Error('Choose a valid destination')
+  if (countrySlug !== 'all' && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(countrySlug)) throw new Error('Choose a valid destination')
   if (!title || !message) throw new Error('Add a title and notice text')
   if (!['draft', 'published'].includes(status)) throw new Error('Choose draft or published')
   if (status === 'published') {
@@ -159,6 +159,10 @@ export const savePolicyNotice = createServerFn({ method: 'POST' }).middleware([a
   return { id, countrySlug, title, message, showFrom, expiresOn, sourceLabel, sourceUrl, status: status as 'draft' | 'published', sourceVerified }
 }).handler(async ({ data, context }): Promise<PolicyNotice> => {
   if (context.role !== 'super_admin') throw new Error('Only a super admin can manage policy notices')
+  if (data.countrySlug !== 'all') {
+    const countryPages = await getPublicCountryCatalog()
+    if (!countryPages.some((entry) => entry.country.slug === data.countrySlug)) throw new Error('Choose a published destination')
+  }
   const state = await readPolicyWatchState()
   const id = data.id || 'notice-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8)
   const previous = state.notices.find((item) => item.id === id)
