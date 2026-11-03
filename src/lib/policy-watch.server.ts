@@ -39,6 +39,15 @@ function destinationSlug(destination: string) {
   return slugs[destination] ?? 'all'
 }
 
+export function isTrustedPolicySourceUrl(value: string) {
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' && isTrustedOfficialHost(url.hostname)
+  } catch {
+    return false
+  }
+}
+
 function isTrustedOfficialHost(hostname: string) {
   const allowed = [
     'gov.uk',
