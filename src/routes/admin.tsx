@@ -17,7 +17,7 @@ type Tab = 'enquiries' | 'news' | 'stories' | 'certificates' | 'batches' | 'budg
 const roleLabels: Record<AdminRole, string> = { super_admin: 'Super Admin', content_editor: 'Content Editor', enquiry_manager: 'Enquiry Manager' }
 
 const blankPost: Omit<AdminPost, 'id'> = { slug: '', title: '', category: 'Visa News', date: new Date().toISOString().slice(0, 10), excerpt: '', readMins: 4, body: [], published: false }
-const blankStory: Omit<AdminStory, 'id'> = { kind: 'testimonial', name: '', city: '', country: '', visa: '', quote: '', rating: 5, initials: '', flag: '', date: new Date().toISOString().slice(0, 10), note: '', mediaType: 'none', photoSrc: '', videoUrl: '', mediaAlt: '', mediaConsent: false, published: false }
+const blankStory: Omit<AdminStory, 'id'> = { kind: 'testimonial', name: '', city: '', country: '', visa: '', quote: '', rating: 5, initials: '', flag: '', date: new Date().toISOString().slice(0, 10), note: '', mediaType: 'none', photoSrc: '', videoUrl: '', mediaAlt: '', mediaConsent: false, homepageFeatured: true, published: false }
 
 function AdminPage() {
   const [snapshot, setSnapshot] = useState<AdminSnapshot | null>(null)
