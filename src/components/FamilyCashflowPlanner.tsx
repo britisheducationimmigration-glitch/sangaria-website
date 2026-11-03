@@ -137,7 +137,7 @@ export function FamilyCashflowPlanner() {
   }
 
   return (
-    <section className="mt-8 rounded-3xl bg-forest-900 p-5 text-white sm:p-8">
+    <section className="mx-auto mt-8 w-full rounded-3xl bg-forest-900 p-5 text-white sm:p-8 md:w-[calc(100%-3rem)] md:max-w-7xl">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-white/10 pb-5">
         <div>
@@ -218,7 +218,7 @@ export function FamilyCashflowPlanner() {
       ) : null}
 
       {/* 2x2 Grid for Mobile (matching What We Do & Destinations size) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
         {country.stages.map((st) => (
           <div
             key={st.stageNumber}
