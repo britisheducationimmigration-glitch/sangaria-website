@@ -54,7 +54,7 @@ function mapAdminStory(row: Record<string, unknown>): AdminStory {
   const photoSrc = Boolean(row.has_photo) ? '/success-stories/media/' + Number(row.id) + '?v=' + Number(row.media_version ?? 0) : ''
   const videoUrl = String(row.video_url ?? '')
   const mediaType: AdminStory['mediaType'] = photoSrc ? 'photo' : getSupportedVideoEmbedUrl(videoUrl) ? 'video' : 'none'
-  return { id: Number(row.id), kind: String(row.kind) as AdminStory['kind'], name: String(row.name), city: String(row.city), country: String(row.country), visa: String(row.visa), quote: String(row.quote), rating: Number(row.rating), initials: String(row.initials), flag: String(row.flag), date: dateOnly(row.story_date), note: String(row.note), mediaType, photoSrc, videoUrl: mediaType === 'video' ? videoUrl : '', mediaAlt: String(row.media_alt ?? ''), mediaConsent: Boolean(row.media_consent), published: Boolean(row.published) }
+  return { id: Number(row.id), kind: String(row.kind) as AdminStory['kind'], name: String(row.name), city: String(row.city), country: String(row.country), visa: String(row.visa), quote: String(row.quote), rating: Number(row.rating), initials: String(row.initials), flag: String(row.flag), date: dateOnly(row.story_date), note: String(row.note), mediaType, photoSrc, videoUrl: mediaType === 'video' ? videoUrl : '', mediaAlt: String(row.media_alt ?? ''), mediaConsent: Boolean(row.media_consent), homepageFeatured: Boolean(row.homepage_featured), published: Boolean(row.published) }
 }
 function mapBatch(row: Record<string, unknown>): CoachingBatch {
   return { id: Number(row.id), program: String(row.program), batch: String(row.batch_name), time: String(row.time_slot), seats: Number(row.seats), starts: String(row.starts), published: Boolean(row.published) }
@@ -85,7 +85,7 @@ export const getAdminSnapshot = createServerFn({ method: 'GET' })
     const [enquiryRows, postRows, storyRows, settingsRows, userRows, statRows, batchRows, statusRows, sourceRows, certificateRows] = await Promise.all([
       context.role === 'content_editor' ? Promise.resolve([]) : queryRows('SELECT id, name, phone, email, city, interest, country, message, source, summary, status, notes, assigned_to, next_follow_up_at, created_at, updated_at FROM enquiries ORDER BY created_at DESC LIMIT 150'),
       context.role === 'enquiry_manager' ? Promise.resolve([]) : queryRows('SELECT * FROM content_posts ORDER BY publish_date DESC, id DESC LIMIT 100'),
-      context.role === 'enquiry_manager' ? Promise.resolve([]) : queryRows('SELECT id, kind, name, city, country, visa, quote, rating, initials, flag, story_date, note, photo_data IS NOT NULL AS has_photo, video_url, media_alt, media_consent, media_version, published FROM success_stories ORDER BY story_date DESC, id DESC LIMIT 100'),
+      context.role === 'enquiry_manager' ? Promise.resolve([]) : queryRows('SELECT id, kind, name, city, country, visa, quote, rating, initials, flag, story_date, note, photo_data IS NOT NULL AS has_photo, video_url, media_alt, media_consent, media_version, homepage_featured, published FROM success_stories ORDER BY story_date DESC, id DESC LIMIT 100'),
       context.role === 'super_admin' ? queryRows('SELECT popup_enabled, popup_delay_seconds, whatsapp_enabled, approvals_marquee_enabled, public_settings_json FROM site_settings WHERE id = 1 LIMIT 1') : Promise.resolve([]),
       context.role === 'super_admin' ? queryRows('SELECT * FROM admin_users ORDER BY email ASC') : Promise.resolve([]),
       context.role === 'content_editor' ? Promise.resolve([]) : queryRows(`SELECT COUNT(*) AS total, SUM(status = 'New') AS new_count, SUM(status IN ('Follow-up', 'Documents Pending', 'Applied')) AS follow_ups, SUM(status = 'Converted') AS converted, SUM(created_at >= CURRENT_DATE - INTERVAL 6 DAY) AS new_last_7_days, SUM(source = 'coaching') AS demo_requests, SUM(next_follow_up_at IS NOT NULL AND DATE(next_follow_up_at) = CURRENT_DATE() AND status NOT IN ('Converted', 'Closed')) AS due_today FROM enquiries`),
@@ -284,6 +284,7 @@ export const saveStory = createServerFn({ method: 'POST' }).middleware([adminMid
     videoUrl,
     mediaAlt,
     mediaConsent,
+    homepageFeatured: input.homepageFeatured === undefined ? true : Boolean(input.homepageFeatured),
     published,
   }
 }).handler(async ({ data, context }) => {
@@ -305,26 +306,26 @@ export const saveStory = createServerFn({ method: 'POST' }).middleware([adminMid
 
   const mediaType = data.kind === 'approval' ? data.mediaType : 'none'
   const mediaConsent = mediaType !== 'none' && data.mediaConsent ? 1 : 0
-  const base = [data.kind, data.name, data.city, data.country, data.visa, data.quote, data.rating, data.initials, data.flag, data.date, data.note, data.published ? 1 : 0]
+  const base = [data.kind, data.name, data.city, data.country, data.visa, data.quote, data.rating, data.initials, data.flag, data.date, data.note, data.homepageFeatured ? 1 : 0, data.published ? 1 : 0]
   if (data.id) {
     if (mediaType === 'photo' && photo) {
       await execute(
-        'UPDATE success_stories SET kind = ?, name = ?, city = ?, country = ?, visa = ?, quote = ?, rating = ?, initials = ?, flag = ?, story_date = ?, note = ?, published = ?, photo_mime_type = ?, photo_data = ?, video_url = NULL, media_alt = ?, media_consent = ?, media_version = ? WHERE id = ?',
+        'UPDATE success_stories SET kind = ?, name = ?, city = ?, country = ?, visa = ?, quote = ?, rating = ?, initials = ?, flag = ?, story_date = ?, note = ?, homepage_featured = ?, published = ?, photo_mime_type = ?, photo_data = ?, video_url = NULL, media_alt = ?, media_consent = ?, media_version = ? WHERE id = ?',
         [...base, data.photoMimeType, photo, data.mediaAlt, mediaConsent, Date.now(), data.id],
       )
     } else if (mediaType === 'photo') {
       await execute(
-        'UPDATE success_stories SET kind = ?, name = ?, city = ?, country = ?, visa = ?, quote = ?, rating = ?, initials = ?, flag = ?, story_date = ?, note = ?, published = ?, video_url = NULL, media_alt = ?, media_consent = ?, media_version = ? WHERE id = ?',
+        'UPDATE success_stories SET kind = ?, name = ?, city = ?, country = ?, visa = ?, quote = ?, rating = ?, initials = ?, flag = ?, story_date = ?, note = ?, homepage_featured = ?, published = ?, video_url = NULL, media_alt = ?, media_consent = ?, media_version = ? WHERE id = ?',
         [...base, data.mediaAlt, mediaConsent, Date.now(), data.id],
       )
     } else if (mediaType === 'video') {
       await execute(
-        'UPDATE success_stories SET kind = ?, name = ?, city = ?, country = ?, visa = ?, quote = ?, rating = ?, initials = ?, flag = ?, story_date = ?, note = ?, published = ?, photo_mime_type = NULL, photo_data = NULL, video_url = ?, media_alt = ?, media_consent = ?, media_version = ? WHERE id = ?',
+        'UPDATE success_stories SET kind = ?, name = ?, city = ?, country = ?, visa = ?, quote = ?, rating = ?, initials = ?, flag = ?, story_date = ?, note = ?, homepage_featured = ?, published = ?, photo_mime_type = NULL, photo_data = NULL, video_url = ?, media_alt = ?, media_consent = ?, media_version = ? WHERE id = ?',
         [...base, data.videoUrl, '', mediaConsent, Date.now(), data.id],
       )
     } else {
       await execute(
-        'UPDATE success_stories SET kind = ?, name = ?, city = ?, country = ?, visa = ?, quote = ?, rating = ?, initials = ?, flag = ?, story_date = ?, note = ?, published = ?, photo_mime_type = NULL, photo_data = NULL, video_url = NULL, media_alt = ?, media_consent = ?, media_version = ? WHERE id = ?',
+        'UPDATE success_stories SET kind = ?, name = ?, city = ?, country = ?, visa = ?, quote = ?, rating = ?, initials = ?, flag = ?, story_date = ?, note = ?, homepage_featured = ?, published = ?, photo_mime_type = NULL, photo_data = NULL, video_url = NULL, media_alt = ?, media_consent = ?, media_version = ? WHERE id = ?',
         [...base, '', 0, Date.now(), data.id],
       )
     }
@@ -335,8 +336,8 @@ export const saveStory = createServerFn({ method: 'POST' }).middleware([adminMid
     const videoUrl = mediaType === 'video' ? data.videoUrl : null
     const mediaAlt = mediaType === 'photo' ? data.mediaAlt : ''
     await execute(
-      'INSERT INTO success_stories (kind, name, city, country, visa, quote, rating, initials, flag, story_date, note, photo_mime_type, photo_data, video_url, media_alt, media_consent, media_version, published) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [data.kind, data.name, data.city, data.country, data.visa, data.quote, data.rating, data.initials, data.flag, data.date, data.note, photoMimeType, photoData, videoUrl, mediaAlt, mediaConsent, photoData ? Date.now() : 0, data.published ? 1 : 0],
+      'INSERT INTO success_stories (kind, name, city, country, visa, quote, rating, initials, flag, story_date, note, photo_mime_type, photo_data, video_url, media_alt, media_consent, media_version, homepage_featured, published) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [data.kind, data.name, data.city, data.country, data.visa, data.quote, data.rating, data.initials, data.flag, data.date, data.note, photoMimeType, photoData, videoUrl, mediaAlt, mediaConsent, photoData ? Date.now() : 0, data.homepageFeatured ? 1 : 0, data.published ? 1 : 0],
     )
   }
   invalidatePublicContentCache()
