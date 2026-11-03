@@ -2,17 +2,21 @@ import { Link, createFileRoute, notFound } from '@tanstack/react-router'
 import { CalendarDays, Check, Languages, Wallet } from 'lucide-react'
 import { EnquiryForm } from '@/components/EnquiryForm'
 import { Eyebrow } from '@/components/Section'
-import { countries } from '@/data/fixtures'
-import { visaGuidance } from '@/data/visa-guidance'
+import { getPublicPolicyNotices, getPublicCountryPage } from '@/lib/public-functions'
 import { CountryFlag } from '@/components/CountryFlag'
 
 import { createPageSeo } from '@/lib/seo'
 
 export const Route = createFileRoute('/countries/$slug')({
-  loader: ({ params }) => {
-    const country = countries.find((c) => c.slug === params.slug)
-    if (!country) throw notFound()
-    return { country }
+  loader: async ({ params }) => {
+    const content = await getPublicCountryPage({ data: { slug: params.slug } })
+    if (!content) throw notFound()
+    const notices = await getPublicPolicyNotices()
+    return {
+      country: content.country,
+      guidance: content.guidance,
+      notices: notices.filter((notice) => notice.countrySlug === 'all' || notice.countrySlug === content.country.slug),
+    }
   },
   head: ({ loaderData }) => {
     const isEuropeGuide = loaderData.country.slug === 'europe'
@@ -30,8 +34,7 @@ export const Route = createFileRoute('/countries/$slug')({
 })
 
 function CountryPage() {
-  const { country: c } = Route.useLoaderData()
-  const guidance = visaGuidance[c.slug]
+  const { country: c, guidance, notices } = Route.useLoaderData()
   return (
     <>
       <section className="relative overflow-hidden bg-forest-900 bg-grain text-white">
@@ -88,7 +91,14 @@ function CountryPage() {
               </Link>
             </div>
           </div>
-          <div className="rounded-3xl bg-forest-50 p-8">
+          {notices.map((notice) => (
+            <aside key={notice.id} role="status" className="mb-5 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm leading-relaxed text-forest-900/80">
+              <strong className="block text-amber-900">{notice.title}</strong>
+              <p className="mt-1">{notice.message}</p>
+              <a href={notice.sourceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex min-h-10 items-center font-bold text-coral-700 underline underline-offset-2">{notice.sourceLabel} ↗</a>
+            </aside>
+          ))}
+                    <div className="rounded-3xl bg-forest-50 p-8">
             <Wallet className="size-6 text-forest-700" />
             <h3 className="mt-4 text-lg font-bold text-forest-900">Official fee snapshot</h3>
             <table className="mt-4 w-full text-left">

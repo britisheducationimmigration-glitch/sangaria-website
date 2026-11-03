@@ -221,7 +221,12 @@ export function CountryFlag({ code, flag, country, className, ...props }: Countr
   }
 
   return (
-    <span className={cn('inline-block font-mono text-xs font-bold px-1.5 py-0.5 rounded bg-forest-900/10 text-forest-900', className)} {...props}>
+    <span
+      className={cn('inline-flex items-center justify-center overflow-hidden rounded bg-forest-900/10 text-forest-900 align-middle', className)}
+      style={{ fontSize: 'clamp(0.75rem, 4vw, 2rem)' }}
+      title={country || undefined}
+      {...props}
+    >
       {flag || country || code || '🌐'}
     </span>
   )

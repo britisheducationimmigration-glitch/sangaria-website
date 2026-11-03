@@ -5,7 +5,8 @@ import { SiteFooter } from '@/components/SiteFooter'
 import { SiteHeader } from '@/components/SiteHeader'
 import { WhatsAppButton } from '@/components/WhatsAppButton'
 import { EnquiryPopup } from '@/components/EnquiryPopup'
-import { getPublicContent } from '@/lib/public-functions'
+import { getPublicContent, getPublicCountryCatalogue } from '@/lib/public-functions'
+import { countries as fixtureCountries, getCurrentCountry } from '@/data/fixtures'
 import { defaultSiteSettings } from '@/lib/site-settings'
 import appCss from '../styles.css?url'
 
@@ -68,9 +69,10 @@ function schemaOpeningHours(label: string) {
 export const Route = createRootRoute({
   loader: async () => {
     try {
-      return { settings: (await getPublicContent()).settings }
+      const [content, countryPages] = await Promise.all([getPublicContent(), getPublicCountryCatalogue()])
+      return { settings: content.settings, countries: countryPages.map((entry) => entry.country) }
     } catch {
-      return { settings: defaultSiteSettings }
+      return { settings: defaultSiteSettings, countries: fixtureCountries.map(getCurrentCountry) }
     }
   },
   head: ({ loaderData }) => ({
@@ -131,7 +133,7 @@ export const Route = createRootRoute({
 function RootDocument({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const isAdmin = pathname.startsWith('/admin')
-  const { settings } = Route.useLoaderData()
+  const { settings, countries } = Route.useLoaderData()
 
   useEffect(() => {
     if (isAdmin || window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) return
@@ -186,7 +188,7 @@ function RootDocument({ children }: { children: ReactNode }) {
       <body>
         {!isAdmin && <SiteHeader settings={settings} />}
         <main className={isAdmin ? 'admin-main' : 'public-main'}>{children}</main>
-        {!isAdmin && <SiteFooter settings={settings} />}
+        {!isAdmin && <SiteFooter settings={settings} countries={countries} />}
         {!isAdmin && <WhatsAppButton />}
         {!isAdmin && <EnquiryPopup />}
         <Analytics />

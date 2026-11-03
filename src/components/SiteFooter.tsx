@@ -2,12 +2,12 @@ import { Link } from '@tanstack/react-router'
 import { Mail, MapPin, Phone } from 'lucide-react'
 import { Facebook, Instagram } from './BrandIcons'
 import { CountryFlag } from './CountryFlag'
-import { countries } from '@/data/fixtures'
+import type { Country } from '@/data/fixtures'
 import { navLinks, site } from '@/data/site'
 import type { SiteSettings } from '@/lib/content-types'
 import { Logo } from './Logo'
 
-export function SiteFooter({ settings }: { settings: SiteSettings }) {
+export function SiteFooter({ settings, countries }: { settings: SiteSettings; countries: Country[] }) {
   return (
     <footer className="bg-forest-950 bg-grain text-forest-100">
       <div className="mx-auto max-w-7xl px-5 pt-12 pb-8 md:px-6 md:pt-20 md:pb-10">

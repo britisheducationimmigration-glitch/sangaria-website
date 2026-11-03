@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { countries, posts as fixturePosts } from '@/data/fixtures'
 import { queryRows } from '@/lib/db.server'
+import { getPublicCountryCatalog } from '@/lib/country-catalog.server'
 
 const siteUrl = 'https://britisheducationandimmigration.com'
 const staticPages = [
@@ -36,6 +37,8 @@ export const Route = createFileRoute('/sitemap.xml')({
   server: {
     handlers: {
       GET: async () => {
+        let countrySlugs = countries.map((country) => country.slug)
+        try { countrySlugs = (await getPublicCountryCatalog()).map((entry) => entry.country.slug) } catch { /* Keep the static sitemap fallback if the database is unavailable. */ }
         let articleRows: Array<Record<string, unknown>> = []
         try {
           articleRows = await queryRows('SELECT slug, updated_at FROM content_posts WHERE published = 1 ORDER BY publish_date DESC, id DESC')
@@ -48,7 +51,7 @@ export const Route = createFileRoute('/sitemap.xml')({
           : fixturePosts.map((post) => ({ slug: post.slug, date: post.date }))
         const entries: Array<{ path: string; frequency: string; priority: string; lastmod?: string }> = [
           ...staticPages.map(([path, frequency, priority]) => ({ path, frequency, priority })),
-          ...countries.map((country) => ({ path: '/countries/' + country.slug, frequency: 'monthly', priority: '0.8' })),
+          ...countrySlugs.map((slug) => ({ path: '/countries/' + slug, frequency: 'monthly', priority: '0.8' })),
         ]
         const seen = new Set(entries.map((entry) => entry.path))
         for (const article of articles) {

@@ -7,6 +7,9 @@ import { readSiteSettings } from './site-settings'
 import { approvals as fixtureApprovals, coachingSchedule as fixtureCoachingSchedule, posts as fixturePosts, testimonials as fixtureTestimonials } from '@/data/fixtures'
 import { defaultCashflowData, mergeNewCashflowDestinations, type CountryCashflow } from '@/data/cashflow'
 import { isBatchExpired } from '@/lib/batch-dates'
+import { applyScheduledCashflowPolicy, isPolicyNoticeVisible } from '@/data/policy-watch'
+import { readPolicyWatchState } from './policy-watch.server'
+import { getPublicCountryBySlug, getPublicCountryCatalog } from './country-catalog.server'
 
 let publicContentCache: { expiresAt: number; data: PublicContent } | null = null
 
@@ -110,6 +113,31 @@ function applyEditorialReview(post: PublicContent['posts'][number]): PublicConte
   return { ...post, lastReviewed: reviewed.lastReviewed, sources: reviewed.sources }
 }
 
+export const getPublicCountryCatalogue = createServerFn({ method: 'GET' }).handler(async () => getPublicCountryCatalog())
+
+export const getPublicCountryPage = createServerFn({ method: 'GET' })
+  .validator((data: unknown) => {
+    const slug = stringValue((data as Record<string, unknown>)?.slug, 80).toLowerCase()
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) throw new Error('Invalid destination')
+    return { slug }
+  })
+  .handler(async ({ data }) => getPublicCountryBySlug(data.slug))
+
+export const getPublicPolicyNotices = createServerFn({ method: 'GET' }).handler(async () => {
+  const state = await readPolicyWatchState()
+  return state.notices
+    .filter((notice) => isPolicyNoticeVisible(notice))
+    .map((notice) => ({
+      id: notice.id,
+      countrySlug: notice.countrySlug,
+      title: notice.title,
+      message: notice.message,
+      sourceLabel: notice.sourceLabel,
+      sourceUrl: notice.sourceUrl,
+    }))
+    .sort((left, right) => left.title.localeCompare(right.title))
+})
+
 export const getPublicContent = createServerFn({ method: 'GET' }).handler(async (): Promise<PublicContent> => {
   if (publicContentCache && publicContentCache.expiresAt > Date.now()) return publicContentCache.data
   const postRows = await queryRows('SELECT slug, title, category, publish_date, excerpt, read_mins, body_json FROM content_posts WHERE published = 1 ORDER BY publish_date DESC, id DESC')
@@ -180,13 +208,13 @@ export const getPublicContent = createServerFn({ method: 'GET' }).handler(async 
 export const getPublicCashflow = createServerFn({ method: 'GET' }).handler(async (): Promise<CountryCashflow[]> => {
   const rows = await queryRows('SELECT cashflow_json FROM site_settings WHERE id = 1 LIMIT 1')
   const raw = rows[0]?.cashflow_json
-  if (typeof raw !== 'string' || !raw.trim()) return defaultCashflowData
+  if (typeof raw !== 'string' || !raw.trim()) return defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country))
 
   try {
     const parsed = JSON.parse(raw) as unknown
-    return Array.isArray(parsed) && parsed.length > 0 ? mergeNewCashflowDestinations(parsed as CountryCashflow[]) : defaultCashflowData
+    return (Array.isArray(parsed) && parsed.length > 0 ? mergeNewCashflowDestinations(parsed as CountryCashflow[]) : defaultCashflowData).map((country) => applyScheduledCashflowPolicy(country))
   } catch {
-    return defaultCashflowData
+    return defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country))
   }
 })
 

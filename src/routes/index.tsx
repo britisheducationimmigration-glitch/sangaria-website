@@ -6,7 +6,8 @@ import { CountryFlag } from '@/components/CountryFlag'
 import { EnquiryForm } from '@/components/EnquiryForm'
 import { Eyebrow } from '@/components/Section'
 import { ServiceIcon } from '@/components/ServiceIcon'
-import { countries, visaServices } from '@/data/fixtures'
+import { visaServices } from '@/data/fixtures'
+import { getPublicCountryCatalogue } from '@/lib/public-functions'
 import { site } from '@/data/site'
 import { img } from '@/lib/utils'
 import { getPublicContent } from '@/lib/public-functions'
@@ -17,7 +18,10 @@ import { CertificateCarousel } from '@/components/CertificateCarousel'
 import { createPageSeo } from '@/lib/seo'
 
 export const Route = createFileRoute('/')({
-  loader: () => getPublicContent(),
+  loader: async () => {
+    const [content, countryPages] = await Promise.all([getPublicContent(), getPublicCountryCatalogue()])
+    return { ...content, countryPages }
+  },
   head: () => createPageSeo({
     title: 'Study Visas & IELTS Coaching in Sangaria | British Education',
     description: 'Get study visa guidance, IELTS/PTE coaching and free profile evaluation in Sangaria, Rajasthan. Compare destinations and explore next steps.',
@@ -51,7 +55,8 @@ const homeJumpSections = [
 ] as const
 
 function Home() {
-  const { approvals, posts, testimonials, certificates, settings } = Route.useLoaderData()
+  const { approvals, posts, testimonials, certificates, settings, countryPages } = Route.useLoaderData()
+  const countries = countryPages.map((entry) => entry.country)
   const homepageApprovals = approvals.filter((story) => story.homepageFeatured !== false)
   const homepageTestimonials = testimonials.filter((story) => story.homepageFeatured !== false)
   const [selectedCountry, setSelectedCountry] = useState('canada')

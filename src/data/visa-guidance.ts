@@ -57,6 +57,7 @@ export const visaGuidance: Record<string, VisaGuidance> = {
     caveat: 'Fees are route-, duration-, nationality- and circumstance-specific. Biometrics, priority, courier, scanning and visa-centre services are separate. Some nationalities need an ETA or neither an ETA nor a visitor visa.',
     sources: [
       { label: 'Student visa', url: 'https://www.gov.uk/student-visa' },
+      { label: 'Student funds increase from 30 November 2026 (HC 584)', url: 'https://www.gov.uk/government/publications/statement-of-changes-to-the-immigration-rules-hc-584-3-september-2026/statement-of-changes-to-the-immigration-rules-hc-584-3-september-2026-accessible' },
       { label: 'Student documents', url: 'https://www.gov.uk/student-visa/documents-you-must-provide' },
       { label: 'Student visa living costs', url: 'https://www.gov.uk/student-visa/money' },
       { label: 'Student visa English requirements', url: 'https://www.gov.uk/student-visa/knowledge-of-english' },
@@ -124,12 +125,14 @@ export const visaGuidance: Record<string, VisaGuidance> = {
     feeSummary: 'INZ fees depend on citizenship, application location, category and exemptions. The visitor common-case figure combines an application fee, immigration levy and per-person IVL; eligible Pacific-country rules can differ.',
     requirements: [
       'Student: approved offer of place, tuition payment or scholarship, living funds or acceptable sponsor, genuine study purpose, health/character compliance and acceptable medical/travel insurance.',
+      'From 27 October 2026, new master’s-by-research visa applications no longer receive unlimited in-study work rights; new master’s students have the 25-hour weekly limit and full-time work in holidays. English ability is expressly a key factor in meeting student visa conditions. INZ also broadened grounds to suspend processing and extended the usual post-course period from 1 to 2 months for affected visas; the 31 March expiry date remains.',
       'Visitor: genuine visitor intentions, health and character compliance, sufficient funds or sponsor, and evidence of departure. Self-funded applicants generally need NZD 1,000 per month, or NZD 400 when accommodation is prepaid.',
       'Visitor evidence can include bank statements, accommodation proof and an onward ticket or funds to buy one. Some travellers need an NZeTA rather than a Visitor Visa.',
       'Skilled Migrant Category: age 55 or younger, expression of interest and invitation, skilled job or offer from an accredited employer, points pathway, English, health, character and relationship requirements.',
     ],
     caveat: 'The amounts are from figures and change by fee band and levy rules. Tuition, insurance, medical/X-ray, police certificates, translations and third-party/payment charges are separate.',
     sources: [
+      { label: 'Changes to student visas (27 October 2026)', url: 'https://www.immigration.govt.nz/about-us/news-centre/changes-to-student-visas/' },
       { label: 'Fee Paying Student Visa', url: 'https://www.immigration.govt.nz/visas/fee-paying-student-visa/' },
       { label: 'Visitor Visa', url: 'https://www.immigration.govt.nz/visas/visitor-visa/' },
       { label: 'Skilled Migrant Category', url: 'https://immigration.govt.nz/visas/skilled-migrant-category-resident-visa' },

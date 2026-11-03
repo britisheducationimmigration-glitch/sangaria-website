@@ -4,9 +4,14 @@ import type { AdminCertificate, AdminPost, AdminRole, AdminSnapshot, AdminStory,
 import { Buffer } from 'node:buffer'
 import { asFaqList, asTrustStatList, readSiteSettings } from './site-settings'
 import { defaultCashflowData, mergeNewCashflowDestinations, type CountryCashflow } from '@/data/cashflow'
+import { applyScheduledCashflowPolicy, policyWatchItems, type PolicyNotice } from '@/data/policy-watch'
+import { readPolicyWatchState, scanOfficialPolicySources, writePolicyWatchState } from './policy-watch.server'
 import { isValidBatchStartDate } from '@/lib/batch-dates'
 import { getSupportedVideoEmbedUrl } from './video'
 import { invalidateCoachingCache, invalidatePublicContentCache } from './public-functions'
+import { discardCountryDraft, getAdminCountryCatalog, getPublicCountryCatalog, revertCountryToDefault, saveCountryDraft, type CountryPageContent } from './country-catalog.server'
+import type { Country, StudyGuide } from '@/data/fixtures'
+import type { VisaGuidance } from '@/data/visa-guidance'
 
 function stringValue(value: unknown, max = 5000) {
   return typeof value === 'string' ? value.trim().slice(0, max) : ''
@@ -122,6 +127,239 @@ export const getAdminSnapshot = createServerFn({ method: 'GET' })
       certificates: certificateRows.map(mapCertificate),
     }
   })
+
+export const getAdminPolicyWatch = createServerFn({ method: 'GET' })
+  .middleware([adminMiddleware])
+  .handler(async ({ context }) => {
+    if (context.role !== 'super_admin') throw new Error('Only a super admin can manage policy notices')
+    const [state, countryPages] = await Promise.all([readPolicyWatchState(), getPublicCountryCatalog()])
+    return { items: policyWatchItems, notices: state.notices, reviews: state.reviews, countries: countryPages.map((entry) => ({ slug: entry.country.slug, name: entry.country.name })) }
+  })
+
+export const savePolicyNotice = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
+  const input = (data ?? {}) as Record<string, unknown>
+  const id = stringValue(input.id, 120)
+  const countrySlug = stringValue(input.countrySlug, 40)
+  const title = stringValue(input.title, 180)
+  const message = stringValue(input.message, 1400)
+  const showFrom = stringValue(input.showFrom, 10)
+  const expiresOn = stringValue(input.expiresOn, 10)
+  const sourceLabel = stringValue(input.sourceLabel, 180)
+  const sourceUrl = stringValue(input.sourceUrl, 500)
+  const status = stringValue(input.status, 20)
+  const sourceVerified = Boolean(input.sourceVerified)
+  if (countrySlug !== 'all' && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(countrySlug)) throw new Error('Choose a valid destination')
+  if (!title || !message) throw new Error('Add a title and notice text')
+  if (!['draft', 'published'].includes(status)) throw new Error('Choose draft or published')
+  if (status === 'published') {
+    if (!sourceVerified) throw new Error('Check the official source before publishing')
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(showFrom) || !/^\d{4}-\d{2}-\d{2}$/.test(expiresOn) || expiresOn <= showFrom) throw new Error('Set a valid start date and a later hide date before publishing')
+    if (!sourceUrl.startsWith('https://') || !sourceLabel) throw new Error('Published notices need an official HTTPS source link')
+  }
+  return { id, countrySlug, title, message, showFrom, expiresOn, sourceLabel, sourceUrl, status: status as 'draft' | 'published', sourceVerified }
+}).handler(async ({ data, context }): Promise<PolicyNotice> => {
+  if (context.role !== 'super_admin') throw new Error('Only a super admin can manage policy notices')
+  if (data.countrySlug !== 'all') {
+    const countryPages = await getPublicCountryCatalog()
+    if (!countryPages.some((entry) => entry.country.slug === data.countrySlug)) throw new Error('Choose a published destination')
+  }
+  const state = await readPolicyWatchState()
+  const id = data.id || 'notice-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8)
+  const previous = state.notices.find((item) => item.id === id)
+  const notice: PolicyNotice = {
+    ...previous,
+    ...data,
+    id,
+    status: data.status,
+    sourceVerified: data.status === 'published' && data.sourceVerified,
+    guidanceUpdatedAt: previous?.guidanceUpdatedAt,
+    guidanceUpdatedBy: previous?.guidanceUpdatedBy,
+    sourceItemId: previous?.sourceItemId,
+  }
+  const index = state.notices.findIndex((item) => item.id === id)
+  if (index < 0) state.notices.unshift(notice)
+  else state.notices[index] = notice
+  await writePolicyWatchState(state)
+  return notice
+})
+
+export const deletePolicyNotice = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => ({
+  id: stringValue((data as Record<string, unknown>)?.id, 120),
+})).handler(async ({ data, context }) => {
+  if (context.role !== 'super_admin') throw new Error('Only a super admin can remove policy notices')
+  const state = await readPolicyWatchState()
+  state.notices = state.notices.filter((item) => item.id !== data.id)
+  for (const review of Object.values(state.reviews)) {
+    if (review.pendingDraftId === data.id) {
+      review.sourceChangePending = false
+      delete review.pendingDraftId
+    }
+  }
+  await writePolicyWatchState(state)
+  return { ok: true }
+})
+
+export const markPolicySourceReview = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
+  const input = (data ?? {}) as Record<string, unknown>
+  const itemId = stringValue(input.itemId, 120)
+  const action = stringValue(input.action, 30)
+  if (!policyWatchItems.some((item) => item.id === itemId) || !['checked', 'guidance-updated'].includes(action)) throw new Error('Invalid policy review action')
+  return { itemId, action: action as 'checked' | 'guidance-updated' }
+}).handler(async ({ data, context }) => {
+  if (context.role !== 'super_admin') throw new Error('Only a super admin can mark policy reviews')
+  const state = await readPolicyWatchState()
+  const previous = state.reviews[data.itemId] ?? {}
+  const now = new Date().toISOString()
+  state.reviews[data.itemId] = data.action === 'checked'
+    ? { ...previous, checkedAt: now, checkedBy: context.user.email, sourceChangePending: false, pendingDraftId: undefined }
+    : { ...previous, guidanceUpdatedAt: now, guidanceUpdatedBy: context.user.email }
+  await writePolicyWatchState(state)
+  return { ok: true, review: state.reviews[data.itemId] }
+})
+
+export const scanPolicySourcesNow = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).handler(async ({ context }) => {
+  if (context.role !== 'super_admin') throw new Error('Only a super admin can scan policy sources')
+  return scanOfficialPolicySources()
+})
+
+function objectValue(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? value as Record<string, unknown> : {}
+}
+
+function cleanStringList(value: unknown, maxItems = 24, maxLength = 600): string[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((item): item is string => typeof item === 'string').map((item) => item.trim().slice(0, maxLength)).filter(Boolean).slice(0, maxItems)
+}
+
+function cleanCountryRows(value: unknown, maxItems = 20): { label: string; value: string }[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((item) => !!item && typeof item === 'object').map((item) => {
+    const row = item as Record<string, unknown>
+    return { label: stringValue(row.label, 140), value: stringValue(row.value, 1200) }
+  }).filter((row) => row.label || row.value).slice(0, maxItems)
+}
+
+function cleanCountrySources(value: unknown): { label: string; url: string }[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((item) => !!item && typeof item === 'object').map((item) => {
+    const row = item as Record<string, unknown>
+    return { label: stringValue(row.label, 180), url: stringValue(row.url, 500) }
+  }).filter((row) => row.label || row.url).slice(0, 30)
+}
+
+function normalizeCountryPageContent(value: unknown): CountryPageContent {
+  const input = objectValue(value)
+  const countryInput = objectValue(input.country)
+  const guidanceInput = objectValue(input.guidance)
+  const guideInput = objectValue(countryInput.studyGuide)
+  const stats = cleanCountryRows(countryInput.stats, 6)
+  const costs = cleanCountryRows(countryInput.costs, 24)
+  const feeRows = cleanCountryRows(guidanceInput.feeRows, 30)
+  const guideSources = cleanCountrySources(guideInput.sources)
+  const sources = cleanCountrySources(guidanceInput.sources)
+  const hasStudyGuide = Object.values(guideInput).some((item) => typeof item === 'string' && item.trim()) || guideSources.length > 0
+  const studyGuide: StudyGuide | undefined = hasStudyGuide ? {
+    tuitionEstimate: stringValue(guideInput.tuitionEstimate, 1800),
+    studentVisaFee: stringValue(guideInput.studentVisaFee, 1200),
+    proofOfFunds: stringValue(guideInput.proofOfFunds, 1800),
+    admissionAndEnglish: stringValue(guideInput.admissionAndEnglish, 1800),
+    workWhileStudying: stringValue(guideInput.workWhileStudying, 1800),
+    postStudyOption: stringValue(guideInput.postStudyOption, 1800),
+    intakesNote: stringValue(guideInput.intakesNote, 1200),
+    lastVerified: stringValue(guideInput.lastVerified, 80),
+    sources: guideSources,
+  } : undefined
+  const country: Country = {
+    slug: stringValue(countryInput.slug, 80).toLowerCase(),
+    name: stringValue(countryInput.name, 100),
+    flag: stringValue(countryInput.flag, 24),
+    code: stringValue(countryInput.code, 2).toUpperCase(),
+    headline: stringValue(countryInput.headline, 180),
+    intro: stringValue(countryInput.intro, 1800),
+    stats,
+    intakes: cleanStringList(countryInput.intakes, 24, 100),
+    visas: cleanStringList(countryInput.visas, 24, 120),
+    highlights: cleanStringList(countryInput.highlights, 16, 400),
+    costs,
+    english: stringValue(countryInput.english, 1200),
+    studyGuide,
+  }
+  const guidance: VisaGuidance = {
+    lastVerified: stringValue(guidanceInput.lastVerified, 80),
+    feeRows,
+    feeSummary: stringValue(guidanceInput.feeSummary, 1800),
+    requirements: cleanStringList(guidanceInput.requirements, 24, 1800),
+    caveat: stringValue(guidanceInput.caveat, 1800),
+    sources,
+  }
+  return { country, guidance }
+}
+
+function validateCountryPageForPublish(content: CountryPageContent) {
+  const { country, guidance } = content
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(country.slug)) throw new Error('Use a lowercase URL slug such as japan or south-korea')
+  if (!country.name || !country.flag || !/^[A-Z]{2}$/.test(country.code)) throw new Error('Add a country name, flag emoji and two-letter country code')
+  if (!country.headline || !country.intro || !country.english) throw new Error('Complete the page headline, introduction and English/admission guidance')
+  if (!country.visas.length || !country.highlights.length || !country.costs.length) throw new Error('Add visa types, highlights and destination costs')
+  if (!guidance.lastVerified || !guidance.feeRows.length || !guidance.feeSummary || !guidance.requirements.length || !guidance.caveat || !guidance.sources.length) {
+    throw new Error('Complete the visa fees, core requirements, caution, last-verified date and official sources')
+  }
+  for (const source of [...guidance.sources, ...(country.studyGuide?.sources ?? [])]) {
+    if (!source.label || !source.url.startsWith('https://')) throw new Error('Every published source needs a label and HTTPS link')
+  }
+  if (country.slug !== 'europe' && !country.studyGuide) throw new Error('Study destinations also need their study guide and admission details')
+  if (country.studyGuide) {
+    const guide = country.studyGuide
+    if (!guide.tuitionEstimate || !guide.studentVisaFee || !guide.proofOfFunds || !guide.admissionAndEnglish || !guide.workWhileStudying || !guide.postStudyOption || !guide.intakesNote || !guide.lastVerified || !guide.sources.length) {
+      throw new Error('Complete all study guide fields, verification date and sources')
+    }
+  }
+}
+
+export const getAdminCountryPages = createServerFn({ method: 'GET' }).middleware([adminMiddleware]).handler(async ({ context }) => {
+  if (context.role !== 'super_admin') throw new Error('Only a super admin can manage country pages')
+  return getAdminCountryCatalog()
+})
+
+export const saveCountryPage = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
+  const input = objectValue(data)
+  const content = normalizeCountryPageContent(input.content)
+  const status = stringValue(input.status, 20)
+  const isNew = Boolean(input.isNew)
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(content.country.slug)) throw new Error('Add a URL slug before saving')
+  if (!content.country.name) throw new Error('Add a destination name before saving')
+  if (!['draft', 'published'].includes(status)) throw new Error('Choose save draft or publish')
+  if (status === 'published') validateCountryPageForPublish(content)
+  return { content, status: status as 'draft' | 'published', isNew }
+}).handler(async ({ data, context }) => {
+  if (context.role !== 'super_admin') throw new Error('Only a super admin can manage country pages')
+  if (data.isNew) {
+    const current = await getAdminCountryCatalog()
+    if (current.countries.some((entry) => entry.country.slug === data.content.country.slug)) throw new Error('That country URL is already in use')
+  }
+  await saveCountryDraft(data.content, data.status)
+  return { ok: true }
+})
+
+export const discardCountryPageDraft = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
+  const slug = stringValue(objectValue(data).slug, 80).toLowerCase()
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) throw new Error('Invalid country slug')
+  return { slug }
+}).handler(async ({ data, context }) => {
+  if (context.role !== 'super_admin') throw new Error('Only a super admin can manage country pages')
+  await discardCountryDraft(data.slug)
+  return { ok: true }
+})
+
+export const resetCountryPage = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
+  const slug = stringValue(objectValue(data).slug, 80).toLowerCase()
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) throw new Error('Invalid country slug')
+  return { slug }
+}).handler(async ({ data, context }) => {
+  if (context.role !== 'super_admin') throw new Error('Only a super admin can manage country pages')
+  await revertCountryToDefault(data.slug)
+  return { ok: true }
+})
 
 export const updateEnquiry = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
   const input = (data ?? {}) as Record<string, unknown>
@@ -560,12 +798,12 @@ export const getAdminCashflow = createServerFn({ method: 'GET' }).middleware([ad
   if (context.role !== 'super_admin') throw new Error('Only a super admin can view cashflow settings')
   const rows = await queryRows('SELECT cashflow_json FROM site_settings WHERE id = 1 LIMIT 1')
   const raw = rows[0]?.cashflow_json
-  if (typeof raw !== 'string' || !raw.trim()) return defaultCashflowData
+  if (typeof raw !== 'string' || !raw.trim()) return defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country))
   try {
     const parsed = JSON.parse(raw) as unknown
-    return Array.isArray(parsed) && parsed.length > 0 ? mergeNewCashflowDestinations(parsed as CountryCashflow[]) : defaultCashflowData
+    return (Array.isArray(parsed) && parsed.length > 0 ? mergeNewCashflowDestinations(parsed as CountryCashflow[]) : defaultCashflowData).map((country) => applyScheduledCashflowPolicy(country))
   } catch {
-    return defaultCashflowData
+    return defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country))
   }
 })
 

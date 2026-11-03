@@ -3,11 +3,12 @@ import { ArrowRight, Check } from 'lucide-react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { PageHero } from '@/components/Section'
 import { CountryFlag } from '@/components/CountryFlag'
-import { countries } from '@/data/fixtures'
+import { getPublicCountryCatalogue } from '@/lib/public-functions'
 
 import { createPageSeo } from '@/lib/seo'
 
 export const Route = createFileRoute('/countries/')({
+  loader: async () => ({ countryPages: await getPublicCountryCatalogue() }),
   head: () => createPageSeo({
     title: 'Study Destinations & Visa Fees | British Education Sangaria',
     description: 'Compare study destinations, visa guidance, tuition ranges, living funds and intakes for international students.',
@@ -17,10 +18,12 @@ export const Route = createFileRoute('/countries/')({
 })
 
 function CountriesPage() {
+  const { countryPages } = Route.useLoaderData()
   const [selectedSlugs, setSelectedSlugs] = useState<string[]>([])
   const [showComparison, setShowComparison] = useState(false)
   const [compareNotice, setCompareNotice] = useState('')
-  const studyDestinations = countries.filter((country) => country.studyGuide)
+  const currentCountries = countryPages.map((entry) => entry.country)
+  const studyDestinations = currentCountries.filter((country) => country.studyGuide)
   const selectedCountries = studyDestinations.filter((country) => selectedSlugs.includes(country.slug))
 
   function toggleCompare(slug: string, name: string) {
@@ -63,7 +66,7 @@ function CountriesPage() {
         </div>
         {compareNotice && <p className="mb-4 rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900" role="status">{compareNotice}</p>}
         <div className="grid gap-6 md:grid-cols-2">
-          {countries.map((country) => {
+          {currentCountries.map((country) => {
             const selected = selectedSlugs.includes(country.slug)
             return (
               <article key={country.slug} className="group grid overflow-hidden rounded-3xl bg-white ring-1 ring-forest-900/10 transition hover:-translate-y-1 hover:shadow-[8px_8px_0_0] hover:shadow-forest-900 lg:grid-cols-[1fr_auto]">

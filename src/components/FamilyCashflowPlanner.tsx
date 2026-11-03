@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { defaultCashflowData, CountryCashflow } from '@/data/cashflow'
 import { getPublicCashflow } from '@/lib/public-functions'
+import { applyScheduledCashflowPolicy } from '@/data/policy-watch'
 
 export function FamilyCashflowPlanner() {
-  const [data, setData] = useState<CountryCashflow[]>(defaultCashflowData)
+  const [data, setData] = useState<CountryCashflow[]>(() => defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country)))
   const [selectedSlug, setSelectedSlug] = useState('canada')
 
   useEffect(() => {

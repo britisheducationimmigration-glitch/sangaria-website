@@ -6,13 +6,16 @@ import { StoryEditor } from '@/components/admin/StoryEditor'
 import type { AdminPost, AdminRole, AdminSnapshot, AdminStory, AdminUser, CoachingBatch, Enquiry, EnquiryActivity, EnquiryStatus } from '@/lib/content-types'
 import { defaultCashflowData, CountryCashflow } from '@/data/cashflow'
 import { formatBatchStartDate, getBatchDateStatus, isValidBatchStartDate } from '@/lib/batch-dates'
+import { PolicyWatchPanel } from '@/components/admin/PolicyWatchPanel'
+import { CountryPanel } from '@/components/admin/CountryPanel'
+import { applyScheduledCashflowPolicy, getPolicyWatchStatus, policyWatchItems } from '@/data/policy-watch'
 
 export const Route = createFileRoute('/admin')({
   head: () => ({ meta: [{ title: 'Admin · British Education and Immigration' }, { name: 'robots', content: 'noindex,nofollow,noarchive' }] }),
   component: AdminPage,
 })
 
-type Tab = 'enquiries' | 'news' | 'stories' | 'certificates' | 'batches' | 'budget' | 'settings' | 'users' | 'demo' | 'review' | 'reports'
+type Tab = 'enquiries' | 'news' | 'stories' | 'certificates' | 'batches' | 'budget' | 'settings' | 'users' | 'demo' | 'review' | 'reports' | 'policy' | 'countries'
 
 const roleLabels: Record<AdminRole, string> = { super_admin: 'Super Admin', content_editor: 'Content Editor', enquiry_manager: 'Enquiry Manager' }
 
@@ -61,8 +64,9 @@ function AdminPage() {
   })
   const newLeadQueue = snapshot.enquiries.filter((item) => item.status === 'New')
   const draftQueue = snapshot.posts.filter((item) => !item.published)
+  const policyWatchCount = policyWatchItems.filter((item) => getPolicyWatchStatus(item) !== 'Effective').length
   const tabs: Array<[Tab, string]> = snapshot.user.role === 'super_admin'
-    ? [['enquiries', `Enquiries (${snapshot.enquiryStats.total})`], ['demo', `Demo requests (${snapshot.enquiryStats.demoRequests})`], ['review', `Review queue (${newLeadQueue.length + draftQueue.length})`], ['reports', 'Reports'], ['news', 'News & Updates'], ['stories', 'Success Stories'], ['certificates', 'Certificates'], ['batches', 'Coaching batches'], ['budget', '💰 Cashflow Budget'], ['settings', 'Site settings'], ['users', 'Users & roles']]
+    ? [['enquiries', `Enquiries (${snapshot.enquiryStats.total})`], ['demo', `Demo requests (${snapshot.enquiryStats.demoRequests})`], ['review', `Review queue (${newLeadQueue.length + draftQueue.length})`], ['reports', 'Reports'], ['policy', `Policy watch (${policyWatchCount})`], ['countries', 'Countries'], ['news', 'News & Updates'], ['stories', 'Success Stories'], ['certificates', 'Certificates'], ['batches', 'Coaching batches'], ['budget', '💰 Cashflow Budget'], ['settings', 'Site settings'], ['users', 'Users & roles']]
     : snapshot.user.role === 'content_editor'
       ? [['review', `Review queue (${draftQueue.length})`], ['news', 'News & Updates'], ['stories', 'Success Stories'], ['certificates', 'Certificates'], ['batches', 'Coaching batches']]
       : [['enquiries', `Enquiries (${snapshot.enquiries.length})`], ['demo', `Demo requests (${snapshot.enquiryStats.demoRequests})`], ['review', `Review queue (${newLeadQueue.length})`], ['reports', 'Reports']]
@@ -128,6 +132,8 @@ function AdminPage() {
         {tab === 'demo' && <DemoRequestsPanel enquiries={snapshot.enquiries.filter((item) => item.source === 'coaching')} totalCount={snapshot.enquiryStats.demoRequests} onReload={reload} onNotice={showNotice} canDelete={snapshot.user.role === 'super_admin'} canManageComments={snapshot.user.role === 'super_admin'} />}
         {tab === 'review' && <ReviewQueuePanel enquiries={newLeadQueue} drafts={draftQueue} onOpenEnquiries={() => { setQuery(''); setStatusFilter('New'); setTab('enquiries') }} onOpenDraft={(post) => { setSelectedPost(post); setTab('news') }} />}
         {tab === 'reports' && <ReportsPanel stats={snapshot.enquiryStats} />}
+        {tab === 'policy' && <PolicyWatchPanel />}
+        {tab === 'countries' && <CountryPanel />}
         {tab === 'news' && <ContentPanel type="news" items={snapshot.posts} selected={selectedPost} onSelect={(item) => setSelectedPost(item as AdminPost | null)} onReload={reload} onNotice={showNotice} />}
         {tab === 'stories' && <ContentPanel type="stories" items={snapshot.stories} selected={selectedStory} onSelect={(item) => setSelectedStory(item as AdminStory | null)} onReload={reload} onNotice={showNotice} />}
         {tab === 'certificates' && <CertificatePanel items={snapshot.certificates} onReload={reload} onNotice={showNotice} />}
@@ -830,7 +836,7 @@ function PostEditor({ item, onReload, onNotice, onClose }: { item: AdminPost; on
   )
 }
 function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
-  const [data, setData] = useState<CountryCashflow[]>(defaultCashflowData)
+  const [data, setData] = useState<CountryCashflow[]>(() => defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country)))
   const [selectedSlug, setSelectedSlug] = useState('canada')
   const [busy, setBusy] = useState(false)
 
@@ -869,10 +875,11 @@ function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
   }
 
   const resetToOfficial = async () => {
-    setData(defaultCashflowData)
+    const currentDefaults = defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country))
+    setData(currentDefaults)
     try {
       setBusy(true)
-      await saveCashflow({ data: { cashflowData: defaultCashflowData } })
+      await saveCashflow({ data: { cashflowData: currentDefaults } })
       onNotice('Reset to official 2026/2027 embassy defaults and saved to database.')
     } catch {
       onNotice('Reset locally, but database sync failed.')

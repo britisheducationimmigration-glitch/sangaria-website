@@ -1,8 +1,8 @@
 import { CheckCircle2, Loader2, MessageCircle, Send } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
-import { countries, visaServices } from '@/data/fixtures'
+import { countries as fixtureCountries, visaServices } from '@/data/fixtures'
 import { cn } from '@/lib/utils'
-import { submitEnquiry } from '@/lib/public-functions'
+import { getPublicCountryCatalogue, submitEnquiry } from '@/lib/public-functions'
 
 /**
  * The single enquiry form used across the site. Submissions are validated by the
@@ -27,8 +27,13 @@ export function EnquiryForm({
   onSuccess?: () => void
 }) {
   const [state, setState] = useState<'idle' | 'sending' | 'done' | 'error'>('idle')
+  const [countryOptions, setCountryOptions] = useState(fixtureCountries)
   const [whatsappUrl, setWhatsappUrl] = useState('')
   const [showSharePrompt, setShowSharePrompt] = useState(false)
+
+  useEffect(() => {
+    void getPublicCountryCatalogue().then((entries) => setCountryOptions(entries.map((entry) => entry.country))).catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (state !== 'done' || !showSharePrompt) return
@@ -212,7 +217,7 @@ export function EnquiryForm({
           <label className={labelCls} htmlFor={`${source}-country`}>Preferred country</label>
           <select id={`${source}-country`} name="country" defaultValue={defaultCountry ?? ''} className="field">
             <option value="">Not decided yet</option>
-            {countries.map((c) => (
+            {countryOptions.map((c) => (
               <option key={c.slug}>{c.name}</option>
             ))}
           </select>
