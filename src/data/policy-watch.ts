@@ -217,3 +217,63 @@ export function getUKStudentMaintenanceCopy(asOf = new Date()) {
   }
   return `£${figures.outsideLondon.toLocaleString('en-GB')}/month outside London or £${figures.london.toLocaleString('en-GB')}/month in London, for up to 9 months, plus course fees. From 30 November 2026 the amounts become £1,203 outside London and £1,570 in London per month. Applications made before that date are assessed under the rules in force on 29 November; exemptions and individual circumstances apply.`
 }
+
+export type PolicyNotice = {
+  id: string
+  countrySlug: string
+  title: string
+  message: string
+  showFrom: string
+  expiresOn: string
+  sourceLabel: string
+  sourceUrl: string
+  status: 'draft' | 'published'
+  sourceVerified: boolean
+  sourceItemId?: string
+  guidanceUpdatedAt?: string
+  guidanceUpdatedBy?: string
+}
+
+export type PolicySourceReview = {
+  checkedAt?: string
+  checkedBy?: string
+  guidanceUpdatedAt?: string
+  guidanceUpdatedBy?: string
+  sourceHash?: string
+  sourceCheckedAt?: string
+  sourceChangePending?: boolean
+  pendingDraftId?: string
+}
+
+export type PolicyWatchState = {
+  notices: PolicyNotice[]
+  reviews: Record<string, PolicySourceReview>
+}
+
+export const defaultPolicyNotices: PolicyNotice[] = [
+  {
+    id: 'uk-student-funds-2026-11-30',
+    countrySlug: 'uk',
+    title: 'UK student visa funds increase from 30 November',
+    message: 'Monthly maintenance funds rise to £1,203 outside London and £1,570 in London, for up to 9 months. Applications made before 30 November 2026 use the rules in force on 29 November. Exemptions and individual circumstances apply.',
+    showFrom: '2026-11-03',
+    expiresOn: '2026-11-30',
+    sourceLabel: 'GOV.UK: Immigration Rules HC 584',
+    sourceUrl: 'https://www.gov.uk/government/publications/statement-of-changes-to-the-immigration-rules-hc-584-3-september-2026/statement-of-changes-to-the-immigration-rules-hc-584-3-september-2026-accessible',
+    status: 'published',
+    sourceVerified: true,
+  },
+]
+
+export function defaultPolicyWatchState(): PolicyWatchState {
+  return {
+    notices: defaultPolicyNotices.map((notice) => ({ ...notice })),
+    reviews: {},
+  }
+}
+
+export function isPolicyNoticeVisible(notice: PolicyNotice, now = new Date()) {
+  if (notice.status !== 'published' || !notice.sourceVerified || !notice.showFrom || !notice.expiresOn) return false
+  const today = dateInTimeZone(now, 'Asia/Kolkata')
+  return today >= notice.showFrom && today < notice.expiresOn
+}
