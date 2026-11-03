@@ -169,7 +169,7 @@ export function CountryPanel() {
 
   useEffect(() => { void reload() }, [])
 
-  const draftsBySlug = useMemo(() => new Map((data?.drafts ?? []).map((item) => [item.country.slug, item])), [data?.drafts])
+  const draftsBySlug = useMemo(() => new Map<string, CountryPageContent>((data?.drafts ?? []).map((item) => [item.country.slug, item] as const)), [data?.drafts])
 
   function edit(content: CountryPageContent) {
     setForm(fromContent(content))
