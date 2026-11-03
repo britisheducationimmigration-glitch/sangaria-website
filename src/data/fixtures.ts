@@ -174,14 +174,14 @@ const baseCountries: Country[] = [
     costs: [
       { label: 'SEVIS fee', value: 'USD 350' },
       { label: 'Visa fee', value: 'USD 185' },
-      { label: 'Living cost (estimate, not visa funds)', value: 'USD 12–18k / yr' },
+      { label: 'Typical living estimate', value: 'USD 12–18k / yr' },
     ],
-    english: 'Set by the school and programme; no single federal IELTS/PTE score.',
+    english: 'Indicative admission baseline: IELTS 6.5 / PTE 58 / Duolingo 110; check the school’s minimum.',
     studyGuide: {
       tuitionEstimate: "The site’s USD 20,000–45,000/year band is a planning estimate only. Tuition and living costs vary widely by school, programme and location; use the school’s current cost estimate on Form I-20.",
       studentVisaFee: "F/M visa application US$185 plus separate I-901 SEVIS fee US$350; reciprocity or other costs may apply.",
-      proofOfFunds: "There is no single national living-funds figure. The SEVP-certified school records estimated tuition and living expenses on Form I-20; applicants must show funding for the school’s required amount.",
-      admissionAndEnglish: "Acceptance from an SEVP-certified school and Form I-20 are needed. Each school sets its admission and English evidence; there is no single federal IELTS/PTE score.",
+      proofOfFunds: "Show funds for the tuition and living-cost estimate recorded by the SEVP-certified school on Form I-20. The required amount varies by school and programme.",
+      admissionAndEnglish: "Acceptance from an SEVP-certified school and Form I-20 are required. Indicative admission score targets are IELTS 6.5, PTE 58 or Duolingo 110; the school and programme set the actual minimum.",
       workWhileStudying: "F-1 on-campus work is generally limited to 20 hours/week while school is in session. Off-campus CPT/OPT requires the correct school/USCIS authorization and must meet its rules.",
       postStudyOption: "Eligible students may get up to 12 months of OPT per higher education level. A qualifying STEM degree may support a further 24-month STEM OPT extension with an eligible E-Verify employer.",
       intakesNote: "Spring and fall are common starts; some programmes have summer or rolling entry. Confirm each school’s calendar and deadline.",
