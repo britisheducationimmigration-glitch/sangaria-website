@@ -321,13 +321,18 @@ export const saveCountryPage = createServerFn({ method: 'POST' }).middleware([ad
   const input = objectValue(data)
   const content = normalizeCountryPageContent(input.content)
   const status = stringValue(input.status, 20)
+  const isNew = Boolean(input.isNew)
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(content.country.slug)) throw new Error('Add a URL slug before saving')
   if (!content.country.name) throw new Error('Add a destination name before saving')
   if (!['draft', 'published'].includes(status)) throw new Error('Choose save draft or publish')
   if (status === 'published') validateCountryPageForPublish(content)
-  return { content, status: status as 'draft' | 'published' }
+  return { content, status: status as 'draft' | 'published', isNew }
 }).handler(async ({ data, context }) => {
   if (context.role !== 'super_admin') throw new Error('Only a super admin can manage country pages')
+  if (data.isNew) {
+    const current = await getAdminCountryCatalog()
+    if (current.countries.some((entry) => entry.country.slug === data.content.country.slug) || current.drafts.some((entry) => entry.country.slug === data.content.country.slug)) throw new Error('That country URL is already in use')
+  }
   await saveCountryDraft(data.content, data.status)
   return { ok: true }
 })
