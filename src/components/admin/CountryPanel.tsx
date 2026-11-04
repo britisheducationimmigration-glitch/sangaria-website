@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CountryFlag } from '@/components/CountryFlag'
+import { CountryPagePreview } from '@/components/admin/CountryPagePreview'
 import type { Country } from '@/data/fixtures'
 import type { VisaGuidance } from '@/data/visa-guidance'
 import {
@@ -259,8 +260,8 @@ export function CountryPanel() {
       {error && <p role="alert" className="mb-4 rounded-xl bg-red-100 px-4 py-3 text-sm font-bold text-red-900">{error}</p>}
 
       {form && (
-        <form onSubmit={(event) => event.preventDefault()} className="mb-8 space-y-6 rounded-2xl border border-forest-900/15 bg-white p-4 shadow-sm sm:p-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <form onSubmit={(event) => event.preventDefault()} className="mb-8 grid min-w-0 gap-6 rounded-2xl border border-forest-900/15 bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between lg:col-span-2">
             <div>
               <h3 className="text-lg font-extrabold">{form.name ? 'Edit ' + form.name : 'Add a destination'}</h3>
               <p className="mt-1 text-sm text-forest-900/65">Save a private draft first. Publishing updates this preview's country directory and public guide.</p>
@@ -268,7 +269,11 @@ export function CountryPanel() {
             <button type="button" onClick={() => setForm(null)} className="min-h-10 rounded-lg border border-forest-900/15 px-3 text-sm font-bold hover:bg-forest-50">Close editor</button>
           </div>
 
-          <div>
+          <div className="order-first lg:order-none lg:col-start-2 lg:row-start-2">
+            <CountryPagePreview content={toContent(form)} />
+          </div>
+          <div className="min-w-0 space-y-6 lg:col-start-1 lg:row-start-2">
+            <div>
             <h4 className="mb-3 font-extrabold">Country page</h4>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Destination name" value={form.name} required onChange={(value) => update({ name: value })} />
@@ -313,21 +318,10 @@ export function CountryPanel() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-amber-900">Page content preview</p>
-            <div className="mt-3 flex min-w-0 items-center gap-3">
-              <CountryFlag code={form.code} flag={form.flag} country={form.name} className="h-10 w-14 shrink-0" />
-              <div className="min-w-0">
-                <p className="font-extrabold text-forest-900">{form.name || 'Destination name'}</p>
-                <p className="break-words text-sm text-forest-900/70">{form.headline || 'Page headline'}</p>
-              </div>
-            </div>
-            <p className="mt-3 break-words text-sm leading-relaxed text-forest-900/75">{form.english || 'English/admission target'}</p>
-          </div>
-
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button type="button" disabled={busy} onClick={() => void save('draft')} className="min-h-11 rounded-xl border border-forest-900/15 bg-white px-4 py-2 text-sm font-bold disabled:opacity-60">Save draft</button>
             <button type="button" disabled={busy} onClick={() => void save('published')} className="min-h-11 rounded-xl bg-coral-500 px-4 py-2 text-sm font-bold text-white hover:bg-coral-600 disabled:opacity-60">{busy ? 'Saving…' : 'Save & publish'}</button>
+          </div>
           </div>
         </form>
       )}
