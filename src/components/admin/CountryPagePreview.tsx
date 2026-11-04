@@ -17,6 +17,10 @@ export function CountryPagePreview({ content }: {
   const [size, setSize] = useState<PreviewSize>('mobile')
   const [mountTarget, setMountTarget] = useState<HTMLElement | null>(null)
   const [desktopScale, setDesktopScale] = useState(0.5)
+  const [wide, setWide] = useState(false)
+  const wideRef = useRef(false)
+  const naturalTopRef = useRef<number | null>(null)
+  const panelRef = useRef<HTMLElement>(null)
   const frameAreaRef = useRef<HTMLDivElement>(null)
 
   function preparePreview(event: SyntheticEvent<HTMLIFrameElement>) {
@@ -38,6 +42,69 @@ export function CountryPagePreview({ content }: {
   }
 
   useEffect(() => {
+    function updateViewportMode() {
+      const nextWide = window.matchMedia('(min-width: 1024px)').matches
+      if (nextWide === wideRef.current) return
+
+      if (nextWide) {
+        const panel = panelRef.current
+        naturalTopRef.current = panel ? panel.getBoundingClientRect().top + window.scrollY : 180
+      } else {
+        naturalTopRef.current = null
+      }
+
+      wideRef.current = nextWide
+      setWide(nextWide)
+    }
+
+    updateViewportMode()
+    window.addEventListener('resize', updateViewportMode)
+    return () => window.removeEventListener('resize', updateViewportMode)
+  }, [])
+
+  useEffect(() => {
+    const panel = panelRef.current
+    if (!panel) return
+
+    if (!wide) {
+      panel.style.removeProperty('position')
+      panel.style.removeProperty('top')
+      panel.style.removeProperty('right')
+      panel.style.removeProperty('width')
+      panel.style.removeProperty('z-index')
+      return
+    }
+
+    function keepPreviewBesideEditor() {
+      const top = Math.max(16, (naturalTopRef.current ?? 180) - window.scrollY)
+      const width = Math.min(520, (window.innerWidth - 64) / 2)
+      const right = Math.max(16, (window.innerWidth - 1152) / 2)
+
+      panel.style.position = 'fixed'
+      panel.style.top = top + 'px'
+      panel.style.right = right + 'px'
+      panel.style.width = width + 'px'
+      panel.style.zIndex = '40'
+
+      const frameArea = frameAreaRef.current
+      if (frameArea) {
+        const scale = Math.min(1, frameArea.clientWidth / 1024)
+        const pageHeight = size === 'mobile' ? 400 : 900 * scale
+        const availableHeight = Math.max(180, window.innerHeight - top - 180)
+        frameArea.style.height = Math.min(pageHeight, availableHeight) + 'px'
+      }
+    }
+
+    keepPreviewBesideEditor()
+    window.addEventListener('scroll', keepPreviewBesideEditor, { passive: true })
+    window.addEventListener('resize', keepPreviewBesideEditor)
+    return () => {
+      window.removeEventListener('scroll', keepPreviewBesideEditor)
+      window.removeEventListener('resize', keepPreviewBesideEditor)
+    }
+  }, [wide, size, desktopScale])
+
+  useEffect(() => {
     const frameArea = frameAreaRef.current
     if (!frameArea || typeof ResizeObserver === 'undefined') return
     const resizeObserver = new ResizeObserver(() => setDesktopScale(Math.min(1, frameArea.clientWidth / 1024)))
@@ -47,9 +114,11 @@ export function CountryPagePreview({ content }: {
   }, [])
 
   const mobile = size === 'mobile'
-
-  return (
-    <section className="rounded-2xl border border-forest-900/15 bg-white p-4 shadow-sm sm:p-5">
+  const previewCard = (
+    <section
+      ref={panelRef}
+      className={'rounded-2xl border border-forest-900/15 bg-white p-4 shadow-sm sm:p-5 ' + (wide ? 'fixed z-40' : '')}
+    >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="font-mono text-xs font-bold uppercase tracking-wider text-coral-600">Page preview</p>
@@ -103,6 +172,8 @@ export function CountryPagePreview({ content }: {
       </div>
     </section>
   )
+
+  return wide ? createPortal(previewCard, document.body) : previewCard
 }
 
 function CountryPreviewShell({ content }: {
