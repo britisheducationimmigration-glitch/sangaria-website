@@ -21,7 +21,7 @@ type Draft = {
 const emptyDraft = (): Draft => ({
   id: 0, title: '', issuer: '', category: 'Partner authorisations', credentialDate: '',
   altText: '', imageSrc: '', imageBase64: '', imageMimeType: '',
-  homepageFeatured: false, published: false, sortOrder: 100,
+  homepageFeatured: false, published: false, sortOrder: 0,
 })
 const inputClass = 'mt-1 min-h-11 w-full rounded-xl border border-forest-900/15 bg-white px-3 py-2 text-sm text-forest-900'
 const labelClass = 'block text-xs font-bold text-forest-900/75'
@@ -76,7 +76,7 @@ export function CertificatePanel({ items, onReload, onNotice }: {
       id: item.id, title: item.title, issuer: item.issuer, category: item.category,
       credentialDate: item.credentialDate, altText: item.altText, imageSrc: item.imageSrc,
       imageBase64: '', imageMimeType: '', homepageFeatured: item.homepageFeatured,
-      published: item.published, sortOrder: item.sortOrder,
+      published: item.published, sortOrder: item.sortOrder === 0 ? 1 : item.sortOrder,
     })
     setDirty(false)
     setError('')
@@ -192,7 +192,7 @@ export function CertificatePanel({ items, onReload, onNotice }: {
           <div className="grid gap-3 sm:grid-cols-3">
             <label className="flex min-h-11 items-center gap-2 rounded-xl bg-cream px-3 py-2 text-xs font-semibold"><input type="checkbox" checked={draft.published} onChange={(e) => update('published', e.currentTarget.checked)} className="size-4 accent-forest-900" /> Publish on certificates page</label>
             <label className="flex min-h-11 items-center gap-2 rounded-xl bg-cream px-3 py-2 text-xs font-semibold"><input type="checkbox" checked={draft.homepageFeatured} onChange={(e) => update('homepageFeatured', e.currentTarget.checked)} className="size-4 accent-forest-900" /> Include in homepage rotation</label>
-            <label className={labelClass}>Display order<input type="number" min={0} max={9999} value={draft.sortOrder} onChange={(e) => update('sortOrder', Number(e.currentTarget.value))} className={inputClass} /></label>
+            <label className={labelClass}>Display order<input type="number" min={1} max={9999} value={draft.id ? draft.sortOrder : 1} disabled={!draft.id} onChange={(e) => update('sortOrder', Number(e.currentTarget.value))} className={inputClass + ' disabled:cursor-not-allowed disabled:bg-forest-50 disabled:text-forest-900/55'} />{!draft.id && <span className="mt-1 block font-normal text-forest-900/55">New certificates are automatically added first.</span>}</label>
           </div>
           <div className="flex flex-wrap justify-end gap-3 border-t border-forest-900/10 pt-4">
             <button type="button" onClick={cancelEdit} className="min-h-11 rounded-full border border-forest-900/20 px-5 py-2 text-sm font-bold">Cancel</button>
