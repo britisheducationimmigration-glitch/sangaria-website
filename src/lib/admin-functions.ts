@@ -662,10 +662,10 @@ export const saveCertificate = createServerFn({ method: 'POST' })
       }
     } else {
       await execute(
-        'UPDATE certificate_items SET sort_order = sort_order + 1 WHERE collection = \\'certificates\\'',
+        'UPDATE certificate_items SET sort_order = sort_order + 1 WHERE collection = \'certificates\'',
       )
       await execute(
-        'INSERT INTO certificate_items (collection, title, issuer, category, credential_date, alt_text, image_mime_type, image_data, image_version, homepage_featured, published, sort_order) VALUES (\\'certificates\\', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO certificate_items (collection, title, issuer, category, credential_date, alt_text, image_mime_type, image_data, image_version, homepage_featured, published, sort_order) VALUES (\'certificates\', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [data.title, data.issuer, data.category, data.credentialDate, data.altText, data.imageMimeType, image, image ? Date.now() : 0, data.homepageFeatured ? 1 : 0, data.published ? 1 : 0, 0],
       )
     }
