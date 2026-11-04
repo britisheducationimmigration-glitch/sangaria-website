@@ -1,6 +1,9 @@
 import { useState, type SyntheticEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { CountryPageView } from '@/components/CountryPageView'
+import { SiteFooter } from '@/components/SiteFooter'
+import { SiteHeader } from '@/components/SiteHeader'
+import { Route as RootRoute } from '@/routes/__root'
 import type { Country } from '@/data/fixtures'
 import type { VisaGuidance } from '@/data/visa-guidance'
 
@@ -73,12 +76,26 @@ export function CountryPagePreview({ content }: {
           className={'block border-0 bg-white ' + (mobile ? 'mx-auto' : '')}
         />
         {mountTarget && createPortal(
-          <main className="public-main">
-            <CountryPageView country={content.country} guidance={content.guidance} preview />
-          </main>,
+          <CountryPreviewShell content={content} />,
           mountTarget,
         )}
       </div>
     </section>
+  )
+}
+
+function CountryPreviewShell({ content }: {
+  content: { country: Country; guidance: VisaGuidance }
+}) {
+  const { settings, countries } = RootRoute.useLoaderData()
+
+  return (
+    <div inert>
+      <SiteHeader settings={settings} />
+      <main className="public-main">
+        <CountryPageView country={content.country} guidance={content.guidance} preview />
+      </main>
+      <SiteFooter settings={settings} countries={countries} />
+    </div>
   )
 }
