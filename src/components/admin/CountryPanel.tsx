@@ -128,7 +128,7 @@ function toContent(editor: Editor): CountryPageContent {
   return { country, guidance }
 }
 
-function Field({ label, value, onChange, textarea = false, rows = 3, required = false, hint }: {
+function Field({ label, value, onChange, textarea = false, rows = 3, required = false, disabled = false, hint }: {
   label: string
   value: string
   onChange: (value: string) => void
