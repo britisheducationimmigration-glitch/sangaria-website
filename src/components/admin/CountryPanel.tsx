@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CountryFlag } from '@/components/CountryFlag'
+import { CountryPagePreview } from '@/components/admin/CountryPagePreview'
 import type { Country } from '@/data/fixtures'
 import type { VisaGuidance } from '@/data/visa-guidance'
 import {
@@ -313,17 +314,7 @@ export function CountryPanel() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-amber-900">Page content preview</p>
-            <div className="mt-3 flex min-w-0 items-center gap-3">
-              <CountryFlag code={form.code} flag={form.flag} country={form.name} className="h-10 w-14 shrink-0" />
-              <div className="min-w-0">
-                <p className="font-extrabold text-forest-900">{form.name || 'Destination name'}</p>
-                <p className="break-words text-sm text-forest-900/70">{form.headline || 'Page headline'}</p>
-              </div>
-            </div>
-            <p className="mt-3 break-words text-sm leading-relaxed text-forest-900/75">{form.english || 'English/admission target'}</p>
-          </div>
+          <CountryPagePreview content={toContent(form)} />
 
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button type="button" disabled={busy} onClick={() => void save('draft')} className="min-h-11 rounded-xl border border-forest-900/15 bg-white px-4 py-2 text-sm font-bold disabled:opacity-60">Save draft</button>
