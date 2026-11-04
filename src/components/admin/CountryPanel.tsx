@@ -269,7 +269,7 @@ export function CountryPanel() {
             <button type="button" onClick={() => setForm(null)} className="min-h-10 rounded-lg border border-forest-900/15 px-3 text-sm font-bold hover:bg-forest-50">Close editor</button>
           </div>
 
-          <div className="order-first lg:order-none lg:col-start-2 lg:row-start-2 lg:sticky lg:top-4 lg:self-start">
+          <div className="order-first lg:order-none lg:col-start-2 lg:row-start-2">
             <CountryPagePreview content={toContent(form)} />
           </div>
           <div className="min-w-0 space-y-6 lg:col-start-1 lg:row-start-2">
