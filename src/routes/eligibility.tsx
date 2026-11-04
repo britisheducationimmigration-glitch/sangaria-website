@@ -44,7 +44,7 @@ function EligibilityPage() {
 
   return (
     <section className="relative min-h-[80vh] overflow-hidden bg-forest-900 bg-grain py-16 text-white md:py-24">
-      <div className="mx-auto grid max-w-7xl gap-12 px-6 lg:grid-cols-[0.8fr_1.2fr]">
+      <div className="relative z-10 mx-auto grid max-w-7xl gap-12 px-6 lg:grid-cols-[0.8fr_1.2fr]">
         <div>
           <Eyebrow light>Preliminary profile check</Eyebrow>
           <h1 className="mt-6 text-5xl font-extrabold leading-[0.95] md:text-6xl">

@@ -140,8 +140,8 @@ export function FamilyCashflowPlanner() {
   return (
     <section className="mx-auto mt-8 w-full rounded-3xl bg-forest-900 p-5 text-white sm:p-8 md:w-[calc(100%-3rem)] max-w-7xl">
       {/* Header */}
-      <div className="flex flex-col justify-between gap-4 border-b border-white/10 pb-5 lg:flex-row lg:items-end">
-        <div>
+      <div className="flex flex-col justify-between gap-3 border-b border-white/10 pb-5 md:flex-row md:items-end">
+        <div className="min-w-0 flex-1">
           <span className="font-mono text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-coral-400">
             Transparent Financial Roadmap
           </span>
@@ -154,11 +154,11 @@ export function FamilyCashflowPlanner() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex w-fit shrink-0 gap-2 sm:ml-auto">
+        <div className="grid w-full max-w-[15rem] shrink-0 grid-cols-2 gap-2 md:ml-auto md:w-auto">
           <button
             type="button"
             onClick={handleDownloadPDF}
-            className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-bold text-white ring-1 ring-white/15 transition hover:bg-white/20 cursor-pointer"
+            className="flex min-h-10 min-w-0 items-center justify-center gap-1 whitespace-nowrap rounded-full bg-white/10 px-2.5 py-2 text-[11px] font-bold text-white ring-1 ring-white/15 transition hover:bg-white/20 cursor-pointer sm:px-3.5 sm:text-xs"
           >
             <span>📄</span>
             <span>Summary</span>
@@ -166,7 +166,7 @@ export function FamilyCashflowPlanner() {
           <button
             type="button"
             onClick={handleWhatsAppShare}
-            className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-[#25D366] px-4 py-1.5 text-xs font-bold text-white transition hover:brightness-105 cursor-pointer"
+            className="flex min-h-10 min-w-0 items-center justify-center gap-1 whitespace-nowrap rounded-full bg-[#25D366] px-2 py-2 text-[11px] font-bold text-white transition hover:brightness-105 cursor-pointer sm:px-3.5 sm:text-xs"
           >
             <span>💬</span>
             <span>WhatsApp</span>
@@ -223,7 +223,7 @@ export function FamilyCashflowPlanner() {
         {country.stages.map((st) => (
           <div
             key={st.stageNumber}
-            className="rounded-2xl bg-white/10 p-3.5 sm:p-4 ring-1 ring-white/10 flex flex-col justify-between hover:bg-white/15 transition"
+            className="cashflow-stage-card rounded-2xl bg-white/10 p-3.5 sm:p-4 ring-1 ring-white/10 flex flex-col justify-between hover:bg-white/15"
           >
             <div>
               <div className="flex items-center justify-between gap-1 mb-2">

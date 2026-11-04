@@ -28,11 +28,16 @@ export function CountryPageView({
   return (
     <div inert={preview ? true : undefined}>
     <>
-      <section className="relative overflow-hidden bg-forest-900 bg-grain text-white">
+      <section className="relative overflow-hidden bg-forest-900 bg-aurora-live text-white">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-20 top-1/2 h-[380px] w-[380px] -translate-y-1/2 opacity-35 md:right-10 md:h-[460px] md:w-[460px] md:opacity-65">
+          <div className="absolute inset-0 rounded-full border border-dashed border-white/20 animate-spin [animation-duration:36s]" />
+          <div className="absolute inset-12 rounded-full border border-coral-400/30 animate-spin [animation-duration:24s] [animation-direction:reverse]" />
+          <div className="absolute inset-24 rounded-full border border-amber-300/25 animate-pulse" />
+        </div>
         <span className="pointer-events-none absolute -top-10 right-0 font-display text-[16rem] leading-none font-extrabold text-white/[0.04] md:text-[22rem]">
           {c.code}
         </span>
-        <div className="relative mx-auto max-w-7xl px-6 pt-16 pb-20 md:pt-24">
+        <div className="relative z-10 mx-auto max-w-7xl px-6 pt-16 pb-20 md:pt-24">
           <Link to="/countries" className="text-sm text-forest-100/60 hover:text-white">
             ← All destinations
           </Link>
