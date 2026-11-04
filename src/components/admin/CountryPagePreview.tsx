@@ -1,4 +1,4 @@
-import { useState, type SyntheticEvent } from 'react'
+import { useEffect, useRef, useState, type SyntheticEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { CountryPageView } from '@/components/CountryPageView'
 import { SiteFooter } from '@/components/SiteFooter'
@@ -16,6 +16,8 @@ export function CountryPagePreview({ content }: {
 }) {
   const [size, setSize] = useState<PreviewSize>('mobile')
   const [mountTarget, setMountTarget] = useState<HTMLElement | null>(null)
+  const [desktopScale, setDesktopScale] = useState(0.5)
+  const frameAreaRef = useRef<HTMLDivElement>(null)
 
   function preparePreview(event: SyntheticEvent<HTMLIFrameElement>) {
     const frameDocument = event.currentTarget.contentDocument
@@ -34,6 +36,15 @@ export function CountryPagePreview({ content }: {
     frameDocument.body.style.margin = '0'
     setMountTarget(frameDocument.getElementById('country-page-preview-root'))
   }
+
+  useEffect(() => {
+    const frameArea = frameAreaRef.current
+    if (!frameArea || typeof ResizeObserver === 'undefined') return
+    const resizeObserver = new ResizeObserver(() => setDesktopScale(Math.min(1, frameArea.clientWidth / 1024)))
+    resizeObserver.observe(frameArea)
+    setDesktopScale(Math.min(1, frameArea.clientWidth / 1024))
+    return () => resizeObserver.disconnect()
+  }, [])
 
   const mobile = size === 'mobile'
 
@@ -66,13 +77,23 @@ export function CountryPagePreview({ content }: {
       <p className="mt-3 text-xs leading-relaxed text-forest-900/60">
         This uses the same country page layout and updates as you edit. The preview links and enquiry form are inactive.
       </p>
-      <div className="mt-4 overflow-x-auto rounded-xl border border-forest-900/10 bg-forest-50 p-2 sm:p-3">
+      <div
+        ref={frameAreaRef}
+        className="mt-4 w-full overflow-hidden rounded-xl border border-forest-900/10 bg-forest-50"
+        style={{ height: mobile ? '400px' : String(900 * desktopScale) + 'px' }}
+      >
         <iframe
           title={(mobile ? 'Mobile' : 'Desktop') + ' preview of ' + (content.country.name || 'country') + ' page'}
           srcDoc={previewDocument}
           sandbox="allow-same-origin"
           onLoad={preparePreview}
-          style={{ width: mobile ? '390px' : '1024px', maxWidth: mobile ? '100%' : undefined, height: '720px' }}
+          style={{
+            width: mobile ? '390px' : '1024px',
+            maxWidth: mobile ? '100%' : undefined,
+            height: mobile ? '720px' : '900px',
+            transform: mobile ? undefined : `scale(${desktopScale})`,
+            transformOrigin: 'top left',
+          }}
           className={'block border-0 bg-white ' + (mobile ? 'mx-auto' : '')}
         />
         {mountTarget && createPortal(
