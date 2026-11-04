@@ -19,7 +19,7 @@ export function CountryPagePreview({ content }: {
   const [desktopScale, setDesktopScale] = useState(0.5)
   const [wide, setWide] = useState(false)
   const wideRef = useRef(false)
-  const naturalTopRef = useRef<number | null>(null)
+  const anchorRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLElement>(null)
   const frameAreaRef = useRef<HTMLDivElement>(null)
 
@@ -46,13 +46,6 @@ export function CountryPagePreview({ content }: {
       const nextWide = window.matchMedia('(min-width: 1024px)').matches
       if (nextWide === wideRef.current) return
 
-      if (nextWide) {
-        const panel = panelRef.current
-        naturalTopRef.current = panel ? panel.getBoundingClientRect().top + window.scrollY : 180
-      } else {
-        naturalTopRef.current = null
-      }
-
       wideRef.current = nextWide
       setWide(nextWide)
     }
@@ -76,7 +69,7 @@ export function CountryPagePreview({ content }: {
     }
 
     function keepPreviewBesideEditor() {
-      const top = Math.max(16, (naturalTopRef.current ?? 180) - window.scrollY)
+      const top = Math.max(16, anchorRef.current?.getBoundingClientRect().top ?? 180)
       const width = Math.min(520, (window.innerWidth - 64) / 2)
       const right = Math.max(16, (window.innerWidth - 1152) / 2)
 
@@ -173,7 +166,12 @@ export function CountryPagePreview({ content }: {
     </section>
   )
 
-  return wide ? createPortal(previewCard, document.body) : previewCard
+  return wide ? (
+    <>
+      <div ref={anchorRef} aria-hidden="true" className="hidden lg:block" />
+      {createPortal(previewCard, document.body)}
+    </>
+  ) : previewCard
 }
 
 function CountryPreviewShell({ content }: {
