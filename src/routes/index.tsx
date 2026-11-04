@@ -5,6 +5,7 @@ import { ApprovalCard, PostCard, TestimonialCard } from '@/components/Cards'
 import { CountryFlag } from '@/components/CountryFlag'
 import { EnquiryForm } from '@/components/EnquiryForm'
 import { Eyebrow } from '@/components/Section'
+import { AnimatedStatValue, InteractiveFlightGlobe } from '@/components/InteractiveFlightGlobe'
 import { ServiceIcon } from '@/components/ServiceIcon'
 import { visaServices } from '@/data/fixtures'
 import { getPublicCountryCatalogue } from '@/lib/public-functions'
@@ -145,8 +146,12 @@ function Home() {
       {/* ========================================================================= */}
       <div className="block lg:hidden bg-cream text-forest-900">
         {/* MOBILE HERO */}
-        <section className="relative overflow-hidden bg-forest-900 bg-grain text-white px-5 pt-8 pb-16">
-          <div>
+        <section className="relative overflow-hidden bg-forest-900 bg-aurora-live text-white px-5 pt-8 pb-16">
+          <InteractiveFlightGlobe
+            selectedCountry={selectedCountry}
+            className="absolute -top-6 -right-12 h-[360px] w-[360px] opacity-55"
+          />
+          <div className="relative z-10">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-forest-950/80 border border-white/20 px-3.5 py-1 text-[11px] font-bold text-coral-400 shadow-sm">
               📍 Sangaria · Hanumangarh · Since Day 1
             </span>
@@ -278,7 +283,7 @@ function Home() {
             <dl className="mt-7 grid grid-cols-2 gap-3.5">
               {settings.trustStats.map((s) => (
                 <div key={s.label} className="rounded-2xl bg-white/5 border border-white/10 p-4 text-center">
-                  <dt className="font-display text-2xl font-extrabold text-white">{s.value}</dt>
+                  <dt className="font-display text-2xl font-extrabold text-white"><AnimatedStatValue value={s.value} /></dt>
                   <dd className="mt-1 text-[10px] uppercase tracking-wider text-forest-100/70">{s.label}</dd>
                 </div>
               ))}
@@ -718,9 +723,15 @@ function Home() {
       {/* ========================================================================= */}
       <div className="hidden lg:block bg-cream text-forest-900">
         {/* DESKTOP HERO */}
-        <section className="relative overflow-hidden bg-forest-900 bg-grain text-white">
-          <div className="mx-auto grid max-w-7xl items-center gap-14 px-6 pt-16 pb-24 lg:grid-cols-[1.15fr_1fr] lg:pt-24">
-            <div>
+        <section className="relative overflow-hidden bg-forest-900 bg-aurora-live text-white">
+          
+          <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-14 px-6 pt-16 pb-24 lg:grid-cols-[1.15fr_1fr] lg:pt-24">
+            <div className="relative isolate">
+              <InteractiveFlightGlobe
+                selectedCountry={selectedCountry}
+                className="pointer-events-none absolute -top-12 -right-10 z-0 h-[460px] w-[460px] opacity-85 xl:-right-6 xl:h-[520px] xl:w-[520px]"
+              />
+              <div className="relative z-10">
               <div className="animate-rise">
                 <Eyebrow light>Sangaria · Hanumangarh · Since day one</Eyebrow>
               </div>
@@ -807,6 +818,7 @@ function Home() {
                   <Link to="/contact" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-400">Contact</Link>
                 </div>
               </div>
+              </div>
             </div>
 
             <div className="relative mx-auto w-full max-w-md lg:max-w-none">
@@ -847,7 +859,7 @@ function Home() {
           <dl className="mx-auto mt-12 grid max-w-7xl grid-cols-2 gap-6 px-6 pb-16 sm:grid-cols-4">
             {settings.trustStats.map((s) => (
               <div key={s.label}>
-                <dt className="font-display text-3xl font-extrabold text-white">{s.value}</dt>
+                <dt className="font-display text-3xl font-extrabold text-white"><AnimatedStatValue value={s.value} /></dt>
                 <dd className="mt-1 text-xs uppercase tracking-wider text-forest-100/60">{s.label}</dd>
               </div>
             ))}
