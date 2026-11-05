@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import { ApprovalCard, TestimonialCard } from '@/components/Cards'
+import { GoogleReviewCta } from '@/components/GoogleReviewCta'
 import { Eyebrow, PageHero } from '@/components/Section'
 import { cn, img } from '@/lib/utils'
 import { getPublicContent } from '@/lib/public-functions'
@@ -81,6 +82,7 @@ function SuccessPage() {
           ))}
         </div>
       </section>
+      <GoogleReviewCta />
     </>
   )
 }
