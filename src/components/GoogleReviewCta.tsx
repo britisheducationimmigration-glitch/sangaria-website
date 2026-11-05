@@ -33,7 +33,7 @@ export function GoogleReviewCta() {
           </a>
         </div>
 
-        <div className="flex w-fit max-w-full shrink-0 items-center gap-2 rounded-2xl border border-forest-900/10 bg-forest-50 p-2.5 md:gap-3 md:p-3">
+        <div className="flex w-fit max-w-full shrink-0 flex-col items-center gap-2 rounded-2xl border border-forest-900/10 bg-forest-50 p-2.5 md:flex-row md:gap-3 md:p-3">
           <img
             src="/img/google-review-qr.svg"
             alt="Google review QR code"
@@ -43,8 +43,8 @@ export function GoogleReviewCta() {
             decoding="async"
             className="size-28 shrink-0 rounded-xl bg-white object-contain p-1 sm:size-36 lg:size-40"
           />
-          <p className="w-20 text-xs font-semibold leading-relaxed text-forest-900/70">
-            Scan with your phone to leave a review.
+          <p className="w-20 text-center text-xs font-semibold leading-relaxed text-forest-900/70 md:text-left">
+            Scan to leave a review.
           </p>
         </div>
       </div>
