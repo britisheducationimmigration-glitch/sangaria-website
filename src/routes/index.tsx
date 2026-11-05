@@ -15,6 +15,7 @@ import { getPublicContent } from '@/lib/public-functions'
 import { BoardingPassGenerator } from '@/components/BoardingPassGenerator'
 import { FamilyCashflowPlanner } from '@/components/FamilyCashflowPlanner'
 import { CertificateCarousel } from '@/components/CertificateCarousel'
+import { GoogleReviewCta } from '@/components/GoogleReviewCta'
 
 import { createPageSeo } from '@/lib/seo'
 
@@ -623,6 +624,8 @@ function Home() {
           </section>
         )}
 
+        <GoogleReviewCta />
+
         {/* NEWS & BLOG (MOBILE) */}
         <section className="px-5 py-20 border-b border-forest-900/10 bg-white">
           <div className="flex items-end justify-between mb-8">
@@ -1150,6 +1153,8 @@ function Home() {
             </div>
           </section>
         )}
+
+        <GoogleReviewCta />
 
         {/* DESKTOP UPDATES (News & Blog) */}
         <section className="mx-auto max-w-7xl px-6 py-24">

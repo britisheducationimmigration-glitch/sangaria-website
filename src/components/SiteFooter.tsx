@@ -3,6 +3,7 @@ import { Mail, MapPin, Phone } from 'lucide-react'
 import { Facebook, Instagram } from './BrandIcons'
 import { CountryFlag } from './CountryFlag'
 import type { Country } from '@/data/fixtures'
+import { googleReviewUrl } from '@/data/google-review'
 import { navLinks, site } from '@/data/site'
 import type { SiteSettings } from '@/lib/content-types'
 import { Logo } from './Logo'
@@ -46,6 +47,7 @@ export function SiteFooter({ settings, countries }: { settings: SiteSettings; co
                 </li>
               ))}
               <li><Link to="/certificates" className="block py-1 transition-colors hover:text-white md:py-0">Certificates & partnerships</Link></li>
+              <li><a href={googleReviewUrl} target="_blank" rel="noopener noreferrer" aria-label="Write a Google review" className="block py-1 transition-colors hover:text-white md:py-0">Google reviews ↗</a></li>
             </ul>
           </div>
           <div>
