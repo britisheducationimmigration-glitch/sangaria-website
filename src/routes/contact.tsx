@@ -3,6 +3,7 @@ import { Clock, Mail, MapPin, MessageCircle, Phone } from 'lucide-react'
 import { Facebook, Instagram } from '@/components/BrandIcons'
 import { EnquiryForm } from '@/components/EnquiryForm'
 import { PageHero } from '@/components/Section'
+import { GoogleReviewCta } from '@/components/GoogleReviewCta'
 import { site } from '@/data/site'
 import { Route as RootRoute } from './__root'
 
@@ -109,6 +110,7 @@ function ContactPage() {
           />
         </div>
       </section>
+      <GoogleReviewCta />
     </>
   )
 }
