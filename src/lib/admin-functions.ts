@@ -276,8 +276,10 @@ function normalizeCountryPageContent(value: unknown): CountryPageContent {
   const studyPlanTimeline = Array.isArray(studyPlanInput.timeline)
     ? studyPlanInput.timeline.filter((item) => !!item && typeof item === 'object').map((item, index) => {
         const row = item as Record<string, unknown>
+        const weeksFromStart = Math.max(0, Math.min(9, Math.round(numberValue(row.weeksFromStart, index * 2))))
         return {
-          monthsBeforeIntake: Math.max(0, Math.min(36, Math.round(numberValue(row.monthsBeforeIntake, index + 1)))),
+          weeks: 'Week ' + (weeksFromStart + 1),
+          weeksFromStart,
           title: stringValue(row.title, 240),
           detail: stringValue(row.detail, 1200),
         }
@@ -358,8 +360,8 @@ function validateCountryPageForPublish(content: CountryPageContent) {
       throw new Error('Complete the study plan summary, checklist, timeline, verification date and official sources')
     }
     if (plan.checklist.some((item) => !item.category || !item.title || !item.detail)) throw new Error('Each study checklist item needs a category, title and explanation')
-    if (plan.timeline.some((step) => !Number.isInteger(step.monthsBeforeIntake) || step.monthsBeforeIntake < 0 || step.monthsBeforeIntake > 36 || !step.title || !step.detail)) {
-      throw new Error('Each planning checkpoint needs a title, explanation and an intake offset from 0 to 36 months')
+    if (plan.timeline.some((step) => !step.weeks || !Number.isInteger(step.weeksFromStart) || step.weeksFromStart < 0 || step.weeksFromStart > 9 || !step.title || !step.detail)) {
+      throw new Error('Each planning checkpoint needs a week range, a start week from 0 to 9, a title and an explanation')
     }
     if (plan.sources.some((source) => !source.label || !source.url.startsWith('https://'))) throw new Error('Every study plan source needs a label and HTTPS link')
   }
