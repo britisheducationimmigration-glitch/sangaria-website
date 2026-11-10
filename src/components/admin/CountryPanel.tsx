@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CountryFlag } from '@/components/CountryFlag'
 import { CountryPagePreview } from '@/components/admin/CountryPagePreview'
-import type { Country, StudyPlanChecklistItem, StudyPlanTimelineStep } from '@/data/fixtures'
+import type { Country } from '@/data/fixtures'
 import type { VisaGuidance } from '@/data/visa-guidance'
 import {
   discardCountryPageDraft,
@@ -32,6 +32,7 @@ type Editor = {
   highlights: string
   costs: string
   english: string
+  studyPlan: Country['studyPlan']
   guideTuition: string
   guideVisaFee: string
   guideFunds: string
@@ -41,12 +42,6 @@ type Editor = {
   guideIntakes: string
   guideVerified: string
   guideSources: string
-  studyPlanEnabled: boolean
-  studyPlanVerified: string
-  studyPlanSummary: string
-  studyPlanChecklist: StudyPlanChecklistItem[]
-  studyPlanTimeline: StudyPlanTimelineStep[]
-  studyPlanSources: { label: string; url: string }[]
   visaVerified: string
   visaFees: string
   visaFeeSummary: string
@@ -56,9 +51,8 @@ type Editor = {
 }
 
 const emptyEditor = (): Editor => ({
-  originalSlug: '', slug: '', name: '', code: '', flag: '', headline: '', intro: '', stats: '', intakes: '', visas: '', highlights: '', costs: '', english: '',
+  originalSlug: '', slug: '', name: '', code: '', flag: '', headline: '', intro: '', stats: '', intakes: '', visas: '', highlights: '', costs: '', english: '', studyPlan: undefined,
   guideTuition: '', guideVisaFee: '', guideFunds: '', guideAdmission: '', guideWork: '', guidePostStudy: '', guideIntakes: '', guideVerified: '', guideSources: '',
-  studyPlanEnabled: false, studyPlanVerified: '', studyPlanSummary: '', studyPlanChecklist: [], studyPlanTimeline: [], studyPlanSources: [],
   visaVerified: '', visaFees: '', visaFeeSummary: '', visaRequirements: '', visaCaveat: '', visaSources: '',
 })
 
@@ -80,31 +74,16 @@ function parseSources(value: string) {
 function fromContent(content: CountryPageContent): Editor {
   const country = content.country
   const guide = country.studyGuide
-  const plan = country.studyPlan
   const visa = content.guidance
   return {
     originalSlug: country.slug, slug: country.slug, name: country.name, code: country.code, flag: country.flag, headline: country.headline, intro: country.intro,
     stats: country.stats.map((item) => item.label + ' | ' + item.value).join('\n'),
     intakes: country.intakes.join('\n'), visas: country.visas.join('\n'), highlights: country.highlights.join('\n'),
-    costs: country.costs.map((item) => item.label + ' | ' + item.value).join('\n'), english: country.english,
+    costs: country.costs.map((item) => item.label + ' | ' + item.value).join('\n'), english: country.english, studyPlan: country.studyPlan,
     guideTuition: guide?.tuitionEstimate ?? '', guideVisaFee: guide?.studentVisaFee ?? '', guideFunds: guide?.proofOfFunds ?? '',
     guideAdmission: guide?.admissionAndEnglish ?? '', guideWork: guide?.workWhileStudying ?? '', guidePostStudy: guide?.postStudyOption ?? '',
     guideIntakes: guide?.intakesNote ?? '', guideVerified: guide?.lastVerified ?? '',
     guideSources: (guide?.sources ?? []).map((item) => item.label + ' | ' + item.url).join('\n'),
-    studyPlanEnabled: !!plan,
-    studyPlanVerified: plan?.lastVerified ?? '',
-    studyPlanSummary: plan?.summary ?? '',
-    studyPlanChecklist: plan?.checklist ?? [],
-    studyPlanTimeline: (plan?.timeline ?? []).map((item, index) => {
-      const weeksFromStart = item.weeksFromStart ?? Math.min(9, index * 2)
-      return {
-        weeks: 'Week ' + (weeksFromStart + 1),
-        weeksFromStart,
-        title: item.title,
-        detail: item.detail,
-      }
-    }),
-    studyPlanSources: plan?.sources ?? [],
     visaVerified: visa.lastVerified, visaFees: visa.feeRows.map((item) => item.label + ' | ' + item.value).join('\n'),
     visaFeeSummary: visa.feeSummary, visaRequirements: visa.requirements.join('\n'), visaCaveat: visa.caveat,
     visaSources: visa.sources.map((item) => item.label + ' | ' + item.url).join('\n'),
@@ -112,15 +91,6 @@ function fromContent(content: CountryPageContent): Editor {
 }
 
 function toContent(editor: Editor): CountryPageContent {
-  const studyPlan = editor.studyPlanEnabled
-    ? {
-        lastVerified: editor.studyPlanVerified.trim(),
-        summary: editor.studyPlanSummary.trim(),
-        checklist: editor.studyPlanChecklist,
-        timeline: editor.studyPlanTimeline,
-        sources: editor.studyPlanSources,
-      }
-    : editor.originalSlug ? null : undefined
   const studyGuide = editor.slug === 'europe' && !editor.guideTuition.trim() && !editor.guideAdmission.trim()
     ? undefined
     : {
@@ -148,7 +118,7 @@ function toContent(editor: Editor): CountryPageContent {
     costs: parsePairs(editor.costs),
     english: editor.english.trim(),
     studyGuide,
-    studyPlan,
+    studyPlan: editor.studyPlan,
   }
   const guidance: VisaGuidance = {
     lastVerified: editor.visaVerified.trim(),
@@ -181,145 +151,6 @@ function Field({ label, value, onChange, textarea = false, rows = 3, required = 
       )}
       {hint && <span className="mt-1 block text-xs font-normal leading-relaxed text-forest-900/60">{hint}</span>}
     </label>
-  )
-}
-
-const studyPlanCategories = ['Admission', 'Identity', 'Education', 'Funds', 'Application', 'Additional checks', 'After submission']
-const studyPlanStatuses: StudyPlanChecklistItem['status'][] = ['Required', 'Usually required', 'Recommended', 'If applicable', 'After submission']
-
-function StudyPlanChecklistEditor({ items, onChange }: {
-  items: StudyPlanChecklistItem[]
-  onChange: (items: StudyPlanChecklistItem[]) => void
-}) {
-  function updateItem(index: number, patch: Partial<StudyPlanChecklistItem>) {
-    onChange(items.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item))
-  }
-  function addItem() {
-    onChange([...items, { id: 'study-item-' + Date.now() + '-' + items.length, category: 'Admission', title: '', detail: '', status: 'Usually required' }])
-  }
-  function removeItem(index: number) {
-    onChange(items.filter((_, itemIndex) => itemIndex !== index))
-  }
-  return (
-    <div className="sm:col-span-2 rounded-2xl border border-forest-900/10 bg-forest-50/60 p-3 sm:p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h5 className="font-bold text-forest-900">Documents to prepare <span className="text-xs font-normal text-forest-900/60">({items.length})</span></h5>
-          <p className="mt-1 text-xs text-forest-900/60">Add the country’s verified documents. Write the name and a short note for the student.</p>
-        </div>
-        <button type="button" onClick={addItem} className="min-h-10 rounded-lg border border-forest-900/15 bg-white px-3 text-sm font-bold text-forest-900 hover:bg-forest-50">+ Add document</button>
-      </div>
-      <div className="mt-3 space-y-2">
-        {items.map((item, index) => (
-          <details key={item.id} className="rounded-xl border border-forest-900/10 bg-white">
-            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 [&::-webkit-details-marker]:hidden">
-              <span className="min-w-0 truncate text-sm font-bold text-forest-900">{index + 1}. {item.title || 'New document'}</span>
-              <span className="shrink-0 rounded-full bg-forest-50 px-2 py-1 text-[10px] font-bold text-forest-700">{item.status}</span>
-            </summary>
-            <div className="grid gap-3 border-t border-forest-900/10 p-3">
-              <Field label="Document name" value={item.title} required hint="For example: parents’ ITRs for the last 2 years" onChange={(value) => updateItem(index, { title: value })} />
-              <Field label="What should the student collect?" value={item.detail} required textarea rows={2} hint="One short note: which records, who provides them, and any time period." onChange={(value) => updateItem(index, { detail: value })} />
-              <details className="rounded-lg bg-forest-50/70 px-3 py-2">
-                <summary className="cursor-pointer text-xs font-bold text-forest-800">Optional: change where it appears</summary>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <label className="block min-w-0 text-sm font-semibold text-forest-900">Document group
-                    <select value={item.category} onChange={(event) => updateItem(index, { category: event.currentTarget.value })} className="mt-1 block min-h-11 w-full rounded-xl border border-forest-900/15 bg-white px-3 font-normal">
-                      {studyPlanCategories.map((category) => <option key={category} value={category}>{category}</option>)}
-                      {!studyPlanCategories.includes(item.category) && <option value={item.category}>{item.category}</option>}
-                    </select>
-                  </label>
-                  <label className="block min-w-0 text-sm font-semibold text-forest-900">Who needs it?
-                    <select value={item.status} onChange={(event) => updateItem(index, { status: event.currentTarget.value as StudyPlanChecklistItem['status'] })} className="mt-1 block min-h-11 w-full rounded-xl border border-forest-900/15 bg-white px-3 font-normal">
-                      {studyPlanStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
-                    </select>
-                  </label>
-                </div>
-              </details>
-              <div className="flex justify-end"><button type="button" onClick={() => removeItem(index)} className="min-h-10 rounded-lg px-3 text-sm font-bold text-red-700 hover:bg-red-50">Remove document</button></div>
-            </div>
-          </details>
-        ))}
-        {!items.length && <p className="rounded-xl border border-dashed border-forest-900/20 bg-white p-4 text-sm text-forest-900/60">No documents added. Add the verified items before publishing.</p>}
-      </div>
-    </div>
-  )
-}
-
-function StudyPlanTimelineEditor({ items, onChange }: {
-  items: StudyPlanTimelineStep[]
-  onChange: (items: StudyPlanTimelineStep[]) => void
-}) {
-  function updateItem(index: number, patch: Partial<StudyPlanTimelineStep>) {
-    onChange(items.map((item, itemIndex) => {
-      if (itemIndex !== index) return item
-      const nextStartWeek = patch.weeksFromStart ?? item.weeksFromStart
-      const next = { ...item, ...patch, weeksFromStart: nextStartWeek }
-      if (patch.weeksFromStart !== undefined) next.weeks = 'Week ' + (nextStartWeek + 1)
-      return next
-    }))
-  }
-  function addItem() {
-    const startWeek = Math.min(9, items.length * 2)
-    onChange([...items, { weeks: 'Week ' + (startWeek + 1), weeksFromStart: startWeek, title: '', detail: '' }])
-  }
-  function removeItem(index: number) {
-    onChange(items.filter((_, itemIndex) => itemIndex !== index))
-  }
-  return (
-    <div className="sm:col-span-2 rounded-2xl border border-forest-900/10 bg-forest-50/60 p-3 sm:p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h5 className="font-bold text-forest-900">Preparation steps <span className="text-xs font-normal text-forest-900/60">({items.length})</span></h5>
-          <p className="mt-1 text-xs text-forest-900/60">Pick when each task starts. Different tasks can happen at the same time.</p>
-        </div>
-        <button type="button" onClick={addItem} className="min-h-10 rounded-lg border border-forest-900/15 bg-white px-3 text-sm font-bold text-forest-900 hover:bg-forest-50">+ Add step</button>
-      </div>
-      <div className="mt-3 space-y-2">
-        {items.map((item, index) => (
-          <details key={index} className="rounded-xl border border-forest-900/10 bg-white">
-            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 [&::-webkit-details-marker]:hidden">
-              <span className="min-w-0 truncate text-sm font-bold text-forest-900">{item.weeks}: {item.title || 'New preparation step'}</span>
-            </summary>
-            <div className="grid gap-3 border-t border-forest-900/10 p-3">
-              <label className="block min-w-0 text-sm font-semibold text-forest-900">When should this start?
-                <select value={item.weeksFromStart} onChange={(event) => updateItem(index, { weeksFromStart: Number(event.currentTarget.value) })} className="mt-1 block min-h-11 w-full rounded-xl border border-forest-900/15 bg-white px-3 font-normal">
-                  {Array.from({ length: 10 }, (_, week) => <option key={week} value={week}>{week === 0 ? 'This week' : 'In ' + week + (week === 1 ? ' week' : ' weeks')}</option>)}
-                </select>
-                <span className="mt-1 block text-xs font-normal text-forest-900/60">The site adds these weeks to today’s date automatically.</span>
-              </label>
-              <Field label="Step name" value={item.title} required hint="For example: Apply to colleges" onChange={(value) => updateItem(index, { title: value })} />
-              <Field label="What should the student do?" value={item.detail} required textarea rows={2} hint="Keep it short. Mention documents to work on together." onChange={(value) => updateItem(index, { detail: value })} />
-              <div className="flex justify-end"><button type="button" onClick={() => removeItem(index)} className="min-h-10 rounded-lg px-3 text-sm font-bold text-red-700 hover:bg-red-50">Remove step</button></div>
-            </div>
-          </details>
-        ))}
-        {!items.length && <p className="rounded-xl border border-dashed border-forest-900/20 bg-white p-4 text-sm text-forest-900/60">No steps added. Add the main tasks from course applications to visa-file submission.</p>}
-      </div>
-    </div>
-  )
-}
-
-function StudyPlanSourceEditor({ sources, onChange }: {
-  sources: { label: string; url: string }[]
-  onChange: (sources: { label: string; url: string }[]) => void
-}) {
-  return (
-    <div className="sm:col-span-2 rounded-2xl border border-forest-900/10 bg-forest-50/60 p-3 sm:p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div><h5 className="font-bold text-forest-900">Official sources <span className="text-xs font-normal text-forest-900/60">({sources.length})</span></h5><p className="mt-1 text-xs text-forest-900/60">Add the government checklist and each source used to verify this plan.</p></div>
-        <button type="button" onClick={() => onChange([...sources, { label: '', url: '' }])} className="min-h-10 rounded-lg border border-forest-900/15 bg-white px-3 text-sm font-bold text-forest-900 hover:bg-forest-50">+ Add source</button>
-      </div>
-      <div className="mt-3 space-y-3">
-        {sources.map((source, index) => (
-          <div key={index} className="grid gap-3 rounded-xl border border-forest-900/10 bg-white p-3 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.5fr)_auto] sm:items-end">
-            <Field label="Source name" value={source.label} required onChange={(label) => onChange(sources.map((item, itemIndex) => itemIndex === index ? { ...item, label } : item))} />
-            <Field label="Official HTTPS link" value={source.url} required hint="Copy the full link from the official page." onChange={(url) => onChange(sources.map((item, itemIndex) => itemIndex === index ? { ...item, url } : item))} />
-            <button type="button" onClick={() => onChange(sources.filter((_, itemIndex) => itemIndex !== index))} className="min-h-10 rounded-lg px-3 text-sm font-bold text-red-700 hover:bg-red-50">Remove</button>
-          </div>
-        ))}
-        {!sources.length && <p className="rounded-xl border border-dashed border-forest-900/20 bg-white p-4 text-sm text-forest-900/60">Add at least one official source before publishing this plan.</p>}
-      </div>
-    </div>
   )
 }
 
@@ -475,29 +306,6 @@ export function CountryPanel() {
               <Field label="Study guide last verified" value={form.guideVerified} onChange={(value) => update({ guideVerified: value })} />
               <div className="sm:col-span-2"><Field label="Study guide sources" value={form.guideSources} textarea rows={4} hint="One per line: source label | HTTPS link" onChange={(value) => update({ guideSources: value })} /></div>
             </div>
-          </div>
-
-          <div className="border-t border-forest-900/10 pt-5">
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <h4 className="font-extrabold">Study plan, document checklist and timeline</h4>
-                <p className="mt-1 max-w-2xl text-xs leading-relaxed text-forest-900/60">A simple student checklist and timeline. It uses this destination’s saved country data and the existing Cashflow Budget.</p>
-              </div>
-              <label className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-forest-900/15 px-3 text-sm font-bold">
-                <input type="checkbox" checked={form.studyPlanEnabled} onChange={(event) => update({ studyPlanEnabled: event.currentTarget.checked })} className="size-4 accent-coral-600" />
-                Enable study plan
-              </label>
-            </div>
-            {form.studyPlanEnabled && (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="sm:col-span-2 rounded-xl bg-amber-50 p-3 text-xs leading-relaxed text-amber-950"><strong>Where facts come from:</strong> official government and school pages, checked by a content reviewer and saved under this country in Admin. The site does not fetch rule changes by itself. <strong>Team workflow:</strong> use approved notes to fill the short document/task cards, save as Draft, then let a reviewer check the preview and publish. Cashflow comes from this country’s existing Cashflow Budget entry.</div>
-                <Field label="Short introduction" value={form.studyPlanSummary} required textarea rows={2} hint="One or two simple sentences for students." onChange={(value) => update({ studyPlanSummary: value })} />
-                <Field label="Last checked against official sources" value={form.studyPlanVerified} required hint="For example, 10 November 2026" onChange={(value) => update({ studyPlanVerified: value })} />
-                <StudyPlanChecklistEditor items={form.studyPlanChecklist} onChange={(studyPlanChecklist) => update({ studyPlanChecklist })} />
-                <StudyPlanTimelineEditor items={form.studyPlanTimeline} onChange={(studyPlanTimeline) => update({ studyPlanTimeline })} />
-                <StudyPlanSourceEditor sources={form.studyPlanSources} onChange={(studyPlanSources) => update({ studyPlanSources })} />
-              </div>
-            )}
           </div>
 
           <div className="border-t border-forest-900/10 pt-5">
