@@ -8,6 +8,7 @@ import { defaultCashflowData, CountryCashflow } from '@/data/cashflow'
 import { formatBatchStartDate, getBatchDateStatus, isValidBatchStartDate } from '@/lib/batch-dates'
 import { PolicyWatchPanel } from '@/components/admin/PolicyWatchPanel'
 import { CountryPanel } from '@/components/admin/CountryPanel'
+import { StudyPlanPanel } from '@/components/admin/StudyPlanPanel'
 import { applyScheduledCashflowPolicy, getPolicyWatchStatus, policyWatchItems } from '@/data/policy-watch'
 
 export const Route = createFileRoute('/admin')({
@@ -15,7 +16,7 @@ export const Route = createFileRoute('/admin')({
   component: AdminPage,
 })
 
-type Tab = 'enquiries' | 'news' | 'stories' | 'certificates' | 'batches' | 'budget' | 'settings' | 'users' | 'demo' | 'review' | 'reports' | 'policy' | 'countries'
+type Tab = 'enquiries' | 'news' | 'stories' | 'certificates' | 'batches' | 'budget' | 'settings' | 'users' | 'demo' | 'review' | 'reports' | 'policy' | 'countries' | 'studyPlans'
 
 const roleLabels: Record<AdminRole, string> = { super_admin: 'Super Admin', content_editor: 'Content Editor', enquiry_manager: 'Enquiry Manager' }
 
@@ -36,6 +37,7 @@ function AdminPage() {
   const [notice, setNotice] = useState('')
   const [showChangePass, setShowChangePass] = useState(false)
   const [settingsDirty, setSettingsDirty] = useState(false)
+  const [studyPlanDirty, setStudyPlanDirty] = useState(false)
 
   async function reload() {
     try {
@@ -66,7 +68,7 @@ function AdminPage() {
   const draftQueue = snapshot.posts.filter((item) => !item.published)
   const policyWatchCount = policyWatchItems.filter((item) => getPolicyWatchStatus(item) !== 'Effective').length
   const tabs: Array<[Tab, string]> = snapshot.user.role === 'super_admin'
-    ? [['enquiries', `Enquiries (${snapshot.enquiryStats.total})`], ['demo', `Demo requests (${snapshot.enquiryStats.demoRequests})`], ['review', `Review queue (${newLeadQueue.length + draftQueue.length})`], ['reports', 'Reports'], ['policy', `Policy watch (${policyWatchCount})`], ['countries', 'Countries'], ['news', 'News & Updates'], ['stories', 'Success Stories'], ['certificates', 'Certificates'], ['batches', 'Coaching batches'], ['budget', '💰 Cashflow Budget'], ['settings', 'Site settings'], ['users', 'Users & roles']]
+    ? [['enquiries', `Enquiries (${snapshot.enquiryStats.total})`], ['demo', `Demo requests (${snapshot.enquiryStats.demoRequests})`], ['review', `Review queue (${newLeadQueue.length + draftQueue.length})`], ['reports', 'Reports'], ['policy', `Policy watch (${policyWatchCount})`], ['countries', 'Countries'], ['studyPlans', 'Study Plans'], ['news', 'News & Updates'], ['stories', 'Success Stories'], ['certificates', 'Certificates'], ['batches', 'Coaching batches'], ['budget', '💰 Cashflow Budget'], ['settings', 'Site settings'], ['users', 'Users & roles']]
     : snapshot.user.role === 'content_editor'
       ? [['review', `Review queue (${draftQueue.length})`], ['news', 'News & Updates'], ['stories', 'Success Stories'], ['certificates', 'Certificates'], ['batches', 'Coaching batches']]
       : [['enquiries', `Enquiries (${snapshot.enquiries.length})`], ['demo', `Demo requests (${snapshot.enquiryStats.demoRequests})`], ['review', `Review queue (${newLeadQueue.length})`], ['reports', 'Reports']]
@@ -78,7 +80,9 @@ function AdminPage() {
 
   function selectTab(value: Tab) {
     if (settingsDirty && value !== 'settings' && !window.confirm('You have unsaved changes in Site settings. Leave this section and discard them?')) return
+    if (studyPlanDirty && value !== 'studyPlans' && !window.confirm('You have unsaved Study Plan changes. Leave this section and discard them?')) return
     if (value !== 'settings') setSettingsDirty(false)
+    if (value !== 'studyPlans') setStudyPlanDirty(false)
     setTab(value)
   }
 
@@ -134,6 +138,7 @@ function AdminPage() {
         {tab === 'reports' && <ReportsPanel stats={snapshot.enquiryStats} />}
         {tab === 'policy' && <PolicyWatchPanel />}
         {tab === 'countries' && <CountryPanel />}
+        {tab === 'studyPlans' && <StudyPlanPanel onDirtyChange={setStudyPlanDirty} />}
         {tab === 'news' && <ContentPanel type="news" items={snapshot.posts} selected={selectedPost} onSelect={(item) => setSelectedPost(item as AdminPost | null)} onReload={reload} onNotice={showNotice} />}
         {tab === 'stories' && <ContentPanel type="stories" items={snapshot.stories} selected={selectedStory} onSelect={(item) => setSelectedStory(item as AdminStory | null)} onReload={reload} onNotice={showNotice} />}
         {tab === 'certificates' && <CertificatePanel items={snapshot.certificates} onReload={reload} onNotice={showNotice} />}
