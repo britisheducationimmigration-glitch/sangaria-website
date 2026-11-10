@@ -92,7 +92,19 @@ export async function getPublicCountryCatalog(): Promise<CountryPageContent[]> {
   const state = await readCountryCatalogState()
   const defaults = defaultCountryContent()
   const baseSlugs = new Set(defaults.map((entry) => entry.country.slug))
-  const merged = defaults.map((entry) => withScheduledGuidance(state.published[entry.country.slug] ?? entry))
+  const merged = defaults.map((entry) => {
+    const override = state.published[entry.country.slug]
+    if (!override) return entry
+    return withScheduledGuidance({
+      ...override,
+      country: {
+        ...override.country,
+        // Existing database entries predate the planner. Inherit its default only
+        // when no value was saved; admins can intentionally hide the plan with null.
+        studyPlan: override.country.studyPlan === undefined ? entry.country.studyPlan : override.country.studyPlan,
+      },
+    })
+  })
   const added = Object.entries(state.published)
     .filter(([slug]) => !baseSlugs.has(slug))
     .map(([, entry]) => withScheduledGuidance(entry))

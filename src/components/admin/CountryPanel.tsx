@@ -32,6 +32,7 @@ type Editor = {
   highlights: string
   costs: string
   english: string
+  studyPlan: Country['studyPlan']
   guideTuition: string
   guideVisaFee: string
   guideFunds: string
@@ -50,7 +51,7 @@ type Editor = {
 }
 
 const emptyEditor = (): Editor => ({
-  originalSlug: '', slug: '', name: '', code: '', flag: '', headline: '', intro: '', stats: '', intakes: '', visas: '', highlights: '', costs: '', english: '',
+  originalSlug: '', slug: '', name: '', code: '', flag: '', headline: '', intro: '', stats: '', intakes: '', visas: '', highlights: '', costs: '', english: '', studyPlan: undefined,
   guideTuition: '', guideVisaFee: '', guideFunds: '', guideAdmission: '', guideWork: '', guidePostStudy: '', guideIntakes: '', guideVerified: '', guideSources: '',
   visaVerified: '', visaFees: '', visaFeeSummary: '', visaRequirements: '', visaCaveat: '', visaSources: '',
 })
@@ -78,7 +79,7 @@ function fromContent(content: CountryPageContent): Editor {
     originalSlug: country.slug, slug: country.slug, name: country.name, code: country.code, flag: country.flag, headline: country.headline, intro: country.intro,
     stats: country.stats.map((item) => item.label + ' | ' + item.value).join('\n'),
     intakes: country.intakes.join('\n'), visas: country.visas.join('\n'), highlights: country.highlights.join('\n'),
-    costs: country.costs.map((item) => item.label + ' | ' + item.value).join('\n'), english: country.english,
+    costs: country.costs.map((item) => item.label + ' | ' + item.value).join('\n'), english: country.english, studyPlan: country.studyPlan,
     guideTuition: guide?.tuitionEstimate ?? '', guideVisaFee: guide?.studentVisaFee ?? '', guideFunds: guide?.proofOfFunds ?? '',
     guideAdmission: guide?.admissionAndEnglish ?? '', guideWork: guide?.workWhileStudying ?? '', guidePostStudy: guide?.postStudyOption ?? '',
     guideIntakes: guide?.intakesNote ?? '', guideVerified: guide?.lastVerified ?? '',
@@ -117,6 +118,7 @@ function toContent(editor: Editor): CountryPageContent {
     costs: parsePairs(editor.costs),
     english: editor.english.trim(),
     studyGuide,
+    studyPlan: editor.studyPlan,
   }
   const guidance: VisaGuidance = {
     lastVerified: editor.visaVerified.trim(),

@@ -21,6 +21,7 @@ import { Route as SuccessStoriesMediaRouteImport } from './routes/success-storie
 import { Route as VisasRouteImport } from './routes/visas'
 import { Route as CountriesIndexRouteImport } from './routes/countries.index'
 import { Route as CountriesSlugRouteImport } from './routes/countries.$slug'
+import { Route as StudyPlanSlugRouteImport } from './routes/study-plan.$slug'
 import { Route as UpdatesIndexRouteImport } from './routes/updates.index'
 import { Route as UpdatesSlugRouteImport } from './routes/updates.$slug'
 import { Route as AdminOauthCallbackRouteImport } from './routes/admin.oauth.callback'
@@ -87,6 +88,11 @@ const CountriesSlugRoute = CountriesSlugRouteImport.update({
   path: '/countries/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StudyPlanSlugRoute = StudyPlanSlugRouteImport.update({
+  id: '/study-plan/$slug',
+  path: '/study-plan/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UpdatesIndexRoute = UpdatesIndexRouteImport.update({
   id: '/updates/',
   path: '/updates/',
@@ -125,6 +131,7 @@ export interface FileRoutesByFullPath {
   '/success-stories/media/$id': typeof SuccessStoriesMediaRoute
   '/visas': typeof VisasRoute
   '/countries/$slug': typeof CountriesSlugRoute
+  '/study-plan/$slug': typeof StudyPlanSlugRoute
   '/updates/$slug': typeof UpdatesSlugRoute
   '/countries/': typeof CountriesIndexRoute
   '/updates/': typeof UpdatesIndexRoute
@@ -144,6 +151,7 @@ export interface FileRoutesByTo {
   '/success-stories/media/$id': typeof SuccessStoriesMediaRoute
   '/visas': typeof VisasRoute
   '/countries/$slug': typeof CountriesSlugRoute
+  '/study-plan/$slug': typeof StudyPlanSlugRoute
   '/updates/$slug': typeof UpdatesSlugRoute
   '/countries': typeof CountriesIndexRoute
   '/updates': typeof UpdatesIndexRoute
@@ -164,6 +172,7 @@ export interface FileRoutesById {
   '/success-stories/media/$id': typeof SuccessStoriesMediaRoute
   '/visas': typeof VisasRoute
   '/countries/$slug': typeof CountriesSlugRoute
+  '/study-plan/$slug': typeof StudyPlanSlugRoute
   '/updates/$slug': typeof UpdatesSlugRoute
   '/countries/': typeof CountriesIndexRoute
   '/updates/': typeof UpdatesIndexRoute
@@ -185,6 +194,7 @@ export interface FileRouteTypes {
     | '/success-stories/media/$id'
     | '/visas'
     | '/countries/$slug'
+    | '/study-plan/$slug'
     | '/updates/$slug'
     | '/countries/'
     | '/updates/'
@@ -204,6 +214,7 @@ export interface FileRouteTypes {
     | '/success-stories/media/$id'
     | '/visas'
     | '/countries/$slug'
+    | '/study-plan/$slug'
     | '/updates/$slug'
     | '/countries'
     | '/updates'
@@ -223,6 +234,7 @@ export interface FileRouteTypes {
     | '/success-stories/media/$id'
     | '/visas'
     | '/countries/$slug'
+    | '/study-plan/$slug'
     | '/updates/$slug'
     | '/countries/'
     | '/updates/'
@@ -243,6 +255,7 @@ export interface RootRouteChildren {
   SuccessStoriesMediaRoute: typeof SuccessStoriesMediaRoute
   VisasRoute: typeof VisasRoute
   CountriesSlugRoute: typeof CountriesSlugRoute
+  StudyPlanSlugRoute: typeof StudyPlanSlugRoute
   UpdatesSlugRoute: typeof UpdatesSlugRoute
   CountriesIndexRoute: typeof CountriesIndexRoute
   UpdatesIndexRoute: typeof UpdatesIndexRoute
@@ -334,6 +347,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CountriesSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/study-plan/$slug': {
+      id: '/study-plan/$slug'
+      path: '/study-plan/$slug'
+      fullPath: '/study-plan/$slug'
+      preLoaderRoute: typeof StudyPlanSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/updates/': {
       id: '/updates/'
       path: '/updates'
@@ -398,6 +418,7 @@ const rootRouteChildren: RootRouteChildren = {
   SuccessStoriesMediaRoute: SuccessStoriesMediaRoute,
   VisasRoute: VisasRoute,
   CountriesSlugRoute: CountriesSlugRoute,
+  StudyPlanSlugRoute: StudyPlanSlugRoute,
   UpdatesSlugRoute: UpdatesSlugRoute,
   CountriesIndexRoute: CountriesIndexRoute,
   UpdatesIndexRoute: UpdatesIndexRoute,
