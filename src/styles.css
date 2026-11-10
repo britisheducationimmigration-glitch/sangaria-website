@@ -412,8 +412,8 @@ main .scroll-reveal:focus-within .scroll-reveal-item {
   }
   .study-plan-print-watermark img {
     display: block !important;
-    width: 116mm !important;
-    height: 116mm !important;
+    width: 145mm !important;
+    height: 145mm !important;
     max-width: 70% !important;
     object-fit: contain !important;
     filter: grayscale(1) !important;
@@ -552,7 +552,7 @@ main .scroll-reveal:focus-within .scroll-reveal-item {
   .study-plan-print-lower ul { list-style: none !important; margin: 0 !important; padding: 0 !important; }
   .study-plan-print-lower li span { display: block; color: #667d8b !important; font-size: 5.1pt !important; overflow-wrap: anywhere; }
   .study-plan-print-only a { color: #17364f !important; }
-  .study-plan-print-contact {
+  .study-plan-print-page > .study-plan-print-contact {
     position: absolute !important;
     left: 0 !important;
     right: 0 !important;
