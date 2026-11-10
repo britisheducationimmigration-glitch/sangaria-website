@@ -129,7 +129,8 @@ const baseCountries: Country[] = [
       ],
     },
   },
-slug: 'uk',
+  {
+    slug: 'uk',
     name: 'United Kingdom',
     flag: '🇬🇧',
     code: 'UK',
