@@ -3,7 +3,7 @@ import { countries, posts as fixturePosts } from '@/data/fixtures'
 import { queryRows } from '@/lib/db.server'
 import { getPublicCountryCatalog } from '@/lib/country-catalog.server'
 
-const siteUrl = 'https://britisheducationandimmigration.com'
+const siteUrl = 'https://www.britisheducationandimmigration.com'
 const staticPages = [
   ['/', 'weekly', '1.0'],
   ['/countries', 'weekly', '0.9'],
