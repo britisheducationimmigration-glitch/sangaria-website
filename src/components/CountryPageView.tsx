@@ -146,6 +146,15 @@ export function CountryPageView({
         <aside className="h-fit rounded-[2rem] bg-white p-8 ring-1 ring-forest-900/10 lg:sticky lg:top-32">
           <h2 className="text-2xl font-extrabold text-forest-900">Planning for {c.name}?</h2>
           <p className="mt-2 mb-6 text-forest-900/65">Get a free profile check from our {c.name} specialist.</p>
+          {c.studyPlan && (
+            <Link
+              to="/study-plan/$slug"
+              params={{ slug: c.slug }}
+              className="mb-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-coral-500 px-5 py-3 text-sm font-bold text-white transition hover:bg-coral-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500"
+            >
+              View complete study plan <span aria-hidden="true">→</span>
+            </Link>
+          )}
           {preview ? (
             <div className="rounded-2xl border border-dashed border-forest-900/20 bg-forest-50 p-5 text-sm text-forest-900/70">
               <h3 className="font-bold text-forest-900">Enquiry form</h3>

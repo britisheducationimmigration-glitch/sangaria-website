@@ -109,6 +109,15 @@ function CountriesPage() {
                   ) : (
                     <p className="max-w-48 text-xs leading-relaxed text-forest-900/60">Visitor guide · study over 90 days uses a country-specific route.</p>
                   )}
+                  {country.studyPlan && (
+                    <Link
+                      to="/study-plan/$slug"
+                      params={{ slug: country.slug }}
+                      className="inline-flex min-h-11 w-fit items-center justify-center gap-2 rounded-full bg-coral-500 px-4 py-2 text-xs font-bold text-white transition hover:bg-coral-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500 lg:w-full"
+                    >
+                      Build study plan <ArrowRight aria-hidden="true" className="size-3.5" />
+                    </Link>
+                  )}
                 </div>
               </article>
             )

@@ -18,6 +18,28 @@ export type StudyGuide = {
   sources: { label: string; url: string }[]
 }
 
+export type StudyPlanChecklistItem = {
+  id: string
+  category: string
+  title: string
+  detail: string
+  status: 'Required' | 'Usually required' | 'Recommended' | 'If applicable' | 'After submission'
+}
+
+export type StudyPlanTimelineStep = {
+  monthsBeforeIntake: number
+  title: string
+  detail: string
+}
+
+export type StudyPlan = {
+  lastVerified: string
+  summary: string
+  checklist: StudyPlanChecklistItem[]
+  timeline: StudyPlanTimelineStep[]
+  sources: { label: string; url: string }[]
+}
+
 export type Country = {
   slug: string
   name: string
@@ -32,6 +54,7 @@ export type Country = {
   costs: { label: string; value: string }[]
   english: string
   studyGuide?: StudyGuide
+  studyPlan?: StudyPlan | null
 }
 
 const baseCountries: Country[] = [
@@ -73,9 +96,40 @@ const baseCountries: Country[] = [
         { label: "IRCC PGWP eligibility", url: "https://www.canada.ca/en/immigration-refugees-citizenship/services/study-canada/work/after-graduation/eligibility.html" },
       ],
     },
+    studyPlan: {
+      lastVerified: '10 November 2026',
+      summary: 'A practical planning checklist based on IRCC guidance. Your exact document list depends on your school, province, application location and personal circumstances.',
+      checklist: [
+        { id: 'canada-loa', category: 'Admission', title: 'Letter of acceptance (LOA) from your Canadian school', detail: 'Use the letter issued by your Designated Learning Institution. Check that programme, tuition and start dates are correct.', status: 'Required' },
+        { id: 'canada-pal-tal', category: 'Admission', title: 'PAL/TAL or proof that an exception applies', detail: 'Needed in most cases. For Quebec, check the CAQ instructions; it serves as the attestation document. Confirm your exact exception with IRCC.', status: 'Usually required' },
+        { id: 'canada-identity', category: 'Identity', title: 'Valid passport or travel document', detail: 'Prepare the applicant’s identity page and documents for any accompanying family members, if applicable.', status: 'Required' },
+        { id: 'canada-funds', category: 'Funds', title: 'Evidence for tuition, living costs and travel', detail: 'Show enough funds for the first year and explain how you will fund the full programme if it lasts longer. IRCC accepts different kinds of evidence; you do not need every example on its website.', status: 'Required' },
+        { id: 'canada-sponsor', category: 'Funds', title: 'Sponsor support and relationship evidence', detail: 'Add a support letter, proof of relationship and evidence of the sponsor’s ability to provide funds when someone else is supporting you.', status: 'If applicable' },
+        { id: 'canada-explanation', category: 'Application', title: 'Letter of explanation / study plan', detail: 'Explain why you want to study in Canada and that you understand your responsibilities as an international student.', status: 'Recommended' },
+        { id: 'canada-school-records', category: 'Application', title: 'Academic and language records requested for your case', detail: 'Prepare transcripts, certificates and test results required by your school or the visa office serving your application location.', status: 'If applicable' },
+        { id: 'canada-translation', category: 'Application', title: 'Translations for documents not in English or French', detail: 'Follow IRCC’s translation and certification rules for the document and country where it was issued.', status: 'If applicable' },
+        { id: 'canada-medical-police', category: 'Additional checks', title: 'Medical exam or police certificate', detail: 'A medical exam may be needed depending on your stay, travel history or intended work. IRCC may request a police certificate.', status: 'If applicable' },
+        { id: 'canada-local', category: 'Additional checks', title: 'Local visa-office instructions', detail: 'Check the application instructions for the country or territory where you will apply; extra documents may be required.', status: 'Usually required' },
+        { id: 'canada-biometrics', category: 'After submission', title: 'Biometrics instruction letter and appointment', detail: 'If biometrics are required, wait for IRCC’s instruction letter and book an appointment promptly.', status: 'After submission' },
+      ],
+      timeline: [
+        { monthsBeforeIntake: 12, title: 'Choose an intake and shortlist courses', detail: 'Compare programmes, school admission criteria, tuition and your English-test route.' },
+        { monthsBeforeIntake: 9, title: 'Apply to schools and prepare admission documents', detail: 'Follow each institution’s deadlines and request academic records or language results it requires.' },
+        { monthsBeforeIntake: 6, title: 'Review the offer and attestation route', detail: 'Confirm your LOA details and whether you need a PAL/TAL or Quebec CAQ before applying.' },
+        { monthsBeforeIntake: 5, title: 'Build your funds and document file', detail: 'Collect evidence for tuition, living costs and travel; prepare sponsor evidence and translations if relevant.' },
+        { monthsBeforeIntake: 4, title: 'Submit a complete study permit application', detail: 'Check the current IRCC processing-time tool and your local visa-office instructions before choosing when to apply.' },
+        { monthsBeforeIntake: 3, title: 'Respond to IRCC and plan around the decision', detail: 'Book biometrics after receiving the instruction letter, complete any requested checks and confirm any enrolment deferral directly with your school.' },
+      ],
+      sources: [
+        { label: 'IRCC: Study permit document checklist', url: 'https://www.canada.ca/en/immigration-refugees-citizenship/services/study-canada/study-permit/get-documents.html' },
+        { label: 'IRCC: Proof of financial support', url: 'https://www.canada.ca/en/immigration-refugees-citizenship/services/study-canada/study-permit/get-documents/financial-support.html' },
+        { label: 'IRCC: PAL/TAL requirements', url: 'https://www.canada.ca/en/immigration-refugees-citizenship/services/study-canada/study-permit/get-documents/provincial-attestation-letter.html' },
+        { label: 'IRCC: Current processing times', url: 'https://www.canada.ca/en/immigration-refugees-citizenship/services/application/check-processing-times.html' },
+        { label: 'IRCC: What happens after applying', url: 'https://www.canada.ca/en/immigration-refugees-citizenship/services/study-canada/study-permit/after-apply-next-steps.html' },
+      ],
+    },
   },
-  {
-    slug: 'uk',
+slug: 'uk',
     name: 'United Kingdom',
     flag: '🇬🇧',
     code: 'UK',

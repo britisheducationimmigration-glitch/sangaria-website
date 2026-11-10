@@ -37,8 +37,8 @@ export const Route = createFileRoute('/sitemap.xml')({
   server: {
     handlers: {
       GET: async () => {
-        let countrySlugs = countries.map((country) => country.slug)
-        try { countrySlugs = (await getPublicCountryCatalog()).map((entry) => entry.country.slug) } catch { /* Keep the static sitemap fallback if the database is unavailable. */ }
+        let countryPages = countries.map((country) => ({ slug: country.slug, hasStudyPlan: !!country.studyPlan }))
+        try { countryPages = (await getPublicCountryCatalog()).map((entry) => ({ slug: entry.country.slug, hasStudyPlan: !!entry.country.studyPlan })) } catch { /* Keep the static sitemap fallback if the database is unavailable. */ }
         let articleRows: Array<Record<string, unknown>> = []
         try {
           articleRows = await queryRows('SELECT slug, updated_at FROM content_posts WHERE published = 1 ORDER BY publish_date DESC, id DESC')
@@ -51,7 +51,10 @@ export const Route = createFileRoute('/sitemap.xml')({
           : fixturePosts.map((post) => ({ slug: post.slug, date: post.date }))
         const entries: Array<{ path: string; frequency: string; priority: string; lastmod?: string }> = [
           ...staticPages.map(([path, frequency, priority]) => ({ path, frequency, priority })),
-          ...countrySlugs.map((slug) => ({ path: '/countries/' + slug, frequency: 'monthly', priority: '0.8' })),
+          ...countryPages.flatMap((country) => [
+            { path: '/countries/' + country.slug, frequency: 'monthly', priority: '0.8' },
+            ...(country.hasStudyPlan ? [{ path: '/study-plan/' + country.slug, frequency: 'monthly', priority: '0.7' }] : []),
+          ]),
         ]
         const seen = new Set(entries.map((entry) => entry.path))
         for (const article of articles) {

@@ -339,3 +339,30 @@ main .scroll-reveal:focus-within .scroll-reveal-item {
 @media (prefers-reduced-motion: reduce) {
   .bg-aurora-live { animation: none !important; }
 }
+
+
+@media print {
+  @page { size: A4; margin: 12mm; }
+  body * { visibility: hidden !important; }
+  #study-plan-document,
+  #study-plan-document * { visibility: visible !important; }
+  #study-plan-document {
+    position: absolute !important;
+    inset: 0 auto auto 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    padding: 0 !important;
+    color: #17364f !important;
+    background: #fff !important;
+  }
+  .print-hidden { display: none !important; }
+  #study-plan-document header,
+  #study-plan-document article,
+  #study-plan-document li {
+    break-inside: avoid;
+    box-shadow: none !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  #study-plan-document a { color: #17364f !important; }
+}

@@ -41,6 +41,12 @@ type Editor = {
   guideIntakes: string
   guideVerified: string
   guideSources: string
+  studyPlanEnabled: boolean
+  studyPlanVerified: string
+  studyPlanSummary: string
+  studyPlanChecklist: string
+  studyPlanTimeline: string
+  studyPlanSources: string
   visaVerified: string
   visaFees: string
   visaFeeSummary: string
@@ -52,6 +58,7 @@ type Editor = {
 const emptyEditor = (): Editor => ({
   originalSlug: '', slug: '', name: '', code: '', flag: '', headline: '', intro: '', stats: '', intakes: '', visas: '', highlights: '', costs: '', english: '',
   guideTuition: '', guideVisaFee: '', guideFunds: '', guideAdmission: '', guideWork: '', guidePostStudy: '', guideIntakes: '', guideVerified: '', guideSources: '',
+  studyPlanEnabled: false, studyPlanVerified: '', studyPlanSummary: '', studyPlanChecklist: '', studyPlanTimeline: '', studyPlanSources: '',
   visaVerified: '', visaFees: '', visaFeeSummary: '', visaRequirements: '', visaCaveat: '', visaSources: '',
 })
 
@@ -70,9 +77,27 @@ function parseSources(value: string) {
   return parsePairs(value).map((item) => ({ label: item.label, url: item.value }))
 }
 
+function parseStudyChecklist(value: string) {
+  const allowed = ['Required', 'Usually required', 'Recommended', 'If applicable', 'After submission']
+  return textLines(value).map((line, index) => {
+    const [category = '', title = '', status = 'If applicable', ...detailParts] = line.split('|').map((part) => part.trim())
+    const safeStatus = allowed.includes(status) ? status : 'If applicable'
+    const id = (category + '-' + title).toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + (index + 1)
+    return { id, category, title, status: safeStatus as 'Required' | 'Usually required' | 'Recommended' | 'If applicable' | 'After submission', detail: detailParts.join(' | ') }
+  })
+}
+
+function parseStudyTimeline(value: string) {
+  return textLines(value).map((line) => {
+    const [months = '', title = '', ...detailParts] = line.split('|').map((part) => part.trim())
+    return { monthsBeforeIntake: Number(months), title, detail: detailParts.join(' | ') }
+  })
+}
+
 function fromContent(content: CountryPageContent): Editor {
   const country = content.country
   const guide = country.studyGuide
+  const plan = country.studyPlan
   const visa = content.guidance
   return {
     originalSlug: country.slug, slug: country.slug, name: country.name, code: country.code, flag: country.flag, headline: country.headline, intro: country.intro,
@@ -83,6 +108,12 @@ function fromContent(content: CountryPageContent): Editor {
     guideAdmission: guide?.admissionAndEnglish ?? '', guideWork: guide?.workWhileStudying ?? '', guidePostStudy: guide?.postStudyOption ?? '',
     guideIntakes: guide?.intakesNote ?? '', guideVerified: guide?.lastVerified ?? '',
     guideSources: (guide?.sources ?? []).map((item) => item.label + ' | ' + item.url).join('\n'),
+    studyPlanEnabled: !!plan,
+    studyPlanVerified: plan?.lastVerified ?? '',
+    studyPlanSummary: plan?.summary ?? '',
+    studyPlanChecklist: (plan?.checklist ?? []).map((item) => [item.category, item.title, item.status, item.detail].join(' | ')).join('\n'),
+    studyPlanTimeline: (plan?.timeline ?? []).map((item) => [item.monthsBeforeIntake, item.title, item.detail].join(' | ')).join('\n'),
+    studyPlanSources: (plan?.sources ?? []).map((item) => item.label + ' | ' + item.url).join('\n'),
     visaVerified: visa.lastVerified, visaFees: visa.feeRows.map((item) => item.label + ' | ' + item.value).join('\n'),
     visaFeeSummary: visa.feeSummary, visaRequirements: visa.requirements.join('\n'), visaCaveat: visa.caveat,
     visaSources: visa.sources.map((item) => item.label + ' | ' + item.url).join('\n'),
@@ -90,6 +121,15 @@ function fromContent(content: CountryPageContent): Editor {
 }
 
 function toContent(editor: Editor): CountryPageContent {
+  const studyPlan = editor.studyPlanEnabled
+    ? {
+        lastVerified: editor.studyPlanVerified.trim(),
+        summary: editor.studyPlanSummary.trim(),
+        checklist: parseStudyChecklist(editor.studyPlanChecklist),
+        timeline: parseStudyTimeline(editor.studyPlanTimeline),
+        sources: parseSources(editor.studyPlanSources),
+      }
+    : editor.originalSlug ? null : undefined
   const studyGuide = editor.slug === 'europe' && !editor.guideTuition.trim() && !editor.guideAdmission.trim()
     ? undefined
     : {
@@ -117,6 +157,7 @@ function toContent(editor: Editor): CountryPageContent {
     costs: parsePairs(editor.costs),
     english: editor.english.trim(),
     studyGuide,
+    studyPlan,
   }
   const guidance: VisaGuidance = {
     lastVerified: editor.visaVerified.trim(),
@@ -304,6 +345,28 @@ export function CountryPanel() {
               <Field label="Study guide last verified" value={form.guideVerified} onChange={(value) => update({ guideVerified: value })} />
               <div className="sm:col-span-2"><Field label="Study guide sources" value={form.guideSources} textarea rows={4} hint="One per line: source label | HTTPS link" onChange={(value) => update({ guideSources: value })} /></div>
             </div>
+          </div>
+
+          <div className="border-t border-forest-900/10 pt-5">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h4 className="font-extrabold">Study plan, document checklist and timeline</h4>
+                <p className="mt-1 max-w-2xl text-xs leading-relaxed text-forest-900/60">This creates a country-specific planning page. Cashflow is read from the existing Cashflow Budget data. Publish only after checking every requirement and source for this destination.</p>
+              </div>
+              <label className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-forest-900/15 px-3 text-sm font-bold">
+                <input type="checkbox" checked={form.studyPlanEnabled} onChange={(event) => update({ studyPlanEnabled: event.currentTarget.checked })} className="size-4 accent-coral-600" />
+                Enable study plan
+              </label>
+            </div>
+            {form.studyPlanEnabled && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Study plan summary" value={form.studyPlanSummary} required textarea rows={3} onChange={(value) => update({ studyPlanSummary: value })} />
+                <Field label="Study plan last verified" value={form.studyPlanVerified} required hint="For example, 10 November 2026" onChange={(value) => update({ studyPlanVerified: value })} />
+                <div className="sm:col-span-2"><Field label="Document checklist" value={form.studyPlanChecklist} required textarea rows={12} hint="One item per line: Category | Document title | Status | Explanation. Status: Required, Usually required, Recommended, If applicable, After submission." onChange={(value) => update({ studyPlanChecklist: value })} /></div>
+                <div className="sm:col-span-2"><Field label="Intake preparation timeline" value={form.studyPlanTimeline} required textarea rows={8} hint="One item per line: months before intake | checkpoint title | explanation. Months must be from 0 to 36." onChange={(value) => update({ studyPlanTimeline: value })} /></div>
+                <div className="sm:col-span-2"><Field label="Official study-plan sources" value={form.studyPlanSources} required textarea rows={5} hint="One per line: source label | HTTPS link. Link to official government or school sources." onChange={(value) => update({ studyPlanSources: value })} /></div>
+              </div>
+            )}
           </div>
 
           <div className="border-t border-forest-900/10 pt-5">

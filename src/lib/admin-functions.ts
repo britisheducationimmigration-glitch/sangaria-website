@@ -10,7 +10,7 @@ import { isValidBatchStartDate } from '@/lib/batch-dates'
 import { getSupportedVideoEmbedUrl } from './video'
 import { invalidateCoachingCache, invalidatePublicContentCache } from './public-functions'
 import { discardCountryDraft, getAdminCountryCatalog, getPublicCountryCatalog, revertCountryToDefault, saveCountryDraft, type CountryPageContent } from './country-catalog.server'
-import type { Country, StudyGuide } from '@/data/fixtures'
+import type { Country, StudyGuide, StudyPlan, StudyPlanChecklistItem } from '@/data/fixtures'
 import type { VisaGuidance } from '@/data/visa-guidance'
 
 function stringValue(value: unknown, max = 5000) {
@@ -257,6 +257,43 @@ function normalizeCountryPageContent(value: unknown): CountryPageContent {
   const feeRows = cleanCountryRows(guidanceInput.feeRows, 30)
   const guideSources = cleanCountrySources(guideInput.sources)
   const sources = cleanCountrySources(guidanceInput.sources)
+  const studyPlanInput = objectValue(countryInput.studyPlan)
+  const studyPlanSources = cleanCountrySources(studyPlanInput.sources)
+  const studyPlanChecklist = Array.isArray(studyPlanInput.checklist)
+    ? studyPlanInput.checklist.filter((item) => !!item && typeof item === 'object').map((item, index) => {
+        const row = item as Record<string, unknown>
+        const status = stringValue(row.status, 40)
+        const allowedStatuses: StudyPlanChecklistItem['status'][] = ['Required', 'Usually required', 'Recommended', 'If applicable', 'After submission']
+        return {
+          id: stringValue(row.id, 100) || 'checklist-' + (index + 1),
+          category: stringValue(row.category, 100),
+          title: stringValue(row.title, 240),
+          detail: stringValue(row.detail, 1200),
+          status: (allowedStatuses.includes(status as StudyPlanChecklistItem['status']) ? status : 'If applicable') as StudyPlanChecklistItem['status'],
+        }
+      }).filter((row) => row.category || row.title || row.detail).slice(0, 40)
+    : []
+  const studyPlanTimeline = Array.isArray(studyPlanInput.timeline)
+    ? studyPlanInput.timeline.filter((item) => !!item && typeof item === 'object').map((item, index) => {
+        const row = item as Record<string, unknown>
+        return {
+          monthsBeforeIntake: Math.max(0, Math.min(36, Math.round(numberValue(row.monthsBeforeIntake, index + 1)))),
+          title: stringValue(row.title, 240),
+          detail: stringValue(row.detail, 1200),
+        }
+      }).filter((row) => row.title || row.detail).slice(0, 16)
+    : []
+  const studyPlan: StudyPlan | null | undefined = countryInput.studyPlan === null
+    ? null
+    : countryInput.studyPlan && typeof countryInput.studyPlan === 'object'
+      ? {
+          lastVerified: stringValue(studyPlanInput.lastVerified, 80),
+          summary: stringValue(studyPlanInput.summary, 1800),
+          checklist: studyPlanChecklist,
+          timeline: studyPlanTimeline,
+          sources: studyPlanSources,
+        }
+      : undefined
   const hasStudyGuide = Object.values(guideInput).some((item) => typeof item === 'string' && item.trim()) || guideSources.length > 0
   const studyGuide: StudyGuide | undefined = hasStudyGuide ? {
     tuitionEstimate: stringValue(guideInput.tuitionEstimate, 1800),
@@ -283,6 +320,7 @@ function normalizeCountryPageContent(value: unknown): CountryPageContent {
     costs,
     english: stringValue(countryInput.english, 1200),
     studyGuide,
+    studyPlan,
   }
   const guidance: VisaGuidance = {
     lastVerified: stringValue(guidanceInput.lastVerified, 80),
@@ -304,7 +342,7 @@ function validateCountryPageForPublish(content: CountryPageContent) {
   if (!guidance.lastVerified || !guidance.feeRows.length || !guidance.feeSummary || !guidance.requirements.length || !guidance.caveat || !guidance.sources.length) {
     throw new Error('Complete the visa fees, core requirements, caution, last-verified date and official sources')
   }
-  for (const source of [...guidance.sources, ...(country.studyGuide?.sources ?? [])]) {
+  for (const source of [...guidance.sources, ...(country.studyGuide?.sources ?? []), ...(country.studyPlan?.sources ?? [])]) {
     if (!source.label || !source.url.startsWith('https://')) throw new Error('Every published source needs a label and HTTPS link')
   }
   if (country.slug !== 'europe' && !country.studyGuide) throw new Error('Study destinations also need their study guide and admission details')
@@ -313,6 +351,17 @@ function validateCountryPageForPublish(content: CountryPageContent) {
     if (!guide.tuitionEstimate || !guide.studentVisaFee || !guide.proofOfFunds || !guide.admissionAndEnglish || !guide.workWhileStudying || !guide.postStudyOption || !guide.intakesNote || !guide.lastVerified || !guide.sources.length) {
       throw new Error('Complete all study guide fields, verification date and sources')
     }
+  }
+  if (country.studyPlan) {
+    const plan = country.studyPlan
+    if (!plan.lastVerified || !plan.summary || !plan.checklist.length || !plan.timeline.length || !plan.sources.length) {
+      throw new Error('Complete the study plan summary, checklist, timeline, verification date and official sources')
+    }
+    if (plan.checklist.some((item) => !item.category || !item.title || !item.detail)) throw new Error('Each study checklist item needs a category, title and explanation')
+    if (plan.timeline.some((step) => !Number.isInteger(step.monthsBeforeIntake) || step.monthsBeforeIntake < 0 || step.monthsBeforeIntake > 36 || !step.title || !step.detail)) {
+      throw new Error('Each planning checkpoint needs a title, explanation and an intake offset from 0 to 36 months')
+    }
+    if (plan.sources.some((source) => !source.label || !source.url.startsWith('https://'))) throw new Error('Every study plan source needs a label and HTTPS link')
   }
 }
 
