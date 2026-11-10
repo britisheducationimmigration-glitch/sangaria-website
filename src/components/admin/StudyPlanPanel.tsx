@@ -20,24 +20,20 @@ const statuses: StudyPlanChecklistItem['status'][] = ['Required', 'Usually requi
 const blankPlan = (): StudyPlan => ({ lastVerified: '', summary: '', checklist: [], timeline: [], sources: [] })
 
 function ConfirmRemoveButton({ itemLabel, onConfirm }: { itemLabel: string; onConfirm: () => void }) {
-  const [open, setOpen] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+
+  if (!confirming) {
+    return <button type="button" onClick={() => setConfirming(true)} className="min-h-10 rounded-lg px-3 text-sm font-bold text-red-700 hover:bg-red-50">Remove</button>
+  }
 
   return (
-    <>
-      <button type="button" onClick={() => setOpen(true)} className="min-h-10 rounded-lg px-3 text-sm font-bold text-red-700 hover:bg-red-50">Remove</button>
-      {open && (
-        <div role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false) }} className="fixed inset-0 z-[120] grid place-items-center bg-black/55 p-4 backdrop-blur-sm">
-          <section role="alertdialog" aria-modal="true" aria-label={`Remove ${itemLabel}`} className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl ring-1 ring-forest-900/15">
-            <h3 className="text-lg font-extrabold text-forest-900">Remove this item?</h3>
-            <p className="mt-2 break-words text-sm leading-relaxed text-forest-900/70"><strong>{itemLabel}</strong> will be removed from the current unsaved study plan. This does not change the public page unless you save or publish afterward.</p>
-            <div className="mt-5 flex justify-end gap-2">
-              <button type="button" onClick={() => setOpen(false)} className="min-h-11 rounded-xl border border-forest-900/15 px-4 text-sm font-bold text-forest-900">Keep item</button>
-              <button type="button" onClick={() => { setOpen(false); onConfirm() }} className="min-h-11 rounded-xl bg-red-700 px-4 text-sm font-bold text-white">Yes, remove</button>
-            </div>
-          </section>
-        </div>
-      )}
-    </>
+    <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-3">
+      <p className="min-w-0 flex-1 text-sm font-semibold leading-relaxed text-red-900">Remove “{itemLabel}” from this draft? Confirm to remove it here; the public page changes only after Publish.</p>
+      <div className="flex shrink-0 gap-2">
+        <button type="button" onClick={() => setConfirming(false)} className="min-h-10 rounded-lg border border-forest-900/15 bg-white px-3 text-sm font-bold text-forest-900">Cancel</button>
+        <button type="button" onClick={onConfirm} className="min-h-10 rounded-lg bg-red-700 px-3 text-sm font-bold text-white">Yes, remove</button>
+      </div>
+    </div>
   )
 }
 
@@ -62,9 +58,11 @@ function PlanField({ label, value, onChange, hint, required, multiline = false }
   )
 }
 
-function DocumentCards({ items, onChange }: {
+function DocumentCards({ items, onChange, onSave, saving }: {
   items: StudyPlanChecklistItem[]
   onChange: (items: StudyPlanChecklistItem[]) => void
+  onSave: () => Promise<void>
+  saving: boolean
 }) {
   const [openId, setOpenId] = useState<string | null>(null)
   function addDocument() {
@@ -78,7 +76,7 @@ function DocumentCards({ items, onChange }: {
   return (
     <section className="rounded-2xl border border-forest-900/10 bg-forest-50/50 p-3 sm:p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div><h3 className="font-bold">Documents <span className="text-xs font-normal text-forest-900/60">({items.length})</span></h3><p className="mt-1 text-xs text-forest-900/60">Add a document to this country’s draft; the new card opens for editing. Changes stay unsaved until Save draft, and reach the public page only after Publish.</p></div>
+        <div><h3 className="font-bold">Documents <span className="text-xs font-normal text-forest-900/60">({items.length})</span></h3><p className="mt-1 text-xs text-forest-900/60">Add a document; its editor opens. The Save draft button on a card saves this country’s whole plan as a draft. Publish updates the public page.</p></div>
         <button type="button" onClick={addDocument} className="min-h-10 rounded-lg border border-forest-900/15 bg-white px-3 text-sm font-bold">+ Add document</button>
       </div>
       <div className="mt-3 space-y-2">
@@ -107,7 +105,10 @@ function DocumentCards({ items, onChange }: {
                   </label>
                 </div>
               </details>
-              <div className="flex justify-end"><ConfirmRemoveButton itemLabel={item.title || 'this document'} onConfirm={() => { if (openId === item.id) setOpenId(null); onChange(items.filter((_, i) => i !== index)) }} /></div>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <button type="button" disabled={saving} onClick={() => void onSave()} className="min-h-10 rounded-lg bg-forest-900 px-4 text-sm font-bold text-white disabled:opacity-50">{saving ? 'Saving…' : 'Save draft'}</button>
+                <ConfirmRemoveButton itemLabel={item.title || 'this document'} onConfirm={() => { if (openId === item.id) setOpenId(null); onChange(items.filter((_, i) => i !== index)) }} />
+              </div>
             </div>
           </details>
         ))}
@@ -117,9 +118,11 @@ function DocumentCards({ items, onChange }: {
   )
 }
 
-function TimelineCards({ items, onChange }: {
+function TimelineCards({ items, onChange, onSave, saving }: {
   items: StudyPlanTimelineStep[]
   onChange: (items: StudyPlanTimelineStep[]) => void
+  onSave: () => Promise<void>
+  saving: boolean
 }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null)
   function update(index: number, patch: Partial<StudyPlanTimelineStep>) {
@@ -132,7 +135,7 @@ function TimelineCards({ items, onChange }: {
   return (
     <section className="rounded-2xl border border-forest-900/10 bg-forest-50/50 p-3 sm:p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div><h3 className="font-bold">Preparation steps <span className="text-xs font-normal text-forest-900/60">({items.length})</span></h3><p className="mt-1 text-xs text-forest-900/60">Add overlapping tasks within the 10-week window. New steps open for editing and stay in this country’s draft until saved.</p></div>
+        <div><h3 className="font-bold">Preparation steps <span className="text-xs font-normal text-forest-900/60">({items.length})</span></h3><p className="mt-1 text-xs text-forest-900/60">New steps open for editing. Save draft on a step saves this country’s whole plan; Publish updates the public page.</p></div>
         <button type="button" onClick={() => {
           const weeksFromStart = Math.min(9, items.length * 2)
           setOpenIndex(items.length)
@@ -153,7 +156,10 @@ function TimelineCards({ items, onChange }: {
               </label>
               <PlanField label="Step name" value={item.title} required hint="Example: Apply to colleges" onChange={(title) => update(index, { title })} />
               <PlanField label="What should the student do?" value={item.detail} required multiline hint="Use a short action note. Mention work that can happen together." onChange={(detail) => update(index, { detail })} />
-              <div className="flex justify-end"><ConfirmRemoveButton itemLabel={item.title || 'this preparation step'} onConfirm={() => { setOpenIndex(null); onChange(items.filter((_, i) => i !== index)) }} /></div>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <button type="button" disabled={saving} onClick={() => void onSave()} className="min-h-10 rounded-lg bg-forest-900 px-4 text-sm font-bold text-white disabled:opacity-50">{saving ? 'Saving…' : 'Save draft'}</button>
+                <ConfirmRemoveButton itemLabel={item.title || 'this preparation step'} onConfirm={() => { setOpenIndex(null); onChange(items.filter((_, i) => i !== index)) }} />
+              </div>
             </div>
           </details>
         ))}
@@ -163,15 +169,17 @@ function TimelineCards({ items, onChange }: {
   )
 }
 
-function SourceCards({ items, onChange }: {
+function SourceCards({ items, onChange, onSave, saving }: {
   items: { label: string; url: string }[]
   onChange: (items: { label: string; url: string }[]) => void
+  onSave: () => Promise<void>
+  saving: boolean
 }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null)
   return (
     <section className="rounded-2xl border border-forest-900/10 bg-forest-50/50 p-3 sm:p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div><h3 className="font-bold">Official links <span className="text-xs font-normal text-forest-900/60">({items.length})</span></h3><p className="mt-1 text-xs text-forest-900/60">New links open here for editing. Save draft to keep them for review; Publish makes them public.</p></div>
+        <div><h3 className="font-bold">Official links <span className="text-xs font-normal text-forest-900/60">({items.length})</span></h3><p className="mt-1 text-xs text-forest-900/60">New links open for editing. Save draft on a link saves this country’s whole plan; Publish updates the public page.</p></div>
         <button type="button" onClick={() => { setOpenIndex(items.length); onChange([...items, { label: '', url: '' }]) }} className="min-h-10 rounded-lg border border-forest-900/15 bg-white px-3 text-sm font-bold">+ Add link</button>
       </div>
       <div className="mt-3 space-y-2">
@@ -184,7 +192,10 @@ function SourceCards({ items, onChange }: {
             <div className="grid gap-3 border-t border-forest-900/10 p-3 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.4fr)_auto] sm:items-end">
               <PlanField label="Page name" value={item.label} required onChange={(label) => onChange(items.map((source, i) => i === index ? { ...source, label } : source))} />
               <PlanField label="Official link" value={item.url} required hint="Paste the full government or school URL." onChange={(url) => onChange(items.map((source, i) => i === index ? { ...source, url } : source))} />
-              <ConfirmRemoveButton itemLabel={item.label || 'this official link'} onConfirm={() => { setOpenIndex(null); onChange(items.filter((_, i) => i !== index)) }} />
+              <div className="flex flex-wrap items-center justify-end gap-2 sm:contents">
+                <button type="button" disabled={saving} onClick={() => void onSave()} className="min-h-10 rounded-lg bg-forest-900 px-4 text-sm font-bold text-white disabled:opacity-50">{saving ? 'Saving…' : 'Save draft'}</button>
+                <ConfirmRemoveButton itemLabel={item.label || 'this official link'} onConfirm={() => { setOpenIndex(null); onChange(items.filter((_, i) => i !== index)) }} />
+              </div>
             </div>
           </details>
         ))}
@@ -390,9 +401,9 @@ export function StudyPlanPanel({ onDirtyChange }: Props) {
                     <PlanField label="Short introduction" value={plan.summary} required multiline hint="One or two simple sentences for students." onChange={(summary) => updatePlan({ summary })} />
                     <PlanField label="Last checked against official sources" value={plan.lastVerified} required hint="For example: 10 November 2026" onChange={(lastVerified) => updatePlan({ lastVerified })} />
                   </div>
-                  <DocumentCards items={plan.checklist} onChange={(checklist) => updatePlan({ checklist })} />
-                  <TimelineCards items={plan.timeline} onChange={(timeline) => updatePlan({ timeline })} />
-                  <SourceCards items={plan.sources} onChange={(sources) => updatePlan({ sources })} />
+                  <DocumentCards items={plan.checklist} onChange={(checklist) => updatePlan({ checklist })} onSave={() => save('draft')} saving={busy} />
+                  <TimelineCards items={plan.timeline} onChange={(timeline) => updatePlan({ timeline })} onSave={() => save('draft')} saving={busy} />
+                  <SourceCards items={plan.sources} onChange={(sources) => updatePlan({ sources })} onSave={() => save('draft')} saving={busy} />
                 </div>
               )}
 
