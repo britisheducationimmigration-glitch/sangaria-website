@@ -5,4 +5,4 @@ Disallow: /admin
 Disallow: /admin/
 Disallow: /api/
 
-Sitemap: https://britisheducationandimmigration.com/sitemap.xml
+Sitemap: https://www.britisheducationandimmigration.com/sitemap.xml
