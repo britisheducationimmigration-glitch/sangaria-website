@@ -27,12 +27,32 @@ export const Route = createFileRoute('/study-plan/$slug')({
   component: StudyPlanPage,
 })
 
-function formatMonth(value: string, monthsBeforeIntake: number) {
-  if (!value) return `${monthsBeforeIntake} months before intake`
-  const [year, month] = value.split('-').map(Number)
-  if (!year || !month) return `${monthsBeforeIntake} months before intake`
-  const target = new Date(year, month - 1 - monthsBeforeIntake, 1)
-  return new Intl.DateTimeFormat('en', { month: 'long', year: 'numeric' }).format(target)
+function localDateInputValue(date = new Date()) {
+  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-')
+}
+
+function dateFromInput(value: string) {
+  const [year, month, day] = value.split('-').map(Number)
+  return year && month && day ? new Date(year, month - 1, day) : null
+}
+
+function timelineDate(startDate: string, weeksFromStart: number) {
+  const start = dateFromInput(startDate)
+  if (!start) return `Week ${weeksFromStart + 1}`
+  start.setDate(start.getDate() + weeksFromStart * 7)
+  return new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short', year: 'numeric' }).format(start)
+}
+
+function intakeMonthLabel(value: string) {
+  const date = dateFromInput(value ? value + '-01' : '')
+  return date ? new Intl.DateTimeFormat('en', { month: 'long', year: 'numeric' }).format(date) : ''
+}
+
+function recommendedSubmissionDate(intakeMonth: string) {
+  const firstDay = dateFromInput(intakeMonth ? intakeMonth + '-01' : '')
+  if (!firstDay) return null
+  firstDay.setMonth(firstDay.getMonth() - 3)
+  return firstDay
 }
 
 function StudyPlanPage() {
@@ -43,6 +63,7 @@ function StudyPlanPage() {
   const [checkedItems, setCheckedItems] = useState<string[]>([])
   const [storageReady, setStorageReady] = useState(false)
   const [intakeMonth, setIntakeMonth] = useState('')
+  const [planStartDate, setPlanStartDate] = useState('')
   const [notice, setNotice] = useState('')
   const sourceList = useMemo(() => {
     const allSources = [...plan.sources, ...(guide?.sources ?? []), ...guidance.sources]
@@ -51,6 +72,15 @@ function StudyPlanPage() {
   const totalItems = plan.checklist.length
   const completedCount = checkedItems.length
   const progress = totalItems ? Math.round((completedCount / totalItems) * 100) : 0
+  const submissionDue = recommendedSubmissionDate(intakeMonth)
+  const lastPrepWeek = plan.timeline.reduce((latest, step) => Math.max(latest, step.weeksFromStart), 0)
+  const plannedSubmitDate = dateFromInput(planStartDate)
+  if (plannedSubmitDate) plannedSubmitDate.setDate(plannedSubmitDate.getDate() + lastPrepWeek * 7)
+  const intakeNeedsEarlierSubmission = !!(submissionDue && plannedSubmitDate && plannedSubmitDate > submissionDue)
+
+  useEffect(() => {
+    setPlanStartDate(localDateInputValue())
+  }, [])
 
   useEffect(() => {
     try {
@@ -109,7 +139,7 @@ function StudyPlanPage() {
         </Link>
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={downloadPlan} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-forest-900/15 bg-white px-4 py-2 text-sm font-bold text-forest-900 transition hover:bg-forest-50">
-            <Download aria-hidden="true" className="size-4" /> Download / print PDF
+            <Download aria-hidden="true" className="size-4" /> Print / save as PDF (2 pages)
           </button>
           <button type="button" onClick={() => void sharePlan()} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-forest-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-forest-800">
             <Share2 aria-hidden="true" className="size-4" /> Share plan
@@ -118,6 +148,80 @@ function StudyPlanPage() {
       </div>
 
       {notice && <p role="status" className="print-hidden mb-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-900">{notice}</p>}
+
+      <div className="study-plan-print-only" aria-hidden="true">
+        <section className="study-plan-print-page">
+          <header className="study-plan-print-header">
+            <p>BRITISH EDUCATION & IMMIGRATION · STUDY PLANNING GUIDE</p>
+            <h1>{country.flag} {country.name} study plan</h1>
+            <p>{plan.summary}</p>
+            <div>Reviewed {plan.lastVerified}{intakeMonth ? ' · Target intake: ' + intakeMonthLabel(intakeMonth) : ''}{planStartDate ? ' · Plan starts: ' + new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short', year: 'numeric' }).format(dateFromInput(planStartDate)!) : ''}</div>
+          </header>
+
+          <div className="study-plan-print-snapshot">
+            <div><strong>Tuition estimate</strong><span>{guide?.tuitionEstimate || 'Confirm with the institution'}</span></div>
+            <div><strong>Student visa fee</strong><span>{guide?.studentVisaFee || guidance.feeSummary || 'Check current official fee'}</span></div>
+            <div><strong>Proof of funds</strong><span>{guide?.proofOfFunds || 'Use current official financial evidence rules'}</span></div>
+            <div><strong>Intakes</strong><span>{country.intakes.join(' · ')}</span></div>
+          </div>
+
+          <section className="study-plan-print-section">
+            <h2>10-week preparation plan · tasks run in parallel</h2>
+            <ol className="study-plan-print-timeline">
+              {plan.timeline.map((step, index) => (
+                <li key={step.weeksFromStart + '-' + index}>
+                  <p><strong>{step.weeks}</strong> · {timelineDate(planStartDate, step.weeksFromStart)}</p>
+                  <h3>{step.title}</h3>
+                  <span>{step.detail}</span>
+                </li>
+              ))}
+            </ol>
+            {intakeNeedsEarlierSubmission && <p className="study-plan-print-alert">The selected intake is close for this 10-week preparation plan. Confirm your exact school start/travel date and current processing times.</p>}
+          </section>
+
+          {cashflow && (
+            <section className="study-plan-print-section">
+              <h2>Family cashflow snapshot · existing planner data</h2>
+              <p><strong>Estimated first-year total: {cashflow.totalEstimateINR}</strong> · {cashflow.officialRuleNote}</p>
+              <div className="study-plan-print-cashflow">
+                {cashflow.stages.map((stage) => <div key={stage.stageNumber}><strong>{stage.stageNumber}. {stage.title}</strong><span>{stage.timeline} · {stage.inrEstimate}</span></div>)}
+              </div>
+            </section>
+          )}
+
+          <p className="study-plan-print-footnote">This timeline prepares an application file; it does not predict a visa decision. Official processing times and school deadlines vary. India New Delhi instructions recommend applying at least 3 months before planned travel.</p>
+        </section>
+
+        <section className="study-plan-print-page study-plan-print-page-break">
+          <header className="study-plan-print-page-heading">
+            <p>{country.name} · {intakeMonth ? intakeMonthLabel(intakeMonth) + ' intake' : 'study permit'}</p>
+            <h2>Documents to prepare</h2>
+            <p>Use your current country checklist. Funding documents are options; you do not need every option listed here. “If applicable” items depend on your route.</p>
+          </header>
+          <div className="study-plan-print-checklist">
+            {plan.checklist.map((item) => (
+              <article key={item.id}>
+                <span className="study-plan-print-checkbox" aria-hidden="true" />
+                <div><p><strong>{item.title}</strong> <small>{item.status}</small></p><span>{item.detail}</span></div>
+              </article>
+            ))}
+          </div>
+
+          <div className="study-plan-print-lower">
+            <section>
+              <h3>Route notes</h3>
+              <p><strong>Admission & English:</strong> {guide?.admissionAndEnglish || country.english}</p>
+              <p><strong>Work/post-study:</strong> {guide?.workWhileStudying || 'Check current permit conditions.'} {guide?.postStudyOption || 'Post-study eligibility depends on current route rules.'}</p>
+              <p><strong>Visa requirements:</strong> {guidance.requirements.join(' · ')}</p>
+            </section>
+            <section>
+              <h3>Official sources to re-check</h3>
+              <ul>{plan.sources.map((source) => <li key={source.url}><strong>{source.label}</strong><span>{source.url}</span></li>)}</ul>
+            </section>
+          </div>
+          <p className="study-plan-print-disclaimer">General guidance, not legal advice or an eligibility decision. Document needs vary by applicant, school, province and visa office. No approval is guaranteed. Final decisions are made by IRCC.</p>
+        </section>
+      </div>
 
       <header className="rounded-[2rem] bg-forest-900 bg-grain p-6 text-white sm:p-9 lg:p-12">
         <div className="flex flex-col gap-7 sm:flex-row sm:items-center sm:justify-between">
@@ -130,7 +234,7 @@ function StudyPlanPage() {
           </div>
           <div className="print-hidden rounded-2xl border border-white/15 bg-white/5 p-4 sm:max-w-xs">
             <label htmlFor="study-plan-intake" className="flex items-center gap-2 text-sm font-bold"><CalendarDays aria-hidden="true" className="size-4 text-coral-400" /> Target intake month</label>
-            <input id="study-plan-intake" type="month" value={intakeMonth} onChange={(event) => setIntakeMonth(event.currentTarget.value)} className="mt-3 min-h-11 w-full rounded-xl border border-white/20 bg-white px-3 text-sm font-semibold text-forest-900" />
+            <input id="study-plan-intake" type="month" min={planStartDate ? planStartDate.slice(0, 7) : undefined} value={intakeMonth} onChange={(event) => setIntakeMonth(event.currentTarget.value)} className="mt-3 min-h-11 w-full rounded-xl border border-white/20 bg-white px-3 text-sm font-semibold text-forest-900" />
             <p className="mt-2 text-xs leading-relaxed text-forest-100/65">Choose an intake to see suggested calendar months. Dates are planning checkpoints, not visa processing estimates.</p>
           </div>
         </div>
@@ -148,16 +252,19 @@ function StudyPlanPage() {
       <section aria-labelledby="timeline-title" className="mt-10 rounded-[2rem] bg-white p-5 ring-1 ring-forest-900/10 sm:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div><p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-coral-600">Plan around your intake</p><h2 id="timeline-title" className="mt-2 text-2xl font-extrabold text-forest-900 sm:text-3xl">Suggested timeline</h2></div>
-          {intakeMonth && <p className="rounded-full bg-forest-50 px-3 py-2 text-xs font-bold text-forest-800">Target: {formatMonth(intakeMonth, 0)}</p>}
+          {intakeMonth && <p className="rounded-full bg-forest-50 px-3 py-2 text-xs font-bold text-forest-800">Target: {intakeMonthLabel(intakeMonth)}</p>}
         </div>
         <ol className="mt-6 grid gap-3 md:grid-cols-2">
           {plan.timeline.map((step, index) => (
-            <li key={`${step.monthsBeforeIntake}-${step.title}`} className="relative min-w-0 rounded-2xl border border-forest-900/10 bg-cream p-4 sm:p-5">
-              <div className="flex items-start gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-full bg-forest-900 font-mono text-xs font-bold text-white">{String(index + 1).padStart(2, '0')}</span><div className="min-w-0"><p className="text-xs font-bold uppercase tracking-wide text-coral-700">{formatMonth(intakeMonth, step.monthsBeforeIntake)}</p><h3 className="mt-1 text-base font-extrabold text-forest-900">{step.title}</h3><p className="mt-2 text-sm leading-relaxed text-forest-900/70">{step.detail}</p></div></div>
+            <li key={`${step.weeksFromStart}-${step.title}`} className="relative min-w-0 rounded-2xl border border-forest-900/10 bg-cream p-4 sm:p-5">
+              <div className="flex items-start gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-full bg-forest-900 font-mono text-xs font-bold text-white">{String(index + 1).padStart(2, '0')}</span><div className="min-w-0"><p className="text-xs font-bold uppercase tracking-wide text-coral-700">{step.weeks} · {timelineDate(planStartDate, step.weeksFromStart)}</p><h3 className="mt-1 text-base font-extrabold text-forest-900">{step.title}</h3><p className="mt-2 text-sm leading-relaxed text-forest-900/70">{step.detail}</p></div></div>
             </li>
           ))}
         </ol>
-        <p className="mt-4 rounded-xl bg-amber-50 p-4 text-xs leading-relaxed text-amber-950">These are suggested preparation checkpoints. School deadlines, the time needed to obtain documents and government processing times change. Check the official processing-time page and apply early enough for your own circumstances.</p>
+        {intakeNeedsEarlierSubmission && (
+          <p role="status" className="mt-4 rounded-xl bg-amber-50 p-4 text-xs leading-relaxed text-amber-950">This intake is close for the 10-week plan. The projected submission date may be later than 3 months before the selected intake month. Check the exact school start/travel date and current processing times; consider an earlier start or the next intake.</p>
+        )}
+        <p className="mt-4 rounded-xl bg-amber-50 p-4 text-xs leading-relaxed text-amber-950">Dates start from today and never count backward. This 10-week plan prepares a complete file; it does not predict a decision date. IRCC’s New Delhi instructions recommend applying at least 3 months before planned travel. Other application countries may have different local instructions.</p>
       </section>
 
       <section aria-labelledby="checklist-title" className="mt-10 rounded-[2rem] bg-white p-5 ring-1 ring-forest-900/10 sm:p-8">
@@ -185,7 +292,7 @@ function StudyPlanPage() {
             </div>
           ))}
         </div>
-        <p className="mt-5 text-xs leading-relaxed text-forest-900/55">Your checked items are saved only in this browser on this device. This checklist is a preparation aid and does not replace the application-specific IRCC or local visa-office checklist.</p>
+        <p className="mt-5 text-xs leading-relaxed text-forest-900/55">Your checked items stay in this browser on this device. For funds, choose evidence that matches the real source; GIC, loan and CA summary are not universal requirements. This preparation list does not replace your current application-country checklist.</p>
       </section>
 
       <section aria-labelledby="cashflow-title" className="mt-10 rounded-[2rem] bg-forest-900 bg-aurora p-5 text-white sm:p-8">
