@@ -70,9 +70,19 @@ function PrintContactFooter({ settings }: { settings: { phones: string[]; emails
   )
 }
 
-function MobilePlanSection({ title, hint, children }: { title: string; hint: string; children: ReactNode }) {
+function MobilePlanSection({ title, hint, children, defaultOpen = false }: { title: string; hint: string; children: ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen)
+
+  useEffect(() => {
+    const desktop = window.matchMedia('(min-width: 768px)')
+    const syncViewport = () => setOpen(desktop.matches || defaultOpen)
+    syncViewport()
+    desktop.addEventListener('change', syncViewport)
+    return () => desktop.removeEventListener('change', syncViewport)
+  }, [defaultOpen])
+
   return (
-    <details className="study-plan-mobile-disclosure mt-10">
+    <details open={open} onToggle={(event) => setOpen(event.currentTarget.open)} className="study-plan-mobile-disclosure mt-10">
       <summary className="study-plan-mobile-summary flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl bg-white p-4 ring-1 ring-forest-900/10">
         <span className="min-w-0"><strong className="block text-sm font-extrabold text-forest-900">{title}</strong><small className="mt-1 block text-xs leading-relaxed text-forest-900/60">{hint}</small></span>
         <ChevronDown aria-hidden="true" className="size-5 shrink-0 text-forest-800 transition-transform" />
@@ -280,7 +290,7 @@ function StudyPlanPage() {
         ].map(([label, value]) => <article key={label} className="min-w-0 rounded-2xl bg-white p-4 ring-1 ring-forest-900/10 sm:p-5"><p className="text-xs font-bold uppercase tracking-wider text-forest-900/50">{label}</p><p className="mt-2 break-words text-sm font-semibold leading-relaxed text-forest-900">{value}</p></article>)}
       </section>
 
-      <MobilePlanSection title="Suggested timeline" hint="10-week preparation steps that can run side by side">
+      <MobilePlanSection title="Suggested timeline" hint="10-week preparation steps that can run side by side" defaultOpen>
         <section aria-labelledby="timeline-title" className="rounded-[2rem] bg-white p-5 ring-1 ring-forest-900/10 sm:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div><p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-coral-600">Plan around your intake</p><h2 id="timeline-title" className="mt-2 text-2xl font-extrabold text-forest-900 sm:text-3xl">Suggested timeline</h2></div>
