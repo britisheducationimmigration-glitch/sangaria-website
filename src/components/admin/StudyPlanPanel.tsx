@@ -362,6 +362,7 @@ export function StudyPlanPanel({ onDirtyChange }: Props) {
           </div>
 
           {content && (
+            <>
             <div className="sticky top-2 z-30 mb-5 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-forest-900/15 bg-white/95 p-3 shadow-lg backdrop-blur">
               <p className="text-xs font-semibold text-forest-900/65">{dirty ? 'Unsaved edits. Save draft for review or Publish to update the public page.' : 'Edit any field below; Save draft and Publish are available here and at the bottom.'}</p>
               <div className="flex shrink-0 gap-2">
@@ -370,7 +371,6 @@ export function StudyPlanPanel({ onDirtyChange }: Props) {
                 <button type="button" disabled={!dirty || busy || !canPublish} onClick={() => void save('published')} className="min-h-10 rounded-xl bg-coral-500 px-3 text-xs font-bold text-white disabled:opacity-50">Publish</button>
               </div>
             </div>
-            <>
               <div className="mb-5 rounded-2xl bg-white p-4 ring-1 ring-forest-900/10 sm:p-5">
                 <label className="inline-flex min-h-11 items-center gap-3 text-sm font-bold">
                   <input type="checkbox" checked={!!plan} onChange={(event) => {
