@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { getAdminCountryPages, saveCountryPage } from '@/lib/admin-functions'
 import type { StudyPlan, StudyPlanChecklistItem, StudyPlanTimelineStep } from '@/data/fixtures'
 import type { CountryPageContent } from '@/lib/country-catalog.server'
@@ -17,6 +18,10 @@ type Props = {
 const categories = ['Admission', 'Identity', 'Education', 'Funds', 'Application', 'Additional checks', 'After submission']
 const statuses: StudyPlanChecklistItem['status'][] = ['Required', 'Usually required', 'Recommended', 'If applicable', 'After submission']
 const blankPlan = (): StudyPlan => ({ lastVerified: '', summary: '', checklist: [], timeline: [], sources: [] })
+
+function confirmPlanRemove(label: string) {
+  return window.confirm(`Remove ${label} from this unsaved study plan? Save or publish afterward to keep the change.`)
+}
 
 function PlanField({ label, value, onChange, hint, required, multiline = false }: {
   label: string
@@ -84,7 +89,7 @@ function DocumentCards({ items, onChange }: {
                   </label>
                 </div>
               </details>
-              <div className="flex justify-end"><button type="button" onClick={() => { if (openId === item.id) setOpenId(null); onChange(items.filter((_, i) => i !== index)) }} className="min-h-10 rounded-lg px-3 text-sm font-bold text-red-700 hover:bg-red-50">Remove</button></div>
+              <div className="flex justify-end"><button type="button" onClick={() => { if (!confirmPlanRemove('“' + (item.title || 'this document') + '”')) return; if (openId === item.id) setOpenId(null); onChange(items.filter((_, i) => i !== index)) }} className="min-h-10 rounded-lg px-3 text-sm font-bold text-red-700 hover:bg-red-50">Remove</button></div>
             </div>
           </details>
         ))}
@@ -130,7 +135,7 @@ function TimelineCards({ items, onChange }: {
               </label>
               <PlanField label="Step name" value={item.title} required hint="Example: Apply to colleges" onChange={(title) => update(index, { title })} />
               <PlanField label="What should the student do?" value={item.detail} required multiline hint="Use a short action note. Mention work that can happen together." onChange={(detail) => update(index, { detail })} />
-              <div className="flex justify-end"><button type="button" onClick={() => { setOpenIndex(null); onChange(items.filter((_, i) => i !== index)) }} className="min-h-10 rounded-lg px-3 text-sm font-bold text-red-700 hover:bg-red-50">Remove</button></div>
+              <div className="flex justify-end"><button type="button" onClick={() => { if (!confirmPlanRemove('“' + (item.title || 'this preparation step') + '”')) return; setOpenIndex(null); onChange(items.filter((_, i) => i !== index)) }} className="min-h-10 rounded-lg px-3 text-sm font-bold text-red-700 hover:bg-red-50">Remove</button></div>
             </div>
           </details>
         ))}
@@ -161,7 +166,7 @@ function SourceCards({ items, onChange }: {
             <div className="grid gap-3 border-t border-forest-900/10 p-3 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.4fr)_auto] sm:items-end">
               <PlanField label="Page name" value={item.label} required onChange={(label) => onChange(items.map((source, i) => i === index ? { ...source, label } : source))} />
               <PlanField label="Official link" value={item.url} required hint="Paste the full government or school URL." onChange={(url) => onChange(items.map((source, i) => i === index ? { ...source, url } : source))} />
-              <button type="button" onClick={() => { setOpenIndex(null); onChange(items.filter((_, i) => i !== index)) }} className="min-h-10 rounded-lg px-3 text-sm font-bold text-red-700 hover:bg-red-50">Remove</button>
+              <button type="button" onClick={() => { if (!confirmPlanRemove('“' + (item.label || 'this official link') + '”')) return; setOpenIndex(null); onChange(items.filter((_, i) => i !== index)) }} className="min-h-10 rounded-lg px-3 text-sm font-bold text-red-700 hover:bg-red-50">Remove</button>
             </div>
           </details>
         ))}
@@ -186,6 +191,7 @@ export function StudyPlanPanel({ onDirtyChange }: Props) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null)
 
   const countryBySlug = useMemo(() => new Map((data?.countries ?? []).map((item) => [item.country.slug, item] as const)), [data?.countries])
   const draftBySlug = useMemo(() => new Map((data?.drafts ?? []).map((item) => [item.country.slug, item] as const)), [data?.drafts])
@@ -215,7 +221,10 @@ export function StudyPlanPanel({ onDirtyChange }: Props) {
     }
   }
 
-  useEffect(() => { void reload('') }, [])
+  useEffect(() => {
+    void reload('')
+    setPortalTarget(document.body)
+  }, [])
 
   function markDirty() {
     setDirty(true)
@@ -295,13 +304,23 @@ export function StudyPlanPanel({ onDirtyChange }: Props) {
   const draft = draftBySlug.get(selectedSlug)
   const hasOtherDraftChanges = !!(draft && published && withoutStudyPlan(draft) !== withoutStudyPlan(published))
   const canPublish = !!published && !hasOtherDraftChanges
+  const saveBar = content && (
+    <div style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }} className="fixed inset-x-2 bottom-2 z-[100] mx-auto grid w-[calc(100%-1rem)] max-w-6xl grid-cols-3 items-center gap-2 rounded-2xl border border-forest-900/15 bg-white/98 p-2 shadow-2xl backdrop-blur sm:flex sm:justify-between sm:px-4">
+      <p className="col-span-3 px-1 text-xs font-semibold text-forest-900/65 sm:col-span-1">{dirty ? 'Unsaved changes' : 'All changes saved'}</p>
+      <div className="col-span-3 grid grid-cols-3 gap-2 sm:col-span-1 sm:ml-auto sm:flex">
+        <button type="button" disabled={!dirty || busy} onClick={discardChanges} className="min-h-11 rounded-xl border border-forest-900/15 px-2 text-xs font-bold disabled:opacity-50 sm:px-4 sm:text-sm">Discard</button>
+        <button type="button" disabled={!dirty || busy} onClick={() => void save('draft')} className="min-h-11 rounded-xl border border-forest-900/15 px-2 text-xs font-bold disabled:opacity-50 sm:px-4 sm:text-sm">{busy ? 'Saving…' : 'Save draft'}</button>
+        <button type="button" disabled={!dirty || busy || !canPublish} onClick={() => void save('published')} className="min-h-11 rounded-xl bg-coral-500 px-2 text-xs font-bold text-white disabled:opacity-50 sm:px-5 sm:text-sm">{busy ? 'Saving…' : 'Publish'}</button>
+      </div>
+    </div>
+  )
 
   return (
     <section className="max-w-6xl pb-28">
       <div className="mb-5">
         <p className="font-mono text-xs font-bold uppercase tracking-wider text-coral-600">Country content</p>
         <h2 className="mt-1 text-3xl font-extrabold">Study Plans</h2>
-        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-forest-900/65">This tab edits only the checklist, preparation steps and official links. It reads fees, visa guidance, English/admission details and cashflow from their existing Countries and Cashflow Budget records.</p>
+        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-forest-900/65">This tab edits the checklist, preparation steps and official links. It reads fees and admission guidance from Countries. Saved destinations and drafts appear in the selector automatically; cashflow is optional, so a plan works without a Cashflow Budget entry.</p>
       </div>
 
       <div className="mb-5 rounded-xl bg-amber-50 p-4 text-sm leading-relaxed text-amber-950">
@@ -312,7 +331,7 @@ export function StudyPlanPanel({ onDirtyChange }: Props) {
       {message && <p role="status" className="mb-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-900">{message}</p>}
 
       {loading ? <div className="rounded-2xl bg-white p-6 text-sm text-forest-900/60">Loading destinations…</div> : !options.length ? (
-        <div className="rounded-2xl bg-white p-6 text-sm text-forest-900/70">Add the destination basics in Countries first. It will appear here after its country draft is saved.</div>
+        <div className="rounded-2xl bg-white p-6 text-sm text-forest-900/70">Save a new destination in Countries and it will appear here automatically, including as a draft. A cashflow entry is optional.</div>
       ) : (
         <>
           <div className="mb-5 grid gap-3 rounded-2xl border border-forest-900/10 bg-white p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
@@ -328,9 +347,14 @@ export function StudyPlanPanel({ onDirtyChange }: Props) {
             <>
               <div className="mb-5 rounded-2xl bg-white p-4 ring-1 ring-forest-900/10 sm:p-5">
                 <label className="inline-flex min-h-11 items-center gap-3 text-sm font-bold">
-                  <input type="checkbox" checked={!!plan} onChange={(event) => togglePlan(event.currentTarget.checked)} className="size-4 accent-coral-600" />
+                  <input type="checkbox" checked={!!plan} onChange={(event) => {
+                    const enabled = event.currentTarget.checked
+                    if (!enabled && !window.confirm('Remove this study plan from the saved draft? The public button changes only after you publish.')) return
+                    togglePlan(enabled)
+                  }} className="size-4 accent-coral-600" />
                   Show a study plan for {content.country.name}
                 </label>
+                <p className="mt-2 text-xs text-forest-900/60">Unchecking clears this plan from the draft. The public button changes only after you publish.</p>
                 {!plan && <p className="mt-2 text-xs text-forest-900/60">Turn this on to add a destination-specific study plan.</p>}
               </div>
 
@@ -349,18 +373,11 @@ export function StudyPlanPanel({ onDirtyChange }: Props) {
               {hasOtherDraftChanges && <p className="mt-5 rounded-xl bg-amber-50 p-3 text-sm text-amber-950">This country also has unpublished edits to other fields. Save the study plan draft here; review and publish the full country page from Countries.</p>}
               {!published && <p className="mt-5 rounded-xl bg-amber-50 p-3 text-sm text-amber-950">Publish the destination basics from Countries first. This tab does not create or publish country pages.</p>}
 
-              <div className="fixed bottom-3 left-1/2 z-40 flex w-[calc(100%-1.5rem)] max-w-6xl -translate-x-1/2 flex-col gap-2 rounded-2xl border border-forest-900/15 bg-white/95 p-3 shadow-xl backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-4">
-                <p className="text-xs font-semibold text-forest-900/65">{dirty ? 'Unsaved changes' : 'All changes saved'}</p>
-                <div className="flex flex-col-reverse gap-2 sm:flex-row">
-                  <button type="button" disabled={!dirty || busy} onClick={discardChanges} className="min-h-11 rounded-xl border border-forest-900/15 px-4 text-sm font-bold disabled:opacity-50">Discard</button>
-                  <button type="button" disabled={!dirty || busy} onClick={() => void save('draft')} className="min-h-11 rounded-xl border border-forest-900/15 px-4 text-sm font-bold disabled:opacity-50">{busy ? 'Saving…' : 'Save draft'}</button>
-                  <button type="button" disabled={!dirty || busy || !canPublish} onClick={() => void save('published')} className="min-h-11 rounded-xl bg-coral-500 px-5 text-sm font-bold text-white disabled:opacity-50">{busy ? 'Saving…' : 'Publish'}</button>
-                </div>
-              </div>
             </>
           )}
         </>
       )}
+      {portalTarget && saveBar ? createPortal(saveBar, portalTarget) : null}
     </section>
   )
 }

@@ -343,10 +343,27 @@ main .scroll-reveal:focus-within .scroll-reveal-item {
 
 .study-plan-print-only { display: none; }
 
+.study-plan-mobile-summary::-webkit-details-marker { display: none; }
+.study-plan-mobile-disclosure[open] > .study-plan-mobile-summary svg { transform: rotate(180deg); }
+
+@media screen and (min-width: 768px) {
+  .study-plan-mobile-summary { display: none !important; }
+  .study-plan-mobile-disclosure-content { display: block !important; }
+}
+
 @media print {
   @page { size: A4 portrait; margin: 12mm 8mm; }
   html, body { margin: 0 !important; background: #fff !important; }
-  body * { visibility: hidden !important; }
+  body:has(#study-plan-document) > div[aria-hidden="true"],
+  body:has(#study-plan-document) > #site-main-header,
+  body:has(#study-plan-document) > footer { display: none !important; }
+  body:has(#study-plan-document) > main.public-main {
+    display: contents !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+  body:has(#study-plan-document) * { visibility: hidden !important; }
   #study-plan-document {
     position: static !important;
     display: block !important;

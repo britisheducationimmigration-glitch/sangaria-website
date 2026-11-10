@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, createFileRoute, notFound } from '@tanstack/react-router'
-import { ArrowLeft, ArrowRight, CalendarDays, Check, ClipboardCheck, Download, ExternalLink, Share2, Wallet } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronDown, ClipboardCheck, Download, ExternalLink, Share2, Wallet } from 'lucide-react'
 import { CountryFlag } from '@/components/CountryFlag'
 import { Eyebrow } from '@/components/Section'
 import { getPublicCashflow, getPublicContent, getPublicCountryPage } from '@/lib/public-functions'
@@ -67,6 +67,18 @@ function PrintContactFooter({ settings }: { settings: { phones: string[]; emails
       <span>{phones}{settings.emails.length ? ' · ' + settings.emails.join(' · ') : ''}</span>
       <span>{settings.officeHours}</span>
     </footer>
+  )
+}
+
+function MobilePlanSection({ title, hint, children }: { title: string; hint: string; children: ReactNode }) {
+  return (
+    <details className="study-plan-mobile-disclosure mt-10">
+      <summary className="study-plan-mobile-summary flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl bg-white p-4 ring-1 ring-forest-900/10">
+        <span className="min-w-0"><strong className="block text-sm font-extrabold text-forest-900">{title}</strong><small className="mt-1 block text-xs leading-relaxed text-forest-900/60">{hint}</small></span>
+        <ChevronDown aria-hidden="true" className="size-5 shrink-0 text-forest-800 transition-transform" />
+      </summary>
+      <div className="study-plan-mobile-disclosure-content">{children}</div>
+    </details>
   )
 }
 
@@ -268,7 +280,8 @@ function StudyPlanPage() {
         ].map(([label, value]) => <article key={label} className="min-w-0 rounded-2xl bg-white p-4 ring-1 ring-forest-900/10 sm:p-5"><p className="text-xs font-bold uppercase tracking-wider text-forest-900/50">{label}</p><p className="mt-2 break-words text-sm font-semibold leading-relaxed text-forest-900">{value}</p></article>)}
       </section>
 
-      <section aria-labelledby="timeline-title" className="mt-10 rounded-[2rem] bg-white p-5 ring-1 ring-forest-900/10 sm:p-8">
+      <MobilePlanSection title="Suggested timeline" hint="10-week preparation steps that can run side by side">
+        <section aria-labelledby="timeline-title" className="rounded-[2rem] bg-white p-5 ring-1 ring-forest-900/10 sm:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div><p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-coral-600">Plan around your intake</p><h2 id="timeline-title" className="mt-2 text-2xl font-extrabold text-forest-900 sm:text-3xl">Suggested timeline</h2></div>
           {intakeMonth && <p className="rounded-full bg-forest-50 px-3 py-2 text-xs font-bold text-forest-800">Target: {intakeMonthLabel(intakeMonth)}</p>}
@@ -284,8 +297,10 @@ function StudyPlanPage() {
           <p role="status" className="mt-4 rounded-xl bg-amber-50 p-4 text-xs leading-relaxed text-amber-950">This intake is close for the 10-week plan. The projected submission date may be later than 3 months before the selected intake month. Check the exact school start/travel date and current processing times; consider an earlier start or the next intake.</p>
         )}
       </section>
+      </MobilePlanSection>
 
-      <section aria-labelledby="checklist-title" className="mt-10 rounded-[2rem] bg-white p-5 ring-1 ring-forest-900/10 sm:p-8">
+      <MobilePlanSection title="Document checklist" hint="Country-specific records and your saved progress">
+        <section aria-labelledby="checklist-title" className="rounded-[2rem] bg-white p-5 ring-1 ring-forest-900/10 sm:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div><p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-coral-600">Save your progress on this device</p><h2 id="checklist-title" className="mt-2 text-2xl font-extrabold text-forest-900 sm:text-3xl">Document checklist</h2></div>
           <div className="min-w-40 rounded-xl bg-forest-50 p-3 sm:w-52"><div className="flex justify-between text-xs font-bold text-forest-800"><span>{completedCount} of {totalItems} ready</span><span>{progress}%</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-forest-900/10"><div className="h-full rounded-full bg-coral-500 transition-[width]" style={{ width: `${progress}%` }} /></div></div>
@@ -312,8 +327,10 @@ function StudyPlanPage() {
         </div>
         <p className="mt-5 text-xs leading-relaxed text-forest-900/55">Your checked items stay in this browser on this device. For funds, choose evidence that matches the real source; GIC, loan and CA summary are not universal requirements. This preparation list does not replace your current application-country checklist.</p>
       </section>
+      </MobilePlanSection>
 
-      <section aria-labelledby="cashflow-title" className="mt-10 rounded-[2rem] bg-forest-900 bg-aurora p-5 text-white sm:p-8">
+      <MobilePlanSection title="Family cashflow planner" hint="Existing fee stages; optional when no budget record exists">
+        <section aria-labelledby="cashflow-title" className="rounded-[2rem] bg-forest-900 bg-aurora p-5 text-white sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div><p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-coral-300">Existing cashflow data</p><h2 id="cashflow-title" className="mt-2 flex items-center gap-2 text-2xl font-extrabold sm:text-3xl"><Wallet aria-hidden="true" className="size-6" /> Family cashflow planner</h2><p className="mt-2 max-w-2xl text-sm leading-relaxed text-forest-100/75">This estimate is loaded from the same country cashflow data used by the website’s existing planner.</p></div>
           {cashflow && <div className="rounded-2xl border border-white/15 bg-white/5 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-coral-300">Estimated first-year planning total</p><p className="mt-1 text-2xl font-black">{cashflow.totalEstimateINR}</p></div>}
@@ -327,8 +344,10 @@ function StudyPlanPage() {
           </>
         ) : <p className="mt-4 rounded-xl bg-white/10 p-4 text-sm text-forest-100/75">No cashflow estimate is configured for this destination yet. Add its stages in the existing Admin → Cashflow Budget section.</p>}
       </section>
+      </MobilePlanSection>
 
-      <section aria-labelledby="route-guidance-title" className="mt-10 grid gap-4 lg:grid-cols-2">
+      <MobilePlanSection title="Study route and visa requirements" hint="Admission, funds, work and post-study conditions">
+        <section aria-labelledby="route-guidance-title" className="grid gap-4 lg:grid-cols-2">
         <article className="rounded-[2rem] bg-white p-5 ring-1 ring-forest-900/10 sm:p-7"><Eyebrow>Study route</Eyebrow><h2 id="route-guidance-title" className="mt-3 text-xl font-extrabold text-forest-900">Admission, English and study conditions</h2><dl className="mt-4 space-y-3">{[
           ['Admission and English', guide?.admissionAndEnglish || country.english],
           ['Work while studying', guide?.workWhileStudying || 'Check the current visa conditions and permitted work rules for your route.'],
@@ -337,8 +356,10 @@ function StudyPlanPage() {
         ].map(([label, value]) => <div key={label} className="rounded-xl bg-cream p-3"><dt className="text-xs font-bold uppercase tracking-wide text-forest-900/55">{label}</dt><dd className="mt-1 text-sm leading-relaxed text-forest-900/75">{value}</dd></div>)}</dl></article>
         <article className="rounded-[2rem] bg-white p-5 ring-1 ring-forest-900/10 sm:p-7"><Eyebrow>Visa application</Eyebrow><h2 className="mt-3 text-xl font-extrabold text-forest-900">Core requirements to review</h2><ul className="mt-4 space-y-3">{guidance.requirements.map((item) => <li key={item} className="flex gap-2 text-sm leading-relaxed text-forest-900/75"><Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-coral-600" /><span>{item}</span></li>)}</ul><p className="mt-4 rounded-xl bg-amber-50 p-3 text-xs leading-relaxed text-amber-950">{guidance.caveat}</p></article>
       </section>
+      </MobilePlanSection>
 
-      <section aria-labelledby="sources-title" className="mt-10 rounded-[2rem] bg-white p-5 ring-1 ring-forest-900/10 sm:p-8">
+      <MobilePlanSection title="Official sources" hint="Official links and application notes">
+        <section aria-labelledby="sources-title" className="rounded-[2rem] bg-white p-5 ring-1 ring-forest-900/10 sm:p-8">
         <div className="flex items-center gap-2"><ClipboardCheck aria-hidden="true" className="size-5 text-coral-600" /><h2 id="sources-title" className="text-xl font-extrabold text-forest-900">Official sources</h2></div>
         <p className="mt-2 text-sm text-forest-900/65">Check these sources again before applying. Rules and document requirements can change.</p>
         <ul className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -346,6 +367,7 @@ function StudyPlanPage() {
         </ul>
         <p className="mt-5 border-t border-forest-900/10 pt-4 text-xs leading-relaxed text-forest-900/55">This is general planning guidance, not legal advice or an eligibility decision. Document needs depend on route, nationality, school, province, application location and personal circumstances. It cannot guarantee a visa approval. Final decisions are made by the relevant government authority.</p>
       </section>
+      </MobilePlanSection>
 
       <div className="print-hidden mt-8 flex flex-col gap-3 rounded-2xl bg-cream p-5 sm:flex-row sm:items-center sm:justify-between">
         <div><h2 className="font-extrabold text-forest-900">Want help reviewing your plan?</h2><p className="mt-1 text-sm text-forest-900/65">Talk through your course, documents and next steps with our team.</p></div>
