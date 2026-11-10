@@ -1,4 +1,4 @@
-const siteOrigin = 'https://britisheducationandimmigration.com'
+const siteOrigin = 'https://www.britisheducationandimmigration.com'
 
 export type PageSeoOptions = {
   title: string
