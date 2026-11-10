@@ -43,6 +43,12 @@ function DocumentCards({ items, onChange }: {
   items: StudyPlanChecklistItem[]
   onChange: (items: StudyPlanChecklistItem[]) => void
 }) {
+  const [openId, setOpenId] = useState<string | null>(null)
+  function addDocument() {
+    const item = { id: 'study-item-' + Date.now() + '-' + items.length, category: 'Admission', title: '', detail: '', status: 'Usually required' as const }
+    setOpenId(item.id)
+    onChange([...items, item])
+  }
   function update(index: number, patch: Partial<StudyPlanChecklistItem>) {
     onChange(items.map((item, i) => i === index ? { ...item, ...patch } : item))
   }
@@ -50,14 +56,14 @@ function DocumentCards({ items, onChange }: {
     <section className="rounded-2xl border border-forest-900/10 bg-forest-50/50 p-3 sm:p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div><h3 className="font-bold">Documents <span className="text-xs font-normal text-forest-900/60">({items.length})</span></h3><p className="mt-1 text-xs text-forest-900/60">Use the approved country checklist. One document per card.</p></div>
-        <button type="button" onClick={() => onChange([...items, { id: 'study-item-' + Date.now(), category: 'Admission', title: '', detail: '', status: 'Usually required' }])} className="min-h-10 rounded-lg border border-forest-900/15 bg-white px-3 text-sm font-bold">+ Add document</button>
+        <button type="button" onClick={addDocument} className="min-h-10 rounded-lg border border-forest-900/15 bg-white px-3 text-sm font-bold">+ Add document</button>
       </div>
       <div className="mt-3 space-y-2">
         {items.map((item, index) => (
-          <details key={item.id} className="rounded-xl border border-forest-900/10 bg-white">
+          <details key={item.id} open={openId === item.id} onToggle={(event) => setOpenId(event.currentTarget.open ? item.id : (current) => current === item.id ? null : current)} className="rounded-xl border border-forest-900/10 bg-white">
             <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 [&::-webkit-details-marker]:hidden">
               <span className="min-w-0 truncate text-sm font-bold">{index + 1}. {item.title || 'New document'}</span>
-              <span className="shrink-0 rounded-full bg-forest-50 px-2 py-1 text-[10px] font-bold text-forest-700">{item.status}</span>
+              <span className="shrink-0 text-xs font-semibold text-forest-900/60">{openId === item.id ? 'Close' : 'Edit'}</span>
             </summary>
             <div className="grid gap-3 border-t border-forest-900/10 p-3">
               <PlanField label="Document name" value={item.title} required hint="Example: Parents’ ITRs — past 2 years" onChange={(title) => update(index, { title })} />
@@ -78,7 +84,7 @@ function DocumentCards({ items, onChange }: {
                   </label>
                 </div>
               </details>
-              <div className="flex justify-end"><button type="button" onClick={() => onChange(items.filter((_, i) => i !== index))} className="min-h-10 rounded-lg px-3 text-sm font-bold text-red-700 hover:bg-red-50">Remove</button></div>
+              <div className="flex justify-end"><button type="button" onClick={() => { if (openId === item.id) setOpenId(null); onChange(items.filter((_, i) => i !== index)) }} className="min-h-10 rounded-lg px-3 text-sm font-bold text-red-700 hover:bg-red-50">Remove</button></div>
             </div>
           </details>
         ))}
@@ -92,6 +98,7 @@ function TimelineCards({ items, onChange }: {
   items: StudyPlanTimelineStep[]
   onChange: (items: StudyPlanTimelineStep[]) => void
 }) {
+  const [openIndex, setOpenIndex] = useState<number | null>(null)
   function update(index: number, patch: Partial<StudyPlanTimelineStep>) {
     onChange(items.map((item, i) => {
       if (i !== index) return item
@@ -105,14 +112,15 @@ function TimelineCards({ items, onChange }: {
         <div><h3 className="font-bold">Preparation steps <span className="text-xs font-normal text-forest-900/60">({items.length})</span></h3><p className="mt-1 text-xs text-forest-900/60">Set when a task starts. Tasks can overlap.</p></div>
         <button type="button" onClick={() => {
           const weeksFromStart = Math.min(9, items.length * 2)
+          setOpenIndex(items.length)
           onChange([...items, { weeks: 'Week ' + (weeksFromStart + 1), weeksFromStart, title: '', detail: '' }])
         }} className="min-h-10 rounded-lg border border-forest-900/15 bg-white px-3 text-sm font-bold">+ Add step</button>
       </div>
       <div className="mt-3 space-y-2">
         {items.map((item, index) => (
-          <details key={index} className="rounded-xl border border-forest-900/10 bg-white">
-            <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 px-3 py-2 [&::-webkit-details-marker]:hidden">
-              <span className="min-w-0 truncate text-sm font-bold">{item.weeks}: {item.title || 'New step'}</span>
+          <details key={index} open={openIndex === index} onToggle={(event) => setOpenIndex(event.currentTarget.open ? index : (current) => current === index ? null : current)} className="rounded-xl border border-forest-900/10 bg-white">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 [&::-webkit-details-marker]:hidden">
+              <span className="min-w-0 truncate text-sm font-bold">{item.weeks}: {item.title || 'New step'}</span><span className="shrink-0 text-xs font-semibold text-forest-900/60">{openIndex === index ? 'Close' : 'Edit'}</span>
             </summary>
             <div className="grid gap-3 border-t border-forest-900/10 p-3">
               <label className="block text-sm font-semibold">Start around
@@ -122,7 +130,7 @@ function TimelineCards({ items, onChange }: {
               </label>
               <PlanField label="Step name" value={item.title} required hint="Example: Apply to colleges" onChange={(title) => update(index, { title })} />
               <PlanField label="What should the student do?" value={item.detail} required multiline hint="Use a short action note. Mention work that can happen together." onChange={(detail) => update(index, { detail })} />
-              <div className="flex justify-end"><button type="button" onClick={() => onChange(items.filter((_, i) => i !== index))} className="min-h-10 rounded-lg px-3 text-sm font-bold text-red-700 hover:bg-red-50">Remove</button></div>
+              <div className="flex justify-end"><button type="button" onClick={() => { setOpenIndex(null); onChange(items.filter((_, i) => i !== index)) }} className="min-h-10 rounded-lg px-3 text-sm font-bold text-red-700 hover:bg-red-50">Remove</button></div>
             </div>
           </details>
         ))}
@@ -136,23 +144,24 @@ function SourceCards({ items, onChange }: {
   items: { label: string; url: string }[]
   onChange: (items: { label: string; url: string }[]) => void
 }) {
+  const [openIndex, setOpenIndex] = useState<number | null>(null)
   return (
     <section className="rounded-2xl border border-forest-900/10 bg-forest-50/50 p-3 sm:p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div><h3 className="font-bold">Official links <span className="text-xs font-normal text-forest-900/60">({items.length})</span></h3><p className="mt-1 text-xs text-forest-900/60">Add the sources the reviewer checked.</p></div>
-        <button type="button" onClick={() => onChange([...items, { label: '', url: '' }])} className="min-h-10 rounded-lg border border-forest-900/15 bg-white px-3 text-sm font-bold">+ Add link</button>
+        <button type="button" onClick={() => { setOpenIndex(items.length); onChange([...items, { label: '', url: '' }]) }} className="min-h-10 rounded-lg border border-forest-900/15 bg-white px-3 text-sm font-bold">+ Add link</button>
       </div>
       <div className="mt-3 space-y-2">
         {items.map((item, index) => (
-          <details key={index} className="rounded-xl border border-forest-900/10 bg-white">
+          <details key={index} open={openIndex === index} onToggle={(event) => setOpenIndex(event.currentTarget.open ? index : (current) => current === index ? null : current)} className="rounded-xl border border-forest-900/10 bg-white">
             <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 [&::-webkit-details-marker]:hidden">
               <span className="min-w-0 truncate text-sm font-bold">{item.label || 'New official link'}</span>
-              <span className="shrink-0 text-xs text-forest-900/60">Edit</span>
+              <span className="shrink-0 text-xs font-semibold text-forest-900/60">{openIndex === index ? 'Close' : 'Edit'}</span>
             </summary>
             <div className="grid gap-3 border-t border-forest-900/10 p-3 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.4fr)_auto] sm:items-end">
               <PlanField label="Page name" value={item.label} required onChange={(label) => onChange(items.map((source, i) => i === index ? { ...source, label } : source))} />
               <PlanField label="Official link" value={item.url} required hint="Paste the full government or school URL." onChange={(url) => onChange(items.map((source, i) => i === index ? { ...source, url } : source))} />
-              <button type="button" onClick={() => onChange(items.filter((_, i) => i !== index))} className="min-h-10 rounded-lg px-3 text-sm font-bold text-red-700 hover:bg-red-50">Remove</button>
+              <button type="button" onClick={() => { setOpenIndex(null); onChange(items.filter((_, i) => i !== index)) }} className="min-h-10 rounded-lg px-3 text-sm font-bold text-red-700 hover:bg-red-50">Remove</button>
             </div>
           </details>
         ))}
@@ -288,7 +297,7 @@ export function StudyPlanPanel({ onDirtyChange }: Props) {
   const canPublish = !!published && !hasOtherDraftChanges
 
   return (
-    <section className="max-w-6xl">
+    <section className="max-w-6xl pb-28">
       <div className="mb-5">
         <p className="font-mono text-xs font-bold uppercase tracking-wider text-coral-600">Country content</p>
         <h2 className="mt-1 text-3xl font-extrabold">Study Plans</h2>
@@ -334,17 +343,20 @@ export function StudyPlanPanel({ onDirtyChange }: Props) {
                   <DocumentCards items={plan.checklist} onChange={(checklist) => updatePlan({ checklist })} />
                   <TimelineCards items={plan.timeline} onChange={(timeline) => updatePlan({ timeline })} />
                   <SourceCards items={plan.sources} onChange={(sources) => updatePlan({ sources })} />
-
-                  {hasOtherDraftChanges && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-950">This country also has unpublished edits to other fields. You can save the study plan draft here; publish the full country page from Countries after reviewing those edits.</p>}
-                  {!published && <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-950">Publish the destination basics from Countries first. This tab does not create or publish country pages.</p>}
-
-                  <div className="flex flex-col-reverse gap-2 rounded-2xl bg-white p-4 sm:flex-row sm:justify-end">
-                    <button type="button" disabled={!dirty || busy} onClick={discardChanges} className="min-h-11 rounded-xl border border-forest-900/15 px-4 text-sm font-bold disabled:opacity-50">Discard changes</button>
-                    <button type="button" disabled={!dirty || busy} onClick={() => void save('draft')} className="min-h-11 rounded-xl border border-forest-900/15 px-4 text-sm font-bold disabled:opacity-50">{busy ? 'Saving…' : 'Save draft'}</button>
-                    <button type="button" disabled={!dirty || busy || !canPublish} onClick={() => void save('published')} className="min-h-11 rounded-xl bg-coral-500 px-5 text-sm font-bold text-white disabled:opacity-50">{busy ? 'Saving…' : 'Publish study plan'}</button>
-                  </div>
                 </div>
               )}
+
+              {hasOtherDraftChanges && <p className="mt-5 rounded-xl bg-amber-50 p-3 text-sm text-amber-950">This country also has unpublished edits to other fields. Save the study plan draft here; review and publish the full country page from Countries.</p>}
+              {!published && <p className="mt-5 rounded-xl bg-amber-50 p-3 text-sm text-amber-950">Publish the destination basics from Countries first. This tab does not create or publish country pages.</p>}
+
+              <div className="fixed bottom-3 left-1/2 z-40 flex w-[calc(100%-1.5rem)] max-w-6xl -translate-x-1/2 flex-col gap-2 rounded-2xl border border-forest-900/15 bg-white/95 p-3 shadow-xl backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-4">
+                <p className="text-xs font-semibold text-forest-900/65">{dirty ? 'Unsaved changes' : 'All changes saved'}</p>
+                <div className="flex flex-col-reverse gap-2 sm:flex-row">
+                  <button type="button" disabled={!dirty || busy} onClick={discardChanges} className="min-h-11 rounded-xl border border-forest-900/15 px-4 text-sm font-bold disabled:opacity-50">Discard</button>
+                  <button type="button" disabled={!dirty || busy} onClick={() => void save('draft')} className="min-h-11 rounded-xl border border-forest-900/15 px-4 text-sm font-bold disabled:opacity-50">{busy ? 'Saving…' : 'Save draft'}</button>
+                  <button type="button" disabled={!dirty || busy || !canPublish} onClick={() => void save('published')} className="min-h-11 rounded-xl bg-coral-500 px-5 text-sm font-bold text-white disabled:opacity-50">{busy ? 'Saving…' : 'Publish'}</button>
+                </div>
+              </div>
             </>
           )}
         </>
