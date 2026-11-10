@@ -99,7 +99,7 @@ const baseCountries: Country[] = [
     },
     studyPlan: {
       lastVerified: '10 November 2026',
-      summary: 'A focused 10-week document-preparation sprint. Admission applications, academic records and sponsor funds work in parallel. India applicants should also use the current New Delhi visa-office checklist. This plan targets a complete submission file, not a visa decision.',
+      summary: 'A focused 10-week study-preparation plan. Admission applications, academic records and family funding can be prepared side by side.',
       checklist: [
         { id: 'canada-loa', category: 'Admission', title: 'Letter of acceptance (LOA) from a Canadian DLI', detail: 'Check the school, DLI, programme, start date, duration and tuition. Confirm the school can validate the LOA; upload it only in the LOA slot.', status: 'Required' },
         { id: 'canada-pal-tal', category: 'Admission', title: 'PAL/TAL, Quebec CAQ or evidence of an exemption', detail: 'PAL/TAL is needed in most cases and must be valid when you apply. Quebec uses a valid CAQ. If claiming an exemption, attach proof and verify the current IRCC list.', status: 'Usually required' },
