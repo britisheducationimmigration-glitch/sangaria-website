@@ -3,20 +3,23 @@ import { Link, createFileRoute, notFound } from '@tanstack/react-router'
 import { ArrowLeft, ArrowRight, CalendarDays, Check, ClipboardCheck, Download, ExternalLink, Share2, Wallet } from 'lucide-react'
 import { CountryFlag } from '@/components/CountryFlag'
 import { Eyebrow } from '@/components/Section'
-import { getPublicCashflow, getPublicCountryPage } from '@/lib/public-functions'
+import { getPublicCashflow, getPublicContent, getPublicCountryPage } from '@/lib/public-functions'
+import { site } from '@/data/site'
 import { createPageSeo } from '@/lib/seo'
 
 export const Route = createFileRoute('/study-plan/$slug')({
   loader: async ({ params }) => {
-    const [content, cashflowData] = await Promise.all([
+    const [content, cashflowData, publicContent] = await Promise.all([
       getPublicCountryPage({ data: { slug: params.slug } }),
       getPublicCashflow(),
+      getPublicContent(),
     ])
     if (!content?.country.studyPlan) throw notFound()
     return {
       country: content.country,
       guidance: content.guidance,
       cashflow: cashflowData.find((item) => item.slug === params.slug) ?? null,
+      settings: publicContent.settings,
     }
   },
   head: ({ loaderData }) => createPageSeo({
@@ -55,8 +58,20 @@ function recommendedSubmissionDate(intakeMonth: string) {
   return firstDay
 }
 
+function PrintContactFooter({ settings }: { settings: { phones: string[]; emails: string[]; officeHours: string } }) {
+  const phones = settings.phones.map((phone) => phone.startsWith('+') ? phone : '+91 ' + phone).join(' · ')
+  return (
+    <footer className="study-plan-print-contact">
+      <strong>{site.name}</strong>
+      <span>{site.address}</span>
+      <span>{phones}{settings.emails.length ? ' · ' + settings.emails.join(' · ') : ''}</span>
+      <span>{settings.officeHours}</span>
+    </footer>
+  )
+}
+
 function StudyPlanPage() {
-  const { country, guidance, cashflow } = Route.useLoaderData()
+  const { country, guidance, cashflow, settings } = Route.useLoaderData()
   const plan = country.studyPlan!
   const guide = country.studyGuide
   const storageKey = `study-plan-checklist:${country.slug}`
@@ -151,6 +166,7 @@ function StudyPlanPage() {
 
       <div className="study-plan-print-only" aria-hidden="true">
         <section className="study-plan-print-page">
+          <div className="study-plan-print-watermark" aria-hidden="true"><img src="/img/logo.png" alt="" /></div>
           <header className="study-plan-print-header">
             <p>BRITISH EDUCATION & IMMIGRATION · STUDY PLANNING GUIDE</p>
             <h1>{country.flag} {country.name} study plan</h1>
@@ -189,10 +205,12 @@ function StudyPlanPage() {
             </section>
           )}
 
-          <p className="study-plan-print-footnote">This timeline prepares an application file; it does not predict a visa decision. Official processing times and school deadlines vary. India New Delhi instructions recommend applying at least 3 months before planned travel.</p>
+          <p className="study-plan-print-footnote">Dates start from today and move forward only. This 10-week plan prepares a complete file; it does not predict a decision date. IRCC New Delhi recommends applying at least 3 months before planned travel. Other countries and visa offices may publish different local instructions; re-check the official sources listed on page 2.</p>
+          <PrintContactFooter settings={settings} />
         </section>
 
         <section className="study-plan-print-page study-plan-print-page-break">
+          <div className="study-plan-print-watermark" aria-hidden="true"><img src="/img/logo.png" alt="" /></div>
           <header className="study-plan-print-page-heading">
             <p>{country.name} · {intakeMonth ? intakeMonthLabel(intakeMonth) + ' intake' : 'study permit'}</p>
             <h2>Documents to prepare</h2>
@@ -219,7 +237,8 @@ function StudyPlanPage() {
               <ul>{plan.sources.map((source) => <li key={source.url}><strong>{source.label}</strong><span>{source.url}</span></li>)}</ul>
             </section>
           </div>
-          <p className="study-plan-print-disclaimer">General guidance, not legal advice or an eligibility decision. Document needs vary by applicant, school, province and visa office. No approval is guaranteed. Final decisions are made by IRCC.</p>
+          <p className="study-plan-print-disclaimer">General guidance, not legal advice or an eligibility decision. Document needs vary by applicant, school, province and visa office. No approval is guaranteed. Final decisions are made by the relevant immigration authority.</p>
+          <PrintContactFooter settings={settings} />
         </section>
       </div>
 
@@ -264,7 +283,6 @@ function StudyPlanPage() {
         {intakeNeedsEarlierSubmission && (
           <p role="status" className="mt-4 rounded-xl bg-amber-50 p-4 text-xs leading-relaxed text-amber-950">This intake is close for the 10-week plan. The projected submission date may be later than 3 months before the selected intake month. Check the exact school start/travel date and current processing times; consider an earlier start or the next intake.</p>
         )}
-        <p className="mt-4 rounded-xl bg-amber-50 p-4 text-xs leading-relaxed text-amber-950">Dates start from today and never count backward. This 10-week plan prepares a complete file; it does not predict a decision date. IRCC’s New Delhi instructions recommend applying at least 3 months before planned travel. Other application countries may have different local instructions.</p>
       </section>
 
       <section aria-labelledby="checklist-title" className="mt-10 rounded-[2rem] bg-white p-5 ring-1 ring-forest-900/10 sm:p-8">
