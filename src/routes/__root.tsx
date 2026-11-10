@@ -16,9 +16,9 @@ const localBusinessSchema = {
   name: 'British Education and Immigration',
   alternateName: 'British Education Sangaria',
   description: 'Premier Study Visa Consultant & IELTS / PTE Coaching Institute in Sangaria, Hanumangarh, Rajasthan. Expert visa guidance for Canada, UK, Australia, USA, NZ & Europe.',
-  url: 'https://britisheducationandimmigration.com',
-  logo: 'https://britisheducationandimmigration.com/img/logo.png',
-  image: 'https://britisheducationandimmigration.com/img/hero.webp',
+  url: 'https://www.britisheducationandimmigration.com',
+  logo: 'https://www.britisheducationandimmigration.com/img/logo.png',
+  image: 'https://www.britisheducationandimmigration.com/img/hero.webp',
   telephone: ['+919772570478', '+919658018000'],
   email: 'admin@britisheducationandimmigration.com',
   priceRange: '₹₹',
@@ -94,12 +94,12 @@ export const Route = createRootRoute({
 
       // OpenGraph for WhatsApp & Social Media Rich Previews (Fast 76KB WebP)
       { property: 'og:site_name', content: 'British Education and Immigration' },
-      { property: 'og:image', content: 'https://britisheducationandimmigration.com/img/hero.webp' },
+      { property: 'og:image', content: 'https://www.britisheducationandimmigration.com/img/hero.webp' },
       { property: 'og:locale', content: 'en_IN' },
 
       // Twitter Card Preview
       { name: 'twitter:card', content: 'summary_large_image' },
-      { name: 'twitter:image', content: 'https://britisheducationandimmigration.com/img/hero.webp' },
+      { name: 'twitter:image', content: 'https://www.britisheducationandimmigration.com/img/hero.webp' },
     ],
     links: [
       { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
