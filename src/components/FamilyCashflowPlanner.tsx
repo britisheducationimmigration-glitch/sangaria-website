@@ -256,6 +256,21 @@ export function FamilyCashflowPlanner() {
           </div>
         ))}
       </div>
+
+      <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <div className="min-w-0">
+          <p className="text-sm font-extrabold text-white">Need help funding your study plan?</p>
+          <p className="mt-1 text-xs leading-relaxed text-forest-100/70">Explore education-loan eligibility or scholarships through GyanDhan.</p>
+        </div>
+        <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+          <a href="https://www.gyandhan.com/loaneligs?campaign_partner=British+Education+Immigration" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-coral-500 px-4 py-2 text-xs font-bold text-white transition hover:bg-coral-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+            Check loan eligibility ↗
+          </a>
+          <a href="https://www.gyandhan.com/scholarships/apply/new?scholarship_id=gd-scholarship&campaign_partner=British+Education+Immigration" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-bold text-white ring-1 ring-white/15 transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+            Explore scholarships ↗
+          </a>
+        </div>
+      </div>
     </section>
   )
 }
