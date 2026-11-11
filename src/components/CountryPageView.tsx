@@ -155,12 +155,15 @@ export function CountryPageView({
               >
                 View complete study plan <span aria-hidden="true">→</span>
               </Link>
-              <a
-                href={`/study-plan/${c.slug}#loan-eligibility`}
+              <Link
+                to="/study-plan/$slug"
+                params={{ slug: c.slug }}
+                hash="loan-eligibility"
+                hashScrollIntoView={{ block: 'start' }}
                 className="mb-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-forest-900/15 bg-white px-5 py-3 text-sm font-bold text-forest-900 transition hover:bg-forest-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-900"
               >
                 Explore loan options <span aria-hidden="true">→</span>
-              </a>
+              </Link>
             </>
           )}
           {preview ? (
