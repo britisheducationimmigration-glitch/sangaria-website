@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { checkRateLimit } from '@/lib/rate-limit.server'
 import {
   changeAdminPassword,
   getSessionUser,
@@ -18,6 +19,43 @@ export const Route = createFileRoute('/admin/oauth/start')({
         try {
           const body = (await request.json()) as Record<string, unknown>
           const action = String(body.action || 'login')
+          const rateLimitAction = ['send-otp', 'verify-otp', 'forgot'].includes(action) ? action : 'login'
+          if (action !== 'change') {
+            const identifier = String(
+              action === 'login'
+                ? body.identifier || body.email || ''
+                : body.email || '',
+            ).trim().toLowerCase() || 'missing'
+            const clientIp = (
+              request.headers.get('x-real-ip') ??
+              request.headers.get('x-forwarded-for')?.split(',')[0] ??
+              ''
+            ).trim()
+            const policy = {
+              login: { identityLimit: 8, identityWindow: 900, ipLimit: 30, ipWindow: 900 },
+              'send-otp': { identityLimit: 3, identityWindow: 900, ipLimit: 10, ipWindow: 3600 },
+              'verify-otp': { identityLimit: 5, identityWindow: 900, ipLimit: 20, ipWindow: 3600 },
+              forgot: { identityLimit: 5, identityWindow: 900, ipLimit: 15, ipWindow: 3600 },
+            }[rateLimitAction]!
+            const identityAllowed = await checkRateLimit(
+              'admin:' + rateLimitAction + ':account',
+              identifier,
+              policy.identityLimit,
+              policy.identityWindow,
+            )
+            const ipAllowed = !clientIp || (await checkRateLimit(
+              'admin:' + rateLimitAction + ':ip',
+              clientIp,
+              policy.ipLimit,
+              policy.ipWindow,
+            ))
+            if (!identityAllowed || !ipAllowed) {
+              return new Response(JSON.stringify({ ok: false, error: 'Too many attempts. Please wait and try again.' }), {
+                status: 429,
+                headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+              })
+            }
+          }
 
           // 1. Send 6-Digit OTP to Email via Resend
           if (action === 'send-otp') {
@@ -93,8 +131,7 @@ export const Route = createFileRoute('/admin/oauth/start')({
             headers,
           })
         } catch (cause) {
-          const message = cause instanceof Error ? cause.message : 'Server error occurred'
-          return new Response(JSON.stringify({ ok: false, error: message }), {
+          return new Response(JSON.stringify({ ok: false, error: 'The request could not be completed. Please try again.' }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' },
           })

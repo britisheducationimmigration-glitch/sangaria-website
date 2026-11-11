@@ -96,6 +96,7 @@ export function EnquiryForm({
           message,
           source,
           summary: enquirySummary,
+          botField: String(data.get('bot-field') ?? '').trim(),
         },
       })
 

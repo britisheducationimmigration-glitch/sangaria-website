@@ -1,4 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
+import { getRequestHeader } from '@tanstack/react-start/server'
+import { checkRateLimit } from './rate-limit.server'
 import { execute, jsonArray, queryRows } from './db.server'
 import type { PublicContent, PublicCoachingContent, PublicCertificate } from './content-types'
 import { getSupportedVideoEmbedUrl } from './video'
@@ -33,7 +35,9 @@ function validateEnquiry(data: unknown) {
     message: stringValue(input.message, 5000),
     source: stringValue(input.source, 160),
     summary: stringValue(input.summary, 5000),
+    botField: stringValue(input.botField, 300),
   }
+  if (result.botField) return result
   if (result.name.length < 2) throw new Error('Please enter your name')
   if (result.phone.replace(/\D/g, '').length < 10) throw new Error('Please enter a valid phone number')
   if (result.email && !/^\S+@\S+\.\S+$/.test(result.email)) throw new Error('Please enter a valid email')
@@ -43,6 +47,21 @@ function validateEnquiry(data: unknown) {
 export const submitEnquiry = createServerFn({ method: 'POST' })
   .validator(validateEnquiry)
   .handler(async ({ data }) => {
+    if (data.botField) return { ok: true, id: 0 }
+
+    const clientIp = (
+      getRequestHeader('x-real-ip') ??
+      getRequestHeader('x-forwarded-for')?.split(',')[0] ??
+      ''
+    ).trim()
+    const phoneKey = data.phone.replace(/\D/g, '')
+    if (clientIp && !(await checkRateLimit('enquiry-ip', clientIp, 8, 900))) {
+      throw new Error('Please wait before sending another enquiry.')
+    }
+    if (!(await checkRateLimit('enquiry-phone', phoneKey, 5, 1800))) {
+      throw new Error('Please wait before sending another enquiry.')
+    }
+
     const result = await execute(
       `INSERT INTO enquiries (name, phone, email, city, interest, country, message, source, summary, status, notes)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'New', '')`,
