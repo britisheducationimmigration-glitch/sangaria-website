@@ -121,6 +121,23 @@ function StudyPlanPage() {
   }, [])
 
   useEffect(() => {
+    if (window.location.hash !== '#loan-eligibility') return
+
+    let firstFrame = 0
+    let secondFrame = 0
+    firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => {
+        document.getElementById('loan-eligibility')?.scrollIntoView({ block: 'start', behavior: 'auto' })
+      })
+    })
+
+    return () => {
+      window.cancelAnimationFrame(firstFrame)
+      window.cancelAnimationFrame(secondFrame)
+    }
+  }, [country.slug])
+
+  useEffect(() => {
     try {
       const saved = window.localStorage.getItem(storageKey)
       if (saved) {
