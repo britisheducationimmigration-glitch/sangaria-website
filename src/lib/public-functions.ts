@@ -55,7 +55,7 @@ export const submitEnquiry = createServerFn({ method: 'POST' })
       ''
     ).trim()
     const phoneKey = data.phone.replace(/\D/g, '')
-    if (clientIp && !(await checkRateLimit('enquiry-ip', clientIp, 8, 900))) {
+    if (clientIp && !(await checkRateLimit('enquiry-ip', clientIp, 60, 900))) {
       throw new Error('Please wait before sending another enquiry.')
     }
     if (!(await checkRateLimit('enquiry-phone', phoneKey, 5, 1800))) {
