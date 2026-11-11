@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, createFileRoute, notFound } from '@tanstack/react-router'
 import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronDown, ClipboardCheck, Download, ExternalLink, Share2, Wallet } from 'lucide-react'
 import { CountryFlag } from '@/components/CountryFlag'
+import { GyanDhanLoanSection } from '@/components/GyanDhanLoanSection'
 import { Eyebrow } from '@/components/Section'
 import { getPublicCashflow, getPublicContent, getPublicCountryPage } from '@/lib/public-functions'
 import { site } from '@/data/site'
@@ -355,6 +356,8 @@ function StudyPlanPage() {
         ) : <p className="mt-4 rounded-xl bg-white/10 p-4 text-sm text-forest-100/75">No cashflow estimate is configured for this destination yet. Add its stages in the existing Admin → Cashflow Budget section.</p>}
       </section>
       </MobilePlanSection>
+
+      <GyanDhanLoanSection countryName={country.name} />
 
       <MobilePlanSection title="Study route and visa requirements" hint="Admission, funds, work and post-study conditions">
         <section aria-labelledby="route-guidance-title" className="grid gap-4 lg:grid-cols-2">
