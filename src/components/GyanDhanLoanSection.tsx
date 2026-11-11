@@ -49,17 +49,17 @@ export function GyanDhanLoanSection({ countryName }: { countryName: string }) {
 
         <div className="min-w-0 rounded-2xl bg-cream p-4 sm:p-5">
           <h3 className="text-base font-extrabold text-forest-900">Loan eligibility form</h3>
-          <p className="mt-1 text-sm leading-relaxed text-forest-900/65">The partner form loads only when you choose to open it.</p>
+          <p className="mt-1 text-sm leading-relaxed text-forest-900/65">See available education-funding options for your study plans.</p>
           {!widgetRequested ? (
             <button type="button" onClick={() => setWidgetRequested(true)} className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-forest-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-forest-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-900">
-              Load GyanDhan form <ExternalLink aria-hidden="true" className="size-4" />
+              Check loan eligibility <ExternalLink aria-hidden="true" className="size-4" />
             </button>
+          ) : widgetStatus === 'error' ? (
+            <a href={loanEligibilityUrl} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-forest-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-forest-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-900">
+              Continue to GyanDhan <ExternalLink aria-hidden="true" className="size-4" />
+            </a>
           ) : (
-            <>
-              {widgetStatus === 'loading' && <p role="status" className="mt-3 text-sm font-semibold text-forest-800">Loading the partner form…</p>}
-              {widgetStatus === 'error' && <p role="status" className="mt-3 text-sm font-semibold text-coral-700">The embedded form could not load. Use “Open loan page” to continue on GyanDhan.</p>}
-              <div ref={widgetMountRef} id="gyandhan-loan-eligibility" data-gyandhan-le-widget data-campaign-partner="British Education Immigration" className="mt-3 min-h-12 w-full" />
-            </>
+            <div ref={widgetMountRef} id="gyandhan-loan-eligibility" data-gyandhan-le-widget data-campaign-partner="British Education Immigration" className="mt-3 min-h-12 w-full" aria-busy={widgetStatus === 'loading'} />
           )}
         </div>
       </div>
