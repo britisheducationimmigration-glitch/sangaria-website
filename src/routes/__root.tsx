@@ -101,11 +101,18 @@ export const Route = createRootRoute({
       { name: 'twitter:card', content: 'summary_large_image' },
       { name: 'twitter:image', content: 'https://www.britisheducationandimmigration.com/img/hero.webp' },
     ],
-    links: [
+   links: [
       { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
       { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
-      { rel: 'icon', href: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519664045228795/VqtFGwaGtbWyvcCS' },
-      { rel: 'apple-touch-icon', href: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519664045228795/VqtFGwaGtbWyvcCS' },
+      // ✅ Local Logo & Favicon
+      { rel: 'icon', href: '/img/logo.png' },
+      { rel: 'apple-touch-icon', href: '/img/logo.png' },
+      // ✅ Preload style taaki font download hone tak page block na ho
+      {
+        rel: 'preload',
+        as: 'style',
+        href: 'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=Figtree:wght@400;600;700&display=swap',
+      },
       {
         rel: 'stylesheet',
         href: 'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=Figtree:wght@400;600;700&display=swap',
@@ -129,11 +136,32 @@ export const Route = createRootRoute({
   shellComponent: RootDocument,
   notFoundComponent: NotFound,
 })
-
 function RootDocument({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const isAdmin = pathname.startsWith('/admin')
   const { settings, countries } = Route.useLoaderData()
+
+  // ⚡ Non-blocking GTM: Page load hone ke turant baad background me chalega (Speed boost)
+  useEffect(() => {
+    if (isAdmin || typeof window === 'undefined') return
+
+    const loadGTM = () => {
+      if ((window as any).__gtmLoaded) return
+      ;(window as any).__gtmLoaded = true
+      const script = document.createElement('script')
+      script.async = true
+      script.src = 'https://www.googletagmanager.com/gtm.js?id=GTM-N6H564DV'
+      document.head.appendChild(script)
+      ;(window as any).dataLayer = (window as any).dataLayer || []
+      ;(window as any).dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' })
+    }
+
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(loadGTM, { timeout: 2000 })
+    } else {
+      window.setTimeout(loadGTM, 1500)
+    }
+  }, [isAdmin])
 
   useEffect(() => {
     if (isAdmin || window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) return
@@ -145,8 +173,6 @@ function RootDocument({ children }: { children: ReactNode }) {
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
         if (!entry.isIntersecting) continue
-        // Reveal once on entry, then stop observing so scroll direction changes
-        // do not repeatedly hide, repaint, or animate the same section.
         const section = entry.target as HTMLElement
         section.classList.add('is-scroll-visible')
         observer.unobserve(section)
@@ -183,17 +209,6 @@ function RootDocument({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
-        {!isAdmin && (
-          <>
-            <script async src="https://www.googletagmanager.com/gtm.js?id=GTM-N6H564DV" />
-            <script
-              dangerouslySetInnerHTML={{
-                __html:
-                  'window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag("js", new Date());',
-              }}
-            />
-          </>
-        )}
         <HeadContent />
       </head>
       <body>
