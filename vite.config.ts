@@ -12,7 +12,8 @@ const config = defineConfig({
   build: {
     rollupOptions: {
       output: {
-        assetFileNames: (assetInfo) => assetInfo.name?.endsWith('.css') ? 'assets/styles.css' : 'assets/[name]-[hash][extname]',
+        // ✅ FIX: Har CSS aur Asset ke sath hash code aayega taaki Vercel par updates turant sabko milein
+        assetFileNames: 'assets/[name]-[hash][extname]',
       },
     },
   },
