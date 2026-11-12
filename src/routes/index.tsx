@@ -1,23 +1,28 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, lazy, Suspense } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { ArrowRight, Award, BadgeCheck, Headphones, MapPin, Timer, ShieldCheck, Zap, HeartHandshake } from 'lucide-react'
 import { ApprovalCard, PostCard, TestimonialCard } from '@/components/Cards'
 import { CountryFlag } from '@/components/CountryFlag'
 import { EnquiryForm } from '@/components/EnquiryForm'
 import { Eyebrow } from '@/components/Section'
-import { AnimatedStatValue, InteractiveFlightGlobe } from '@/components/InteractiveFlightGlobe'
+import { InteractiveFlightGlobe } from '@/components/InteractiveFlightGlobe'
 import { ServiceIcon } from '@/components/ServiceIcon'
 import { visaServices } from '@/data/fixtures'
-import { getPublicCountryCatalogue } from '@/lib/public-functions'
+import { getPublicCountryCatalogue, getPublicContent } from '@/lib/public-functions'
 import { site } from '@/data/site'
 import { img } from '@/lib/utils'
-import { getPublicContent } from '@/lib/public-functions'
-import { BoardingPassGenerator } from '@/components/BoardingPassGenerator'
-import { FamilyCashflowPlanner } from '@/components/FamilyCashflowPlanner'
-import { CertificateCarousel } from '@/components/CertificateCarousel'
 import { GoogleReviewCta } from '@/components/GoogleReviewCta'
-
 import { createPageSeo } from '@/lib/seo'
+
+const BoardingPassGenerator = lazy(() =>
+  import('@/components/BoardingPassGenerator').then((m) => ({ default: m.BoardingPassGenerator }))
+)
+const FamilyCashflowPlanner = lazy(() =>
+  import('@/components/FamilyCashflowPlanner').then((m) => ({ default: m.FamilyCashflowPlanner }))
+)
+const CertificateCarousel = lazy(() =>
+  import('@/components/CertificateCarousel').then((m) => ({ default: m.CertificateCarousel }))
+)
 
 export const Route = createFileRoute('/')({
   loader: async () => {
@@ -83,7 +88,8 @@ function Home() {
       if (transitionTimer !== undefined) window.clearTimeout(transitionTimer)
     }
   }, [])
- // Sticky Jump bar state & refs (Dynamically attaches right under #site-main-header with 0 gap)
+
+  // Sticky Jump bar state & refs (Dynamically attaches right under #site-main-header with 0 gap)
   const [isMobileSticky, setIsMobileSticky] = useState(false)
   const [isDesktopSticky, setIsDesktopSticky] = useState(false)
   const [headerOffset, setHeaderOffset] = useState(68)
@@ -284,7 +290,7 @@ function Home() {
             <dl className="mt-7 grid grid-cols-2 gap-3.5">
               {settings.trustStats.map((s) => (
                 <div key={s.label} className="rounded-2xl bg-white/5 border border-white/10 p-4 text-center">
-                  <dt className="font-display text-2xl font-extrabold text-white"><AnimatedStatValue value={s.value} /></dt>
+                  <dt className="font-display text-2xl font-extrabold text-white">{s.value}</dt>
                   <dd className="mt-1 text-[10px] uppercase tracking-wider text-forest-100/70">{s.label}</dd>
                 </div>
               ))}
@@ -355,8 +361,7 @@ function Home() {
           </div>
         </section>
 
-    
-       {/* MOBILE JUMP TO BAR */}
+        {/* MOBILE JUMP TO BAR */}
         <div ref={mobileRef} className="h-[46px]">
           <div
             style={isMobileSticky ? { top: `${headerOffset}px` } : undefined}
@@ -499,7 +504,9 @@ function Home() {
         </section>
 
         {/* 🎫 VIRTUAL BOARDING PASS (Mobile) */}
-        <BoardingPassGenerator />
+        <Suspense fallback={<div className="my-8 h-40 animate-pulse rounded-3xl bg-forest-950/20" />}>
+          <BoardingPassGenerator />
+        </Suspense>
 
         {/* COACHING SECTION (MOBILE) */}
         <section id="coaching-m" className="px-5 py-20 border-b border-forest-900/10 bg-white">
@@ -568,7 +575,10 @@ function Home() {
           </ol>
         </section>
 
-        <FamilyCashflowPlanner />
+        {/* FAMILY CASHFLOW PLANNER (Mobile) */}
+        <Suspense fallback={<div className="my-8 h-40 animate-pulse rounded-3xl bg-forest-900/20" />}>
+          <FamilyCashflowPlanner />
+        </Suspense>
 
         {/* RECENT APPROVALS (MOBILE) */}
         {homepageApprovals.length > 0 && (
@@ -590,7 +600,10 @@ function Home() {
           </section>
         )}
 
-        <CertificateCarousel certificates={certificates} id="certificates-m" />
+        {/* CERTIFICATE CAROUSEL (Mobile) */}
+        <Suspense fallback={null}>
+          <CertificateCarousel certificates={certificates} id="certificates-m" />
+        </Suspense>
 
         {/* TESTIMONIALS (MOBILE) */}
         {homepageTestimonials.length > 0 && (
@@ -732,7 +745,7 @@ function Home() {
             <div className="relative isolate">
               <InteractiveFlightGlobe
                 selectedCountry={selectedCountry}
-                className="pointer-events-none absolute -top-12 -right-10 z-0 h-[460px] w-[460px] opacity-85 xl:-right-6 xl:h-[520px] xl:w-[520px]"
+                className="pointer-events-none absolute -top-16 right-0 z-0 h-[440px] w-[440px] opacity-75 xl:right-4 xl:h-[490px] xl:w-[490px]"
               />
               <div className="relative z-10">
               <div className="animate-rise">
@@ -824,7 +837,7 @@ function Home() {
               </div>
             </div>
 
-            <div className="relative mx-auto w-full max-w-md lg:max-w-none">
+            <div className="relative z-10 mx-auto w-full max-w-md lg:max-w-none">
               <div className="absolute -inset-4 rotate-3 rounded-[2.5rem] bg-coral-500/90" />
               <img
                 src={img('/img/hero.webp', 720, 860)}
@@ -862,7 +875,7 @@ function Home() {
           <dl className="mx-auto mt-12 grid max-w-7xl grid-cols-2 gap-6 px-6 pb-16 sm:grid-cols-4">
             {settings.trustStats.map((s) => (
               <div key={s.label}>
-                <dt className="font-display text-3xl font-extrabold text-white"><AnimatedStatValue value={s.value} /></dt>
+                <dt className="font-display text-3xl font-extrabold text-white">{s.value}</dt>
                 <dd className="mt-1 text-xs uppercase tracking-wider text-forest-100/60">{s.label}</dd>
               </div>
             ))}
@@ -908,7 +921,7 @@ function Home() {
           </div>
         </section>
 
-      {/* DESKTOP FIXED HEADER + JUMP TO BAR COMBO */}
+        {/* DESKTOP FIXED HEADER + JUMP TO BAR COMBO */}
         {/* DESKTOP JUMP TO BAR */}
         <div
           ref={desktopRef}
@@ -1038,7 +1051,9 @@ function Home() {
         </section>
 
         {/* 🎫 VIRTUAL BOARDING PASS (Desktop) */}
-        <BoardingPassGenerator />
+        <Suspense fallback={<div className="my-8 h-40 animate-pulse rounded-3xl bg-forest-950/20" />}>
+          <BoardingPassGenerator />
+        </Suspense>
 
         {/* DESKTOP COACHING */}
         <section id="coaching-desktop" className="mx-auto grid max-w-7xl items-center gap-14 px-6 py-24 lg:grid-cols-2">
@@ -1097,7 +1112,10 @@ function Home() {
           </div>
         </section>
 
-        <FamilyCashflowPlanner />
+        {/* FAMILY CASHFLOW PLANNER (Desktop) */}
+        <Suspense fallback={<div className="my-8 h-40 animate-pulse rounded-3xl bg-forest-900/20" />}>
+          <FamilyCashflowPlanner />
+        </Suspense>
 
         {/* DESKTOP RECENT APPROVALS */}
         {homepageApprovals.length > 0 && (
@@ -1119,7 +1137,10 @@ function Home() {
           </section>
         )}
 
-        <CertificateCarousel certificates={certificates} id="certificates-desktop" />
+        {/* CERTIFICATE CAROUSEL (Desktop) */}
+        <Suspense fallback={null}>
+          <CertificateCarousel certificates={certificates} id="certificates-desktop" />
+        </Suspense>
 
         {/* DESKTOP TESTIMONIALS */}
         {homepageTestimonials.length > 0 && (
