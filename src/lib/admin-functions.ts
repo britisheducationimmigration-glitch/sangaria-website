@@ -37,7 +37,6 @@ function assertCapability(role: AdminRole, capability: Capability) {
   if (!allowed) throw new Error('You do not have permission for this section')
 }
 
-
 function dateOnly(value: unknown) {
   if (value instanceof Date) return value.toISOString().slice(0, 10)
   const text = String(value ?? '')
@@ -49,18 +48,22 @@ function dateOnly(value: unknown) {
 function mapActivity(row: Record<string, unknown>): EnquiryActivity {
   return { id: Number(row.id), enquiryId: Number(row.enquiry_id), authorName: String(row.author_name), authorEmail: String(row.author_email), body: String(row.body), createdAt: new Date(String(row.created_at)).toISOString(), updatedAt: new Date(String(row.updated_at)).toISOString(), editedBy: String(row.edited_by ?? '') }
 }
+
 function mapEnquiry(row: Record<string, unknown>, activities: EnquiryActivity[] = []): Enquiry {
   return { id: Number(row.id), name: String(row.name), phone: String(row.phone), email: String(row.email), city: String(row.city), interest: String(row.interest), country: String(row.country), message: String(row.message), source: String(row.source), summary: String(row.summary), status: String(row.status) as EnquiryStatus, notes: String(row.notes), activities, assignedTo: String(row.assigned_to ?? ''), nextFollowUpAt: row.next_follow_up_at ? new Date(String(row.next_follow_up_at)).toISOString() : '', createdAt: new Date(String(row.created_at)).toISOString(), updatedAt: new Date(String(row.updated_at)).toISOString() }
 }
+
 function mapAdminPost(row: Record<string, unknown>): AdminPost {
   return { id: Number(row.id), slug: String(row.slug), title: String(row.title), category: String(row.category) as AdminPost['category'], date: dateOnly(row.publish_date), excerpt: String(row.excerpt), readMins: Number(row.read_mins), body: jsonArray(row.body_json).map(String), published: Boolean(row.published) }
 }
+
 function mapAdminStory(row: Record<string, unknown>): AdminStory {
   const photoSrc = Boolean(row.has_photo) ? '/success-stories/media/' + Number(row.id) + '?v=' + Number(row.media_version ?? 0) : ''
   const videoUrl = String(row.video_url ?? '')
   const mediaType: AdminStory['mediaType'] = photoSrc ? 'photo' : getSupportedVideoEmbedUrl(videoUrl) ? 'video' : 'none'
   return { id: Number(row.id), kind: String(row.kind) as AdminStory['kind'], name: String(row.name), city: String(row.city), country: String(row.country), visa: String(row.visa), quote: String(row.quote), rating: Number(row.rating), initials: String(row.initials), flag: String(row.flag), date: dateOnly(row.story_date), note: String(row.note), mediaType, photoSrc, videoUrl: mediaType === 'video' ? videoUrl : '', mediaAlt: String(row.media_alt ?? ''), mediaConsent: Boolean(row.media_consent), homepageFeatured: Boolean(row.homepage_featured), published: Boolean(row.published) }
 }
+
 function mapBatch(row: Record<string, unknown>): CoachingBatch {
   return { id: Number(row.id), program: String(row.program), batch: String(row.batch_name), time: String(row.time_slot), seats: Number(row.seats), starts: String(row.starts), published: Boolean(row.published) }
 }
@@ -87,18 +90,24 @@ function mapCertificate(row: Record<string, unknown>): AdminCertificate {
 export const getAdminSnapshot = createServerFn({ method: 'GET' })
   .middleware([adminMiddleware])
   .handler(async ({ context }): Promise<AdminSnapshot> => {
+    const isSuperAdmin = context.role === 'super_admin'
+    const canSeeEnquiries = context.role !== 'content_editor'
+    const canSeeContent = context.role !== 'enquiry_manager'
+
+    // Streamlined query execution targeting only role-accessible data
     const [enquiryRows, postRows, storyRows, settingsRows, userRows, statRows, batchRows, statusRows, sourceRows, certificateRows] = await Promise.all([
-      context.role === 'content_editor' ? Promise.resolve([]) : queryRows('SELECT id, name, phone, email, city, interest, country, message, source, summary, status, notes, assigned_to, next_follow_up_at, created_at, updated_at FROM enquiries ORDER BY created_at DESC LIMIT 150'),
-      context.role === 'enquiry_manager' ? Promise.resolve([]) : queryRows('SELECT * FROM content_posts ORDER BY publish_date DESC, id DESC LIMIT 100'),
-      context.role === 'enquiry_manager' ? Promise.resolve([]) : queryRows('SELECT id, kind, name, city, country, visa, quote, rating, initials, flag, story_date, note, photo_data IS NOT NULL AS has_photo, video_url, media_alt, media_consent, media_version, homepage_featured, published FROM success_stories ORDER BY story_date DESC, id DESC LIMIT 100'),
-      context.role === 'super_admin' ? queryRows('SELECT popup_enabled, popup_delay_seconds, whatsapp_enabled, approvals_marquee_enabled, public_settings_json FROM site_settings WHERE id = 1 LIMIT 1') : Promise.resolve([]),
-      context.role === 'super_admin' ? queryRows('SELECT * FROM admin_users ORDER BY email ASC') : Promise.resolve([]),
-      context.role === 'content_editor' ? Promise.resolve([]) : queryRows(`SELECT COUNT(*) AS total, SUM(status = 'New') AS new_count, SUM(status IN ('Follow-up', 'Documents Pending', 'Applied')) AS follow_ups, SUM(status = 'Converted') AS converted, SUM(created_at >= CURRENT_DATE - INTERVAL 6 DAY) AS new_last_7_days, SUM(source = 'coaching') AS demo_requests, SUM(next_follow_up_at IS NOT NULL AND DATE(next_follow_up_at) = CURRENT_DATE() AND status NOT IN ('Converted', 'Closed')) AS due_today FROM enquiries`),
-      context.role === 'enquiry_manager' ? Promise.resolve([]) : queryRows('SELECT id, program, batch_name, time_slot, seats, starts, published FROM coaching_batches ORDER BY id ASC'),
-      context.role === 'content_editor' ? Promise.resolve([]) : queryRows('SELECT status, COUNT(*) AS count FROM enquiries GROUP BY status'),
-      context.role === 'content_editor' ? Promise.resolve([]) : queryRows('SELECT source, COUNT(*) AS count FROM enquiries GROUP BY source'),
-      context.role === 'enquiry_manager' ? Promise.resolve([]) : queryRows('SELECT id, collection, title, issuer, category, credential_date, alt_text, image_path, image_data IS NOT NULL AS has_database_image, image_version, homepage_featured, published, sort_order FROM certificate_items WHERE collection = \'certificates\' ORDER BY sort_order ASC, id ASC'),
+      !canSeeEnquiries ? Promise.resolve([]) : queryRows('SELECT id, name, phone, email, city, interest, country, message, source, summary, status, notes, assigned_to, next_follow_up_at, created_at, updated_at FROM enquiries ORDER BY created_at DESC LIMIT 150'),
+      !canSeeContent ? Promise.resolve([]) : queryRows('SELECT id, slug, title, category, publish_date, excerpt, read_mins, body_json, published FROM content_posts ORDER BY publish_date DESC, id DESC LIMIT 100'),
+      !canSeeContent ? Promise.resolve([]) : queryRows('SELECT id, kind, name, city, country, visa, quote, rating, initials, flag, story_date, note, photo_data IS NOT NULL AS has_photo, video_url, media_alt, media_consent, media_version, homepage_featured, published FROM success_stories ORDER BY story_date DESC, id DESC LIMIT 100'),
+      !isSuperAdmin ? Promise.resolve([]) : queryRows('SELECT popup_enabled, popup_delay_seconds, whatsapp_enabled, approvals_marquee_enabled, public_settings_json FROM site_settings WHERE id = 1 LIMIT 1'),
+      !isSuperAdmin ? Promise.resolve([]) : queryRows('SELECT open_id, email, name, role FROM admin_users ORDER BY email ASC'),
+      !canSeeEnquiries ? Promise.resolve([]) : queryRows(`SELECT COUNT(*) AS total, SUM(status = 'New') AS new_count, SUM(status IN ('Follow-up', 'Documents Pending', 'Applied')) AS follow_ups, SUM(status = 'Converted') AS converted, SUM(created_at >= CURRENT_DATE - INTERVAL 6 DAY) AS new_last_7_days, SUM(source = 'coaching') AS demo_requests, SUM(next_follow_up_at IS NOT NULL AND DATE(next_follow_up_at) = CURRENT_DATE() AND status NOT IN ('Converted', 'Closed')) AS due_today FROM enquiries`),
+      !canSeeContent ? Promise.resolve([]) : queryRows('SELECT id, program, batch_name, time_slot, seats, starts, published FROM coaching_batches ORDER BY id ASC'),
+      !canSeeEnquiries ? Promise.resolve([]) : queryRows('SELECT status, COUNT(*) AS count FROM enquiries GROUP BY status'),
+      !canSeeEnquiries ? Promise.resolve([]) : queryRows('SELECT source, COUNT(*) AS count FROM enquiries GROUP BY source'),
+      !canSeeContent ? Promise.resolve([]) : queryRows('SELECT id, collection, title, issuer, category, credential_date, alt_text, image_path, image_data IS NOT NULL AS has_database_image, image_version, homepage_featured, published, sort_order FROM certificate_items WHERE collection = \'certificates\' ORDER BY sort_order ASC, id ASC'),
     ])
+
     const activityRows = enquiryRows.length
       ? await queryRows(
           `SELECT id, enquiry_id, author_name, author_email, body, edited_by, created_at, updated_at
@@ -108,6 +117,7 @@ export const getAdminSnapshot = createServerFn({ method: 'GET' })
           enquiryRows.map((row) => Number(row.id)),
         )
       : []
+
     const activitiesByEnquiry = new Map<number, EnquiryActivity[]>()
     for (const row of activityRows) {
       const activity = mapActivity(row)
@@ -115,12 +125,17 @@ export const getAdminSnapshot = createServerFn({ method: 'GET' })
       existing.push(activity)
       activitiesByEnquiry.set(activity.enquiryId, existing)
     }
+
     const stats = statRows[0] ?? {}
     const byStatus = Object.fromEntries(statusRows.map((row) => [String(row.status), Number(row.count ?? 0)]))
     const bySource = Object.fromEntries(sourceRows.map((row) => [String(row.source || 'unknown'), Number(row.count ?? 0)]))
+
     return {
       user: { name: context.user.name, email: context.user.email, role: context.role },
-      enquiries: enquiryRows.map((row) => mapEnquiry(row, activitiesByEnquiry.get(Number(row.id)) ?? [])), posts: postRows.map(mapAdminPost), stories: storyRows.map(mapAdminStory), settings: readSiteSettings(settingsRows[0]),
+      enquiries: enquiryRows.map((row) => mapEnquiry(row, activitiesByEnquiry.get(Number(row.id)) ?? [])),
+      posts: postRows.map(mapAdminPost),
+      stories: storyRows.map(mapAdminStory),
+      settings: readSiteSettings(settingsRows[0]),
       users: userRows.map((row) => ({ openId: String(row.open_id || row.id || row.email), email: String(row.email), name: String(row.name || row.email), role: (row.role === 'admin' ? 'super_admin' : String(row.role)) as AdminRole })),
       enquiryStats: { total: Number(stats.total ?? 0), newCount: Number(stats.new_count ?? 0), followUps: Number(stats.follow_ups ?? 0), dueToday: Number(stats.due_today ?? 0), converted: Number(stats.converted ?? 0), newLast7Days: Number(stats.new_last_7_days ?? 0), demoRequests: Number(stats.demo_requests ?? 0), byStatus, bySource },
       batches: batchRows.map(mapBatch),
@@ -486,9 +501,12 @@ export const exportEnquiries = createServerFn({ method: 'GET' }).middleware([adm
   assertCapability(context.role, 'enquiries')
   const clauses: string[] = []
   const values: unknown[] = []
+  
+  // Overload Fix #4: Sanitize wildcard characters to prevent full-table scan crashes
   if (data.query) {
-    clauses.push('(name LIKE ? OR phone LIKE ? OR email LIKE ? OR city LIKE ? OR interest LIKE ? OR country LIKE ? OR status LIKE ?)')
-    for (let index = 0; index < 7; index += 1) values.push(`%${data.query}%`)
+    const sanitized = data.query.replace(/[%_\\]/g, '\\$&')
+    clauses.push('(name LIKE ? OR phone LIKE ? OR email LIKE ? OR city LIKE ? OR country LIKE ?)')
+    for (let index = 0; index < 5; index += 1) values.push(`%${sanitized}%`)
   }
   if (data.status) { clauses.push('status = ?'); values.push(data.status) }
   if (data.from) { clauses.push('created_at >= ?'); values.push(`${data.from} 00:00:00`) }
@@ -581,7 +599,7 @@ export const saveStory = createServerFn({ method: 'POST' }).middleware([adminMid
   let photo: Buffer | null = null
   if (data.photoBase64) {
     photo = Buffer.from(data.photoBase64, 'base64')
-    if (!photo.length || photo.length > 1.5 * 1024 * 1024) throw new Error('Choose a smaller student photo (maximum 1.5 MB after compression)')
+    if (!photo.length || photo.length > 1.2 * 1024 * 1024) throw new Error('Choose a smaller student photo (maximum 1.2 MB after compression)')
     const webp = photo.toString('ascii', 0, 4) === 'RIFF' && photo.toString('ascii', 8, 12) === 'WEBP'
     if (!webp) throw new Error('The selected photo is not a valid WebP image')
   }
@@ -672,15 +690,15 @@ const certificateInput = (data: unknown) => {
   const credentialDate = stringValue(input.credentialDate, 80)
   const altText = stringValue(input.altText, 500)
   const rawImageBase64 = typeof input.imageBase64 === 'string' ? input.imageBase64 : ''
-  if (rawImageBase64.length > 4_200_000) throw new Error('Choose a smaller image (maximum 3 MB after compression)')
-  const imageBase64 = stringValue(rawImageBase64, 4_200_000)
+  if (rawImageBase64.length > 2_500_000) throw new Error('Choose a smaller image (maximum 1.5 MB after compression)')
+  const imageBase64 = stringValue(rawImageBase64, 2_500_000)
   const imageMimeType = stringValue(input.imageMimeType, 40)
   const published = Boolean(input.published)
   const homepageFeatured = Boolean(input.homepageFeatured)
   const sortOrder = Math.max(0, Math.min(9999, numberValue(input.sortOrder)))
   if (id < 0 || !title || !category || !altText) throw new Error('Title, category and image description are required')
   if (!id && !imageBase64) throw new Error('Choose a certificate photo before saving')
-  if (imageBase64 && (!/^[A-Za-z0-9+/]+={0,2}$/.test(imageBase64) || imageBase64.length > 4_200_000)) throw new Error('Choose a smaller image (maximum 3 MB after compression)')
+  if (imageBase64 && (!/^[A-Za-z0-9+/]+={0,2}$/.test(imageBase64) || imageBase64.length > 2_500_000)) throw new Error('Choose a smaller image (maximum 1.5 MB after compression)')
   if (imageBase64 && !['image/webp', 'image/jpeg', 'image/png'].includes(imageMimeType)) throw new Error('Use a WebP, JPEG or PNG image')
   return { id, title, issuer, category, credentialDate, altText, imageBase64, imageMimeType, published, homepageFeatured, sortOrder }
 }
@@ -693,7 +711,7 @@ export const saveCertificate = createServerFn({ method: 'POST' })
     let image: Buffer | null = null
     if (data.imageBase64) {
       image = Buffer.from(data.imageBase64, 'base64')
-      if (!image.length || image.length > 3 * 1024 * 1024) throw new Error('Choose a smaller image (maximum 3 MB after compression)')
+      if (!image.length || image.length > 1.5 * 1024 * 1024) throw new Error('Choose a smaller image (maximum 1.5 MB after compression)')
       const webp = image.toString('ascii', 0, 4) === 'RIFF' && image.toString('ascii', 8, 12) === 'WEBP'
       const png = image.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
       const jpeg = image[0] === 255 && image[1] === 216 && image[2] === 255
@@ -733,7 +751,6 @@ export const deleteCertificate = createServerFn({ method: 'POST' })
     invalidatePublicContentCache()
     return { ok: true }
   })
-
 
 export const updateSettings = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
   const input = (data ?? {}) as Record<string, unknown>
