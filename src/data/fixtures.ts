@@ -892,7 +892,7 @@ const baseCountries: Country[] = [
     visas: ['Student Visa', 'Opportunity Card', 'EU Blue Card', 'Schengen Visitor'],
     highlights: ['English-taught masters', 'Strong STEM job market', 'Path to EU Blue Card'],
     costs: [
-      { label: 'Living funds (student visa, 2026)', value: 'NZD 20,000 / year' },
+      { label: 'Living funds (student visa, 2026)', value: '€11,904/ year' },
       { label: 'Visa fee', value: '€75' },
       { label: 'Health insurance', value: '€120 / month' },
     ],
