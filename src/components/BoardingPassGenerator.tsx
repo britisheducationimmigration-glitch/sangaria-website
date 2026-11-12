@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plane, MapPin, X, ArrowRight, MessageCircle, RotateCcw, Download } from 'lucide-react'
+import { Plane, MapPin, X, ArrowRight, MessageCircle, RotateCcw, Download, Scissors } from 'lucide-react'
 
 export function BoardingPassGenerator() {
   const [name, setName] = useState('')
@@ -382,77 +382,93 @@ export function BoardingPassGenerator() {
                   aria-hidden={flipped}
                   style={{ gridArea: 'ticket', backfaceVisibility: 'hidden' }}
                 >
-                {/* Front of the pass */}
-              <div className="rounded-2xl bg-cream text-forest-950 shadow-2xl border border-forest-900/15 overflow-hidden">
-                <div className="ticket-hologram px-4 py-2.5 text-white flex items-center justify-between">
-                  <span className="text-xs font-black">BRITISH EDUCATION & IMMIGRATION</span>
-                  <span className="rounded-full bg-coral-500 px-2 py-0.5 font-mono text-[9px] font-bold uppercase">
-                    OFFICIAL PASS
-                  </span>
-                </div>
-  
-                <div className="p-4 sm:p-5 bg-[#fffdf7]">
-                  <div className="flex items-center justify-between pb-3 border-b border-forest-900/10">
-                    <div>
-                      <span className="font-mono text-[9px] font-bold text-forest-900/60 uppercase">ORIGIN</span>
-                      <p className="text-3xl font-black text-forest-900 leading-none mt-0.5">{orgCode}</p>
-                      <p className="text-[11px] font-semibold text-forest-900/75 mt-0.5">{displayOrigin.split('(')[0]}</p>
+                  {/* Front of the pass with realistic airline ticket tear-off notches */}
+                  <div className="relative rounded-2xl bg-cream text-forest-950 shadow-2xl border border-forest-900/15 overflow-hidden">
+                    {/* Left & Right Circular Ticket Tear-off Notches */}
+                    <div className="absolute top-[49%] -left-3 size-6 rounded-full bg-forest-900 border border-forest-900/20 z-20" aria-hidden="true" />
+                    <div className="absolute top-[49%] -right-3 size-6 rounded-full bg-forest-900 border border-forest-900/20 z-20" aria-hidden="true" />
+
+                    <div className="ticket-hologram px-4 py-2.5 text-white flex items-center justify-between">
+                      <span className="text-xs font-black tracking-wide">BRITISH EDUCATION & IMMIGRATION</span>
+                      <span className="rounded-full bg-coral-500 px-2 py-0.5 font-mono text-[9px] font-bold uppercase shadow-sm">
+                        OFFICIAL PASS
+                      </span>
                     </div>
-  
-                    <div className="flex flex-col items-center">
-                      <span className="text-[8px] font-mono font-bold text-coral-600 uppercase">NON-STOP</span>
-                      <div className="flex items-center gap-1.5 text-coral-500 my-1">
-                        <div className="w-6 h-0.5 bg-coral-400 border-dashed" />
-                        <Plane className="size-4 transform rotate-90" />
-                        <div className="w-6 h-0.5 bg-coral-400 border-dashed" />
+
+                    <div className="p-4 sm:p-5 bg-[#fffdf7]">
+                      <div className="flex items-center justify-between pb-3 border-b border-forest-900/10">
+                        <div>
+                          <span className="font-mono text-[9px] font-bold text-forest-900/60 uppercase">ORIGIN</span>
+                          <p className="text-3xl font-black text-forest-900 leading-none mt-0.5">{orgCode}</p>
+                          <p className="text-[11px] font-semibold text-forest-900/75 mt-0.5">{displayOrigin.split('(')[0]}</p>
+                        </div>
+
+                        <div className="flex flex-col items-center">
+                          <span className="text-[8px] font-mono font-bold text-coral-600 uppercase">NON-STOP</span>
+                          <div className="flex items-center gap-1.5 text-coral-500 my-1">
+                            <div className="w-6 h-0.5 bg-coral-400 border-dashed" />
+                            <Plane className="size-4 transform rotate-90" />
+                            <div className="w-6 h-0.5 bg-coral-400 border-dashed" />
+                          </div>
+                          <span className="text-[9px] text-forest-900/60 font-bold">BEI · {year}</span>
+                        </div>
+
+                        <div className="text-right">
+                          <span className="font-mono text-[9px] font-bold text-forest-900/60 uppercase">DESTINATION</span>
+                          <p className="text-3xl font-black text-forest-900 leading-none mt-0.5">{destCode}</p>
+                          <p className="text-[11px] font-semibold text-forest-900/75 mt-0.5">{displayDest.split(',')[0]}</p>
+                        </div>
                       </div>
-                      <span className="text-[9px] text-forest-900/60 font-bold">BEI · {year}</span>
-                    </div>
-  
-                    <div className="text-right">
-                      <span className="font-mono text-[9px] font-bold text-forest-900/60 uppercase">DESTINATION</span>
-                      <p className="text-3xl font-black text-forest-900 leading-none mt-0.5">{destCode}</p>
-                      <p className="text-[11px] font-semibold text-forest-900/75 mt-0.5">{displayDest.split(',')[0]}</p>
-                    </div>
-                  </div>
-  
-                  <div className="grid grid-cols-2 gap-2.5 py-3 text-xs border-b border-forest-900/10">
-                    <div>
-                      <span className="block text-[9px] font-mono text-forest-900/60 uppercase">Passenger</span>
-                      <span className="font-bold text-forest-900 truncate block text-sm">{passName}</span>
-                    </div>
-                    <div>
-                      <span className="block text-[9px] font-mono text-forest-900/60 uppercase">Visa Goal</span>
-                      <span className="font-bold text-forest-900 truncate block">{displayVisa}</span>
-                    </div>
-                    <div>
-                      <span className="block text-[9px] font-mono text-forest-900/60 uppercase">Intake</span>
-                      <span className="font-bold text-forest-900 truncate block">{displayIntake}</span>
-                    </div>
-                    <div>
-                      <span className="block text-[9px] font-mono text-forest-900/60 uppercase">Flight / Seat</span>
-                      <span className="font-bold text-forest-900 truncate block">BEI-{year} · 01A</span>
-                    </div>
-                  </div>
-  
-                  <div className="pt-3 flex items-center justify-between gap-2">
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-[2px] h-6 opacity-80" aria-hidden>
-                        {[12, 24, 8, 16, 26, 6, 20, 14, 26, 10, 22, 16, 12, 26, 8, 18, 22, 10].map((h, i) => (
-                          <div key={i} className="bg-forest-950" style={{ width: i % 3 === 0 ? '2.5px' : '1.5px', height: `${h}px` }} />
-                        ))}
+
+                      {/* Perforated divider line with scissors */}
+                      <div className="relative py-2 flex items-center justify-center">
+                        <div className="w-full border-b border-dashed border-forest-900/20" />
+                        <span className="absolute bg-[#fffdf7] px-2 text-[9px] font-mono text-forest-900/40 flex items-center gap-1">
+                          <Scissors className="size-3 text-coral-500" /> TEAR OFF HERE
+                        </span>
                       </div>
-                      <span className="font-mono text-[8px] text-forest-900/60 tracking-widest mt-0.5">BEI-{orgCode}-{destCode}-{year}</span>
-                    </div>
-  
-                    <div className="rounded-lg border-2 border-dashed border-coral-500 bg-coral-50 px-2.5 py-1 text-center">
-                      <span className="text-[9px] font-black uppercase text-coral-600 block leading-tight">VISA APPROVED</span>
-                      <span className="text-[8px] font-bold text-forest-900/70 block">Sangaria Office</span>
+
+                      <div className="grid grid-cols-2 gap-2.5 py-2.5 text-xs border-b border-forest-900/10">
+                        <div>
+                          <span className="block text-[9px] font-mono text-forest-900/60 uppercase">Passenger</span>
+                          <span className="font-bold text-forest-900 truncate block text-sm">{passName}</span>
+                        </div>
+                        <div>
+                          <span className="block text-[9px] font-mono text-forest-900/60 uppercase">Visa Goal</span>
+                          <span className="font-bold text-forest-900 truncate block">{displayVisa}</span>
+                        </div>
+                        <div>
+                          <span className="block text-[9px] font-mono text-forest-900/60 uppercase">Target Intake</span>
+                          <span className="font-bold text-forest-900 truncate block">{displayIntake}</span>
+                        </div>
+                        <div>
+                          <span className="block text-[9px] font-mono text-forest-900/60 uppercase">Flight / Seat</span>
+                          <span className="font-bold text-coral-600 truncate block">BEI-{year} · 01A</span>
+                        </div>
+                      </div>
+
+                      <div className="pt-3 flex items-center justify-between gap-2">
+                        {/* Barcode with animated red laser scanner */}
+                        <div className="relative overflow-hidden pr-2">
+                          <div className="flex items-center gap-[2px] h-7 opacity-85" aria-hidden="true">
+                            {[12, 24, 8, 16, 26, 6, 20, 14, 26, 10, 22, 16, 12, 26, 8, 18, 22, 10, 14, 26, 8].map((h, i) => (
+                              <div key={i} className="bg-forest-950" style={{ width: i % 3 === 0 ? '2.5px' : '1.5px', height: `${h}px` }} />
+                            ))}
+                          </div>
+                          {/* Laser scanning beam */}
+                          <div className="absolute inset-x-0 top-0 h-0.5 bg-red-500 opacity-80 animate-pulse" />
+                          <span className="font-mono text-[8px] text-forest-900/60 tracking-widest mt-1 block">BEI-{orgCode}-{destCode}-{year}</span>
+                        </div>
+
+                        <div className="rounded-lg border-2 border-dashed border-coral-500 bg-coral-50 px-2.5 py-1 text-center shrink-0">
+                          <span className="text-[9px] font-black uppercase text-coral-600 block leading-tight">VISA APPROVED</span>
+                          <span className="text-[8px] font-bold text-forest-900/70 block">Sangaria Office</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-                </div>
+
                 <div
                   aria-hidden={!flipped}
                   style={{
@@ -461,7 +477,7 @@ export function BoardingPassGenerator() {
                     transform: 'rotateY(180deg)',
                   }}
                 >
-                  <div className="rounded-2xl border border-forest-900/15 bg-cream text-forest-900 shadow-2xl overflow-hidden">
+                  <div className="relative rounded-2xl border border-forest-900/15 bg-cream text-forest-900 shadow-2xl overflow-hidden">
                     <div className="ticket-hologram flex flex-col gap-1.5 px-4 py-3 text-white sm:flex-row sm:items-center sm:justify-between">
                       <span className="text-[10px] font-black leading-tight tracking-wide sm:text-xs">PRE-DEPARTURE CLEARANCE CHECKLIST</span>
                       <span className="w-fit rounded-full bg-coral-500 px-2 py-0.5 font-mono text-[9px] font-bold uppercase">BACK SIDE</span>

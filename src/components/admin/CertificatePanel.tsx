@@ -29,18 +29,19 @@ const labelClass = 'block text-xs font-bold text-forest-900/75'
 async function compressImage(file: File) {
   if (!file.type.startsWith('image/')) throw new Error('Choose an image file.')
   const bitmap = await createImageBitmap(file)
-  const scale = Math.min(1, 2200 / Math.max(bitmap.width, bitmap.height))
+  const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height))
   const canvas = document.createElement('canvas')
   canvas.width = Math.max(1, Math.round(bitmap.width * scale))
   canvas.height = Math.max(1, Math.round(bitmap.height * scale))
   const context = canvas.getContext('2d')
   if (!context) throw new Error('Could not prepare this image.')
+  context.imageSmoothingQuality = 'high'
   context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
   bitmap.close()
   const blob = await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob((value) => value ? resolve(value) : reject(new Error('Could not compress this image.')), 'image/webp', 0.86)
+    canvas.toBlob((value) => value ? resolve(value) : reject(new Error('Could not compress this image.')), 'image/webp', 0.80)
   })
-  if (blob.size > 3 * 1024 * 1024) throw new Error('Image is still too large. Choose a smaller photo.')
+  if (blob.size > 1.2 * 1024 * 1024) throw new Error('Image is still too large. Choose a smaller photo.')
   const imageSrc = URL.createObjectURL(blob)
   const dataUrl = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader()
@@ -183,7 +184,7 @@ export function CertificatePanel({ items, onReload, onNotice }: {
                 <ImagePlus aria-hidden="true" className="size-4" /> Choose photo
                 <input type="file" accept="image/jpeg,image/png,image/webp" onChange={choosePhoto} className="sr-only" />
               </label>
-              <p className="mt-2 text-xs text-forest-900/60">JPG, PNG or WebP. The photo is resized and stored in the site database (up to 3 MB).</p>
+              <p className="mt-2 text-xs text-forest-900/60">JPG, PNG or WebP. Auto-optimized for crisp clarity & fast loading.</p>
             </div>
             {draft.imageSrc
               ? <div className="flex aspect-[4/3] items-center justify-center rounded-xl bg-cream p-3"><img src={draft.imageSrc} alt="Selected certificate preview" className="certificate-image-enhanced max-h-full max-w-full object-contain" /></div>

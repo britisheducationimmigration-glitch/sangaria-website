@@ -1,9 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useEffect, useState, type FormEvent, type MouseEvent, type ReactNode } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { Phone, MessageCircle } from 'lucide-react'
 import { getAdminCashflow, getAdminSnapshot, addEnquiryActivity, deleteAdminUser, deleteBatch, deleteEnquiry, deleteEnquiryActivity, deletePost, exportEnquiries, saveAdminUser, saveBatch, saveCashflow, savePost, updateEnquiry, updateEnquiryActivity, updateSettings, saveFaq, saveTrustStat, saveContactDetails } from '@/lib/admin-functions'
 import { CertificatePanel } from '@/components/admin/CertificatePanel'
 import { StoryEditor } from '@/components/admin/StoryEditor'
-import type { AdminPost, AdminRole, AdminSnapshot, AdminStory, AdminUser, CoachingBatch, Enquiry, EnquiryActivity, EnquiryStatus } from '@/lib/content-types'
+import type { AdminPost, AdminRole, AdminSnapshot, AdminStory, AdminUser, CoachingBatch, Enquiry, EnquiryStatus } from '@/lib/content-types'
 import { defaultCashflowData, CountryCashflow } from '@/data/cashflow'
 import { formatBatchStartDate, getBatchDateStatus, isValidBatchStartDate } from '@/lib/batch-dates'
 import { PolicyWatchPanel } from '@/components/admin/PolicyWatchPanel'
@@ -124,7 +125,7 @@ function AdminPage() {
                 key={value}
                 type="button"
                 onClick={() => selectTab(value)}
-                className={`min-h-11 shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold ${tab === value ? 'bg-forest-900 text-white' : 'bg-white ring-1 ring-forest-900/10'}`}
+                className={`min-h-11 shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold transition ${tab === value ? 'bg-forest-900 text-white shadow-sm' : 'bg-white ring-1 ring-forest-900/10 hover:bg-forest-50'}`}
               >
                 {label}
               </button>
@@ -143,7 +144,7 @@ function AdminPage() {
         {tab === 'stories' && <ContentPanel type="stories" items={snapshot.stories} selected={selectedStory} onSelect={(item) => setSelectedStory(item as AdminStory | null)} onReload={reload} onNotice={showNotice} />}
         {tab === 'certificates' && <CertificatePanel items={snapshot.certificates} onReload={reload} onNotice={showNotice} />}
         {tab === 'batches' && <BatchPanel items={snapshot.batches} selected={selectedBatch} onSelect={setSelectedBatch} onReload={reload} onNotice={showNotice} />}
-		{tab === 'budget' && <CashflowAdminPanel onNotice={showNotice} />}
+        {tab === 'budget' && <CashflowAdminPanel onNotice={showNotice} />}
         {tab === 'settings' && <SettingsPanel settings={snapshot.settings} onReload={reload} onNotice={showNotice} onDirtyChange={setSettingsDirty} />}
         {tab === 'users' && <UsersPanel users={snapshot.users} currentEmail={snapshot.user.email} onReload={reload} onNotice={showNotice} />}
         {showChangePass && <ChangePasswordModal onClose={() => setShowChangePass(false)} onNotice={showNotice} />}
@@ -151,6 +152,7 @@ function AdminPage() {
     </div>
   )
 }
+
 function PasswordInput({ value, onChange, className, placeholder, required, minLength, autoComplete, ariaLabel, toggleClassName }: { value: string; onChange: (value: string) => void; className: string; placeholder: string; required?: boolean; minLength?: number; autoComplete: string; ariaLabel: string; toggleClassName: string }) {
   const [visible, setVisible] = useState(false)
   return (
@@ -401,7 +403,7 @@ function ChangePasswordModal({ onClose, onNotice }: { onClose: () => void; onNot
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true">
       <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-forest-900/10">
         <div className="flex items-center justify-between pb-3 border-b border-forest-900/10">
           <h3 className="text-lg font-extrabold text-forest-900">Change Admin Password</h3>
@@ -438,6 +440,7 @@ function ChangePasswordModal({ onClose, onNotice }: { onClose: () => void; onNot
 function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setStatusFilter, dateFrom, setDateFrom, dateTo, setDateTo, onReload, onNotice, canDelete, canManageComments }: { enquiries: Enquiry[]; stats: AdminSnapshot['enquiryStats']; query: string; setQuery: (value: string) => void; statusFilter: EnquiryStatus | 'All'; setStatusFilter: (value: EnquiryStatus | 'All') => void; dateFrom: string; setDateFrom: (value: string) => void; dateTo: string; setDateTo: (value: string) => void; onReload: () => Promise<void>; onNotice: (message: string) => void; canDelete: boolean; canManageComments: boolean }) {
   const [viewMode, setViewMode] = useState<'list' | 'board'>('list')
   const [selectedBoardLeadId, setSelectedBoardLeadId] = useState<number | null>(null)
+  
   async function downloadExcel() {
     try {
       const result = await exportEnquiries({ data: { query, status: statusFilter === 'All' ? '' : statusFilter, from: dateFrom, to: dateTo } })
@@ -451,29 +454,84 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
       onNotice(`${enquiries.length} leads exported to Excel.`)
     } catch { onNotice('Could not export leads to Excel.') }
   }
+
   const cards = [
     ['All leads', stats.total, 'bg-white'],
-    ['New today', stats.newCount, 'bg-coral-500 text-white'],
+    ['New leads', stats.newCount, 'bg-coral-500 text-white'],
     ['Active pipeline', stats.followUps, 'bg-forest-900 text-white'],
     ['Due today', stats.dueToday, 'bg-amber-100 text-amber-900'],
     ['Converted', stats.converted, 'bg-emerald-100 text-emerald-900'],
   ] as const
+
   const boardStatuses: EnquiryStatus[] = ['New', 'Contacted', 'Follow-up', 'Documents Pending', 'Applied', 'Converted', 'Closed']
   const selectedBoardLead = enquiries.find((item) => item.id === selectedBoardLeadId)
+
   return (
     <section>
-      <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">Lead command centre</p><h2 className="mt-2 text-3xl font-extrabold">Turn enquiries into admissions</h2><p className="mt-1 text-sm text-forest-900/60">Search, move, assign and schedule every lead from one place.</p></div><button type="button" onClick={() => void downloadExcel()} className="w-fit rounded-full bg-forest-900 px-4 py-2 text-sm font-bold text-white">Download Excel</button></div>
-      <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">{cards.map(([label, value, classes]) => <div key={label} className={`rounded-2xl p-4 ring-1 ring-forest-900/10 ${classes}`}><p className="text-xs font-bold uppercase tracking-wider opacity-65">{label}</p><p className="mt-2 text-3xl font-extrabold">{value}</p></div>)}</div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><p className="text-sm font-bold text-forest-900/65">Choose how to review your filtered leads.</p><div role="group" aria-label="Lead display mode" className="inline-flex rounded-full bg-white p-1 ring-1 ring-forest-900/10"><button type="button" aria-pressed={viewMode === 'list'} onClick={() => setViewMode('list')} className={'rounded-full px-4 py-2 text-xs font-bold ' + (viewMode === 'list' ? 'bg-forest-900 text-white' : 'text-forest-900/65')}>List</button><button type="button" aria-pressed={viewMode === 'board'} onClick={() => setViewMode('board')} className={'rounded-full px-4 py-2 text-xs font-bold ' + (viewMode === 'board' ? 'bg-forest-900 text-white' : 'text-forest-900/65')}>Pipeline board</button></div></div>
+      <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">Lead command centre</p>
+          <h2 className="mt-2 text-3xl font-extrabold">Turn enquiries into admissions</h2>
+          <p className="mt-1 text-sm text-forest-900/60">Search, move, assign and schedule every lead from one place.</p>
+        </div>
+        <button type="button" onClick={() => void downloadExcel()} className="w-fit rounded-full bg-forest-900 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-forest-800">
+          Download Excel
+        </button>
+      </div>
+
+      <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        {cards.map(([label, value, classes]) => (
+          <div key={label} className={`rounded-2xl p-4 ring-1 ring-forest-900/10 ${classes}`}>
+            <p className="text-xs font-bold uppercase tracking-wider opacity-65">{label}</p>
+            <p className="mt-2 text-3xl font-extrabold">{value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* QUICK 1-TAP STATUS PILLS (IMPROVEMENT A) */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <span className="text-xs font-bold uppercase tracking-wider text-forest-900/50 mr-1">Quick Filters:</span>
+        {(['All', 'New', 'Follow-up', 'Documents Pending', 'Applied', 'Converted', 'Closed'] as const).map((st) => {
+          const isActive = statusFilter === st
+          const count = st === 'All' ? stats.total : (stats.byStatus[st] ?? 0)
+          return (
+            <button
+              key={st}
+              type="button"
+              onClick={() => setStatusFilter(st)}
+              className={'rounded-full px-3.5 py-1 text-xs font-bold transition shadow-xs ' + (isActive ? 'bg-coral-500 text-white' : 'bg-white text-forest-900/75 ring-1 ring-forest-900/10 hover:bg-forest-50')}
+            >
+              {st} <span className={'ml-1 text-[10px] ' + (isActive ? 'text-white/80' : 'text-forest-900/40')}>({count})</span>
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm font-bold text-forest-900/65">Showing {enquiries.length} leads</p>
+        <div role="group" aria-label="Lead display mode" className="inline-flex rounded-full bg-white p-1 ring-1 ring-forest-900/10">
+          <button type="button" aria-pressed={viewMode === 'list'} onClick={() => setViewMode('list')} className={'rounded-full px-4 py-2 text-xs font-bold ' + (viewMode === 'list' ? 'bg-forest-900 text-white' : 'text-forest-900/65')}>List</button>
+          <button type="button" aria-pressed={viewMode === 'board'} onClick={() => setViewMode('board')} className={'rounded-full px-4 py-2 text-xs font-bold ' + (viewMode === 'board' ? 'bg-forest-900 text-white' : 'text-forest-900/65')}>Pipeline board</button>
+        </div>
+      </div>
+
       <div className="mb-6 grid gap-3 rounded-2xl bg-white p-4 ring-1 ring-forest-900/10 md:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(0,1fr))]">
         <input value={query} onChange={(event) => setQuery(event.target.value)} className="field" placeholder="Search name, phone, city, country…" />
-        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as EnquiryStatus | 'All')} className="field"><option value="All">All stages</option>{['New', 'Contacted', 'Follow-up', 'Documents Pending', 'Applied', 'Converted', 'Closed'].map((status) => <option key={status}>{status}</option>)}</select>
+        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as EnquiryStatus | 'All')} className="field">
+          <option value="All">All stages</option>
+          {['New', 'Contacted', 'Follow-up', 'Documents Pending', 'Applied', 'Converted', 'Closed'].map((status) => <option key={status}>{status}</option>)}
+        </select>
         <input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} className="field" aria-label="From date" />
         <input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} className="field" aria-label="To date" />
       </div>
-      <div className="mb-4 flex flex-wrap gap-2 text-xs font-bold text-forest-900/60"><span className="rounded-full bg-white px-3 py-1.5 ring-1 ring-forest-900/10">Showing {enquiries.length} loaded leads</span><span className="rounded-full bg-white px-3 py-1.5 ring-1 ring-forest-900/10">Excel includes Summary + Follow-ups sheets</span></div>
+
       {viewMode === 'list' ? (
-        <div className="grid gap-4">{enquiries.map((item) => <EnquiryCard key={item.id} item={item} onReload={onReload} onNotice={onNotice} canDelete={canDelete} canManageComments={canManageComments} />)}{enquiries.length === 0 && <p className="rounded-2xl bg-white p-8 text-center text-forest-900/60">No enquiries match these filters.</p>}</div>
+        <div className="grid gap-4">
+          {enquiries.map((item) => (
+            <EnquiryCard key={item.id} item={item} onReload={onReload} onNotice={onNotice} canDelete={canDelete} canManageComments={canManageComments} />
+          ))}
+          {enquiries.length === 0 && <p className="rounded-2xl bg-white p-8 text-center text-forest-900/60">No enquiries match these filters.</p>}
+        </div>
       ) : (
         <div className="space-y-5">
           <div className="overflow-x-auto pb-3">
@@ -615,6 +673,20 @@ function EnquiryCard({ item, onReload, onNotice, canDelete, canManageComments }:
     }
   }
 
+  // Quick 1-tap note adder
+  async function addQuickPreset(presetText: string) {
+    setBusy(true)
+    try {
+      await addEnquiryActivity({ data: { enquiryId: item.id, body: presetText } })
+      await onReload()
+      onNotice(`Note added: "${presetText}"`)
+    } catch {
+      onNotice('Could not add preset note.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function saveComment(activityId: number) {
     const body = editingBody.trim()
     if (!body) return
@@ -666,6 +738,9 @@ function EnquiryCard({ item, onReload, onNotice, canDelete, canManageComments }:
     timeStyle: 'short',
   })
 
+  const rawPhone = item.phone.replace(/\D/g, '')
+  const waPhone = rawPhone.startsWith('91') && rawPhone.length === 12 ? rawPhone : `91${rawPhone}`
+
   return (
     <article className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-forest-900/10">
       <div className="flex flex-col justify-between gap-5 lg:flex-row">
@@ -676,21 +751,36 @@ function EnquiryCard({ item, onReload, onNotice, canDelete, canManageComments }:
             {item.nextFollowUpAt && <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">Follow-up {new Date(item.nextFollowUpAt).toLocaleString()}</span>}
           </div>
           <p className="mt-1 text-sm text-forest-900/60">{new Date(item.createdAt).toLocaleString()} · {item.source || 'website'}{item.assignedTo && <> · Assigned to {item.assignedTo}</>}</p>
-          <p className="mt-4 text-sm"><strong>{item.phone}</strong>{item.email && <> · {item.email}</>}{item.city && <> · {item.city}</>}</p>
+          
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="font-bold text-sm text-forest-900">{item.phone}</span>
+            {/* Quick 1-tap call & WhatsApp actions */}
+            <a href={`tel:${item.phone}`} className="inline-flex items-center gap-1 rounded-full bg-forest-50 border border-forest-900/15 px-2.5 py-1 text-xs font-bold text-forest-900 hover:bg-forest-100">
+              <Phone className="size-3 text-forest-800" /> Call
+            </a>
+            <a href={`https://wa.me/${waPhone}?text=${encodeURIComponent(`Hello ${item.name}, this is British Education & Immigration Sangaria regarding your enquiry.`)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-500/20 px-2.5 py-1 text-xs font-bold text-emerald-800 hover:bg-emerald-100">
+              <MessageCircle className="size-3 text-emerald-600" /> WhatsApp
+            </a>
+            {item.email && <span className="text-xs text-forest-900/60 ml-1">· {item.email}</span>}
+            {item.city && <span className="text-xs text-forest-900/60">· {item.city}</span>}
+          </div>
+
           <p className="mt-2 text-sm font-semibold">{item.interest || 'General counselling'}{item.country && <> · {item.country}</>}</p>
-          {item.message && <p className="mt-3 max-w-3xl text-sm leading-relaxed text-forest-900/75">{item.message}</p>}
+          {item.message && <p className="mt-3 max-w-3xl text-sm leading-relaxed text-forest-900/75 bg-cream/70 p-3 rounded-xl border border-forest-900/5">{item.message}</p>}
           {item.summary && <p className="mt-2 text-xs text-forest-900/50">Context: {item.summary}</p>}
         </div>
+
         <div className="grid content-start gap-2 lg:w-80">
-          <select value={status} onChange={(event) => setStatus(event.target.value as EnquiryStatus)} className="field bg-cream"><option>New</option><option>Contacted</option><option>Follow-up</option><option>Documents Pending</option><option>Applied</option><option>Converted</option><option>Closed</option></select>
+          <select value={status} onChange={(event) => setStatus(event.target.value as EnquiryStatus)} className="field bg-cream">
+            <option>New</option><option>Contacted</option><option>Follow-up</option><option>Documents Pending</option><option>Applied</option><option>Converted</option><option>Closed</option>
+          </select>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
             <input value={assignedTo} onChange={(event) => setAssignedTo(event.target.value)} className="field bg-cream" placeholder="Assigned counsellor" />
             <input type="datetime-local" value={nextFollowUpAt} onChange={(event) => setNextFollowUpAt(event.target.value)} className="field bg-cream" aria-label="Next follow-up" />
           </div>
           <div className="flex flex-wrap gap-2">
-            <button type="button" disabled={busy} onClick={() => void save()} className="rounded-full bg-forest-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Save lead</button>
-            <a href={`https://wa.me/91${item.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="rounded-full bg-[#25D366] px-4 py-2 text-sm font-bold text-white">WhatsApp</a>
-            {canDelete && <button type="button" disabled={busy} onClick={() => void remove()} className="rounded-full border border-red-200 px-4 py-2 text-sm font-bold text-red-700">Delete</button>}
+            <button type="button" disabled={busy} onClick={() => void save()} className="rounded-full bg-forest-900 px-4 py-2 text-sm font-bold text-white shadow-xs disabled:opacity-50 hover:bg-forest-800">Save lead</button>
+            {canDelete && <button type="button" disabled={busy} onClick={() => void remove()} className="rounded-full border border-red-200 px-4 py-2 text-sm font-bold text-red-700 hover:bg-red-50">Delete</button>}
           </div>
         </div>
       </div>
@@ -699,9 +789,31 @@ function EnquiryCard({ item, onReload, onNotice, canDelete, canManageComments }:
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
             <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-coral-600">Lead history</p>
-            <h4 id={`lead-timeline-${item.id}`} className="mt-1 text-lg font-extrabold">Follow-up timeline</h4>
+            <h4 id={`lead-timeline-${item.id}`} className="mt-1 text-base font-extrabold">Follow-up timeline</h4>
           </div>
-          <span className="text-xs text-forest-900/50">{item.activities.length} {item.activities.length === 1 ? 'entry' : 'entries'}</span>
+          <span className="text-xs text-forest-900/50">{item.activities.length} entries</span>
+        </div>
+
+        {/* 1-TAP QUICK PRESET NOTES */}
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] font-bold text-forest-900/50 mr-1">Quick Note:</span>
+          {[
+            'Called - No response',
+            'Called - Discussed options',
+            'Requested 12th / Degree marksheet',
+            'Interested in Jan 2027 intake',
+            'Sent fee structure on WhatsApp',
+          ].map((preset) => (
+            <button
+              key={preset}
+              type="button"
+              disabled={busy}
+              onClick={() => void addQuickPreset(preset)}
+              className="rounded-lg bg-forest-50 border border-forest-900/15 px-2.5 py-1 text-[11px] font-semibold text-forest-900 hover:bg-forest-100 disabled:opacity-50"
+            >
+              + {preset}
+            </button>
+          ))}
         </div>
 
         <ol className="mt-4 grid gap-3">
@@ -740,15 +852,14 @@ function EnquiryCard({ item, onReload, onNotice, canDelete, canManageComments }:
             </li>
           ))}
           {!item.notes && item.activities.length === 0 && (
-            <li className="rounded-xl border border-dashed border-forest-900/15 px-4 py-5 text-center text-sm text-forest-900/55">No timeline entries yet. Add a note after each call or follow-up to build the lead history.</li>
+            <li className="rounded-xl border border-dashed border-forest-900/15 px-4 py-5 text-center text-sm text-forest-900/55">No timeline entries yet. Add a note or tap a preset above after calling the student.</li>
           )}
         </ol>
 
         <form onSubmit={addComment} className="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-          <textarea value={newComment} onChange={(event) => setNewComment(event.target.value)} rows={2} maxLength={5000} className="field bg-cream" placeholder="Log a call, message, document update or next follow-up…" aria-label="Add lead timeline comment" />
+          <textarea value={newComment} onChange={(event) => setNewComment(event.target.value)} rows={2} maxLength={5000} className="field bg-cream" placeholder="Log a custom call, message, document update or next step…" aria-label="Add lead timeline comment" />
           <button type="submit" disabled={busy || !newComment.trim()} className="min-h-11 rounded-full bg-coral-500 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{busy ? 'Saving…' : 'Add comment'}</button>
         </form>
-        <p className="mt-2 text-[11px] text-forest-900/50">Comments are timestamped and attributed to your admin account. Only a Super Admin can edit or delete them.</p>
       </section>
     </article>
   )
@@ -840,6 +951,7 @@ function PostEditor({ item, onReload, onNotice, onClose }: { item: AdminPost; on
     </form>
   )
 }
+
 function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
   const [data, setData] = useState<CountryCashflow[]>(() => defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country)))
   const [selectedSlug, setSelectedSlug] = useState('canada')
@@ -1065,7 +1177,7 @@ function SettingsPanel({ settings, onReload, onNotice, onDirtyChange }: { settin
     } catch (cause) {
       onNotice(cause instanceof Error ? cause.message : 'Could not remove this trust number.')
     } finally {
-      setStatBusy(false)
+      setBusy(false)
     }
   }
   function beginContactEdit() {
@@ -1282,6 +1394,7 @@ function SettingsPanel({ settings, onReload, onNotice, onDirtyChange }: { settin
     </section>
   )
 }
+
 function UsersPanel({ users, currentEmail, onReload, onNotice }: { users: AdminUser[]; currentEmail: string; onReload: () => Promise<void>; onNotice: (message: string) => void }) {
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
