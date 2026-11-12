@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { Plane, MapPin, X, ArrowRight, MessageCircle, RotateCcw, Download, Scissors } from 'lucide-react'
 
 export function BoardingPassGenerator() {
+  const navigate = useNavigate() 
   const [name, setName] = useState('')
   const [origin, setOrigin] = useState('Sangaria (SNG)')
   const [customOrigin, setCustomOrigin] = useState('')
@@ -38,7 +40,7 @@ export function BoardingPassGenerator() {
 
   const handleMakeReal = () => {
     setOpen(false)
-    window.location.href = '/contact'
+    navigate({ to: '/contact' })
   }
 
   const handleDownloadPassImage = async () => {
