@@ -149,7 +149,7 @@ function Home() {
   return (
     <>
       {/* ========================================================================= */}
-      {/* MOBILE-ONLY VIEW                                                          */}
+      {/* MOBILE & HALF-SCREEN VIEW (Below 1024px)                                  */}
       {/* ========================================================================= */}
       <div className="block lg:hidden bg-cream text-forest-900">
         {/* MOBILE HERO */}
@@ -439,7 +439,7 @@ function Home() {
                     </span>
                     <span className={'font-mono text-xs font-bold ' + (i === 0 ? 'text-white/40' : 'text-forest-900/30')}>0{i + 1}</span>
                   </div>
-                  <h3 className="mt-3 text-sm font-extrabold leading-snug">{s.title}</h3>
+                  <h3 className={'mt-3 text-sm font-extrabold leading-snug ' + (i === 0 ? '!text-white' : 'text-forest-900')}>{s.title}</h3>
                   <p className={'mt-1.5 text-[11px] leading-relaxed line-clamp-3 ' + (i === 0 ? 'text-forest-100/75' : 'text-forest-900/65')}>
                     {s.summary}
                   </p>
@@ -449,7 +449,7 @@ function Home() {
           </div>
         </section>
 
-        {/* DESTINATIONS SECTION (MOBILE) */}
+        {/* DESTINATIONS SECTION (MOBILE & HALF-SCREEN) */}
         <section id="destinations-m" className="bg-sand/60 bg-dots px-5 py-20 border-b border-forest-900/10">
           <div className="mb-8">
             <Eyebrow>Destinations</Eyebrow>
@@ -474,14 +474,14 @@ function Home() {
                       className="rounded shadow-sm shrink-0"
                       style={{ width: '36px', height: '24px', minWidth: '36px', maxWidth: '36px' }}
                     />
-                    <span className="font-mono text-xs font-bold text-forest-900/40 group-active:text-white/40 group-hover:text-white/40">{c.code}</span>
+                    <span className="font-mono text-xs font-bold text-forest-900/40 group-active:!text-white/60 group-hover:!text-white/60">{c.code}</span>
                   </div>
-                  <h3 className="mt-2.5 text-sm font-extrabold text-forest-900 group-active:text-white group-hover:text-white leading-tight">{c.name}</h3>
-                  <p className="mt-1 text-[11px] text-forest-900/65 group-active:text-white/70 group-hover:text-white/70 line-clamp-2 leading-tight">{c.headline}</p>
+                  <h3 className="mt-2.5 text-sm font-extrabold text-forest-900 group-active:!text-white group-hover:!text-white leading-tight">{c.name}</h3>
+                  <p className="mt-1 text-[11px] text-forest-900/65 group-active:!text-white/80 group-hover:!text-white/80 line-clamp-2 leading-tight">{c.headline}</p>
                 </div>
-                <div className="mt-3.5 pt-2 border-t border-forest-900/10 group-active:border-white/15 flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-coral-600 group-active:text-coral-300">{c.stats[0].value}</span>
-                  <ArrowRight className="size-3.5 text-coral-500 group-active:text-coral-300" />
+                <div className="mt-3.5 pt-2 border-t border-forest-900/10 group-active:border-white/20 group-hover:border-white/20 flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-coral-600 group-active:!text-coral-300 group-hover:!text-coral-300">{c.stats[0].value}</span>
+                  <ArrowRight className="size-3.5 text-coral-500 group-active:!text-coral-300 group-hover:!text-coral-300" />
                 </div>
               </Link>
             ))}
@@ -492,7 +492,7 @@ function Home() {
             >
               <div>
                 <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-white/80">NOT SURE?</span>
-                <h3 className="mt-2 text-sm font-extrabold leading-tight">Find Your Fit</h3>
+                <h3 className="mt-2 text-sm font-extrabold !text-white leading-tight">Find Your Fit</h3>
                 <p className="mt-1 text-[11px] text-white/85 leading-tight">Free 60-second profile assessment</p>
               </div>
               <div className="mt-3.5 pt-2 border-t border-white/20 flex items-center justify-between font-bold text-xs">
@@ -559,7 +559,7 @@ function Home() {
         <section className="bg-forest-900 bg-grain px-5 py-20 text-white">
           <div className="mb-8">
             <Eyebrow light>How it works</Eyebrow>
-            <h2 className="mt-2 text-2xl font-extrabold">Four steps to your destination.</h2>
+            <h2 className="mt-2 text-2xl font-extrabold !text-white">Four steps to your destination.</h2>
           </div>
 
           <ol className="grid grid-cols-2 gap-4">
@@ -567,7 +567,7 @@ function Home() {
               <li key={s.n} className="rounded-3xl border border-white/15 bg-white/5 p-4 shadow-sm flex flex-col justify-between overflow-hidden">
                 <div>
                   <span className="font-display text-2xl font-extrabold text-coral-400">{s.n}</span>
-                  <h3 className="mt-1.5 text-sm font-bold text-white leading-tight">{s.title}</h3>
+                  <h3 className="mt-1.5 text-sm font-bold !text-white leading-tight">{s.title}</h3>
                 </div>
                 <p className="mt-2 text-[11px] leading-tight text-forest-100/70">{s.text}</p>
               </li>
@@ -699,7 +699,7 @@ function Home() {
           </div>
 
           <div className="rounded-3xl bg-forest-900 bg-grain p-6 text-white shadow-xl">
-            <h2 className="text-xl font-extrabold">Free Profile Evaluation</h2>
+            <h2 className="text-xl font-extrabold !text-white">Free Profile Evaluation</h2>
             <p className="mt-1.5 mb-6 text-xs text-forest-100/70">Share details — a counsellor calls you back within one working day.</p>
             <EnquiryForm source="home-mobile" dark />
           </div>
@@ -735,7 +735,7 @@ function Home() {
       </div>
 
       {/* ========================================================================= */}
-      {/* DESKTOP-ONLY VIEW                                                         */}
+      {/* DESKTOP-ONLY VIEW (1024px and above)                                      */}
       {/* ========================================================================= */}
       <div className="hidden lg:block bg-cream text-forest-900">
         {/* DESKTOP HERO */}
@@ -999,7 +999,7 @@ function Home() {
                 <span className={'grid size-14 place-items-center rounded-2xl ' + (i === 0 ? 'bg-coral-500 text-white' : 'bg-forest-50 text-forest-700')}>
                   <ServiceIcon name={s.icon} className="size-6" />
                 </span>
-                <h3 className="mt-6 text-2xl font-bold">{s.title}</h3>
+                <h3 className={'mt-6 text-2xl font-bold ' + (i === 0 ? '!text-white' : 'text-forest-900')}>{s.title}</h3>
                 <p className={'mt-3 ' + (i === 0 ? 'text-forest-100/75' : 'text-forest-900/65')}>{s.summary}</p>
                 <span className="absolute top-8 right-8 font-mono text-xs opacity-40">0{i + 1}</span>
               </Link>
@@ -1028,7 +1028,7 @@ function Home() {
                       className="rounded shadow-sm shrink-0"
                       style={{ width: '48px', height: '32px', minWidth: '48px', maxWidth: '48px' }}
                     />
-                    <span className="font-mono text-2xl font-bold text-forest-900/20 group-hover:text-white/20">{c.code}</span>
+                    <span className="font-mono text-2xl font-bold text-forest-900/20 group-hover:!text-white/30">{c.code}</span>
                   </div>
                   <h3 className="mt-6 text-2xl font-bold text-forest-900 group-hover:!text-white">{c.name}</h3>
                   <p className="mt-1 text-sm text-forest-900/70 group-hover:!text-white/80">{c.headline}</p>
@@ -1099,12 +1099,12 @@ function Home() {
         <section className="bg-forest-900 bg-grain py-24 text-white">
           <div className="mx-auto max-w-7xl px-6">
             <Eyebrow light>How it works</Eyebrow>
-            <h2 className="mt-4 max-w-2xl text-4xl font-extrabold md:text-5xl">Four steps from Sangaria to your dream destination.</h2>
+            <h2 className="mt-4 max-w-2xl text-4xl font-extrabold !text-white md:text-5xl">Four steps from Sangaria to your dream destination.</h2>
             <ol className="mt-14 grid gap-6 md:grid-cols-4">
               {steps.map((s) => (
                 <li key={s.n} className="relative rounded-[2.5rem] border border-white/10 bg-white/5 p-7 shadow-lg">
                   <span className="font-display text-6xl font-extrabold text-coral-500/90">{s.n}</span>
-                  <h3 className="mt-4 text-xl font-bold">{s.title}</h3>
+                  <h3 className="mt-4 text-xl font-bold !text-white">{s.title}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-forest-100/70">{s.text}</p>
                 </li>
               ))}
@@ -1216,7 +1216,7 @@ function Home() {
             </p>
           </div>
           <div className="rounded-[2.5rem] bg-forest-900 bg-grain p-8 text-white md:p-10 shadow-2xl">
-            <h2 className="text-3xl font-extrabold">Get a free profile evaluation</h2>
+            <h2 className="text-3xl font-extrabold !text-white">Get a free profile evaluation</h2>
             <p className="mt-2 mb-8 text-forest-100/70">Share a few details — a counsellor calls you back within one working day.</p>
             <EnquiryForm source="home" dark />
           </div>
