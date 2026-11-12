@@ -6,6 +6,7 @@ import { hashPassword } from './auth.server'
 import { defaultCertificates } from '@/data/certificates'
 
 let pool: Pool | null = null
+let schemaInitialized = false
 let schemaPromise: Promise<Pool | null> | null = null
 
 type DbRow = RowDataPacket & Record<string, unknown>
@@ -102,7 +103,6 @@ async function seed(poolInstance: Pool) {
     await poolInstance.query('UPDATE site_settings SET certificates_seeded = 1 WHERE id = 1')
   }
 
-
   if (adminRows.length === 0) {
     const initialEmail = (process.env.ADMIN_EMAIL || 'admin@britisheducationandimmigration.com').toLowerCase()
     const initialPass = process.env.ADMIN_PASSWORD || 'Admin@Sangaria2026'
@@ -118,8 +118,23 @@ async function seed(poolInstance: Pool) {
 export async function getDb() {
   const poolInstance = getPool()
   if (!poolInstance) return null
+  if (schemaInitialized) return poolInstance
+
   if (!schemaPromise) {
     schemaPromise = (async () => {
+      // Check if DB is already created to avoid 20 redundant queries on cold start
+      try {
+        const [tables] = await poolInstance.query<DbRow[]>(
+          "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'site_settings' LIMIT 1"
+        )
+        if (tables.length > 0) {
+          schemaInitialized = true
+          return poolInstance
+        }
+      } catch {
+        // Fallback to table creation if schema check fails
+      }
+
       await poolInstance.query(`
         CREATE TABLE IF NOT EXISTS site_settings (
           id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
@@ -270,6 +285,7 @@ export async function getDb() {
       `)
       await ensureColumn(poolInstance, 'admin_users', 'password_hash', "VARCHAR(255) NOT NULL DEFAULT ''")
       await seed(poolInstance)
+      schemaInitialized = true
       return poolInstance
     })().catch((error) => {
       schemaPromise = null
