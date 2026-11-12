@@ -2,10 +2,29 @@ import { Link, createFileRoute, notFound } from '@tanstack/react-router'
 import { PostCard, formatDate } from '@/components/Cards'
 import { EnquiryForm } from '@/components/EnquiryForm'
 import { getPublicContent } from '@/lib/public-functions'
-
 import { createPageSeo } from '@/lib/seo'
 
+function PostPageSkeleton() {
+  return (
+    <div className="mx-auto max-w-3xl px-6 pt-16 pb-12 animate-pulse">
+      <div className="h-4 w-24 bg-slate-200 rounded" />
+      <div className="mt-8 flex gap-3">
+        <div className="h-6 w-20 bg-slate-200 rounded-full" />
+        <div className="h-6 w-32 bg-slate-200 rounded" />
+      </div>
+      <div className="mt-6 h-12 w-full bg-slate-200 rounded-2xl" />
+      <div className="mt-6 h-16 w-full bg-slate-100 rounded-2xl" />
+      <div className="mt-10 space-y-4 pt-10 border-t border-slate-200">
+        <div className="h-4 w-full bg-slate-200 rounded" />
+        <div className="h-4 w-5/6 bg-slate-200 rounded" />
+        <div className="h-4 w-4/6 bg-slate-200 rounded" />
+      </div>
+    </div>
+  )
+}
+
 export const Route = createFileRoute('/updates/$slug')({
+  pendingComponent: PostPageSkeleton,
   loader: async ({ params }) => {
     const { posts } = await getPublicContent()
     const post = posts.find((p) => p.slug === params.slug)
