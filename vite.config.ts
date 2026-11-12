@@ -7,7 +7,7 @@ import { nitro } from 'nitro/vite'
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
   server: {
-    allowedHosts: ['.manus.computer'],
+    allowedHosts: ['.manus.computer', 'sb-2rn2gtzzk30e.vercel.run'],
   },
   build: {
     rollupOptions: {
