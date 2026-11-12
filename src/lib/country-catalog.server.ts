@@ -1,8 +1,8 @@
 import '@tanstack/react-start/server-only'
 
 import { countries, getCurrentCountry, type Country } from '@/data/fixtures'
-import { applyScheduledVisaPolicy, type VisaGuidance } from '@/data/policy-watch'
-import { visaGuidance } from '@/data/visa-guidance'
+import { applyScheduledVisaPolicy } from '@/data/policy-watch'
+import { visaGuidance, type VisaGuidance } from '@/data/visa-guidance'
 import { execute, queryRows } from './db.server'
 
 export type CountryPageContent = {
