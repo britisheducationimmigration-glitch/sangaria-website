@@ -1,9 +1,10 @@
 import { CheckCircle2, Loader2, MessageCircle, Send, Check } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
+import { useLoaderData } from '@tanstack/react-router'
 import { countries as fixtureCountries, visaServices } from '@/data/fixtures'
+import { site } from '@/data/site'
 import { cn } from '@/lib/utils'
-import { getPublicCountryCatalogue, submitEnquiry } from '@/lib/public-functions'
-
+import { submitEnquiry } from '@/lib/public-functions'
 export function EnquiryForm({
   source,
   defaultInterest,
@@ -21,8 +22,11 @@ export function EnquiryForm({
   compact?: boolean
   onSuccess?: () => void
 }) {
+ const rootData = useLoaderData({ from: '__root__' })
+  const countryOptions = rootData?.countries ?? fixtureCountries
+  const settings = rootData?.settings
+
   const [state, setState] = useState<'idle' | 'sending' | 'done' | 'error'>('idle')
-  const [countryOptions, setCountryOptions] = useState(fixtureCountries)
   const [whatsappUrl, setWhatsappUrl] = useState('')
   const [showSharePrompt, setShowSharePrompt] = useState(false)
 
@@ -34,13 +38,6 @@ export function EnquiryForm({
   const isPhoneValid = /^[6-9]\d{9}$/.test(phone.replace(/\D/g, '')) || phone.replace(/\D/g, '').length === 10
   const isNameValid = name.trim().length >= 2
   const isEmailValid = !email || /^\S+@\S+\.\S+$/.test(email.trim())
-
-  useEffect(() => {
-    void getPublicCountryCatalogue()
-      .then((entries) => setCountryOptions(entries.map((entry) => entry.country)))
-      .catch(() => {})
-  }, [])
-
   useEffect(() => {
     if (state !== 'done' || !showSharePrompt) return
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -85,7 +82,11 @@ export function EnquiryForm({
       'Please guide me further. Thank you!',
     ].filter(Boolean).join('\n')
 
-    const waUrl = `https://wa.me/919772570478?text=${encodeURIComponent(textLines)}`
+  const rawDigits = (settings?.phones[1] || settings?.phones[0] || site.whatsapp)
+      .replace(/\D/g, '')
+      .replace(/^0+/, '')
+    const waPhone = rawDigits.length === 10 ? `91${rawDigits}` : rawDigits
+    const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(textLines)}`
     setWhatsappUrl(waUrl)
 
     try {
