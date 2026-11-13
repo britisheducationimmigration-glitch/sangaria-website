@@ -76,9 +76,6 @@ export function InteractiveFlightGlobe({
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     }
 
-    resize()
-    window.addEventListener('resize', resize)
-
     const draw = () => {
       const parent = canvas.parentElement
       const w = parent?.clientWidth || 480
