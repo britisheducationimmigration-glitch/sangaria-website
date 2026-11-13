@@ -1,9 +1,12 @@
 import { useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { useLoaderData, useNavigate } from '@tanstack/react-router'
 import { Plane, MapPin, X, ArrowRight, MessageCircle, RotateCcw, Download, Scissors } from 'lucide-react'
 
 export function BoardingPassGenerator() {
   const navigate = useNavigate() 
+  const rootData = useLoaderData({ from: '__root__' })
+  const rawHelpline = (rootData?.settings.phones[1] || rootData?.settings.phones[0] || '9772570478').trim()
+  const displayHelpline = rawHelpline.startsWith('+') ? rawHelpline : `+91 ${rawHelpline}`
   const [name, setName] = useState('')
   const [origin, setOrigin] = useState('Sangaria (SNG)')
   const [customOrigin, setCustomOrigin] = useState('')
@@ -174,8 +177,7 @@ export function BoardingPassGenerator() {
 
     context.fillStyle = forest
     context.font = '600 12px system-ui, sans-serif'
-    context.fillText('Priority Desk: British Education & Immigration · Near Open Book Library, Bhagatpura Road, Sangaria · Helpline: +91 9772570478', 92, 550, 1035)
-
+   context.fillText(`Priority Desk: British Education & Immigration · Near Open Book Library, Bhagatpura Road, Sangaria · Helpline: ${displayHelpline}`, 92, 550, 1035)
     const link = document.createElement('a')
     link.download = `BEI-boarding-pass-${passName.replace(/[^A-Z0-9]+/gi, '-') || year}.png`
     link.href = canvas.toDataURL('image/png')
@@ -515,7 +517,7 @@ export function BoardingPassGenerator() {
                       </div>
                       <div className="mt-3 rounded-xl border border-coral-500/25 bg-white/80 p-3">
                         <p className="text-xs font-extrabold leading-snug text-forest-900 sm:text-sm">📍 Priority Desk: British Education &amp; Immigration</p>
-                        <p className="mt-1 break-words text-[11px] leading-relaxed text-forest-900/75 sm:text-xs">Near Open Book Library, Bhagatpura Road, Sangaria · Helpline: +91 9772570478</p>
+                        <p className="mt-1 break-words text-[11px] leading-relaxed text-forest-900/75 sm:text-xs">Near Open Book Library, Bhagatpura Road, Sangaria · Helpline: {displayHelpline}</p>
                       </div>
                     </div>
                   </div>
