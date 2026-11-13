@@ -1367,9 +1367,9 @@ export const coachingCourses = [
 
 export const coachingSchedule = [
   { batch: 'IELTS Morning', time: '8:00 – 10:00 AM', seats: 6, starts: '2026-11-03' },
-  { batch: 'PTE Morning', time: '10:00 AM – 12:00 PM', seats: 4, starts: 'Nov 3' },
+  { batch: 'PTE Morning', time: '10:00 AM – 12:00 PM', seats: 4, starts: '2026-11-03' },
   { batch: 'IELTS Afternoon', time: '1:00 – 3:00 PM', seats: 9, starts: '2026-11-10' },
-  { batch: 'PTE Evening', time: '4:00 – 6:00 PM', seats: 3, starts: 'Nov 10' },
+  { batch: 'PTE Evening', time: '4:00 – 6:00 PM', seats: 3, starts: '2026-11-10' },
   { batch: 'Weekend PTE Crash', time: 'Sat–Sun · 10 AM – 2 PM', seats: 8, starts: '2026-11-08' },
 ]
 
