@@ -261,7 +261,7 @@ function Home() {
                 </div>
               </div>
 
-              <div className="mt-4 flex flex-col gap-2">
+             <div className="mt-4 flex flex-col gap-2">
                 {selectedCountry ? (
                   <Link
                     to="/countries/$slug"
@@ -282,6 +282,8 @@ function Home() {
                     <ArrowRight className="size-3.5 shrink-0" />
                   </Link>
                 )}
+                <div className="flex gap-2">
+                  <Link
                     to="/eligibility"
                     className="flex-1 rounded-xl border border-white/30 bg-white/10 py-2.5 px-3 text-xs font-bold text-white text-center active:bg-white/20 transition truncate"
                   >
