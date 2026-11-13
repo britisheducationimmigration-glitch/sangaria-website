@@ -1,8 +1,6 @@
 import { MessageCircle } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { useRouterState } from '@tanstack/react-router'
+import { useLoaderData, useRouterState } from '@tanstack/react-router'
 import { site } from '@/data/site'
-import { getPublicContent } from '@/lib/public-functions'
 
 const countryNames: Record<string, string> = {
   canada: 'Canada',
@@ -14,15 +12,21 @@ const countryNames: Record<string, string> = {
   europe: 'Europe / Schengen',
 }
 
-function getContextualMessage(pathname: string): string {
+function getContextualMessage(pathname: string, countries: Array<{ slug: string; name: string }>): string {
   if (pathname.startsWith('/countries/')) {
     const slug = pathname.replace('/countries/', '').replace(/\/$/, '')
-    const name = countryNames[slug] || (slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : 'Abroad')
+    const name =
+      countryNames[slug] ||
+      countries.find((c) => c.slug === slug)?.name ||
+      (slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : 'Abroad')
     return `Hello British Education Sangaria, I want to know more about ${name} Study Visa.`
   }
   if (pathname.startsWith('/study-plan/')) {
     const slug = pathname.replace('/study-plan/', '').replace(/\/$/, '')
-    const name = countryNames[slug] || 'Study'
+    const name =
+      countryNames[slug] ||
+      countries.find((c) => c.slug === slug)?.name ||
+      'Study'
     return `Hello British Education Sangaria, I am reviewing the ${name} Study Plan checklist and need guidance.`
   }
   if (pathname === '/coaching') {
@@ -44,19 +48,19 @@ function getContextualMessage(pathname: string): string {
 }
 
 export function WhatsAppButton() {
-  const [enabled, setEnabled] = useState(true)
   const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const rootData = useLoaderData({ from: '__root__' })
+  const settings = rootData?.settings
+  const countries = rootData?.countries ?? []
 
-  useEffect(() => {
-    getPublicContent()
-      .then((content) => setEnabled(content.settings.whatsappEnabled))
-      .catch(() => undefined)
-  }, [])
+  if (settings?.whatsappEnabled === false || pathname.startsWith('/admin')) return null
 
-  if (!enabled || pathname.startsWith('/admin')) return null
-
-  const messageText = getContextualMessage(pathname)
-  const waUrl = `https://wa.me/${site.whatsapp}?text=${encodeURIComponent(messageText)}`
+  const rawDigits = (settings?.phones[1] || settings?.phones[0] || site.whatsapp)
+    .replace(/\D/g, '')
+    .replace(/^0+/, '')
+  const waPhone = rawDigits.length === 10 ? `91${rawDigits}` : rawDigits
+  const messageText = getContextualMessage(pathname, countries)
+  const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(messageText)}`
 
   return (
     <a
