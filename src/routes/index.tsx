@@ -51,25 +51,7 @@ const rotatingWords = [
   { text: 'UK Degrees.', icon: '🇬🇧' },
   { text: 'IELTS 7.5+.', icon: '📚' },
 ]
-
-const homeJumpSections = [
-  { id: 'services', icon: '✈️', desktopLabel: 'Services', mobileLabel: 'Services' },
-  { id: 'destinations', icon: '🌍', desktopLabel: 'Countries', mobileLabel: 'Countries' },
-  { id: 'coaching', icon: '📚', desktopLabel: 'IELTS & PTE', mobileLabel: 'IELTS & PTE' },
-  { id: 'approvals', icon: '🎉', desktopLabel: 'Recent Visas', mobileLabel: 'Visas' },
-  { id: 'certificates', icon: '🏅', desktopLabel: 'Certificates', mobileLabel: 'Certificates' },
-  { id: 'reviews', icon: '⭐', desktopLabel: 'Reviews', mobileLabel: 'Reviews' },
-] as const
-
-function Home() {
-  const { approvals, posts, testimonials, certificates, settings, countryPages } = Route.useLoaderData()
-  const countries = countryPages.map((entry) => entry.country)
-  const homepageApprovals = approvals.filter((story) => story.homepageFeatured !== false)
-  const homepageTestimonials = testimonials.filter((story) => story.homepageFeatured !== false)
-  const [selectedCountry, setSelectedCountry] = useState('canada')
-  const [selectedVisa, setSelectedVisa] = useState('study')
-  const [showAllTestimonials, setShowAllTestimonials] = useState(false)
-  const [showAllTestimonialsMobile, setShowAllTestimonialsMobile] = useState(false)
+function HeroRotatingWord({ variant }: { variant: 'mobile' | 'desktop' }) {
   const [wordIndex, setWordIndex] = useState(0)
   const [fade, setFade] = useState(true)
 
@@ -88,6 +70,42 @@ function Home() {
       if (transitionTimer !== undefined) window.clearTimeout(transitionTimer)
     }
   }, [])
+
+  const isMobile = variant === 'mobile'
+
+  return (
+    <span
+      className={
+        `inline-flex items-center ${isMobile ? 'gap-2' : 'gap-3'} transition-all duration-300 transform ` +
+        (fade ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2')
+      }
+    >
+      <span className="text-white">{rotatingWords[wordIndex].text}</span>
+      <span className={`inline-block ${isMobile ? 'text-2xl' : 'text-3xl lg:text-4xl xl:text-5xl'} animate-bounce`}>
+        {rotatingWords[wordIndex].icon}
+      </span>
+    </span>
+  )
+}
+const homeJumpSections = [
+  { id: 'services', icon: '✈️', desktopLabel: 'Services', mobileLabel: 'Services' },
+  { id: 'destinations', icon: '🌍', desktopLabel: 'Countries', mobileLabel: 'Countries' },
+  { id: 'coaching', icon: '📚', desktopLabel: 'IELTS & PTE', mobileLabel: 'IELTS & PTE' },
+  { id: 'approvals', icon: '🎉', desktopLabel: 'Recent Visas', mobileLabel: 'Visas' },
+  { id: 'certificates', icon: '🏅', desktopLabel: 'Certificates', mobileLabel: 'Certificates' },
+  { id: 'reviews', icon: '⭐', desktopLabel: 'Reviews', mobileLabel: 'Reviews' },
+] as const
+
+function Home() {
+  const { approvals, posts, testimonials, certificates, settings, countryPages } = Route.useLoaderData()
+  const countries = countryPages.map((entry) => entry.country)
+  const homepageApprovals = approvals.filter((story) => story.homepageFeatured !== false)
+  const homepageTestimonials = testimonials.filter((story) => story.homepageFeatured !== false)
+  const [selectedCountry, setSelectedCountry] = useState('canada')
+  const [selectedVisa, setSelectedVisa] = useState('study')
+  const [showAllTestimonials, setShowAllTestimonials] = useState(false)
+  const [showAllTestimonialsMobile, setShowAllTestimonialsMobile] = useState(false)
+ 
 
   // Sticky Jump bar state & refs (Dynamically attaches right under #site-main-header with 0 gap)
   const [isMobileSticky, setIsMobileSticky] = useState(false)
@@ -186,18 +204,8 @@ function Home() {
                 </svg>
               </span>
               <br />
-              <span className="inline-flex items-center gap-2 h-[1.15em] overflow-hidden">
-                <span
-                  className={
-                    'inline-flex items-center gap-2 transition-all duration-300 transform ' +
-                    (fade ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2')
-                  }
-                >
-                  <span className="text-white">{rotatingWords[wordIndex].text}</span>
-                  <span className="inline-block text-2xl animate-bounce">
-                    {rotatingWords[wordIndex].icon}
-                  </span>
-                </span>
+             <span className="inline-flex items-center gap-2 h-[1.15em] overflow-hidden">
+                <HeroRotatingWord variant="mobile" />
               </span>
             </h1>
 
@@ -777,17 +785,7 @@ function Home() {
                 </span>
                 <br />
                 <span className="inline-flex items-center gap-3 whitespace-nowrap min-h-[1.25em] pb-1 overflow-visible">
-                  <span
-                    className={
-                      'inline-flex items-center gap-3 transition-all duration-300 transform ' +
-                      (fade ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2')
-                    }
-                  >
-                    <span className="text-white">{rotatingWords[wordIndex].text}</span>
-                    <span className="inline-block text-3xl lg:text-4xl xl:text-5xl animate-bounce">
-                      {rotatingWords[wordIndex].icon}
-                    </span>
-                  </span>
+                  <HeroRotatingWord variant="desktop" />
                 </span>
               </h1>
 
