@@ -43,7 +43,14 @@ export const Route = createFileRoute('/countries/$slug')({
       notices: notices.filter((notice) => notice.countrySlug === 'all' || notice.countrySlug === content.country.slug),
     }
   },
-  head: ({ loaderData }) => {
+ head: ({ loaderData }) => {
+    if (!loaderData?.country) {
+      return createPageSeo({
+        title: 'Study Destinations | British Education Sangaria',
+        description: 'Explore study destinations, visa guidance and official links from British Education and Immigration.',
+        path: '/countries',
+      })
+    }
     const isEuropeGuide = loaderData.country.slug === 'europe'
     return createPageSeo({
       title: isEuropeGuide
