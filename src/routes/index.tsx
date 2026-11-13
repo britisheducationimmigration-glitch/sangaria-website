@@ -262,16 +262,26 @@ function Home() {
               </div>
 
               <div className="mt-4 flex flex-col gap-2">
-                <Link
-                  to="/countries/$slug"
-                  params={{ slug: selectedCountry }}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-coral-500 py-3 px-4 text-xs font-extrabold text-white shadow-lg active:scale-98 transition text-center"
-                >
-                  <span className="truncate">Explore {countries.find((c) => c.slug === selectedCountry)?.name ?? 'Country'} Guide</span>
-                  <ArrowRight className="size-3.5 shrink-0" />
-                </Link>
-                <div className="flex gap-2">
+                {selectedCountry ? (
                   <Link
+                    to="/countries/$slug"
+                    params={{ slug: selectedCountry }}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-coral-500 py-3 px-4 text-xs font-extrabold text-white shadow-lg active:scale-98 transition text-center"
+                  >
+                    <span className="truncate">
+                      Explore {countries.find((c) => c.slug === selectedCountry)?.name ?? 'Country'} Guide
+                    </span>
+                    <ArrowRight className="size-3.5 shrink-0" />
+                  </Link>
+                ) : (
+                  <Link
+                    to="/countries"
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-coral-500 py-3 px-4 text-xs font-extrabold text-white shadow-lg active:scale-98 transition text-center"
+                  >
+                    <span className="truncate">Browse destinations</span>
+                    <ArrowRight className="size-3.5 shrink-0" />
+                  </Link>
+                )}
                     to="/eligibility"
                     className="flex-1 rounded-xl border border-white/30 bg-white/10 py-2.5 px-3 text-xs font-bold text-white text-center active:bg-white/20 transition truncate"
                   >
