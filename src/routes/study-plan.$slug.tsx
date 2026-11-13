@@ -23,11 +23,20 @@ export const Route = createFileRoute('/study-plan/$slug')({
       settings: publicContent.settings,
     }
   },
-  head: ({ loaderData }) => createPageSeo({
-    title: `${loaderData.country.name} Study Visa Checklist & Plan | British Education`,
-    description: `View ${loaderData.country.name} study visa guidance, a document checklist, suggested intake timeline and family cashflow estimate with official sources.`,
-    path: `/study-plan/${loaderData.country.slug}`,
-  }),
+  head: ({ loaderData }) => {
+    if (!loaderData?.country) {
+      return createPageSeo({
+        title: 'Study Plan | British Education Sangaria',
+        description: 'Study visa document checklists, timelines and official links from British Education and Immigration.',
+        path: '/countries',
+      })
+    }
+    return createPageSeo({
+      title: `${loaderData.country.name} Study Visa Checklist & Plan | British Education`,
+      description: `View ${loaderData.country.name} study visa guidance, a document checklist, suggested intake timeline and family cashflow estimate with official sources.`,
+      path: `/study-plan/${loaderData.country.slug}`,
+    })
+  },
   component: StudyPlanPage,
 })
 
@@ -187,7 +196,7 @@ function StudyPlanPage() {
   const checklistGroups = [...new Set(plan.checklist.map((item) => item.category))]
 
   return (
-    <main id="study-plan-document" className="study-plan-document mx-auto w-full max-w-7xl px-4 pb-20 pt-8 sm:px-6 sm:pt-10 lg:px-8">
+    <div id="study-plan-document" className="study-plan-document mx-auto w-full max-w-7xl px-4 pb-20 pt-8 sm:px-6 sm:pt-10 lg:px-8">
       <div className="print-hidden mb-5 flex flex-wrap items-center justify-between gap-3">
         <Link to="/countries/$slug" params={{ slug: country.slug }} className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-forest-700 hover:text-coral-600">
           <ArrowLeft aria-hidden="true" className="size-4" /> Back to {country.name} guide
@@ -310,100 +319,99 @@ function StudyPlanPage() {
 
       <MobilePlanSection title="Suggested timeline" hint="10-week preparation steps that can run side by side" defaultOpen>
         <section aria-labelledby="timeline-title" className="rounded-[2rem] bg-white p-5 ring-1 ring-forest-900/10 sm:p-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div><p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-coral-600">Plan around your intake</p><h2 id="timeline-title" className="mt-2 text-2xl font-extrabold text-forest-900 sm:text-3xl">Suggested timeline</h2></div>
-          {intakeMonth && <p className="rounded-full bg-forest-50 px-3 py-2 text-xs font-bold text-forest-800">Target: {intakeMonthLabel(intakeMonth)}</p>}
-        </div>
-        <ol className="mt-6 grid gap-3 md:grid-cols-2">
-          {plan.timeline.map((step, index) => (
-            <li key={`${step.weeksFromStart}-${step.title}`} className="relative min-w-0 rounded-2xl border border-forest-900/10 bg-cream p-4 sm:p-5">
-              <div className="flex items-start gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-full bg-forest-900 font-mono text-xs font-bold text-white">{String(index + 1).padStart(2, '0')}</span><div className="min-w-0"><p className="text-xs font-bold uppercase tracking-wide text-coral-700">{step.weeks} · {timelineDate(planStartDate, step.weeksFromStart)}</p><h3 className="mt-1 text-base font-extrabold text-forest-900">{step.title}</h3><p className="mt-2 text-sm leading-relaxed text-forest-900/70">{step.detail}</p></div></div>
-            </li>
-          ))}
-        </ol>
-        {intakeNeedsEarlierSubmission && (
-          <p role="status" className="mt-4 rounded-xl bg-amber-50 p-4 text-xs leading-relaxed text-amber-950">This intake is close for the 10-week plan. The projected submission date may be later than 3 months before the selected intake month. Check the exact school start/travel date and current processing times; consider an earlier start or the next intake.</p>
-        )}
-      </section>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div><p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-coral-600">Plan around your intake</p><h2 id="timeline-title" className="mt-2 text-2xl font-extrabold text-forest-900 sm:text-3xl">Suggested timeline</h2></div>
+            {intakeMonth && <p className="rounded-full bg-forest-50 px-3 py-2 text-xs font-bold text-forest-800">Target: {intakeMonthLabel(intakeMonth)}</p>}
+          </div>
+          <ol className="mt-6 grid gap-3 md:grid-cols-2">
+            {plan.timeline.map((step, index) => (
+              <li key={`${step.weeksFromStart}-${step.title}`} className="relative min-w-0 rounded-2xl border border-forest-900/10 bg-cream p-4 sm:p-5">
+                <div className="flex items-start gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-full bg-forest-900 font-mono text-xs font-bold text-white">{String(index + 1).padStart(2, '0')}</span><div className="min-w-0"><p className="text-xs font-bold uppercase tracking-wide text-coral-700">{step.weeks} · {timelineDate(planStartDate, step.weeksFromStart)}</p><h3 className="mt-1 text-base font-extrabold text-forest-900">{step.title}</h3><p className="mt-2 text-sm leading-relaxed text-forest-900/70">{step.detail}</p></div></div>
+              </li>
+            ))}
+          </ol>
+          {intakeNeedsEarlierSubmission && (
+            <p role="status" className="mt-4 rounded-xl bg-amber-50 p-4 text-xs leading-relaxed text-amber-950">This intake is close for the 10-week plan. The projected submission date may be later than 3 months before the selected intake month. Check the exact school start/travel date and current processing times; consider an earlier start or the next intake.</p>
+          )}
+        </section>
       </MobilePlanSection>
 
       <MobilePlanSection title="Document checklist" hint="Country-specific records and your saved progress">
         <section aria-labelledby="checklist-title" className="rounded-[2rem] bg-white p-5 ring-1 ring-forest-900/10 sm:p-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div><p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-coral-600">Save your progress on this device</p><h2 id="checklist-title" className="mt-2 text-2xl font-extrabold text-forest-900 sm:text-3xl">Document checklist</h2></div>
-          <div className="min-w-40 rounded-xl bg-forest-50 p-3 sm:w-52"><div className="flex justify-between text-xs font-bold text-forest-800"><span>{completedCount} of {totalItems} ready</span><span>{progress}%</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-forest-900/10"><div className="h-full rounded-full bg-coral-500 transition-[width]" style={{ width: `${progress}%` }} /></div></div>
-        </div>
-        <div className="mt-6 space-y-6">
-          {checklistGroups.map((category) => (
-            <div key={category}>
-              <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-forest-900/55">{category}</h3>
-              <ul className="mt-3 grid gap-3 lg:grid-cols-2">
-                {plan.checklist.filter((item) => item.category === category).map((item) => {
-                  const checked = checkedItems.includes(item.id)
-                  return (
-                    <li key={item.id} className={`min-w-0 rounded-2xl border p-4 transition-colors ${checked ? 'border-emerald-300 bg-emerald-50/70' : 'border-forest-900/10 bg-white'}`}>
-                      <label className="flex cursor-pointer items-start gap-3">
-                        <input type="checkbox" checked={checked} onChange={() => toggleItem(item.id)} className="mt-1 size-5 shrink-0 accent-emerald-600" />
-                        <span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><span className={`text-sm font-extrabold ${checked ? 'text-emerald-900' : 'text-forest-900'}`}>{item.title}</span><span className="rounded-full bg-forest-50 px-2 py-1 text-[10px] font-bold text-forest-700">{item.status}</span></span><span className="mt-2 block text-sm leading-relaxed text-forest-900/70">{item.detail}</span></span>
-                      </label>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-          ))}
-        </div>
-        <p className="mt-5 text-xs leading-relaxed text-forest-900/55">Your checked items stay in this browser on this device. For funds, choose evidence that matches the real source; GIC, loan and CA summary are not universal requirements. This preparation list does not replace your current application-country checklist.</p>
-      </section>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div><p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-coral-600">Save your progress on this device</p><h2 id="checklist-title" className="mt-2 text-2xl font-extrabold text-forest-900 sm:text-3xl">Document checklist</h2></div>
+            <div className="min-w-40 rounded-xl bg-forest-50 p-3 sm:w-52"><div className="flex justify-between text-xs font-bold text-forest-800"><span>{completedCount} of {totalItems} ready</span><span>{progress}%</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-forest-900/10"><div className="h-full rounded-full bg-coral-500 transition-[width]" style={{ width: `${progress}%` }} /></div></div>
+          </div>
+          <div className="mt-6 space-y-6">
+            {checklistGroups.map((category) => (
+              <div key={category}>
+                <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-forest-900/55">{category}</h3>
+                <ul className="mt-3 grid gap-3 lg:grid-cols-2">
+                  {plan.checklist.filter((item) => item.category === category).map((item) => {
+                    const checked = checkedItems.includes(item.id)
+                    return (
+                      <li key={item.id} className={`min-w-0 rounded-2xl border p-4 transition-colors ${checked ? 'border-emerald-300 bg-emerald-50/70' : 'border-forest-900/10 bg-white'}`}>
+                        <label className="flex cursor-pointer items-start gap-3">
+                          <input type="checkbox" checked={checked} onChange={() => toggleItem(item.id)} className="mt-1 size-5 shrink-0 accent-emerald-600" />
+                          <span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><span className={`text-sm font-extrabold ${checked ? 'text-emerald-900' : 'text-forest-900'}`}>{item.title}</span><span className="rounded-full bg-forest-50 px-2 py-1 text-[10px] font-bold text-forest-700">{item.status}</span></span><span className="mt-2 block text-sm leading-relaxed text-forest-900/70">{item.detail}</span></span>
+                        </label>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <p className="mt-5 text-xs leading-relaxed text-forest-900/55">Your checked items stay in this browser on this device. For funds, choose evidence that matches the real source; GIC, loan and CA summary are not universal requirements. This preparation list does not replace your current application-country checklist.</p>
+        </section>
       </MobilePlanSection>
 
       <MobilePlanSection title="Family cashflow planner" hint="Existing fee stages; optional when no budget record exists">
         <section aria-labelledby="cashflow-title" className="rounded-[2rem] bg-forest-900 bg-aurora p-5 text-white sm:p-8">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div><p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-coral-300">Existing cashflow data</p><h2 id="cashflow-title" className="mt-2 flex items-center gap-2 text-2xl font-extrabold sm:text-3xl"><Wallet aria-hidden="true" className="size-6" /> Family cashflow planner</h2><p className="mt-2 max-w-2xl text-sm leading-relaxed text-forest-100/75">This estimate is loaded from the same country cashflow data used by the website’s existing planner.</p></div>
-          {cashflow && <div className="rounded-2xl border border-white/15 bg-white/5 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-coral-300">Estimated first-year planning total</p><p className="mt-1 text-2xl font-black">{cashflow.totalEstimateINR}</p></div>}
-        </div>
-        {cashflow ? (
-          <>
-            <p className="mt-4 rounded-xl border border-white/10 bg-white/5 p-4 text-xs leading-relaxed text-forest-100/80">{cashflow.officialRuleNote}</p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {cashflow.stages.map((stage) => <article key={stage.stageNumber} className="flex min-w-0 flex-col rounded-2xl border border-white/10 bg-white/10 p-4"><div className="flex items-start justify-between gap-2"><span className="font-mono text-xs font-extrabold text-coral-300">STAGE {String(stage.stageNumber).padStart(2, '0')}</span><span className="rounded-full bg-white/10 px-2 py-1 text-[10px] font-semibold text-white/75">{stage.timeline}</span></div><h3 className="mt-3 text-sm font-extrabold leading-snug">{stage.title}</h3><p className="mt-2 flex-1 text-xs leading-relaxed text-forest-100/65">{stage.description}</p><div className="mt-4 border-t border-white/10 pt-3"><p className="font-bold text-coral-200">{stage.inrEstimate}</p><p className="mt-1 text-xs text-white/60">{stage.officialCost}</p><p className="mt-2 text-[11px] leading-relaxed text-emerald-300">{stage.refundableInfo}</p></div></article>)}
-            </div>
-          </>
-        ) : <p className="mt-4 rounded-xl bg-white/10 p-4 text-sm text-forest-100/75">No cashflow estimate is configured for this destination yet. Add its stages in the existing Admin → Cashflow Budget section.</p>}
-      </section>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div><p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-coral-300">Existing cashflow data</p><h2 id="cashflow-title" className="mt-2 flex items-center gap-2 text-2xl font-extrabold sm:text-3xl"><Wallet aria-hidden="true" className="size-6" /> Family cashflow planner</h2><p className="mt-2 max-w-2xl text-sm leading-relaxed text-forest-100/75">This estimate is loaded from the same country cashflow data used by the website’s existing planner.</p></div>
+            {cashflow && <div className="rounded-2xl border border-white/15 bg-white/5 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-coral-300">Estimated first-year planning total</p><p className="mt-1 text-2xl font-black">{cashflow.totalEstimateINR}</p></div>}
+          </div>
+          {cashflow ? (
+            <>
+              <p className="mt-4 rounded-xl border border-white/10 bg-white/5 p-4 text-xs leading-relaxed text-forest-100/80">{cashflow.officialRuleNote}</p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {cashflow.stages.map((stage) => <article key={stage.stageNumber} className="flex min-w-0 flex-col rounded-2xl border border-white/10 bg-white/10 p-4"><div className="flex items-start justify-between gap-2"><span className="font-mono text-xs font-extrabold text-coral-300">STAGE {String(stage.stageNumber).padStart(2, '0')}</span><span className="rounded-full bg-white/10 px-2 py-1 text-[10px] font-semibold text-white/75">{stage.timeline}</span></div><h3 className="mt-3 text-sm font-extrabold leading-snug">{stage.title}</h3><p className="mt-2 flex-1 text-xs leading-relaxed text-forest-100/65">{stage.description}</p><div className="mt-4 border-t border-white/10 pt-3"><p className="font-bold text-coral-200">{stage.inrEstimate}</p><p className="mt-1 text-xs text-white/60">{stage.officialCost}</p><p className="mt-2 text-[11px] leading-relaxed text-emerald-300">{stage.refundableInfo}</p></div></article>)}
+              </div>
+            </>
+          ) : <p className="mt-4 rounded-xl bg-white/10 p-4 text-sm text-forest-100/75">No cashflow estimate is configured for this destination yet. Add its stages in the existing Admin → Cashflow Budget section.</p>}
+        </section>
       </MobilePlanSection>
 
       <GyanDhanLoanSection countryName={country.name} />
 
       <MobilePlanSection title="Study route and visa requirements" hint="Admission, funds, work and post-study conditions">
         <section aria-labelledby="route-guidance-title" className="grid gap-4 lg:grid-cols-2">
-        <article className="rounded-[2rem] bg-white p-5 ring-1 ring-forest-900/10 sm:p-7"><Eyebrow>Study route</Eyebrow><h2 id="route-guidance-title" className="mt-3 text-xl font-extrabold text-forest-900">Admission, English and study conditions</h2><dl className="mt-4 space-y-3">{[
-          ['Admission and English', guide?.admissionAndEnglish || country.english],
-          ['Work while studying', guide?.workWhileStudying || 'Check the current visa conditions and permitted work rules for your route.'],
-          ['Post-study options', guide?.postStudyOption || 'Post-study eligibility depends on the qualification, institution and immigration rules in force.'],
-          ['Intake note', guide?.intakesNote || country.intakes.join(' · ')],
-        ].map(([label, value]) => <div key={label} className="rounded-xl bg-cream p-3"><dt className="text-xs font-bold uppercase tracking-wide text-forest-900/55">{label}</dt><dd className="mt-1 text-sm leading-relaxed text-forest-900/75">{value}</dd></div>)}</dl></article>
-        <article className="rounded-[2rem] bg-white p-5 ring-1 ring-forest-900/10 sm:p-7"><Eyebrow>Visa application</Eyebrow><h2 className="mt-3 text-xl font-extrabold text-forest-900">Core requirements to review</h2><ul className="mt-4 space-y-3">{guidance.requirements.map((item) => <li key={item} className="flex gap-2 text-sm leading-relaxed text-forest-900/75"><Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-coral-600" /><span>{item}</span></li>)}</ul><p className="mt-4 rounded-xl bg-amber-50 p-3 text-xs leading-relaxed text-amber-950">{guidance.caveat}</p></article>
-      </section>
+          <article className="rounded-[2rem] bg-white p-5 ring-1 ring-forest-900/10 sm:p-7"><Eyebrow>Study route</Eyebrow><h2 id="route-guidance-title" className="mt-3 text-xl font-extrabold text-forest-900">Admission, English and study conditions</h2><dl className="mt-4 space-y-3">{[
+            ['Admission and English', guide?.admissionAndEnglish || country.english],
+            ['Work while studying', guide?.workWhileStudying || 'Check the current visa conditions and permitted work rules for your route.'],
+            ['Post-study options', guide?.postStudyOption || 'Post-study eligibility depends on the qualification, institution and immigration rules in force.'],
+            ['Intake note', guide?.intakesNote || country.intakes.join(' · ')],
+          ].map(([label, value]) => <div key={label} className="rounded-xl bg-cream p-3"><dt className="text-xs font-bold uppercase tracking-wide text-forest-900/55">{label}</dt><dd className="mt-1 text-sm leading-relaxed text-forest-900/75">{value}</dd></div>)}</dl></article>
+          <article className="rounded-[2rem] bg-white p-5 ring-1 ring-forest-900/10 sm:p-7"><Eyebrow>Visa application</Eyebrow><h2 id="route-guidance-title-visa" className="mt-3 text-xl font-extrabold text-forest-900">Core requirements to review</h2><ul className="mt-4 space-y-3">{guidance.requirements.map((item) => <li key={item} className="flex gap-2 text-sm leading-relaxed text-forest-900/75"><Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-coral-600" /><span>{item}</span></li>)}</ul><p className="mt-4 rounded-xl bg-amber-50 p-3 text-xs leading-relaxed text-amber-950">{guidance.caveat}</p></article>
+        </section>
       </MobilePlanSection>
 
       <MobilePlanSection title="Official sources" hint="Official links and application notes">
         <section aria-labelledby="sources-title" className="rounded-[2rem] bg-white p-5 ring-1 ring-forest-900/10 sm:p-8">
-        <div className="flex items-center gap-2"><ClipboardCheck aria-hidden="true" className="size-5 text-coral-600" /><h2 id="sources-title" className="text-xl font-extrabold text-forest-900">Official sources</h2></div>
-        <p className="mt-2 text-sm text-forest-900/65">Check these sources again before applying. Rules and document requirements can change.</p>
-        <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-          {sourceList.map((source) => <li key={source.url}><a href={source.url} target="_blank" rel="noreferrer" className="inline-flex min-h-11 w-full items-center justify-between gap-3 rounded-xl bg-cream px-4 py-3 text-sm font-bold text-forest-800 underline decoration-forest-800/30 underline-offset-4 hover:text-coral-700"><span className="min-w-0">{source.label}</span><ExternalLink aria-hidden="true" className="size-4 shrink-0" /></a></li>)}
-        </ul>
-        <p className="mt-5 border-t border-forest-900/10 pt-4 text-xs leading-relaxed text-forest-900/55">This is general planning guidance, not legal advice or an eligibility decision. Document needs depend on route, nationality, school, province, application location and personal circumstances. It cannot guarantee a visa approval. Final decisions are made by the relevant government authority.</p>
-      </section>
+          <div className="flex items-center gap-2"><ClipboardCheck aria-hidden="true" className="size-5 text-coral-600" /><h2 id="sources-title" className="text-xl font-extrabold text-forest-900">Official sources</h2></div>
+          <p className="mt-2 text-sm text-forest-900/65">Check these sources again before applying. Rules and document requirements can change.</p>
+          <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+            {sourceList.map((source) => <li key={source.url}><a href={source.url} target="_blank" rel="noreferrer" className="inline-flex min-h-11 w-full items-center justify-between gap-3 rounded-xl bg-cream px-4 py-3 text-sm font-bold text-forest-800 underline decoration-forest-800/30 underline-offset-4 hover:text-coral-700"><span className="min-w-0">{source.label}</span><ExternalLink aria-hidden="true" className="size-4 shrink-0" /></a></li>)}
+          </ul>
+          <p className="mt-5 border-t border-forest-900/10 pt-4 text-xs leading-relaxed text-forest-900/55">This is general planning guidance, not legal advice or an eligibility decision. Document needs depend on route, nationality, school, province, application location and personal circumstances. It cannot guarantee a visa approval. Final decisions are made by the relevant government authority.</p>
+        </section>
       </MobilePlanSection>
 
       <div className="print-hidden mt-8 flex flex-col gap-3 rounded-2xl bg-cream p-5 sm:flex-row sm:items-center sm:justify-between">
         <div><h2 className="font-extrabold text-forest-900">Want help reviewing your plan?</h2><p className="mt-1 text-sm text-forest-900/65">Talk through your course, documents and next steps with our team.</p></div>
         <Link to="/contact" className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-coral-500 px-5 py-3 text-sm font-bold text-white transition hover:bg-coral-600">Free counselling <ArrowRight aria-hidden="true" className="size-4" /></Link>
       </div>
-    </main>
+    </div>
   )
 }
-
