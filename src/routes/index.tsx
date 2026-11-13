@@ -51,25 +51,7 @@ const rotatingWords = [
   { text: 'UK Degrees.', icon: '🇬🇧' },
   { text: 'IELTS 7.5+.', icon: '📚' },
 ]
-
-const homeJumpSections = [
-  { id: 'services', icon: '✈️', desktopLabel: 'Services', mobileLabel: 'Services' },
-  { id: 'destinations', icon: '🌍', desktopLabel: 'Countries', mobileLabel: 'Countries' },
-  { id: 'coaching', icon: '📚', desktopLabel: 'IELTS & PTE', mobileLabel: 'IELTS & PTE' },
-  { id: 'approvals', icon: '🎉', desktopLabel: 'Recent Visas', mobileLabel: 'Visas' },
-  { id: 'certificates', icon: '🏅', desktopLabel: 'Certificates', mobileLabel: 'Certificates' },
-  { id: 'reviews', icon: '⭐', desktopLabel: 'Reviews', mobileLabel: 'Reviews' },
-] as const
-
-function Home() {
-  const { approvals, posts, testimonials, certificates, settings, countryPages } = Route.useLoaderData()
-  const countries = countryPages.map((entry) => entry.country)
-  const homepageApprovals = approvals.filter((story) => story.homepageFeatured !== false)
-  const homepageTestimonials = testimonials.filter((story) => story.homepageFeatured !== false)
-  const [selectedCountry, setSelectedCountry] = useState('canada')
-  const [selectedVisa, setSelectedVisa] = useState('study')
-  const [showAllTestimonials, setShowAllTestimonials] = useState(false)
-  const [showAllTestimonialsMobile, setShowAllTestimonialsMobile] = useState(false)
+function HeroRotatingWord({ variant }: { variant: 'mobile' | 'desktop' }) {
   const [wordIndex, setWordIndex] = useState(0)
   const [fade, setFade] = useState(true)
 
@@ -88,6 +70,42 @@ function Home() {
       if (transitionTimer !== undefined) window.clearTimeout(transitionTimer)
     }
   }, [])
+
+  const isMobile = variant === 'mobile'
+
+  return (
+    <span
+      className={
+        `inline-flex items-center ${isMobile ? 'gap-2' : 'gap-3'} transition-all duration-300 transform ` +
+        (fade ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2')
+      }
+    >
+      <span className="text-white">{rotatingWords[wordIndex].text}</span>
+      <span className={`inline-block ${isMobile ? 'text-2xl' : 'text-3xl lg:text-4xl xl:text-5xl'} animate-bounce`}>
+        {rotatingWords[wordIndex].icon}
+      </span>
+    </span>
+  )
+}
+const homeJumpSections = [
+  { id: 'services', icon: '✈️', desktopLabel: 'Services', mobileLabel: 'Services' },
+  { id: 'destinations', icon: '🌍', desktopLabel: 'Countries', mobileLabel: 'Countries' },
+  { id: 'coaching', icon: '📚', desktopLabel: 'IELTS & PTE', mobileLabel: 'IELTS & PTE' },
+  { id: 'approvals', icon: '🎉', desktopLabel: 'Recent Visas', mobileLabel: 'Visas' },
+  { id: 'certificates', icon: '🏅', desktopLabel: 'Certificates', mobileLabel: 'Certificates' },
+  { id: 'reviews', icon: '⭐', desktopLabel: 'Reviews', mobileLabel: 'Reviews' },
+] as const
+
+function Home() {
+  const { approvals, posts, testimonials, certificates, settings, countryPages } = Route.useLoaderData()
+  const countries = countryPages.map((entry) => entry.country)
+  const homepageApprovals = approvals.filter((story) => story.homepageFeatured !== false)
+  const homepageTestimonials = testimonials.filter((story) => story.homepageFeatured !== false)
+  const [selectedCountry, setSelectedCountry] = useState('canada')
+  const [selectedVisa, setSelectedVisa] = useState('study')
+  const [showAllTestimonials, setShowAllTestimonials] = useState(false)
+  const [showAllTestimonialsMobile, setShowAllTestimonialsMobile] = useState(false)
+ 
 
   // Sticky Jump bar state & refs (Dynamically attaches right under #site-main-header with 0 gap)
   const [isMobileSticky, setIsMobileSticky] = useState(false)
@@ -145,6 +163,10 @@ function Home() {
   })
   const visibleTestimonialsDesktop = showAllTestimonials ? homepageTestimonials : homepageTestimonials.slice(0, 3)
   const visibleTestimonialsMobile = showAllTestimonialsMobile ? homepageTestimonials : homepageTestimonials.slice(0, 2)
+  const stickyRaw = (settings.phones[1] || settings.phones[0] || site.whatsapp).trim()
+  const stickyDigits = stickyRaw.replace(/\D/g, '').replace(/^0+/, '')
+  const stickyWaNumber = stickyDigits.length === 10 ? `91${stickyDigits}` : stickyDigits
+  const stickyTelHref = `tel:${stickyRaw.startsWith('+') ? stickyRaw.replace(/[^\d+]/g, '') : `+${stickyWaNumber}`}`
 
   return (
     <>
@@ -186,18 +208,8 @@ function Home() {
                 </svg>
               </span>
               <br />
-              <span className="inline-flex items-center gap-2 h-[1.15em] overflow-hidden">
-                <span
-                  className={
-                    'inline-flex items-center gap-2 transition-all duration-300 transform ' +
-                    (fade ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2')
-                  }
-                >
-                  <span className="text-white">{rotatingWords[wordIndex].text}</span>
-                  <span className="inline-block text-2xl animate-bounce">
-                    {rotatingWords[wordIndex].icon}
-                  </span>
-                </span>
+             <span className="inline-flex items-center gap-2 h-[1.15em] overflow-hidden">
+                <HeroRotatingWord variant="mobile" />
               </span>
             </h1>
 
@@ -220,20 +232,18 @@ function Home() {
                 <div className="min-w-0">
                   <label htmlFor="mobile-country" className="block text-[10px] font-bold text-white/80 mb-1">Country</label>
                   <div className="relative">
-                    <select
+                   <select
                       id="mobile-country"
                       aria-label="Select Country"
                       value={selectedCountry}
                       onChange={(e) => setSelectedCountry(e.target.value)}
                       className="w-full rounded-xl bg-white text-forest-900 text-xs font-bold py-2.5 pl-2.5 pr-7 shadow-sm outline-none border border-forest-900/15 appearance-none truncate"
                     >
-                      <option value="canada">🇨🇦 Canada</option>
-                      <option value="uk">🇬🇧 UK</option>
-                      <option value="australia">🇦🇺 Australia</option>
-                      <option value="usa">🇺🇸 USA</option>
-                      <option value="new-zealand">🇳🇿 NZ</option>
-                      <option value="germany">🇩🇪 Germany</option>
-                      <option value="europe">🇪🇺 Europe</option>
+                      {countries.map((c) => (
+                        <option key={c.slug} value={c.slug}>
+                          {c.flag} {c.name}
+                        </option>
+                      ))}
                       <option value="">Other</option>
                     </select>
                     <span className="pointer-events-none absolute right-2.5 top-2.5 text-[10px] text-forest-900/60">▼</span>
@@ -261,15 +271,44 @@ function Home() {
                 </div>
               </div>
 
-              <div className="mt-4 flex flex-col gap-2">
-                <Link
-                  to="/countries/$slug"
-                  params={{ slug: selectedCountry }}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-coral-500 py-3 px-4 text-xs font-extrabold text-white shadow-lg active:scale-98 transition text-center"
-                >
-                  <span className="truncate">Explore {countries.find((c) => c.slug === selectedCountry)?.name ?? 'Country'} Guide</span>
-                  <ArrowRight className="size-3.5 shrink-0" />
-                </Link>
+            <div className="mt-4 flex flex-col gap-2">
+                {selectedVisa === 'coaching' ? (
+                  <Link
+                    to="/coaching"
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-coral-500 py-3 px-4 text-xs font-extrabold text-white shadow-lg active:scale-98 transition text-center"
+                  >
+                    <span className="truncate">Explore IELTS &amp; PTE Coaching</span>
+                    <ArrowRight className="size-3.5 shrink-0" />
+                  </Link>
+                ) : selectedCountry ? (
+                  <Link
+                    to="/countries/$slug"
+                    params={{ slug: selectedCountry }}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-coral-500 py-3 px-4 text-xs font-extrabold text-white shadow-lg active:scale-98 transition text-center"
+                  >
+                    <span className="truncate">
+                      Explore {countries.find((c) => c.slug === selectedCountry)?.name ?? 'Country'} Guide
+                    </span>
+                    <ArrowRight className="size-3.5 shrink-0" />
+                  </Link>
+                ) : selectedVisa !== 'study' ? (
+                  <Link
+                    to="/visas"
+                    hash={selectedVisa}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-coral-500 py-3 px-4 text-xs font-extrabold text-white shadow-lg active:scale-98 transition text-center"
+                  >
+                    <span className="truncate">Explore Visa Services</span>
+                    <ArrowRight className="size-3.5 shrink-0" />
+                  </Link>
+                ) : (
+                  <Link
+                    to="/countries"
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-coral-500 py-3 px-4 text-xs font-extrabold text-white shadow-lg active:scale-98 transition text-center"
+                  >
+                    <span className="truncate">Browse destinations</span>
+                    <ArrowRight className="size-3.5 shrink-0" />
+                  </Link>
+                )}
                 <div className="flex gap-2">
                   <Link
                     to="/eligibility"
@@ -707,8 +746,8 @@ function Home() {
 
         {/* MOBILE STICKY BOTTOM CTA BAR */}
         <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-forest-950/95 backdrop-blur-md border-t border-white/15 px-4 py-3 flex items-center justify-between gap-3 shadow-2xl">
-          <a
-            href="tel:+919772570478"
+         <a
+            href={stickyTelHref}
             className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-white/10 hover:bg-white/20 py-2.5 text-xs font-bold text-white border border-white/15 active:scale-95 transition"
           >
             <span>📞</span>
@@ -716,7 +755,7 @@ function Home() {
           </a>
           
           <a
-            href="https://wa.me/919772570478?text=Hi%20British%20Education%20Sangaria,%20I%20want%20to%20know%20more%20about%20Study%20Visas."
+            href={`https://wa.me/${stickyWaNumber}?text=${encodeURIComponent('Hi British Education Sangaria, I want to know more about Study Visas.')}`}
             target="_blank"
             rel="noreferrer"
             className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-[#25D366] hover:brightness-105 py-2.5 text-xs font-bold text-white shadow-md active:scale-95 transition"
@@ -765,17 +804,7 @@ function Home() {
                 </span>
                 <br />
                 <span className="inline-flex items-center gap-3 whitespace-nowrap min-h-[1.25em] pb-1 overflow-visible">
-                  <span
-                    className={
-                      'inline-flex items-center gap-3 transition-all duration-300 transform ' +
-                      (fade ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2')
-                    }
-                  >
-                    <span className="text-white">{rotatingWords[wordIndex].text}</span>
-                    <span className="inline-block text-3xl lg:text-4xl xl:text-5xl animate-bounce">
-                      {rotatingWords[wordIndex].icon}
-                    </span>
-                  </span>
+                  <HeroRotatingWord variant="desktop" />
                 </span>
               </h1>
 
@@ -793,14 +822,12 @@ function Home() {
                   <div className="min-w-0">
                     <label htmlFor="desktop-country" className="mb-1 block text-xs font-bold text-white/80">Country</label>
                     <div className="relative">
-                      <select id="desktop-country" aria-label="Select Country" value={selectedCountry} onChange={(event) => setSelectedCountry(event.target.value)} className="w-full appearance-none truncate rounded-xl border border-forest-900/15 bg-white py-3 pl-3 pr-8 text-sm font-bold text-forest-900 shadow-sm">
-                        <option value="canada">🇨🇦 Canada</option>
-                        <option value="uk">🇬🇧 UK</option>
-                        <option value="australia">🇦🇺 Australia</option>
-                        <option value="usa">🇺🇸 USA</option>
-                        <option value="new-zealand">🇳🇿 New Zealand</option>
-                        <option value="germany">🇩🇪 Germany</option>
-                        <option value="europe">🇪🇺 Europe</option>
+                     <select id="desktop-country" aria-label="Select Country" value={selectedCountry} onChange={(event) => setSelectedCountry(event.target.value)} className="w-full appearance-none truncate rounded-xl border border-forest-900/15 bg-white py-3 pl-3 pr-8 text-sm font-bold text-forest-900 shadow-sm">
+                        {countries.map((country) => (
+                          <option key={country.slug} value={country.slug}>
+                            {country.flag} {country.name}
+                          </option>
+                        ))}
                         <option value="">Other / not sure</option>
                       </select>
                       <span aria-hidden="true" className="pointer-events-none absolute right-3 top-3.5 text-xs text-forest-900/60">▼</span>
@@ -820,10 +847,18 @@ function Home() {
                     </div>
                   </div>
                 </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {selectedCountry ? (
+               <div className="mt-4 flex flex-wrap gap-2">
+                  {selectedVisa === 'coaching' ? (
+                    <Link to="/coaching" className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-coral-500 px-4 py-3 text-sm font-extrabold text-white shadow-lg transition hover:bg-coral-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-400">
+                      Explore IELTS &amp; PTE Coaching <ArrowRight aria-hidden="true" className="size-4 shrink-0" />
+                    </Link>
+                  ) : selectedCountry ? (
                     <Link to="/countries/$slug" params={{ slug: selectedCountry }} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-coral-500 px-4 py-3 text-sm font-extrabold text-white shadow-lg transition hover:bg-coral-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-400">
                       Explore {countries.find((country) => country.slug === selectedCountry)?.name ?? 'Country'} Guide <ArrowRight aria-hidden="true" className="size-4 shrink-0" />
+                    </Link>
+                  ) : selectedVisa !== 'study' ? (
+                    <Link to="/visas" hash={selectedVisa} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-coral-500 px-4 py-3 text-sm font-extrabold text-white shadow-lg transition hover:bg-coral-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-400">
+                      Explore Visa Services <ArrowRight aria-hidden="true" className="size-4 shrink-0" />
                     </Link>
                   ) : (
                     <Link to="/countries" className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-coral-500 px-4 py-3 text-sm font-extrabold text-white shadow-lg transition hover:bg-coral-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-400">

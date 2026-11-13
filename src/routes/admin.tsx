@@ -108,7 +108,7 @@ function AdminPage() {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
+      <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
         <div className="mb-8">
           <label htmlFor="admin-section-select" className="mb-2 block text-xs font-bold uppercase tracking-wide text-forest-900/60 sm:hidden">Admin section</label>
           <select
@@ -148,7 +148,7 @@ function AdminPage() {
         {tab === 'settings' && <SettingsPanel settings={snapshot.settings} onReload={reload} onNotice={showNotice} onDirtyChange={setSettingsDirty} />}
         {tab === 'users' && <UsersPanel users={snapshot.users} currentEmail={snapshot.user.email} onReload={reload} onNotice={showNotice} />}
         {showChangePass && <ChangePasswordModal onClose={() => setShowChangePass(false)} onNotice={showNotice} />}
-      </main>
+      </div>
     </div>
   )
 }
@@ -1177,7 +1177,7 @@ function SettingsPanel({ settings, onReload, onNotice, onDirtyChange }: { settin
     } catch (cause) {
       onNotice(cause instanceof Error ? cause.message : 'Could not remove this trust number.')
     } finally {
-      setBusy(false)
+      setStatBusy(false)
     }
   }
   function beginContactEdit() {

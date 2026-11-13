@@ -1,8 +1,7 @@
 import { X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useRouterState } from '@tanstack/react-router'
+import { useLoaderData, useRouterState } from '@tanstack/react-router'
 import { EnquiryForm } from './EnquiryForm'
-import { getPublicContent } from '@/lib/public-functions'
 
 const POPUP_DONE_KEY = 'bei-enquiry-popup-submitted'
 const POPUP_DISMISSED_KEY = 'bei-enquiry-popup-dismissed'
@@ -36,27 +35,13 @@ function markPopupDismissed() {
 
 export function EnquiryPopup() {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const rootData = useLoaderData({ from: '__root__' })
+  const enabled = rootData?.settings.popupEnabled ?? true
+  const delaySeconds = rootData?.settings.popupDelaySeconds ?? 8
   const [open, setOpen] = useState(false)
-  const [enabled, setEnabled] = useState(true)
-  const [delaySeconds, setDelaySeconds] = useState(8)
   const [interacted, setInteracted] = useState(() => hasInteractedWithPopup())
   const dialogRef = useRef<HTMLDivElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
-
-  useEffect(() => {
-    let active = true
-    getPublicContent()
-      .then((content) => {
-        if (!active) return
-        setEnabled(content.settings.popupEnabled)
-        setDelaySeconds(content.settings.popupDelaySeconds)
-      })
-      .catch(() => undefined)
-
-    return () => {
-      active = false
-    }
-  }, [])
 
   useEffect(() => {
     if (interacted || !enabled || pathname.startsWith('/admin') || open) return

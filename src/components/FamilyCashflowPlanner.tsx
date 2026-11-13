@@ -2,8 +2,12 @@ import { useState, useEffect } from 'react'
 import { defaultCashflowData, CountryCashflow } from '@/data/cashflow'
 import { getPublicCashflow } from '@/lib/public-functions'
 import { applyScheduledCashflowPolicy } from '@/data/policy-watch'
+import { useLoaderData } from '@tanstack/react-router'
 
 export function FamilyCashflowPlanner() {
+  const rootData = useLoaderData({ from: '__root__' })
+  const rawPhone = (rootData?.settings.phones[1] || rootData?.settings.phones[0] || '9772570478').trim()
+  const displayPhone = rawPhone.startsWith('+') ? rawPhone : `+91 ${rawPhone}`
   const [data, setData] = useState<CountryCashflow[]>(() => defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country)))
   const [selectedSlug, setSelectedSlug] = useState('canada')
 
@@ -61,7 +65,7 @@ export function FamilyCashflowPlanner() {
           <div class="header">
             <div>
               <h1 class="brand-title">British Education & Immigration</h1>
-              <div class="brand-sub">Near Open Book Library, Bhagatpura Road, Sangaria (Rajasthan) · Phone: +91 9772570478</div>
+<div class="brand-sub">Near Open Book Library, Bhagatpura Road, Sangaria (Rajasthan) · Phone: ${displayPhone}</div>
             </div>
             <div style="text-align: right; font-size: 11px; color: #666;">
               Official Session 2026/2027<br>
@@ -99,7 +103,7 @@ export function FamilyCashflowPlanner() {
           </table>
 
           <div class="footer">
-            <p>Transparency Notice: Student pays fees directly to college/embassy accounts. Zero hidden charges. For counselling: +91 9772570478.</p>
+            <p>Transparency Notice: Student pays fees directly to college/embassy accounts. Zero hidden charges. For counselling: ${displayPhone}.</p>
           </div>
           <script>
             window.onload = function() {
@@ -130,7 +134,7 @@ export function FamilyCashflowPlanner() {
       msg += `🏛️ Paid to: ${st.paidTo}\n`
       msg += `🛡️ Refund: ${st.refundableInfo}\n`
     })
-    msg += `\n📞 *Office Contact / WhatsApp:* +91 9772570478\n`
+    msg += `\n📞 *Office Contact / WhatsApp:* ${displayPhone}\n`
     msg += `📍 Near Open Book Library, Bhagatpura Road, Sangaria (Raj.)\n`
     msg += `👉 Website: https://britisheducationandimmigration.com`
 

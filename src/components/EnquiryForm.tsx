@@ -1,8 +1,10 @@
 import { CheckCircle2, Loader2, MessageCircle, Send, Check } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
+import { useLoaderData } from '@tanstack/react-router'
 import { countries as fixtureCountries, visaServices } from '@/data/fixtures'
+import { site } from '@/data/site'
 import { cn } from '@/lib/utils'
-import { getPublicCountryCatalogue, submitEnquiry } from '@/lib/public-functions'
+import { submitEnquiry } from '@/lib/public-functions'
 
 export function EnquiryForm({
   source,
@@ -21,8 +23,11 @@ export function EnquiryForm({
   compact?: boolean
   onSuccess?: () => void
 }) {
+  const rootData = useLoaderData({ from: '__root__' })
+  const countryOptions = rootData?.countries ?? fixtureCountries
+  const settings = rootData?.settings
+
   const [state, setState] = useState<'idle' | 'sending' | 'done' | 'error'>('idle')
-  const [countryOptions, setCountryOptions] = useState(fixtureCountries)
   const [whatsappUrl, setWhatsappUrl] = useState('')
   const [showSharePrompt, setShowSharePrompt] = useState(false)
 
@@ -30,16 +35,17 @@ export function EnquiryForm({
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
+  const [selectedCountry, setSelectedCountry] = useState(defaultCountry ?? '')
+  const [otherCountry, setOtherCountry] = useState('')
+
+  useEffect(() => {
+    setSelectedCountry(defaultCountry ?? '')
+    setOtherCountry('')
+  }, [defaultCountry])
 
   const isPhoneValid = /^[6-9]\d{9}$/.test(phone.replace(/\D/g, '')) || phone.replace(/\D/g, '').length === 10
   const isNameValid = name.trim().length >= 2
   const isEmailValid = !email || /^\S+@\S+\.\S+$/.test(email.trim())
-
-  useEffect(() => {
-    void getPublicCountryCatalogue()
-      .then((entries) => setCountryOptions(entries.map((entry) => entry.country)))
-      .catch(() => {})
-  }, [])
 
   useEffect(() => {
     if (state !== 'done' || !showSharePrompt) return
@@ -60,7 +66,8 @@ export function EnquiryForm({
     const submittedEmail = String(data.get('email') ?? '').trim()
     const city = String(data.get('city') ?? '').trim()
     const interest = String(data.get('interest') ?? '').trim()
-    const country = String(data.get('country') ?? '').trim()
+    const rawCountry = String(data.get('country') ?? '').trim()
+    const country = rawCountry === 'Other' ? (otherCountry.trim() || 'Other') : rawCountry
     const message = String(data.get('message') ?? '').trim()
     const preferredDemoDate = source === 'coaching' ? String(data.get('preferredDemoDate') ?? '').trim() : ''
     const preferredDemoTime = source === 'coaching' ? String(data.get('preferredDemoTime') ?? '').trim() : ''
@@ -85,7 +92,11 @@ export function EnquiryForm({
       'Please guide me further. Thank you!',
     ].filter(Boolean).join('\n')
 
-    const waUrl = `https://wa.me/919772570478?text=${encodeURIComponent(textLines)}`
+    const rawDigits = (settings?.phones[1] || settings?.phones[0] || site.whatsapp)
+      .replace(/\D/g, '')
+      .replace(/^0+/, '')
+    const waPhone = rawDigits.length === 10 ? `91${rawDigits}` : rawDigits
+    const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(textLines)}`
     setWhatsappUrl(waUrl)
 
     try {
@@ -275,12 +286,30 @@ export function EnquiryForm({
         </div>
         <div>
           <label className={labelCls} htmlFor={`${source}-country`}>Preferred country</label>
-          <select id={`${source}-country`} name="country" defaultValue={defaultCountry ?? ''} className="field">
+          <select
+            id={`${source}-country`}
+            name="country"
+            value={selectedCountry}
+            onChange={(e) => setSelectedCountry(e.target.value)}
+            className="field"
+          >
             <option value="">Not decided yet</option>
             {countryOptions.map((c) => (
-              <option key={c.slug}>{c.name}</option>
+              <option key={c.slug} value={c.name}>{c.name}</option>
             ))}
+            <option value="Other">Other</option>
           </select>
+          {selectedCountry === 'Other' && (
+            <input
+              type="text"
+              maxLength={120}
+              value={otherCountry}
+              onChange={(e) => setOtherCountry(e.target.value)}
+              placeholder="Type country name (e.g. Ireland, Singapore)"
+              aria-label="Other preferred country"
+              className="field mt-2"
+            />
+          )}
         </div>
       </div>
 
