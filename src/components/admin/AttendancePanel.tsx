@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { CalendarDays, Camera, Check, Copy, Download, ExternalLink, History, MapPin, Pencil, Plus, RefreshCw, Smartphone, Trash2, Users } from 'lucide-react'
+import { CalendarDays, Check, Copy, Download, ExternalLink, History, MapPin, Pencil, Plus, RefreshCw, Smartphone, Trash2, Users } from 'lucide-react'
 import { deleteEmployee, exportAttendanceExcel, getAdminAttendanceSnapshot, regenerateEmployeeToken, resetEmployeeDevice, saveAttendanceSettings, saveEmployee, updateAttendanceRecord } from '@/lib/attendance-functions'
 import type { AdminAttendanceSnapshot, AttendanceLogRecord, AttendanceSettings, EmployeeRecord } from '@/lib/content-types'
 import { AttendanceEditModal, EmployeeFormModal, type EmployeeDraft, type LogDraft } from './AttendanceModals'
@@ -275,29 +275,38 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                         <p className="font-bold text-[#1D2939]">{log.employeeName}</p>
                         <p className="text-[#667085]">{log.workDate} · {fmtHours(log.workMinutes)}</p>
                       </td>
-                      <td className="px-4 py-3">
+                     <td className="px-4 py-3">
                         <p className="font-semibold text-[#1D2939]">In: {fmtIstTime(log.checkInAt)} {log.isLate && <span className="ml-1 rounded bg-[#FFFAEB] px-1.5 py-0.5 text-[10px] text-[#F79009]">Late</span>}</p>
                         <p className="text-[#667085]">Out: {fmtIstTime(log.checkOutAt)}</p>
+                        {log.breakMinutes > 0 && <p className="text-[10px] font-medium text-[#465FFF]">Break: {fmtHours(log.breakMinutes)} ({log.breaks.length}x)</p>}
                       </td>
-                      <td className="px-4 py-3">
-                        {log.inLat !== null ? (
-                          <div className="space-y-0.5">
-                            <div className="flex items-center gap-2">
-                              <a href={mapHref(log.inLat, log.inLng)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-[#465FFF] hover:underline">{log.inDistanceM ?? 0}m <ExternalLink className="size-3" /></a>
-                              {log.inPhotoSrc && <a href={log.inPhotoSrc} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-[#12B76A] hover:underline"><Camera className="size-3" /> Selfie</a>}
+                     <td className="px-4 py-3">
+                        {log.inLat !== null || log.inPhotoSrc ? (
+                          <div className="flex items-center gap-2.5">
+                            {log.inPhotoSrc && (
+                              <a href={log.inPhotoSrc} target="_blank" rel="noreferrer" title="Open full In selfie" className="shrink-0">
+                                <img src={log.inPhotoSrc} alt={`${log.employeeName} in selfie`} className="size-11 rounded-lg border border-[#E4E7EC] object-cover shadow-xs" />
+                              </a>
+                            )}
+                            <div className="space-y-0.5">
+                              {log.inLat !== null && <a href={mapHref(log.inLat, log.inLng)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-[#465FFF] hover:underline">{log.inDistanceM ?? 0}m <ExternalLink className="size-3" /></a>}
+                              <p className="text-[10px] text-[#667085]">{log.inIpCity || log.inIpCountry || 'IN'} · {log.inIp}</p>
                             </div>
-                            <p className="text-[10px] text-[#667085]">{log.inIpCity || log.inIpCountry || 'IN'} · {log.inIp}</p>
                           </div>
                         ) : <span className="text-[#98A2B3]">—</span>}
                       </td>
                       <td className="px-4 py-3">
-                        {log.outLat !== null ? (
-                          <div className="space-y-0.5">
-                            <div className="flex items-center gap-2">
-                              <a href={mapHref(log.outLat, log.outLng)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-[#465FFF] hover:underline">{log.outDistanceM ?? 0}m <ExternalLink className="size-3" /></a>
-                              {log.outPhotoSrc && <a href={log.outPhotoSrc} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-[#12B76A] hover:underline"><Camera className="size-3" /> Selfie</a>}
+                        {log.outLat !== null || log.outPhotoSrc ? (
+                          <div className="flex items-center gap-2.5">
+                            {log.outPhotoSrc && (
+                              <a href={log.outPhotoSrc} target="_blank" rel="noreferrer" title="Open full Out selfie" className="shrink-0">
+                                <img src={log.outPhotoSrc} alt={`${log.employeeName} out selfie`} className="size-11 rounded-lg border border-[#E4E7EC] object-cover shadow-xs" />
+                              </a>
+                            )}
+                            <div className="space-y-0.5">
+                              {log.outLat !== null && <a href={mapHref(log.outLat, log.outLng)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-[#465FFF] hover:underline">{log.outDistanceM ?? 0}m <ExternalLink className="size-3" /></a>}
+                              <p className="text-[10px] text-[#667085]">{log.outIpCity || log.outIpCountry || 'IN'} · {log.outIp}</p>
                             </div>
-                            <p className="text-[10px] text-[#667085]">{log.outIpCity || log.outIpCountry || 'IN'} · {log.outIp}</p>
                           </div>
                         ) : <span className="text-[#98A2B3]">—</span>}
                       </td>

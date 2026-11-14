@@ -78,6 +78,7 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
   const [busy, setBusy] = useState(false)
   const [stepLabel, setStepLabel] = useState('')
   const [showMore, setShowMore] = useState(false)
+  const [breakNote, setBreakNote] = useState('')
   const [statusMsg, setStatusMsg] = useState<{ text: string; tone: 'success' | 'error' } | null>(null)
   const [liveTime, setLiveTime] = useState('')
 
@@ -201,26 +202,46 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
     return dataUrl.split(',')[1] ?? ''
   }
 
-  async function submitAction(action: 'in' | 'out') {
+  const hasOpenBreak = Boolean(todayLog?.breaks?.some((b) => b.outAt && !b.inAt))
+
+  async function submitAction(action: 'in' | 'out' | 'half_out' | 'break_out' | 'break_in') {
     setBusy(true)
     setStatusMsg(null)
     try {
-      setStepLabel('Checking live selfie…')
-      const photoBase64 = await captureLiveSelfie()
+      let photoBase64 = ''
+      if (action === 'in' || action === 'out' || action === 'half_out') {
+        setStepLabel('Checking live selfie…')
+        photoBase64 = await captureLiveSelfie()
+      }
       setStepLabel('Verifying GPS location…')
       const freshGps = await fetchLocation()
       setStepLabel('Saving attendance…')
       const res = await markEmployeeAttendance({
-        data: { token, action, pin, deviceKey: deviceKey || getOrCreateDeviceKey(), photoBase64, lat: freshGps.lat, lng: freshGps.lng, accuracyM: freshGps.accuracyM },
+        data: {
+          token,
+          action,
+          pin,
+          note: action === 'break_out' ? breakNote : '',
+          deviceKey: deviceKey || getOrCreateDeviceKey(),
+          photoBase64,
+          lat: freshGps.lat,
+          lng: freshGps.lng,
+          accuracyM: freshGps.accuracyM,
+        },
       })
       const refreshed = await getEmployeePortalData({ data: { token } })
       setPortal(refreshed)
       setPin('')
-      if (action === 'out') stopCamera()
-      setStatusMsg({
-        text: action === 'in' ? `Check In saved (${res.distanceM}m from office).` : `Check Out saved (${res.distanceM}m from office).`,
-        tone: 'success',
-      })
+      if (action === 'break_out') setBreakNote('')
+      if (action === 'out' || action === 'half_out') stopCamera()
+      const msgMap: Record<typeof action, string> = {
+        in: `Check In saved (${res.distanceM}m from office).`,
+        out: `Check Out saved (${res.distanceM}m from office).`,
+        half_out: `Half Day Check Out saved (${res.distanceM}m from office).`,
+        break_out: `Stepped out recorded (${res.distanceM}m). Tap Back in Office when returning.`,
+        break_in: `Back in Office recorded (${res.distanceM}m).`,
+      }
+      setStatusMsg({ text: msgMap[action], tone: 'success' })
     } catch (cause) {
       setStatusMsg({ text: cause instanceof Error ? cause.message : 'Could not mark attendance.', tone: 'error' })
     } finally {
@@ -228,7 +249,6 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
       setBusy(false)
     }
   }
-
   const dist = gps ? distanceMeters(gps.lat, gps.lng, settings.officeLat, settings.officeLng) : null
   const inRange = dist !== null && dist <= settings.allowedRadiusM
 
@@ -303,17 +323,39 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
             </label>
           )}
 
-          {!hasCheckedIn ? (
+         {!hasCheckedIn ? (
             <button type="button" disabled={busy || gpsState !== 'ready' || (settings.requireSelfie && cameraState !== 'ready') || (employee.hasPin && pin.length < 4)} onClick={() => void submitAction('in')} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#465FFF] px-5 py-3 text-sm font-bold text-white shadow-xs disabled:opacity-50">
               <CheckCircle2 className="size-4" /> {busy ? stepLabel || 'Marking…' : 'Mark Check In'}
             </button>
           ) : !hasCheckedOut ? (
-            <button type="button" disabled={busy || gpsState !== 'ready' || (settings.requireSelfie && cameraState !== 'ready') || (employee.hasPin && pin.length < 4)} onClick={() => void submitAction('out')} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#1D2939] px-5 py-3 text-sm font-bold text-white shadow-xs disabled:opacity-50">
-              <Clock className="size-4" /> {busy ? stepLabel || 'Marking…' : 'Mark Check Out'}
-            </button>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2.5">
+                <button type="button" disabled={busy || gpsState !== 'ready' || (settings.requireSelfie && cameraState !== 'ready') || (employee.hasPin && pin.length < 4)} onClick={() => void submitAction('out')} className="flex min-h-12 items-center justify-center gap-1.5 rounded-xl bg-[#1D2939] px-3 py-3 text-xs font-bold text-white shadow-xs disabled:opacity-50 sm:text-sm">
+                  <Clock className="size-4" /> {busy ? stepLabel || 'Saving…' : 'Check Out'}
+                </button>
+                <button type="button" disabled={busy || gpsState !== 'ready' || (settings.requireSelfie && cameraState !== 'ready') || (employee.hasPin && pin.length < 4)} onClick={() => void submitAction('half_out')} className="flex min-h-12 items-center justify-center gap-1.5 rounded-xl border border-[#F79009] bg-[#FFFAEB] px-3 py-3 text-xs font-bold text-[#F79009] disabled:opacity-50 sm:text-sm">
+                  Half Day Out
+                </button>
+              </div>
+
+              <div className="rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-3 space-y-2">
+                {hasOpenBreak ? (
+                  <button type="button" disabled={busy || gpsState !== 'ready' || (employee.hasPin && pin.length < 4)} onClick={() => void submitAction('break_in')} className="flex min-h-10 w-full items-center justify-center rounded-xl bg-[#12B76A] px-4 py-2 text-xs font-bold text-white disabled:opacity-50">
+                    {busy ? stepLabel || 'Saving…' : 'Back in Office (Resume Shift)'}
+                  </button>
+                ) : (
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <input value={breakNote} onChange={(e) => setBreakNote(e.target.value)} maxLength={120} placeholder="Reason if stepping out (e.g. Lunch / Bank)" className="field flex-1 !py-2 !text-xs" />
+                    <button type="button" disabled={busy || gpsState !== 'ready' || (employee.hasPin && pin.length < 4)} onClick={() => void submitAction('break_out')} className="min-h-10 shrink-0 rounded-xl border border-[#E4E7EC] bg-white px-3.5 py-2 text-xs font-bold text-[#1D2939] hover:bg-[#ECF3FF] disabled:opacity-50">
+                      Step Out / Break
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           ) : (
             <div className="rounded-xl bg-[#ECFDF3] p-4 text-center text-sm font-bold text-[#12B76A]">
-              Today&apos;s attendance complete · Worked {fmtHours(todayLog?.workMinutes ?? 0)}
+              Today&apos;s attendance complete ({todayLog?.status}) · Worked {fmtHours(todayLog?.workMinutes ?? 0)}
             </div>
           )}
         </section>

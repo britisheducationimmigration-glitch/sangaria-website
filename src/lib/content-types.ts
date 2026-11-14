@@ -187,7 +187,17 @@ export type AttendanceEditHistoryRecord = {
   reason: string
   createdAt: string
 }
-
+export type AttendanceBreakRecord = {
+  outAt: string
+  inAt: string
+  outLat: number | null
+  outLng: number | null
+  outDistanceM: number | null
+  inLat: number | null
+  inLng: number | null
+  inDistanceM: number | null
+  note: string
+}
 export type AttendanceLogRecord = {
   id: number
   employeeId: number
@@ -216,6 +226,8 @@ export type AttendanceLogRecord = {
   outPhotoSrc: string
   status: AttendanceStatus
   workMinutes: number
+  breakMinutes: number
+  breaks: AttendanceBreakRecord[]
   isLate: boolean
   editedBy: string
   editNote: string

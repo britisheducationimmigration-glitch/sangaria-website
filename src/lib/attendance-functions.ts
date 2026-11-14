@@ -4,6 +4,7 @@ import { getRequestHeader } from '@tanstack/react-start/server'
 import { execute, queryRows } from './db.server'
 import { checkRateLimit } from './rate-limit.server'
 import {
+  autoCloseOpenCheckIns,
   buildEmployeeCycleSummaries,
   currentIstMonth,
   ensureAttendanceSchema,
@@ -15,6 +16,7 @@ import {
   mapAttendanceRow,
   mapEditHistoryRow,
   mapEmployeeRow,
+  parseBreaksJson,
   readAttendanceSettings,
   todayIstDate,
   verifyAttendanceLocation,
@@ -22,6 +24,7 @@ import {
 } from './attendance.server'
 import type {
   AdminAttendanceSnapshot,
+  AttendanceBreakRecord,
   AttendanceEditHistoryRecord,
   AttendanceLogRecord,
   AttendanceSettings,
@@ -35,7 +38,7 @@ const LOG_COLS = `
   l.in_photo_data IS NOT NULL AS has_in_photo,
   l.out_lat, l.out_lng, l.out_accuracy_m, l.out_distance_m, l.out_ip, l.out_ip_city, l.out_ip_country, l.out_flags_json,
   l.out_photo_data IS NOT NULL AS has_out_photo,
-  l.media_version, l.status, l.work_minutes, l.is_late, l.edited_by, l.edit_note, l.updated_at,
+  l.media_version, l.status, l.work_minutes, l.break_minutes, l.breaks_json, l.is_late, l.edited_by, l.edit_note, l.updated_at,
   e.name AS employee_name, e.designation
 `
 
@@ -75,7 +78,7 @@ export const getEmployeePortalData = createServerFn({ method: 'GET' })
     return { token }
   })
   .handler(async ({ data }) => {
-    await ensureAttendanceSchema()
+    await autoCloseOpenCheckIns()
     const empRows = await queryRows('SELECT * FROM employees WHERE access_token = ? LIMIT 1', [data.token])
     if (empRows.length === 0) throw new Error('Attendance link not found')
     const employee = mapEmployeeRow(empRows[0])
@@ -129,28 +132,31 @@ export const getEmployeePortalData = createServerFn({ method: 'GET' })
     }
   })
 
+type EmployeeMarkAction = 'in' | 'out' | 'half_out' | 'break_out' | 'break_in'
+
 export const markEmployeeAttendance = createServerFn({ method: 'POST' })
   .validator((data: unknown) => {
     const input = (data ?? {}) as Record<string, unknown>
     const token = stringValue(input.token, 64)
-    const action = stringValue(input.action, 8)
+    const action = stringValue(input.action, 16)
     const pin = stringValue(input.pin, 12)
+    const note = stringValue(input.note, 160)
     const deviceKey = stringValue(input.deviceKey, 120)
     const photoBase64 = typeof input.photoBase64 === 'string' ? input.photoBase64.trim() : ''
     const lat = Number(input.lat)
     const lng = Number(input.lng)
     const accuracyM = Number(input.accuracyM)
     if (!/^[A-Za-z0-9_-]{12,64}$/.test(token)) throw new Error('Invalid attendance link')
-    if (action !== 'in' && action !== 'out') throw new Error('Invalid attendance action')
+    if (!['in', 'out', 'half_out', 'break_out', 'break_in'].includes(action)) throw new Error('Invalid attendance action')
     if (deviceKey.length < 12) throw new Error('Could not verify your device. Please reload and try again.')
     if (photoBase64 && (photoBase64.length > 500_000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(photoBase64))) {
       throw new Error('Selfie image is invalid or too large.')
     }
-    return { token, action: action as 'in' | 'out', pin, deviceKey, photoBase64, lat, lng, accuracyM }
+    return { token, action: action as EmployeeMarkAction, pin, note, deviceKey, photoBase64, lat, lng, accuracyM }
   })
   .handler(async ({ data }) => {
     await ensureAttendanceSchema()
-    if (!(await checkRateLimit('attendance-mark', data.token, 20, 900))) {
+    if (!(await checkRateLimit('attendance-mark', data.token, 30, 900))) {
       throw new Error('Too many attempts. Please wait a few minutes and try again.')
     }
 
@@ -172,8 +178,9 @@ export const markEmployeeAttendance = createServerFn({ method: 'POST' })
     }
 
     const settings = await readAttendanceSettings()
+    const needsSelfie = ['in', 'out', 'half_out'].includes(data.action)
     let photoBuffer: Buffer | null = null
-    if (settings.requireSelfie && !data.photoBase64) {
+    if (settings.requireSelfie && needsSelfie && !data.photoBase64) {
       throw new Error('Live camera selfie is required to mark attendance.')
     }
     if (data.photoBase64) {
@@ -192,7 +199,7 @@ export const markEmployeeAttendance = createServerFn({ method: 'POST' })
       accuracyM: data.accuracyM,
       headers,
       settings,
-      officeOnly: employee.officeOnly,
+      officeOnly: data.action === 'break_out' ? false : employee.officeOnly,
     })
 
     if (!storedDeviceHash) {
@@ -201,7 +208,7 @@ export const markEmployeeAttendance = createServerFn({ method: 'POST' })
 
     const today = todayIstDate()
     const now = new Date()
-    const existingRows = await queryRows('SELECT id, check_in_at, check_out_at FROM attendance_logs WHERE employee_id = ? AND work_date = ? LIMIT 1', [employee.id, today])
+    const existingRows = await queryRows('SELECT id, check_in_at, check_out_at, breaks_json FROM attendance_logs WHERE employee_id = ? AND work_date = ? LIMIT 1', [employee.id, today])
     const existing = existingRows[0]
 
     if (data.action === 'in') {
@@ -220,14 +227,57 @@ export const markEmployeeAttendance = createServerFn({ method: 'POST' })
           [employee.id, today, now, loc.lat, loc.lng, loc.accuracyM, loc.distanceM, loc.ip, loc.ipCity, loc.ipCountry, JSON.stringify(loc.flags), photoBuffer, Date.now(), isLate],
         )
       }
+    } else if (data.action === 'break_out' || data.action === 'break_in') {
+      if (!existing || !existing.check_in_at) throw new Error('Please mark Check In first.')
+      if (existing.check_out_at) throw new Error('Attendance is already checked out for today.')
+      const breaks: AttendanceBreakRecord[] = parseBreaksJson(existing.breaks_json)
+      const openBreak = breaks.find((b) => b.outAt && !b.inAt)
+      if (data.action === 'break_out') {
+        if (openBreak) throw new Error('You are already stepped out. Tap Back in Office when you return.')
+        breaks.push({
+          outAt: now.toISOString(),
+          inAt: '',
+          outLat: loc.lat,
+          outLng: loc.lng,
+          outDistanceM: loc.distanceM,
+          inLat: null,
+          inLng: null,
+          inDistanceM: null,
+          note: data.note || 'Stepped out',
+        })
+      } else {
+        if (!openBreak) throw new Error('No active break to close.')
+        openBreak.inAt = now.toISOString()
+        openBreak.inLat = loc.lat
+        openBreak.inLng = loc.lng
+        openBreak.inDistanceM = loc.distanceM
+      }
+      const breakMinutes = breaks.reduce((sum, br) => {
+        if (!br.outAt || !br.inAt) return sum
+        return sum + Math.max(0, Math.round((new Date(br.inAt).getTime() - new Date(br.outAt).getTime()) / 60_000))
+      }, 0)
+      await execute('UPDATE attendance_logs SET breaks_json = ?, break_minutes = ? WHERE id = ?', [JSON.stringify(breaks), breakMinutes, Number(existing.id)])
     } else {
       if (!existing || !existing.check_in_at) throw new Error('Please mark Check In first before checking out.')
       if (existing.check_out_at) throw new Error('You have already checked out today.')
-      const workMinutes = Math.max(0, Math.round((now.getTime() - new Date(String(existing.check_in_at)).getTime()) / 60_000))
+      const breaks: AttendanceBreakRecord[] = parseBreaksJson(existing.breaks_json)
+      for (const br of breaks) {
+        if (br.outAt && !br.inAt) br.inAt = now.toISOString()
+      }
+      const breakMinutes = breaks.reduce((sum, br) => {
+        if (!br.outAt || !br.inAt) return sum
+        return sum + Math.max(0, Math.round((new Date(br.inAt).getTime() - new Date(br.outAt).getTime()) / 60_000))
+      }, 0)
+      const grossMins = Math.max(0, Math.round((now.getTime() - new Date(String(existing.check_in_at)).getTime()) / 60_000))
+      const workMinutes = Math.max(0, grossMins - breakMinutes)
+      const isHalfDay = data.action === 'half_out' || workMinutes < 300
+      const finalFlags = isHalfDay ? [...loc.flags, 'HALF_DAY_OUT'] : loc.flags
+      const finalStatus: AttendanceStatus = isHalfDay ? 'Half Day' : 'Present'
       await execute(
         `UPDATE attendance_logs SET check_out_at = ?, out_lat = ?, out_lng = ?, out_accuracy_m = ?, out_distance_m = ?,
-         out_ip = ?, out_ip_city = ?, out_ip_country = ?, out_flags_json = ?, out_photo_data = ?, media_version = ?, work_minutes = ? WHERE id = ?`,
-        [now, loc.lat, loc.lng, loc.accuracyM, loc.distanceM, loc.ip, loc.ipCity, loc.ipCountry, JSON.stringify(loc.flags), photoBuffer, Date.now(), workMinutes, Number(existing.id)],
+         out_ip = ?, out_ip_city = ?, out_ip_country = ?, out_flags_json = ?, out_photo_data = ?, media_version = ?,
+         breaks_json = ?, break_minutes = ?, work_minutes = ?, status = ? WHERE id = ?`,
+        [now, loc.lat, loc.lng, loc.accuracyM, loc.distanceM, loc.ip, loc.ipCity, loc.ipCountry, JSON.stringify(finalFlags), photoBuffer, Date.now(), JSON.stringify(breaks), breakMinutes, workMinutes, finalStatus, Number(existing.id)],
       )
     }
 
@@ -252,7 +302,7 @@ export const getAdminAttendanceSnapshot = createServerFn({ method: 'GET' })
     return { selectedMonth: /^\d{4}-\d{2}$/.test(rawMonth) ? rawMonth : currentIstMonth() }
   })
   .handler(async ({ data }): Promise<AdminAttendanceSnapshot & { currentRequestIp: string }> => {
-    await ensureAttendanceSchema()
+    await autoCloseOpenCheckIns()
     const [year, month] = data.selectedMonth.split('-').map(Number)
     const rangeStart = new Date(Date.UTC(year, month - 2, 1)).toISOString().slice(0, 10)
     const rangeEnd = new Date(Date.UTC(year, month + 1, 28)).toISOString().slice(0, 10)

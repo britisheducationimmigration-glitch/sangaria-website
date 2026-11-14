@@ -4,6 +4,7 @@ import crypto from 'node:crypto'
 import { site } from '@/data/site'
 import { execute, getDb, queryRows } from './db.server'
 import type {
+   AttendanceBreakRecord,
   AttendanceEditHistoryRecord,
   AttendanceLogRecord,
   AttendanceSettings,
@@ -112,7 +113,8 @@ export async function ensureAttendanceSchema() {
       await ensureCol('attendance_logs', 'in_photo_data', 'MEDIUMBLOB NULL')
       await ensureCol('attendance_logs', 'out_photo_data', 'MEDIUMBLOB NULL')
       await ensureCol('attendance_logs', 'media_version', 'BIGINT UNSIGNED NOT NULL DEFAULT 0')
-
+      await ensureCol('attendance_logs', 'breaks_json', 'TEXT NULL')
+      await ensureCol('attendance_logs', 'break_minutes', 'INT NOT NULL DEFAULT 0')
       await execute(`
         CREATE TABLE IF NOT EXISTS attendance_edit_history (
           id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -331,7 +333,67 @@ export function verifyAttendanceLocation(params: {
     flags,
   }
 }
+export function parseBreaksJson(value: unknown): AttendanceBreakRecord[] {
+  if (Array.isArray(value)) return value as AttendanceBreakRecord[]
+  if (typeof value === 'string' && value.trim()) {
+    try {
+      const parsed = JSON.parse(value) as unknown
+      return Array.isArray(parsed) ? (parsed as AttendanceBreakRecord[]) : []
+    } catch {
+      return []
+    }
+  }
+  return []
+}
 
+export async function autoCloseOpenCheckIns() {
+  await ensureAttendanceSchema()
+  const now = new Date()
+  const today = todayIstDate(now)
+  const nowHHMM = istTimeHHMM(now)
+  const pastTenPm = nowHHMM >= '22:00'
+
+  const openRows = await queryRows(
+    `SELECT id, work_date, check_in_at, out_flags_json, breaks_json, break_minutes
+     FROM attendance_logs
+     WHERE check_in_at IS NOT NULL AND check_out_at IS NULL
+       AND (work_date < ? OR (? = 1 AND work_date = ?))
+     LIMIT 100`,
+    [today, pastTenPm ? 1 : 0, today],
+  )
+
+  for (const row of openRows) {
+    const workDate = String(row.work_date)
+    const inDate = new Date(String(row.check_in_at))
+    const autoOutTarget = new Date(`${workDate}T22:00:00+05:30`)
+    const outDate = autoOutTarget.getTime() > inDate.getTime() ? autoOutTarget : inDate
+    const breaks = parseBreaksJson(row.breaks_json)
+
+    for (const br of breaks) {
+      if (br.outAt && !br.inAt) {
+        br.inAt = outDate.toISOString()
+        br.note = br.note ? `${br.note} (Auto-closed 10 PM)` : 'Auto-closed 10 PM'
+      }
+    }
+
+    const totalBreakMins = breaks.reduce((sum, br) => {
+      if (!br.outAt || !br.inAt) return sum
+      return sum + Math.max(0, Math.round((new Date(br.inAt).getTime() - new Date(br.outAt).getTime()) / 60_000))
+    }, 0)
+
+    const grossMins = Math.max(0, Math.round((outDate.getTime() - inDate.getTime()) / 60_000))
+    const netWorkMins = Math.max(0, grossMins - totalBreakMins)
+    const status = netWorkMins < 300 ? 'Half Day' : 'Present'
+    const outFlags = [...parseFlags(row.out_flags_json), 'AUTO_CHECKOUT_10PM']
+
+    await execute(
+      `UPDATE attendance_logs
+       SET check_out_at = ?, out_flags_json = ?, breaks_json = ?, break_minutes = ?, work_minutes = ?, status = ?
+       WHERE id = ? AND check_out_at IS NULL`,
+      [outDate, JSON.stringify(outFlags), JSON.stringify(breaks), totalBreakMins, netWorkMins, status, Number(row.id)],
+    )
+  }
+}
 export async function readAttendanceSettings(): Promise<AttendanceSettings> {
   await ensureAttendanceSchema()
   const rows = await queryRows('SELECT attendance_settings_json FROM site_settings WHERE id = 1 LIMIT 1')
@@ -437,6 +499,8 @@ export function mapAttendanceRow(
     outPhotoSrc: Boolean(row.has_out_photo) ? `/attendance/photo/${id}?type=out&v=${v}` : '',
     status: String(row.status || 'Present') as AttendanceStatus,
     workMinutes: Number(row.work_minutes ?? 0),
+    breakMinutes: Number(row.break_minutes ?? 0),
+    breaks: parseBreaksJson(row.breaks_json),
     isLate: Boolean(row.is_late),
     editedBy: String(row.edited_by ?? ''),
     editNote: String(row.edit_note ?? ''),
