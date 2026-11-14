@@ -21,7 +21,7 @@ const localBusinessSchema = {
   image: 'https://www.britisheducationandimmigration.com/img/hero.webp',
   telephone: ['+919772570478', '+919658018000'],
   email: 'admin@britisheducationandimmigration.com',
-  priceRange: '₹₹',
+  priceRange: '??',
   address: {
     '@type': 'PostalAddress',
     streetAddress: 'Near Open Book Library, Bhagatpura Road',
@@ -57,7 +57,7 @@ function businessTime(hour: string, minute: string | undefined, meridiem: string
 }
 
 function schemaOpeningHours(label: string) {
-  const match = label.match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)\s*[–-]\s*(\d{1,2})(?::(\d{2}))?\s*(AM|PM)/i)
+  const match = label.match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)\s*[--]\s*(\d{1,2})(?::(\d{2}))?\s*(AM|PM)/i)
   if (!match) return localBusinessSchema.openingHoursSpecification
   return {
     ...localBusinessSchema.openingHoursSpecification,
@@ -104,10 +104,10 @@ export const Route = createRootRoute({
    links: [
       { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
       { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
-      // ✅ Local Logo & Favicon
+      // ? Local Logo & Favicon
       { rel: 'icon', href: '/img/logo.png' },
       { rel: 'apple-touch-icon', href: '/img/logo.png' },
-      // ✅ Preload style taaki font download hone tak page block na ho
+      // ? Preload style taaki font download hone tak page block na ho
       {
         rel: 'preload',
         as: 'style',
@@ -142,7 +142,7 @@ function RootDocument({ children }: { children: ReactNode }) {
   const isPortal = isAdmin || pathname.startsWith('/attendance')
   const { settings, countries } = Route.useLoaderData()
 
-  // ⚡ Non-blocking GTM: Page load hone ke turant baad background me chalega (Speed boost)
+  // ? Non-blocking GTM: Page load hone ke turant baad background me chalega (Speed boost)
   useEffect(() => {
     if (isPortal || typeof window === 'undefined') return
 
@@ -160,9 +160,9 @@ function RootDocument({ children }: { children: ReactNode }) {
     if ('requestIdleCallback' in window) {
       window.requestIdleCallback(loadGTM, { timeout: 2000 })
     } else {
-      window.setTimeout(loadGTM, 1500)
+      globalThis.setTimeout(loadGTM, 1500)
     }
-  }, [isAdmin])
+  }, [isPortal])
 
  useEffect(() => {
     if (isPortal || window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) return
@@ -218,7 +218,7 @@ function RootDocument({ children }: { children: ReactNode }) {
         {!isPortal && <SiteFooter settings={settings} countries={countries} />}
         {!isPortal && <WhatsAppButton />}
         {!isPortal && <EnquiryPopup />}
-        <Analytics />
+        {!isPortal && <Analytics />}
         <Scripts />
       </body>
     </html>
@@ -228,7 +228,7 @@ function RootDocument({ children }: { children: ReactNode }) {
 function NotFound() {
   return (
     <section className="mx-auto grid max-w-3xl place-items-center px-6 py-32 text-center">
-      <p className="font-mono text-sm text-coral-600">ERROR 404 · PAGE NOT FOUND</p>
+      <p className="font-mono text-sm text-coral-600">ERROR 404 � PAGE NOT FOUND</p>
       <h1 className="mt-4 text-5xl font-extrabold text-forest-900">This page missed its flight.</h1>
       <Link to="/" className="mt-8 rounded-full bg-forest-900 px-6 py-3 font-bold text-white">
         Back to home

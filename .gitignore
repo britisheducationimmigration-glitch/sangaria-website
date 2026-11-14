@@ -1,0 +1,12 @@
+node_modules/
+.output/
+.vercel/
+.netlify/
+.tanstack/
+dist/
+.env
+.env.*
+!.env.example
+package-lock.json
+.verify-build*/
+*-verification.log

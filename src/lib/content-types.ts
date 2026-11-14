@@ -155,7 +155,7 @@ export type AdminUser = {
   name: string
   role: AdminRole
 }
-export type AttendanceStatus = 'Present' | 'Half Day' | 'Leave' | 'Absent'
+export type AttendanceStatus = 'Present' | 'Half Day' | 'Leave' | 'Paid Leave' | 'Unpaid Leave' | 'Absent'
 
 export type EmployeeRecord = {
   id: number
@@ -168,6 +168,12 @@ export type EmployeeRecord = {
   deviceBound: boolean
   cycleStartDay: number
   monthlySalary: number
+  joiningDate?: string
+  leavingDate?: string
+  halfDayMinutes?: number
+  lateGraceMinutes?: number
+  weeklyOffDays?: number[]
+  holidayDates?: string[]
   expectedInTime: string
   expectedOutTime: string
   officeOnly: boolean
@@ -264,6 +270,7 @@ export type EmployeeCycleSummary = {
   lateCount: number
   flaggedCount: number
   missedCheckOutCount: number
+  offDayWorkMinutes?: number
   totalWorkMinutes: number
 }
 export type AdminAttendanceSnapshot = {

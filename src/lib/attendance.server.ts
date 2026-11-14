@@ -3,13 +3,14 @@ import '@tanstack/react-start/server-only'
 import crypto from 'node:crypto'
 import { site } from '@/data/site'
 import { execute, getDb, queryRows } from './db.server'
+export { getEmployeeCycleRange, countSundaysInRange, buildEmployeeCycleSummaries, calculateWorkMinutes, resolveEmployeePolicy } from './attendance-calculations'
+import type { EmployeePolicyHistory } from './attendance-calculations'
 import type {
    AttendanceBreakRecord,
   AttendanceEditHistoryRecord,
   AttendanceLogRecord,
   AttendanceSettings,
   AttendanceStatus,
-  EmployeeCycleSummary,
   EmployeeRecord,
 } from './content-types'
 
@@ -72,6 +73,21 @@ export async function ensureAttendanceSchema() {
       `)
       await ensureCol('employees', 'bound_device_hash', "VARCHAR(64) NOT NULL DEFAULT ''")
       await ensureCol('employees', 'monthly_salary', 'INT UNSIGNED NOT NULL DEFAULT 0')
+      await ensureCol('employees', 'joining_date', "VARCHAR(10) NOT NULL DEFAULT ''")
+      await ensureCol('employees', 'leaving_date', "VARCHAR(10) NOT NULL DEFAULT ''")
+      await ensureCol('employees', 'half_day_minutes', 'INT NOT NULL DEFAULT 300')
+      await ensureCol('employees', 'late_grace_minutes', 'INT NOT NULL DEFAULT 0')
+      await ensureCol('employees', 'weekly_off_days_json', 'TEXT NULL')
+      await ensureCol('employees', 'holiday_dates_json', 'TEXT NULL')
+      await execute(`CREATE TABLE IF NOT EXISTS employee_policy_history (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        employee_id BIGINT UNSIGNED NOT NULL,
+        effective_date VARCHAR(10) NOT NULL,
+        policy_json LONGTEXT NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY employee_policy_effective_uq (employee_id, effective_date)
+      )`)
+
 
       await execute(`
         CREATE TABLE IF NOT EXISTS attendance_logs (
@@ -200,44 +216,6 @@ export function istTimeHHMM(value: string | Date): string {
   return `${hour}:${get('minute')}`
 }
 
-export function getEmployeeCycleRange(selectedMonth: string, cycleStartDay: number) {
-  const [yearNum, monthNum] = selectedMonth.split('-').map(Number)
-  const year = yearNum || new Date().getUTCFullYear()
-  const month = monthNum || new Date().getUTCMonth() + 1
-  const safeDay = Math.max(1, Math.min(28, Math.floor(cycleStartDay || 1)))
-
-  if (safeDay === 1) {
-    const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate()
-    const mm = String(month).padStart(2, '0')
-    return {
-      startDate: `${year}-${mm}-01`,
-      endDate: `${year}-${mm}-${String(lastDay).padStart(2, '0')}`,
-      totalDays: lastDay,
-    }
-  }
-
-  const startUtc = new Date(Date.UTC(year, month - 1, safeDay))
-  const nextMonthStartUtc = new Date(Date.UTC(year, month, safeDay))
-  const endUtc = new Date(nextMonthStartUtc.getTime() - 86_400_000)
-  const totalDays = Math.round((endUtc.getTime() - startUtc.getTime()) / 86_400_000) + 1
-  return {
-    startDate: startUtc.toISOString().slice(0, 10),
-    endDate: endUtc.toISOString().slice(0, 10),
-    totalDays,
-  }
-}
-
-export function countSundaysInRange(startDate: string, endDate: string): number {
-  let count = 0
-  let cursor = new Date(`${startDate}T00:00:00Z`).getTime()
-  const end = new Date(`${endDate}T00:00:00Z`).getTime()
-  while (cursor <= end) {
-    if (new Date(cursor).getUTCDay() === 0) count += 1
-    cursor += 86_400_000
-  }
-  return count
-}
-
 export function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const toRad = (deg: number) => (deg * Math.PI) / 180
   const R = 6_371_000
@@ -260,8 +238,10 @@ export function readClientNetworkInfo(headers: Headers) {
   } catch {
     ipCity = rawCity
   }
-  const ipLat = Number(headers.get('x-vercel-ip-latitude') ?? '')
-  const ipLng = Number(headers.get('x-vercel-ip-longitude') ?? '')
+  const latHeader = headers.get('x-vercel-ip-latitude')
+  const ipLat = latHeader?.trim() ? Number(latHeader) : NaN
+  const lngHeader = headers.get('x-vercel-ip-longitude')
+  const ipLng = lngHeader?.trim() ? Number(lngHeader) : NaN
   return {
     clientIp,
     ipCountry,
@@ -346,54 +326,24 @@ export function parseBreaksJson(value: unknown): AttendanceBreakRecord[] {
   return []
 }
 
+/** Legacy entry point: flag incomplete past shifts; never invent an OUT punch. */
 export async function autoCloseOpenCheckIns() {
   await ensureAttendanceSchema()
-  const now = new Date()
-  const today = todayIstDate(now)
-  const nowHHMM = istTimeHHMM(now)
-  const pastTenPm = nowHHMM >= '22:00'
-
-  const openRows = await queryRows(
-    `SELECT id, work_date, check_in_at, out_flags_json, breaks_json, break_minutes
-     FROM attendance_logs
-     WHERE check_in_at IS NOT NULL AND check_out_at IS NULL
-       AND (work_date < ? OR (? = 1 AND work_date = ?))
-     LIMIT 100`,
-    [today, pastTenPm ? 1 : 0, today],
-  )
-
-  for (const row of openRows) {
-    const workDate = String(row.work_date)
-    const inDate = new Date(String(row.check_in_at))
-    const autoOutTarget = new Date(`${workDate}T22:00:00+05:30`)
-    const outDate = autoOutTarget.getTime() > inDate.getTime() ? autoOutTarget : inDate
-    const breaks = parseBreaksJson(row.breaks_json)
-
-    for (const br of breaks) {
-      if (br.outAt && !br.inAt) {
-        br.inAt = outDate.toISOString()
-        br.note = br.note ? `${br.note} (Auto-closed 10 PM)` : 'Auto-closed 10 PM'
-      }
-    }
-
-    const totalBreakMins = breaks.reduce((sum, br) => {
-      if (!br.outAt || !br.inAt) return sum
-      return sum + Math.max(0, Math.round((new Date(br.inAt).getTime() - new Date(br.outAt).getTime()) / 60_000))
-    }, 0)
-
-    const grossMins = Math.max(0, Math.round((outDate.getTime() - inDate.getTime()) / 60_000))
-    const netWorkMins = Math.max(0, grossMins - totalBreakMins)
-    const status = netWorkMins < 300 ? 'Half Day' : 'Present'
-    const outFlags = [...parseFlags(row.out_flags_json), 'AUTO_CHECKOUT_10PM']
-
-    await execute(
-      `UPDATE attendance_logs
-       SET check_out_at = ?, out_flags_json = ?, breaks_json = ?, break_minutes = ?, work_minutes = ?, status = ?
-       WHERE id = ? AND check_out_at IS NULL`,
-      [outDate, JSON.stringify(outFlags), JSON.stringify(breaks), totalBreakMins, netWorkMins, status, Number(row.id)],
-    )
+  const today = todayIstDate()
+  const rows = await queryRows("SELECT id, out_flags_json FROM attendance_logs WHERE check_in_at IS NOT NULL AND check_out_at IS NULL AND work_date < ?", [today])
+  for (const row of rows) {
+    const flags = parseFlags(row.out_flags_json)
+    if (!flags.includes('MISSING_OUT_REVIEW_REQUIRED')) await execute('UPDATE attendance_logs SET out_flags_json = ?, work_minutes = 0 WHERE id = ? AND check_out_at IS NULL', [JSON.stringify([...flags, 'MISSING_OUT_REVIEW_REQUIRED']), Number(row.id)])
   }
 }
+export async function readEmployeePolicies(): Promise<EmployeePolicyHistory[]> {
+  await ensureAttendanceSchema()
+  const rows = await queryRows('SELECT employee_id, effective_date, policy_json FROM employee_policy_history ORDER BY effective_date ASC')
+  return rows.flatMap(row => {
+    try { return [{ employeeId: Number(row.employee_id), effectiveDate: String(row.effective_date), policy: JSON.parse(String(row.policy_json)) as Partial<EmployeeRecord> }] } catch { return [] }
+  })
+}
+
 export async function readAttendanceSettings(): Promise<AttendanceSettings> {
   await ensureAttendanceSchema()
   const rows = await queryRows('SELECT attendance_settings_json FROM site_settings WHERE id = 1 LIMIT 1')
@@ -427,8 +377,14 @@ export function mapEmployeeRow(row: Record<string, unknown>): EmployeeRecord {
     accessToken: String(row.access_token),
     hasPin: Boolean(String(row.pin_hash ?? '').trim()),
     deviceBound: Boolean(String(row.bound_device_hash ?? '').trim()),
-    cycleStartDay: Math.max(1, Math.min(28, Number(row.cycle_start_day ?? 1))),
+    cycleStartDay: Math.max(1, Math.min(31, Number(row.cycle_start_day ?? 1))),
     monthlySalary: Math.max(0, Number(row.monthly_salary ?? 0)),
+    joiningDate: String(row.joining_date ?? ''),
+    leavingDate: String(row.leaving_date ?? ''),
+    halfDayMinutes: Math.max(1, Number(row.half_day_minutes ?? 300)),
+    lateGraceMinutes: Math.max(0, Number(row.late_grace_minutes ?? 0)),
+    weeklyOffDays: parseNumberArray(row.weekly_off_days_json, [0]),
+    holidayDates: parseStringArray(row.holiday_dates_json),
     expectedInTime: String(row.expected_in_time || '09:30'),
     expectedOutTime: String(row.expected_out_time || '19:30'),
     officeOnly: Boolean(row.office_only),
@@ -452,6 +408,12 @@ export function mapEditHistoryRow(row: Record<string, unknown>): AttendanceEditH
   }
 }
 
+function parseNumberArray(value: unknown, fallback: number[]): number[] {
+  try { const parsed = typeof value === 'string' ? JSON.parse(value) : value; return Array.isArray(parsed) ? parsed.map(Number).filter(n => Number.isInteger(n) && n >= 0 && n <= 6) : fallback } catch { return fallback }
+}
+function parseStringArray(value: unknown): string[] {
+  try { const parsed = typeof value === 'string' ? JSON.parse(value) : value; return Array.isArray(parsed) ? parsed.map(String).filter(s => /^\d{4}-\d{2}-\d{2}$/.test(s)) : [] } catch { return [] }
+}
 function parseFlags(value: unknown): string[] {
   if (Array.isArray(value)) return value.map(String)
   if (typeof value === 'string' && value.trim()) {
@@ -509,62 +471,3 @@ export function mapAttendanceRow(
   }
 }
 
-export function buildEmployeeCycleSummaries(
-  employees: EmployeeRecord[],
-  logs: AttendanceLogRecord[],
-  selectedMonth: string,
-  todayIst: string,
-): EmployeeCycleSummary[] {
-  return employees.map((employee) => {
-    const { startDate, endDate, totalDays } = getEmployeeCycleRange(selectedMonth, employee.cycleStartDay)
-    const sundaysCount = countSundaysInRange(startDate, endDate)
-    const workingDays = Math.max(1, totalDays - sundaysCount)
-
-    const empLogs = logs.filter(
-      (log) => log.employeeId === employee.id && log.workDate >= startDate && log.workDate <= endDate,
-    )
-    const presentDays = empLogs.filter((log) => log.status === 'Present').length
-    const halfDays = empLogs.filter((log) => log.status === 'Half Day').length
-    const leaveDays = empLogs.filter((log) => log.status === 'Leave').length
-    const explicitAbsent = empLogs.filter((log) => log.status === 'Absent').length
-
-    // Count elapsed non-Sunday days up to todayIst without a log as unmarked/absent
-    const effectiveEnd = endDate < todayIst ? endDate : todayIst
-    let unmarkedWorkingDays = 0
-    if (effectiveEnd >= startDate) {
-      const logDates = new Set(empLogs.map((l) => l.workDate))
-      let cursor = new Date(`${startDate}T00:00:00Z`).getTime()
-      const endMs = new Date(`${effectiveEnd}T00:00:00Z`).getTime()
-      while (cursor <= endMs) {
-        const dt = new Date(cursor)
-        const iso = dt.toISOString().slice(0, 10)
-        if (dt.getUTCDay() !== 0 && !logDates.has(iso)) unmarkedWorkingDays += 1
-        cursor += 86_400_000
-      }
-    }
-
-    const payableDays = presentDays + halfDays * 0.5
-    const perDaySalary = employee.monthlySalary > 0 ? Math.round(employee.monthlySalary / workingDays) : 0
-    const earnedSalary = employee.monthlySalary > 0 ? Math.round((employee.monthlySalary * payableDays) / workingDays) : 0
-
-    return {
-      employee,
-      cycleStartDate: startDate,
-      cycleEndDate: endDate,
-      totalDays,
-      sundaysCount,
-      workingDays,
-      presentDays,
-      halfDays,
-      leaveDays,
-      absentDays: explicitAbsent + unmarkedWorkingDays,
-      payableDays,
-      perDaySalary,
-      earnedSalary,
-      lateCount: empLogs.filter((log) => log.isLate).length,
-      flaggedCount: empLogs.filter((log) => log.inFlags.length > 0 || log.outFlags.length > 0).length,
-      missedCheckOutCount: empLogs.filter((log) => log.checkInAt && !log.checkOutAt && log.workDate < todayIst).length,
-      totalWorkMinutes: empLogs.reduce((sum, log) => sum + (log.workMinutes || 0), 0),
-    }
-  })
-}

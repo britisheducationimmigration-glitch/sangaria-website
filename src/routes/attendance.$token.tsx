@@ -15,7 +15,7 @@ export const Route = createFileRoute('/attendance/$token')({
     }
   },
   head: () => ({
-    meta: [{ title: 'Staff Attendance · British Education & Immigration' }, { name: 'robots', content: 'noindex,nofollow,noarchive' }],
+    meta: [{ title: 'Staff Attendance � British Education & Immigration' }, { name: 'robots', content: 'noindex,nofollow,noarchive' }],
   }),
   component: EmployeeAttendancePage,
 })
@@ -29,7 +29,7 @@ function distanceMeters(lat1: number, lng1: number, lat2: number, lng2: number) 
 }
 
 const fmtIstTime = (iso: string) =>
-  iso ? new Date(iso).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '—'
+  iso ? new Date(iso).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '-'
 
 const fmtHours = (mins: number) => (mins ? `${Math.floor(mins / 60)}h ${mins % 60}m` : '0h 0m')
 
@@ -112,6 +112,7 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
     try {
       stopCamera()
       setCameraError('')
+      setCameraState('idle')
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
         audio: false,
@@ -124,6 +125,13 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
       setCameraError('Camera permission denied. Allow front camera access to mark attendance.')
     }
   }, [hasCheckedOut, settings.requireSelfie, stopCamera])
+
+  useEffect(() => {
+    if (cameraState === 'ready' && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current
+      void videoRef.current.play().catch(() => undefined)
+    }
+  }, [cameraState])
 
   useEffect(() => {
     if (settings.requireSelfie && !hasCheckedOut) void startCamera()
@@ -179,21 +187,7 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
     if (!ctx) throw new Error('Could not capture live selfie.')
 
     ctx.drawImage(video, 0, 0, w, h)
-    const frame1 = ctx.getImageData(0, 0, w, h).data
-    await new Promise((r) => window.setTimeout(r, 450))
-    ctx.drawImage(video, 0, 0, w, h)
-    const frame2 = ctx.getImageData(0, 0, w, h).data
-
-    let diffSum = 0
-    let samples = 0
-    for (let i = 0; i < frame1.length; i += 48) {
-      diffSum += Math.abs(frame1[i] - frame2[i]) + Math.abs(frame1[i + 1] - frame2[i + 1])
-      samples += 2
-    }
-    const avgDiff = samples ? diffSum / samples : 0
-    if (avgDiff < 0.7) {
-      throw new Error('No live camera movement detected. Hold your phone naturally and blink or move slightly.')
-    }
+    // Capture evidence only; browser pixel changes cannot prove identity or liveness.
 
     let dataUrl = canvas.toDataURL('image/webp', 0.72)
     if (!dataUrl.startsWith('data:image/webp')) {
@@ -210,12 +204,12 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
     try {
       let photoBase64 = ''
       if (action === 'in' || action === 'out' || action === 'half_out') {
-        setStepLabel('Checking live selfie…')
+        setStepLabel('Checking live selfie.')
         photoBase64 = await captureLiveSelfie()
       }
-      setStepLabel('Verifying GPS location…')
+      setStepLabel('Verifying GPS location.')
       const freshGps = await fetchLocation()
-      setStepLabel('Saving attendance…')
+      setStepLabel('Saving attendance.')
       const res = await markEmployeeAttendance({
         data: {
           token,
@@ -265,8 +259,8 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
             <span className="rounded-full bg-[#ECF3FF] px-3 py-1 text-xs font-semibold text-[#465FFF]">{todayIst}</span>
           </div>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#E4E7EC] pt-3 text-xs text-[#667085]">
-            <span className="inline-flex items-center gap-1.5 font-medium"><Clock className="size-3.5 text-[#465FFF]" /> IST: <strong className="text-[#1D2939]">{liveTime || '—'}</strong></span>
-            <span>Shift: {employee.expectedInTime} – {employee.expectedOutTime}</span>
+            <span className="inline-flex items-center gap-1.5 font-medium"><Clock className="size-3.5 text-[#465FFF]" /> IST: <strong className="text-[#1D2939]">{liveTime || '-'}</strong></span>
+            <span>Shift: {employee.expectedInTime} - {employee.expectedOutTime}</span>
           </div>
         </header>
 
@@ -281,8 +275,8 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
           {gpsState === 'error' && <p className="mt-2 rounded-xl bg-[#FEF3F2] p-2.5 text-xs font-medium text-[#F04438]">{gpsError}</p>}
           {gps && (
             <div className="mt-2.5 grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-xl bg-[#F9FAFB] p-2.5"><p className="text-[#667085]">Distance</p><p className={`font-bold ${inRange ? 'text-[#12B76A]' : 'text-[#F79009]'}`}>{dist}m {inRange ? '· In Range ✓' : `(Max ${settings.allowedRadiusM}m)`}</p></div>
-              <div className="rounded-xl bg-[#F9FAFB] p-2.5"><p className="text-[#667085]">Accuracy</p><p className="font-bold text-[#1D2939]">±{gps.accuracyM}m</p></div>
+              <div className="rounded-xl bg-[#F9FAFB] p-2.5"><p className="text-[#667085]">Distance</p><p className={`font-bold ${inRange ? 'text-[#12B76A]' : 'text-[#F79009]'}`}>{dist}m {inRange ? '� In Range �' : `(Max ${settings.allowedRadiusM}m)`}</p></div>
+              <div className="rounded-xl bg-[#F9FAFB] p-2.5"><p className="text-[#667085]">Accuracy</p><p className="font-bold text-[#1D2939]">�{gps.accuracyM}m</p></div>
             </div>
           )}
         </section>
@@ -297,7 +291,7 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
           {settings.requireSelfie && !hasCheckedOut && (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="inline-flex items-center gap-1.5 font-semibold text-[#1D2939]"><Camera className="size-3.5 text-[#465FFF]" /> Live Camera Selfie</span>
+                <span className="inline-flex items-center gap-1.5 font-semibold text-[#1D2939]"><Camera className="size-3.5 text-[#465FFF]" /> Camera Selfie</span>
                 <button type="button" onClick={() => void startCamera()} className="text-[11px] font-semibold text-[#465FFF] hover:underline">Restart Camera</button>
               </div>
               {cameraState === 'error' ? (
@@ -325,13 +319,13 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
 
          {!hasCheckedIn ? (
             <button type="button" disabled={busy || gpsState !== 'ready' || (settings.requireSelfie && cameraState !== 'ready') || (employee.hasPin && pin.length < 4)} onClick={() => void submitAction('in')} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#465FFF] px-5 py-3 text-sm font-bold text-white shadow-xs disabled:opacity-50">
-              <CheckCircle2 className="size-4" /> {busy ? stepLabel || 'Marking…' : 'Mark Check In'}
+              <CheckCircle2 className="size-4" /> {busy ? stepLabel || 'Marking.' : 'Mark Check In'}
             </button>
           ) : !hasCheckedOut ? (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2.5">
                 <button type="button" disabled={busy || gpsState !== 'ready' || (settings.requireSelfie && cameraState !== 'ready') || (employee.hasPin && pin.length < 4)} onClick={() => void submitAction('out')} className="flex min-h-12 items-center justify-center gap-1.5 rounded-xl bg-[#1D2939] px-3 py-3 text-xs font-bold text-white shadow-xs disabled:opacity-50 sm:text-sm">
-                  <Clock className="size-4" /> {busy ? stepLabel || 'Saving…' : 'Check Out'}
+                  <Clock className="size-4" /> {busy ? stepLabel || 'Saving.' : 'Check Out'}
                 </button>
                 <button type="button" disabled={busy || gpsState !== 'ready' || (settings.requireSelfie && cameraState !== 'ready') || (employee.hasPin && pin.length < 4)} onClick={() => void submitAction('half_out')} className="flex min-h-12 items-center justify-center gap-1.5 rounded-xl border border-[#F79009] bg-[#FFFAEB] px-3 py-3 text-xs font-bold text-[#F79009] disabled:opacity-50 sm:text-sm">
                   Half Day Out
@@ -341,7 +335,7 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
               <div className="rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-3 space-y-2">
                 {hasOpenBreak ? (
                   <button type="button" disabled={busy || gpsState !== 'ready' || (employee.hasPin && pin.length < 4)} onClick={() => void submitAction('break_in')} className="flex min-h-10 w-full items-center justify-center rounded-xl bg-[#12B76A] px-4 py-2 text-xs font-bold text-white disabled:opacity-50">
-                    {busy ? stepLabel || 'Saving…' : 'Back in Office (Resume Shift)'}
+                    {busy ? stepLabel || 'Saving.' : 'Back in Office (Resume Shift)'}
                   </button>
                 ) : (
                   <div className="flex flex-col gap-2 sm:flex-row">
@@ -355,7 +349,7 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
             </div>
           ) : (
             <div className="rounded-xl bg-[#ECFDF3] p-4 text-center text-sm font-bold text-[#12B76A]">
-              Today&apos;s attendance complete ({todayLog?.status}) · Worked {fmtHours(todayLog?.workMinutes ?? 0)}
+              Today&apos;s attendance complete ({todayLog?.status}) � Worked {fmtHours(todayLog?.workMinutes ?? 0)}
             </div>
           )}
         </section>
@@ -371,7 +365,7 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
             <section className="rounded-2xl border border-[#E4E7EC] bg-white p-5 shadow-xs">
               <div className="flex items-center justify-between gap-2">
                 <h2 className="flex items-center gap-2 text-sm font-bold text-[#1D2939]"><CalendarDays className="size-4 text-[#465FFF]" /> Current Cycle</h2>
-                <span className="text-[11px] font-medium text-[#667085]">{summary.cycleStartDate} → {summary.cycleEndDate}</span>
+                <span className="text-[11px] font-medium text-[#667085]">{summary.cycleStartDate}  {summary.cycleEndDate}</span>
               </div>
               <div className="mt-3 grid grid-cols-4 gap-2 text-center text-xs">
                 <div className="rounded-xl bg-[#ECFDF3] p-2"><p className="text-[10px] text-[#667085]">Present</p><p className="font-bold text-[#12B76A]">{summary.presentDays}</p></div>
@@ -386,7 +380,7 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
               <div className="mt-3 divide-y divide-[#E4E7EC] text-xs">
                 {recentLogs.map((item) => (
                   <div key={item.id} className="flex items-center justify-between gap-3 py-2.5">
-                    <div><p className="font-semibold text-[#1D2939]">{item.workDate}</p><p className="text-[#667085]">In {fmtIstTime(item.checkInAt)} · Out {fmtIstTime(item.checkOutAt)}</p></div>
+                    <div><p className="font-semibold text-[#1D2939]">{item.workDate}</p><p className="text-[#667085]">In {fmtIstTime(item.checkInAt)} � Out {fmtIstTime(item.checkOutAt)}</p></div>
                     <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${item.status === 'Present' ? 'bg-[#ECFDF3] text-[#12B76A]' : item.status === 'Half Day' ? 'bg-[#FFFAEB] text-[#F79009]' : 'bg-[#FEF3F2] text-[#F04438]'}`}>{item.status}</span>
                   </div>
                 ))}

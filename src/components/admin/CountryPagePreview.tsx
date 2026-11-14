@@ -71,6 +71,7 @@ export function CountryPagePreview({ content }: {
     }
 
     function keepPreviewBesideEditor() {
+      if (!panel) return
       const anchorTop = anchorRef.current?.getBoundingClientRect().top ?? 180
       const top = Math.min(Math.max(16, anchorTop), Math.max(16, window.innerHeight - 320))
       const width = Math.min(520, (window.innerWidth - 64) / 2)

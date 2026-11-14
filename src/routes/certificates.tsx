@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ExternalLink } from 'lucide-react'
 import { createFileRoute } from '@tanstack/react-router'
-import { PageHero, Eyebrow } from '@/components/Section'
+import { PageHero } from '@/components/Section'
 import { getPublicContent } from '@/lib/public-functions'
 import { createPageSeo } from '@/lib/seo'
 
