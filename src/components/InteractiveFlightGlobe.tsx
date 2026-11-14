@@ -17,6 +17,7 @@ export const FLIGHT_DESTINATIONS: FlightDestination[] = [
   { slug: 'usa', code: 'JFK', city: 'New York', country: 'USA', lat: 40.71, lng: -74.0, color: '#a78bfa' },
   { slug: 'germany', code: 'BER', city: 'Berlin', country: 'Germany', lat: 52.52, lng: 13.4, color: '#34d399' },
   { slug: 'new-zealand', code: 'AKL', city: 'Auckland', country: 'New Zealand', lat: -36.85, lng: 174.76, color: '#f472b6' },
+  { slug: 'europe', code: 'CDG', city: 'Paris', country: 'Europe', lat: 48.85, lng: 2.35, color: '#22d3ee' },
 ]
 
 // Sangaria, Rajasthan coordinates

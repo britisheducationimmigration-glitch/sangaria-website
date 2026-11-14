@@ -11,17 +11,17 @@ import { Logo } from './Logo'
 export function SiteFooter({ settings, countries }: { settings: SiteSettings; countries: Country[] }) {
   return (
     <footer className="bg-forest-950 bg-grain text-forest-100">
-      <div className="mx-auto max-w-7xl px-5 pt-12 pb-8 md:px-6 md:pt-20 md:pb-10">
+      <div className="mx-auto max-w-7xl px-5 pt-12 pb-24 sm:pb-8 md:px-6 md:pt-20 md:pb-10">
         <div className="mb-10 flex flex-col items-start justify-between gap-5 border-b border-white/10 pb-10 md:mb-16 md:gap-8 md:pb-16 md:flex-row md:items-end">
           <h2 className="max-w-2xl text-3xl font-extrabold leading-tight text-white md:text-6xl">
             Your visa story <span className="text-coral-500">starts here.</span>
           </h2>
-          <a
-            href="/contact"
+          <Link
+            to="/contact"
             className="rounded-full bg-coral-500 px-7 py-4 font-bold text-white shadow-[4px_4px_0_0] shadow-black/40 transition hover:-translate-y-1"
           >
             Book free counselling →
-          </a>
+          </Link>
         </div>
         <div className="grid grid-cols-2 gap-x-5 gap-y-8 md:grid-cols-[1.4fr_1fr_1fr_1.3fr] md:gap-12">
           <div className="col-span-2 md:col-span-1">

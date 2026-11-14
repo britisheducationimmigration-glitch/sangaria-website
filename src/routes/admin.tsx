@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Phone, MessageCircle } from 'lucide-react'
 import { getAdminCashflow, getAdminSnapshot, addEnquiryActivity, deleteAdminUser, deleteBatch, deleteEnquiry, deleteEnquiryActivity, deletePost, exportEnquiries, saveAdminUser, saveBatch, saveCashflow, savePost, updateEnquiry, updateEnquiryActivity, updateSettings, saveFaq, saveTrustStat, saveContactDetails } from '@/lib/admin-functions'
 import { CertificatePanel } from '@/components/admin/CertificatePanel'
@@ -436,10 +436,41 @@ function ChangePasswordModal({ onClose, onNotice }: { onClose: () => void; onNot
     </div>
   )
 }
+function formatFollowUpLabel(value: string) {
+  if (!value) return ''
+  const [datePart, timePart] = value.slice(0, 16).split('T')
+  if (!datePart || !timePart) return new Date(value).toLocaleString('en-IN')
+  const [year, month, day] = datePart.split('-').map(Number)
+  const [hour, minute] = timePart.split(':').map(Number)
+  const dt = new Date(Date.UTC(year, (month || 1) - 1, day || 1, hour || 0, minute || 0))
+  return dt.toLocaleString('en-IN', {
+    timeZone: 'UTC',
+    day: 'numeric',
+    month: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  })
+}
+
+function isDueTodayInIndia(nextFollowUpAt: string, status: EnquiryStatus) {
+  if (!nextFollowUpAt || ['Converted', 'Closed'].includes(status)) return false
+  const todayIst = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date())
+  return nextFollowUpAt.slice(0, 10) === todayIst
+}
 
 function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setStatusFilter, dateFrom, setDateFrom, dateTo, setDateTo, onReload, onNotice, canDelete, canManageComments }: { enquiries: Enquiry[]; stats: AdminSnapshot['enquiryStats']; query: string; setQuery: (value: string) => void; statusFilter: EnquiryStatus | 'All'; setStatusFilter: (value: EnquiryStatus | 'All') => void; dateFrom: string; setDateFrom: (value: string) => void; dateTo: string; setDateTo: (value: string) => void; onReload: () => Promise<void>; onNotice: (message: string) => void; canDelete: boolean; canManageComments: boolean }) {
   const [viewMode, setViewMode] = useState<'list' | 'board'>('list')
   const [selectedBoardLeadId, setSelectedBoardLeadId] = useState<number | null>(null)
+  const [dueTodayOnly, setDueTodayOnly] = useState(false)
+  const visibleEnquiries = dueTodayOnly
+    ? enquiries.filter((item) => isDueTodayInIndia(item.nextFollowUpAt, item.status))
+    : enquiries
   
   async function downloadExcel() {
     try {
@@ -479,13 +510,31 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
         </button>
       </div>
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        {cards.map(([label, value, classes]) => (
-          <div key={label} className={`rounded-2xl p-4 ring-1 ring-forest-900/10 ${classes}`}>
-            <p className="text-xs font-bold uppercase tracking-wider opacity-65">{label}</p>
-            <p className="mt-2 text-3xl font-extrabold">{value}</p>
-          </div>
-        ))}
+     <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        {cards.map(([label, value, classes]) => {
+          if (label === 'Due today') {
+            return (
+              <button
+                key={label}
+                type="button"
+                aria-pressed={dueTodayOnly}
+                onClick={() => setDueTodayOnly((current) => !current)}
+                className={`rounded-2xl p-4 text-left ring-1 transition hover:ring-coral-500 ${classes} ${dueTodayOnly ? 'ring-2 ring-coral-600 shadow-md' : 'ring-forest-900/10'}`}
+              >
+                <p className="text-xs font-bold uppercase tracking-wider opacity-65">
+                  {label} {dueTodayOnly ? '· Active ✓' : '· Tap to filter'}
+                </p>
+                <p className="mt-2 text-3xl font-extrabold">{value}</p>
+              </button>
+            )
+          }
+          return (
+            <div key={label} className={`rounded-2xl p-4 ring-1 ring-forest-900/10 ${classes}`}>
+              <p className="text-xs font-bold uppercase tracking-wider opacity-65">{label}</p>
+              <p className="mt-2 text-3xl font-extrabold">{value}</p>
+            </div>
+          )
+        })}
       </div>
 
       {/* QUICK 1-TAP STATUS PILLS (IMPROVEMENT A) */}
@@ -508,7 +557,9 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
       </div>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm font-bold text-forest-900/65">Showing {enquiries.length} leads</p>
+        <p className="text-sm font-bold text-forest-900/65">
+          Showing {visibleEnquiries.length} leads{dueTodayOnly ? ' (due today)' : ''}
+        </p>
         <div role="group" aria-label="Lead display mode" className="inline-flex rounded-full bg-white p-1 ring-1 ring-forest-900/10">
           <button type="button" aria-pressed={viewMode === 'list'} onClick={() => setViewMode('list')} className={'rounded-full px-4 py-2 text-xs font-bold ' + (viewMode === 'list' ? 'bg-forest-900 text-white' : 'text-forest-900/65')}>List</button>
           <button type="button" aria-pressed={viewMode === 'board'} onClick={() => setViewMode('board')} className={'rounded-full px-4 py-2 text-xs font-bold ' + (viewMode === 'board' ? 'bg-forest-900 text-white' : 'text-forest-900/65')}>Pipeline board</button>
@@ -525,19 +576,19 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
         <input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} className="field" aria-label="To date" />
       </div>
 
-      {viewMode === 'list' ? (
+     {viewMode === 'list' ? (
         <div className="grid gap-4">
-          {enquiries.map((item) => (
+          {visibleEnquiries.map((item) => (
             <EnquiryCard key={item.id} item={item} onReload={onReload} onNotice={onNotice} canDelete={canDelete} canManageComments={canManageComments} />
           ))}
-          {enquiries.length === 0 && <p className="rounded-2xl bg-white p-8 text-center text-forest-900/60">No enquiries match these filters.</p>}
+          {visibleEnquiries.length === 0 && <p className="rounded-2xl bg-white p-8 text-center text-forest-900/60">No enquiries match these filters.</p>}
         </div>
       ) : (
         <div className="space-y-5">
           <div className="overflow-x-auto pb-3">
             <div className="grid min-w-[1260px] grid-cols-7 gap-3">
               {boardStatuses.map((stage) => {
-                const stageItems = enquiries.filter((item) => item.status === stage)
+                const stageItems = visibleEnquiries.filter((item) => item.status === stage)
                 return (
                   <section key={stage} className="min-h-64 rounded-2xl bg-forest-50 p-3 ring-1 ring-forest-900/10">
                     <header className="mb-3 flex items-center justify-between gap-2 border-b border-forest-900/10 pb-3">
@@ -550,7 +601,7 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
                           <span className="block truncate text-sm font-extrabold text-forest-900">{item.name}</span>
                           <span className="mt-1 block truncate text-xs text-forest-900/60">{item.interest || 'General counselling'}{item.country ? ' · ' + item.country : ''}</span>
                           <span className="mt-2 block truncate font-mono text-[10px] text-forest-900/55">{item.phone}</span>
-                          {item.nextFollowUpAt && <span className="mt-2 block rounded-lg bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-900">Follow-up {new Date(item.nextFollowUpAt).toLocaleString()}</span>}
+                          {item.nextFollowUpAt && <span className="mt-2 block rounded-lg bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-900">Follow-up {formatFollowUpLabel(item.nextFollowUpAt)}</span>}
                           {item.assignedTo && <span className="mt-2 block truncate text-[10px] text-forest-900/50">Assigned: {item.assignedTo}</span>}
                         </button>
                       ))}
@@ -642,6 +693,11 @@ function EnquiryCard({ item, onReload, onNotice, canDelete, canManageComments }:
   const [editingActivityId, setEditingActivityId] = useState<number | null>(null)
   const [editingBody, setEditingBody] = useState('')
   const [busy, setBusy] = useState(false)
+  useEffect(() => {
+    setStatus(item.status)
+    setAssignedTo(item.assignedTo)
+    setNextFollowUpAt(item.nextFollowUpAt ? item.nextFollowUpAt.slice(0, 16) : '')
+  }, [item.id, item.status, item.assignedTo, item.nextFollowUpAt])
 
   async function save() {
     setBusy(true)
@@ -738,8 +794,8 @@ function EnquiryCard({ item, onReload, onNotice, canDelete, canManageComments }:
     timeStyle: 'short',
   })
 
-  const rawPhone = item.phone.replace(/\D/g, '')
-  const waPhone = rawPhone.startsWith('91') && rawPhone.length === 12 ? rawPhone : `91${rawPhone}`
+ const rawPhone = item.phone.replace(/\D/g, '').replace(/^0+/, '')
+  const waPhone = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone
 
   return (
     <article className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-forest-900/10">
@@ -748,7 +804,7 @@ function EnquiryCard({ item, onReload, onNotice, canDelete, canManageComments }:
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-xl font-extrabold">{item.name}</h3>
             <span className="rounded-full bg-coral-50 px-3 py-1 text-xs font-bold text-coral-700">{item.status}</span>
-            {item.nextFollowUpAt && <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">Follow-up {new Date(item.nextFollowUpAt).toLocaleString()}</span>}
+            {item.nextFollowUpAt && <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">Follow-up {formatFollowUpLabel(item.nextFollowUpAt)}</span>}
           </div>
           <p className="mt-1 text-sm text-forest-900/60">{new Date(item.createdAt).toLocaleString()} · {item.source || 'website'}{item.assignedTo && <> · Assigned to {item.assignedTo}</>}</p>
           
@@ -957,11 +1013,14 @@ function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
   const [selectedSlug, setSelectedSlug] = useState('canada')
   const [busy, setBusy] = useState(false)
 
+  const onNoticeRef = useRef(onNotice)
+  onNoticeRef.current = onNotice
+
   useEffect(() => {
     void getAdminCashflow()
       .then((saved) => setData(saved))
-      .catch(() => onNotice('Could not load cashflow from database. Showing defaults.'))
-  }, [onNotice])
+      .catch(() => onNoticeRef.current('Could not load cashflow from database. Showing defaults.'))
+  }, [])
 
   const country = data.find((c) => c.slug === selectedSlug) || data[0]
 

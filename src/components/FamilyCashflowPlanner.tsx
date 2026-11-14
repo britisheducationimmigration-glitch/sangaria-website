@@ -4,14 +4,22 @@ import { getPublicCashflow } from '@/lib/public-functions'
 import { applyScheduledCashflowPolicy } from '@/data/policy-watch'
 import { useLoaderData } from '@tanstack/react-router'
 
-export function FamilyCashflowPlanner() {
+export function FamilyCashflowPlanner({ initialData }: { initialData?: CountryCashflow[] } = {}) {
   const rootData = useLoaderData({ from: '__root__' })
   const rawPhone = (rootData?.settings.phones[1] || rootData?.settings.phones[0] || '9772570478').trim()
   const displayPhone = rawPhone.startsWith('+') ? rawPhone : `+91 ${rawPhone}`
-  const [data, setData] = useState<CountryCashflow[]>(() => defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country)))
+  const [data, setData] = useState<CountryCashflow[]>(() =>
+    initialData && initialData.length > 0
+      ? initialData
+      : defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country)),
+  )
   const [selectedSlug, setSelectedSlug] = useState('canada')
 
   useEffect(() => {
+    if (initialData && initialData.length > 0) {
+      setData(initialData)
+      return
+    }
     let active = true
     void getPublicCashflow()
       .then((saved) => {
@@ -23,7 +31,7 @@ export function FamilyCashflowPlanner() {
     return () => {
       active = false
     }
-  }, [])
+  }, [initialData])
 
   const country = data.find((c) => c.slug === selectedSlug) || data[0]
 
