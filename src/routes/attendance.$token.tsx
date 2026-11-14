@@ -168,9 +168,10 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
     if (!video || !streamRef.current || video.videoWidth < 100) {
       throw new Error('Front camera is not ready. Tap Restart Camera and look into the frame.')
     }
-    const canvas = document.createElement('canvas')
-    const w = 420
-    const h = Math.max(240, Math.round((video.videoHeight / video.videoWidth) * w))
+   const canvas = document.createElement('canvas')
+    const scale = Math.min(1, 360 / Math.max(video.videoWidth, video.videoHeight))
+    const w = Math.max(160, Math.round(video.videoWidth * scale))
+    const h = Math.max(160, Math.round(video.videoHeight * scale))
     canvas.width = w
     canvas.height = h
     const ctx = canvas.getContext('2d')
@@ -193,7 +194,10 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
       throw new Error('No live camera movement detected. Hold your phone naturally and blink or move slightly.')
     }
 
-    const dataUrl = canvas.toDataURL('image/webp', 0.72)
+    let dataUrl = canvas.toDataURL('image/webp', 0.72)
+    if (!dataUrl.startsWith('data:image/webp')) {
+      dataUrl = canvas.toDataURL('image/jpeg', 0.75)
+    }
     return dataUrl.split(',')[1] ?? ''
   }
 

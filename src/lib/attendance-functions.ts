@@ -143,7 +143,7 @@ export const markEmployeeAttendance = createServerFn({ method: 'POST' })
     if (!/^[A-Za-z0-9_-]{12,64}$/.test(token)) throw new Error('Invalid attendance link')
     if (action !== 'in' && action !== 'out') throw new Error('Invalid attendance action')
     if (deviceKey.length < 12) throw new Error('Could not verify your device. Please reload and try again.')
-    if (photoBase64 && (photoBase64.length > 320_000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(photoBase64))) {
+    if (photoBase64 && (photoBase64.length > 500_000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(photoBase64))) {
       throw new Error('Selfie image is invalid or too large.')
     }
     return { token, action: action as 'in' | 'out', pin, deviceKey, photoBase64, lat, lng, accuracyM }
@@ -179,7 +179,8 @@ export const markEmployeeAttendance = createServerFn({ method: 'POST' })
     if (data.photoBase64) {
       photoBuffer = Buffer.from(data.photoBase64, 'base64')
       const isWebp = photoBuffer.length > 12 && photoBuffer.toString('ascii', 0, 4) === 'RIFF' && photoBuffer.toString('ascii', 8, 12) === 'WEBP'
-      if (!isWebp || photoBuffer.length > 220_000) {
+      const isJpeg = photoBuffer.length > 4 && photoBuffer[0] === 0xff && photoBuffer[1] === 0xd8 && photoBuffer[2] === 0xff
+      if ((!isWebp && !isJpeg) || photoBuffer.length > 350_000) {
         throw new Error('Invalid live selfie format.')
       }
     }

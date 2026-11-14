@@ -29,9 +29,10 @@ export const Route = createFileRoute('/attendance/photo/$id')({
           const bytes = Buffer.isBuffer(blob) ? blob : Buffer.from(blob as Uint8Array)
           const body = new ArrayBuffer(bytes.byteLength)
           new Uint8Array(body).set(bytes)
+         const isWebp = bytes.length > 12 && bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP'
           return new Response(body, {
             headers: {
-              'Content-Type': 'image/webp',
+              'Content-Type': isWebp ? 'image/webp' : 'image/jpeg',
               'Cache-Control': 'private, no-store',
               'X-Content-Type-Options': 'nosniff',
             },
