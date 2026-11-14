@@ -4,6 +4,7 @@ import crypto from 'node:crypto'
 import { site } from '@/data/site'
 import { execute, getDb, queryRows } from './db.server'
 import type {
+  AttendanceEditHistoryRecord,
   AttendanceLogRecord,
   AttendanceSettings,
   AttendanceStatus,
@@ -20,9 +21,25 @@ export const defaultAttendanceSettings: AttendanceSettings = {
   blockVpnOrForeignIp: true,
   officeWifiIp: '',
   requireOfficeWifiIp: false,
+  requireSelfie: true,
 }
 
 let attendanceSchemaPromise: Promise<void> | null = null
+
+async function ensureCol(table: string, column: string, definition: string) {
+  const rows = await queryRows(
+    'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ? LIMIT 1',
+    [table, column],
+  )
+  if (rows.length === 0) {
+    try {
+      await execute(`ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${definition}`)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message.toLowerCase() : ''
+      if (!msg.includes('duplicate column')) throw err
+    }
+  }
+}
 
 export async function ensureAttendanceSchema() {
   if (!attendanceSchemaPromise) {
@@ -30,17 +47,7 @@ export async function ensureAttendanceSchema() {
       const db = await getDb()
       if (!db) throw new Error('Database is not configured')
 
-      try {
-        const rows = await queryRows(
-          "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'site_settings' AND COLUMN_NAME = 'attendance_settings_json' LIMIT 1",
-        )
-        if (rows.length === 0) {
-          await execute('ALTER TABLE site_settings ADD COLUMN attendance_settings_json LONGTEXT NULL')
-        }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message.toLowerCase() : ''
-        if (!msg.includes('duplicate column')) throw err
-      }
+      await ensureCol('site_settings', 'attendance_settings_json', 'LONGTEXT NULL')
 
       await execute(`
         CREATE TABLE IF NOT EXISTS employees (
@@ -51,7 +58,9 @@ export async function ensureAttendanceSchema() {
           email VARCHAR(190) NOT NULL DEFAULT '',
           access_token VARCHAR(64) NOT NULL UNIQUE,
           pin_hash VARCHAR(255) NOT NULL DEFAULT '',
+          bound_device_hash VARCHAR(64) NOT NULL DEFAULT '',
           cycle_start_day TINYINT UNSIGNED NOT NULL DEFAULT 1,
+          monthly_salary INT UNSIGNED NOT NULL DEFAULT 0,
           expected_in_time VARCHAR(5) NOT NULL DEFAULT '09:30',
           expected_out_time VARCHAR(5) NOT NULL DEFAULT '19:30',
           office_only BOOLEAN NOT NULL DEFAULT TRUE,
@@ -60,6 +69,8 @@ export async function ensureAttendanceSchema() {
           updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         )
       `)
+      await ensureCol('employees', 'bound_device_hash', "VARCHAR(64) NOT NULL DEFAULT ''")
+      await ensureCol('employees', 'monthly_salary', 'INT UNSIGNED NOT NULL DEFAULT 0')
 
       await execute(`
         CREATE TABLE IF NOT EXISTS attendance_logs (
@@ -76,6 +87,7 @@ export async function ensureAttendanceSchema() {
           in_ip_city VARCHAR(120) NOT NULL DEFAULT '',
           in_ip_country VARCHAR(16) NOT NULL DEFAULT '',
           in_flags_json TEXT NULL,
+          in_photo_data MEDIUMBLOB NULL,
           out_lat DOUBLE NULL,
           out_lng DOUBLE NULL,
           out_accuracy_m INT NULL,
@@ -84,6 +96,8 @@ export async function ensureAttendanceSchema() {
           out_ip_city VARCHAR(120) NOT NULL DEFAULT '',
           out_ip_country VARCHAR(16) NOT NULL DEFAULT '',
           out_flags_json TEXT NULL,
+          out_photo_data MEDIUMBLOB NULL,
+          media_version BIGINT UNSIGNED NOT NULL DEFAULT 0,
           status VARCHAR(24) NOT NULL DEFAULT 'Present',
           work_minutes INT NOT NULL DEFAULT 0,
           is_late BOOLEAN NOT NULL DEFAULT FALSE,
@@ -93,6 +107,25 @@ export async function ensureAttendanceSchema() {
           updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
           UNIQUE KEY attendance_emp_day_uq (employee_id, work_date),
           INDEX attendance_work_date_idx (work_date)
+        )
+      `)
+      await ensureCol('attendance_logs', 'in_photo_data', 'MEDIUMBLOB NULL')
+      await ensureCol('attendance_logs', 'out_photo_data', 'MEDIUMBLOB NULL')
+      await ensureCol('attendance_logs', 'media_version', 'BIGINT UNSIGNED NOT NULL DEFAULT 0')
+
+      await execute(`
+        CREATE TABLE IF NOT EXISTS attendance_edit_history (
+          id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+          attendance_log_id BIGINT UNSIGNED NOT NULL,
+          employee_id BIGINT UNSIGNED NOT NULL,
+          work_date VARCHAR(10) NOT NULL,
+          editor_name VARCHAR(160) NOT NULL DEFAULT '',
+          editor_email VARCHAR(190) NOT NULL DEFAULT '',
+          action VARCHAR(16) NOT NULL DEFAULT 'edit',
+          changes_summary VARCHAR(600) NOT NULL DEFAULT '',
+          reason VARCHAR(500) NOT NULL DEFAULT '',
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          INDEX attendance_history_log_idx (attendance_log_id, created_at)
         )
       `)
     })().catch((error) => {
@@ -105,6 +138,13 @@ export async function ensureAttendanceSchema() {
 
 export function generateEmployeeToken(): string {
   return crypto.randomBytes(18).toString('base64url')
+}
+
+export function hashDeviceKey(deviceKey: string): string {
+  const clean = deviceKey.trim()
+  if (!clean) return ''
+  const secret = (process.env.SESSION_SECRET ?? 'bei-attendance-device-salt').trim()
+  return crypto.createHmac('sha256', secret).update(clean).digest('hex')
 }
 
 export function hashEmployeePin(pin: string): string {
@@ -185,6 +225,17 @@ export function getEmployeeCycleRange(selectedMonth: string, cycleStartDay: numb
   }
 }
 
+export function countSundaysInRange(startDate: string, endDate: string): number {
+  let count = 0
+  let cursor = new Date(`${startDate}T00:00:00Z`).getTime()
+  const end = new Date(`${endDate}T00:00:00Z`).getTime()
+  while (cursor <= end) {
+    if (new Date(cursor).getUTCDay() === 0) count += 1
+    cursor += 86_400_000
+  }
+  return count
+}
+
 export function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const toRad = (deg: number) => (deg * Math.PI) / 180
   const R = 6_371_000
@@ -193,8 +244,7 @@ export function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: 
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2)
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-  return R * c
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
 export function readClientNetworkInfo(headers: Headers) {
@@ -237,9 +287,7 @@ export function verifyAttendanceLocation(params: {
 
   const safeAccuracy = Math.max(0, Math.round(Number.isFinite(accuracyM) ? accuracyM : 9999))
   if (safeAccuracy > settings.maxAccuracyM) {
-    throw new Error(
-      `GPS accuracy is too weak (${safeAccuracy}m). Enable High Accuracy / Precise Location and try again.`,
-    )
+    throw new Error(`GPS accuracy is too weak (${safeAccuracy}m). Enable Precise Location and try again.`)
   }
 
   const net = readClientNetworkInfo(headers)
@@ -250,15 +298,13 @@ export function verifyAttendanceLocation(params: {
   if (net.ipCountry && net.ipCountry !== 'IN') {
     flags.push(`FOREIGN_IP_${net.ipCountry}`)
     if (settings.blockVpnOrForeignIp) {
-      throw new Error('VPN or foreign network detected. Turn off VPN and use Indian mobile data or Office Wi-Fi.')
+      throw new Error('VPN or foreign network detected. Turn off VPN and use Indian network.')
     }
   }
 
   if (net.ipLat !== null && net.ipLng !== null) {
     const ipVsGpsKm = Math.round(haversineMeters(lat, lng, net.ipLat, net.ipLng) / 1000)
-    if (ipVsGpsKm > 750) {
-      flags.push(`VPN_OR_IP_MISMATCH_${ipVsGpsKm}KM`)
-    }
+    if (ipVsGpsKm > 750) flags.push(`VPN_OR_IP_MISMATCH_${ipVsGpsKm}KM`)
   }
 
   if (settings.requireOfficeWifiIp && settings.officeWifiIp.trim()) {
@@ -270,9 +316,7 @@ export function verifyAttendanceLocation(params: {
   if (distanceM > settings.allowedRadiusM) {
     flags.push(`OUT_OF_OFFICE_${distanceM}M`)
     if (officeOnly) {
-      throw new Error(
-        `You are ${distanceM}m away from ${settings.officeName}. Move within ${settings.allowedRadiusM}m of office.`,
-      )
+      throw new Error(`You are ${distanceM}m away from ${settings.officeName}. Move within ${settings.allowedRadiusM}m.`)
     }
   }
 
@@ -304,6 +348,7 @@ export async function readAttendanceSettings(): Promise<AttendanceSettings> {
       blockVpnOrForeignIp: parsed.blockVpnOrForeignIp ?? defaultAttendanceSettings.blockVpnOrForeignIp,
       officeWifiIp: String(parsed.officeWifiIp || '').trim().slice(0, 64),
       requireOfficeWifiIp: Boolean(parsed.requireOfficeWifiIp),
+      requireSelfie: parsed.requireSelfie ?? defaultAttendanceSettings.requireSelfie,
     }
   } catch {
     return defaultAttendanceSettings
@@ -319,11 +364,28 @@ export function mapEmployeeRow(row: Record<string, unknown>): EmployeeRecord {
     email: String(row.email ?? ''),
     accessToken: String(row.access_token),
     hasPin: Boolean(String(row.pin_hash ?? '').trim()),
+    deviceBound: Boolean(String(row.bound_device_hash ?? '').trim()),
     cycleStartDay: Math.max(1, Math.min(28, Number(row.cycle_start_day ?? 1))),
+    monthlySalary: Math.max(0, Number(row.monthly_salary ?? 0)),
     expectedInTime: String(row.expected_in_time || '09:30'),
     expectedOutTime: String(row.expected_out_time || '19:30'),
     officeOnly: Boolean(row.office_only),
     active: Boolean(row.active),
+    createdAt: new Date(String(row.created_at)).toISOString(),
+  }
+}
+
+export function mapEditHistoryRow(row: Record<string, unknown>): AttendanceEditHistoryRecord {
+  return {
+    id: Number(row.id),
+    attendanceLogId: Number(row.attendance_log_id),
+    employeeId: Number(row.employee_id),
+    workDate: String(row.work_date),
+    editorName: String(row.editor_name ?? ''),
+    editorEmail: String(row.editor_email ?? ''),
+    action: (String(row.action) === 'create' ? 'create' : 'edit'),
+    changesSummary: String(row.changes_summary ?? ''),
+    reason: String(row.reason ?? ''),
     createdAt: new Date(String(row.created_at)).toISOString(),
   }
 }
@@ -341,9 +403,14 @@ function parseFlags(value: unknown): string[] {
   return []
 }
 
-export function mapAttendanceRow(row: Record<string, unknown>): AttendanceLogRecord {
+export function mapAttendanceRow(
+  row: Record<string, unknown>,
+  editHistory: AttendanceEditHistoryRecord[] = [],
+): AttendanceLogRecord {
+  const id = Number(row.id)
+  const v = Number(row.media_version ?? 0)
   return {
-    id: Number(row.id),
+    id,
     employeeId: Number(row.employee_id),
     employeeName: String(row.employee_name ?? ''),
     designation: String(row.designation ?? ''),
@@ -358,6 +425,7 @@ export function mapAttendanceRow(row: Record<string, unknown>): AttendanceLogRec
     inIpCity: String(row.in_ip_city ?? ''),
     inIpCountry: String(row.in_ip_country ?? ''),
     inFlags: parseFlags(row.in_flags_json),
+    inPhotoSrc: Boolean(row.has_in_photo) ? `/attendance/photo/${id}?type=in&v=${v}` : '',
     outLat: row.out_lat !== null && row.out_lat !== undefined ? Number(row.out_lat) : null,
     outLng: row.out_lng !== null && row.out_lng !== undefined ? Number(row.out_lng) : null,
     outAccuracyM: row.out_accuracy_m !== null && row.out_accuracy_m !== undefined ? Number(row.out_accuracy_m) : null,
@@ -366,12 +434,14 @@ export function mapAttendanceRow(row: Record<string, unknown>): AttendanceLogRec
     outIpCity: String(row.out_ip_city ?? ''),
     outIpCountry: String(row.out_ip_country ?? ''),
     outFlags: parseFlags(row.out_flags_json),
-    status: (String(row.status || 'Present') as AttendanceStatus),
+    outPhotoSrc: Boolean(row.has_out_photo) ? `/attendance/photo/${id}?type=out&v=${v}` : '',
+    status: String(row.status || 'Present') as AttendanceStatus,
     workMinutes: Number(row.work_minutes ?? 0),
     isLate: Boolean(row.is_late),
     editedBy: String(row.edited_by ?? ''),
     editNote: String(row.edit_note ?? ''),
     updatedAt: new Date(String(row.updated_at)).toISOString(),
+    editHistory,
   }
 }
 
@@ -383,6 +453,9 @@ export function buildEmployeeCycleSummaries(
 ): EmployeeCycleSummary[] {
   return employees.map((employee) => {
     const { startDate, endDate, totalDays } = getEmployeeCycleRange(selectedMonth, employee.cycleStartDay)
+    const sundaysCount = countSundaysInRange(startDate, endDate)
+    const workingDays = Math.max(1, totalDays - sundaysCount)
+
     const empLogs = logs.filter(
       (log) => log.employeeId === employee.id && log.workDate >= startDate && log.workDate <= endDate,
     )
@@ -391,26 +464,39 @@ export function buildEmployeeCycleSummaries(
     const leaveDays = empLogs.filter((log) => log.status === 'Leave').length
     const explicitAbsent = empLogs.filter((log) => log.status === 'Absent').length
 
-    // Count elapsed days in cycle up to today (in IST) that have no record as unmarked/absent
+    // Count elapsed non-Sunday days up to todayIst without a log as unmarked/absent
     const effectiveEnd = endDate < todayIst ? endDate : todayIst
-    let elapsedDays = 0
+    let unmarkedWorkingDays = 0
     if (effectiveEnd >= startDate) {
-      const s = new Date(`${startDate}T00:00:00Z`).getTime()
-      const e = new Date(`${effectiveEnd}T00:00:00Z`).getTime()
-      elapsedDays = Math.floor((e - s) / 86_400_000) + 1
+      const logDates = new Set(empLogs.map((l) => l.workDate))
+      let cursor = new Date(`${startDate}T00:00:00Z`).getTime()
+      const endMs = new Date(`${effectiveEnd}T00:00:00Z`).getTime()
+      while (cursor <= endMs) {
+        const dt = new Date(cursor)
+        const iso = dt.toISOString().slice(0, 10)
+        if (dt.getUTCDay() !== 0 && !logDates.has(iso)) unmarkedWorkingDays += 1
+        cursor += 86_400_000
+      }
     }
-    const recordedDays = empLogs.filter((log) => log.workDate <= effectiveEnd).length
-    const unmarkedDays = Math.max(0, elapsedDays - recordedDays)
+
+    const payableDays = presentDays + halfDays * 0.5
+    const perDaySalary = employee.monthlySalary > 0 ? Math.round(employee.monthlySalary / workingDays) : 0
+    const earnedSalary = employee.monthlySalary > 0 ? Math.round((employee.monthlySalary * payableDays) / workingDays) : 0
 
     return {
       employee,
       cycleStartDate: startDate,
       cycleEndDate: endDate,
       totalDays,
+      sundaysCount,
+      workingDays,
       presentDays,
       halfDays,
       leaveDays,
-      absentDays: explicitAbsent + unmarkedDays,
+      absentDays: explicitAbsent + unmarkedWorkingDays,
+      payableDays,
+      perDaySalary,
+      earnedSalary,
       lateCount: empLogs.filter((log) => log.isLate).length,
       flaggedCount: empLogs.filter((log) => log.inFlags.length > 0 || log.outFlags.length > 0).length,
       missedCheckOutCount: empLogs.filter((log) => log.checkInAt && !log.checkOutAt && log.workDate < todayIst).length,

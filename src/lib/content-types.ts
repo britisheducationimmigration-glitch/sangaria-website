@@ -165,11 +165,26 @@ export type EmployeeRecord = {
   email: string
   accessToken: string
   hasPin: boolean
+  deviceBound: boolean
   cycleStartDay: number
+  monthlySalary: number
   expectedInTime: string
   expectedOutTime: string
   officeOnly: boolean
   active: boolean
+  createdAt: string
+}
+
+export type AttendanceEditHistoryRecord = {
+  id: number
+  attendanceLogId: number
+  employeeId: number
+  workDate: string
+  editorName: string
+  editorEmail: string
+  action: 'create' | 'edit'
+  changesSummary: string
+  reason: string
   createdAt: string
 }
 
@@ -197,12 +212,15 @@ export type AttendanceLogRecord = {
   outIpCity: string
   outIpCountry: string
   outFlags: string[]
+   inPhotoSrc: string
+  outPhotoSrc: string
   status: AttendanceStatus
   workMinutes: number
   isLate: boolean
   editedBy: string
   editNote: string
   updatedAt: string
+  editHistory: AttendanceEditHistoryRecord[]
 }
 
 export type AttendanceSettings = {
@@ -214,6 +232,7 @@ export type AttendanceSettings = {
   blockVpnOrForeignIp: boolean
   officeWifiIp: string
   requireOfficeWifiIp: boolean
+  requireSelfie: boolean
 }
 
 export type EmployeeCycleSummary = {
@@ -221,16 +240,20 @@ export type EmployeeCycleSummary = {
   cycleStartDate: string
   cycleEndDate: string
   totalDays: number
+  sundaysCount: number
+  workingDays: number
   presentDays: number
   halfDays: number
   leaveDays: number
   absentDays: number
+  payableDays: number
+  perDaySalary: number
+  earnedSalary: number
   lateCount: number
   flaggedCount: number
   missedCheckOutCount: number
   totalWorkMinutes: number
 }
-
 export type AdminAttendanceSnapshot = {
   settings: AttendanceSettings
   employees: EmployeeRecord[]

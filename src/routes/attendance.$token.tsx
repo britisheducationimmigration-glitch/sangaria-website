@@ -1,109 +1,137 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { CalendarDays, CheckCircle2, Clock, Lock, MapPin, RefreshCw, ShieldAlert } from 'lucide-react'
+import { CalendarDays, Camera, CheckCircle2, ChevronDown, Clock, Lock, MapPin, RefreshCw, ShieldAlert } from 'lucide-react'
 import { getEmployeePortalData, markEmployeeAttendance } from '@/lib/attendance-functions'
 
 type PortalSuccess = Awaited<ReturnType<typeof getEmployeePortalData>>
-type PortalLoaderResult =
-  | { ok: true; data: PortalSuccess }
-  | { ok: false; errorMessage: string }
+type PortalLoaderResult = { ok: true; data: PortalSuccess } | { ok: false; errorMessage: string }
 
 export const Route = createFileRoute('/attendance/$token')({
   loader: async ({ params }): Promise<PortalLoaderResult> => {
     try {
-      const data = await getEmployeePortalData({ data: { token: params.token } })
-      return { ok: true, data }
+      return { ok: true, data: await getEmployeePortalData({ data: { token: params.token } }) }
     } catch (cause) {
-      return {
-        ok: false,
-        errorMessage: cause instanceof Error ? cause.message : 'Could not open this attendance link.',
-      }
+      return { ok: false, errorMessage: cause instanceof Error ? cause.message : 'Could not open this attendance link.' }
     }
   },
   head: () => ({
-    meta: [
-      { title: 'Staff Attendance · British Education & Immigration' },
-      { name: 'robots', content: 'noindex,nofollow,noarchive' },
-    ],
+    meta: [{ title: 'Staff Attendance · British Education & Immigration' }, { name: 'robots', content: 'noindex,nofollow,noarchive' }],
   }),
   component: EmployeeAttendancePage,
 })
 
 function distanceMeters(lat1: number, lng1: number, lat2: number, lng2: number) {
   const toRad = (deg: number) => (deg * Math.PI) / 180
-  const R = 6_371_000
   const dLat = toRad(lat2 - lat1)
   const dLng = toRad(lng2 - lng1)
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2)
-  return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)))
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
+  return Math.round(6_371_000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)))
 }
 
-function formatIstTime(iso: string) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleTimeString('en-IN', {
-    timeZone: 'Asia/Kolkata',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  })
-}
+const fmtIstTime = (iso: string) =>
+  iso ? new Date(iso).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '—'
 
-function formatHours(minutes: number) {
-  if (!minutes) return '0h 0m'
-  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`
+const fmtHours = (mins: number) => (mins ? `${Math.floor(mins / 60)}h ${mins % 60}m` : '0h 0m')
+
+function getOrCreateDeviceKey(): string {
+  const storageKey = 'bei-staff-device-key-v1'
+  try {
+    const existing = window.localStorage.getItem(storageKey)
+    if (existing && existing.length >= 16) return existing
+    const fresh =
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 14)}-${Math.random().toString(36).slice(2, 10)}`
+    window.localStorage.setItem(storageKey, fresh)
+    return fresh
+  } catch {
+    return ''
+  }
 }
 
 function EmployeeAttendancePage() {
-  const loaderResult = Route.useLoaderData()
+  const res = Route.useLoaderData()
   const { token } = Route.useParams()
-
-  if (!loaderResult.ok) {
+  if (!res.ok) {
     return (
       <div className="grid min-h-screen place-items-center bg-[#F9FAFB] px-5 py-12">
         <div className="w-full max-w-md rounded-2xl border border-[#E4E7EC] bg-white p-6 text-center shadow-sm">
           <ShieldAlert className="mx-auto size-12 text-[#F04438]" />
           <h1 className="mt-4 text-xl font-bold text-[#1D2939]">Attendance Link Unavailable</h1>
-          <p className="mt-2 text-sm text-[#667085]">{loaderResult.errorMessage}</p>
+          <p className="mt-2 text-sm text-[#667085]">{res.errorMessage}</p>
         </div>
       </div>
     )
   }
-
-  return <EmployeeAttendanceView initial={loaderResult.data} token={token} />
+  return <EmployeeAttendanceView initial={res.data} token={token} />
 }
 
 function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; token: string }) {
   const [portal, setPortal] = useState<PortalSuccess>(initial)
   const [pin, setPin] = useState('')
+  const [deviceKey, setDeviceKey] = useState('')
   const [gps, setGps] = useState<{ lat: number; lng: number; accuracyM: number } | null>(null)
   const [gpsState, setGpsState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
   const [gpsError, setGpsError] = useState('')
+  const [cameraState, setCameraState] = useState<'idle' | 'ready' | 'error'>('idle')
+  const [cameraError, setCameraError] = useState('')
   const [busy, setBusy] = useState(false)
-  const [statusMessage, setStatusMessage] = useState<{ text: string; tone: 'success' | 'error' } | null>(null)
+  const [stepLabel, setStepLabel] = useState('')
+  const [showMore, setShowMore] = useState(false)
+  const [statusMsg, setStatusMsg] = useState<{ text: string; tone: 'success' | 'error' } | null>(null)
   const [liveTime, setLiveTime] = useState('')
 
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+
+  const { employee, settings, todayIst, todayLog, recentLogs, summary } = portal
+  const hasCheckedIn = Boolean(todayLog?.checkInAt)
+  const hasCheckedOut = Boolean(todayLog?.checkOutAt)
+
   useEffect(() => {
-    const updateClock = () => {
-      setLiveTime(
-        new Date().toLocaleTimeString('en-IN', {
-          timeZone: 'Asia/Kolkata',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: true,
-        }),
-      )
-    }
-    updateClock()
-    const id = window.setInterval(updateClock, 1000)
+    setDeviceKey(getOrCreateDeviceKey())
+    const tick = () => setLiveTime(new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }))
+    tick()
+    const id = window.setInterval(tick, 1000)
     return () => window.clearInterval(id)
   }, [])
 
+  const stopCamera = useCallback(() => {
+    streamRef.current?.getTracks().forEach((t) => t.stop())
+    streamRef.current = null
+  }, [])
+
+  const startCamera = useCallback(async () => {
+    if (!settings.requireSelfie || hasCheckedOut) return
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraState('error')
+      setCameraError('Live camera is not supported on this browser.')
+      return
+    }
+    try {
+      stopCamera()
+      setCameraError('')
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+        audio: false,
+      })
+      streamRef.current = stream
+      if (videoRef.current) videoRef.current.srcObject = stream
+      setCameraState('ready')
+    } catch {
+      setCameraState('error')
+      setCameraError('Camera permission denied. Allow front camera access to mark attendance.')
+    }
+  }, [hasCheckedOut, settings.requireSelfie, stopCamera])
+
+  useEffect(() => {
+    if (settings.requireSelfie && !hasCheckedOut) void startCamera()
+    return () => stopCamera()
+  }, [hasCheckedOut, settings.requireSelfie, startCamera, stopCamera])
+
   const fetchLocation = useCallback((): Promise<{ lat: number; lng: number; accuracyM: number }> => {
     return new Promise((resolve, reject) => {
-      if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      if (!navigator.geolocation) {
         const msg = 'GPS location is not supported on this browser.'
         setGpsState('error')
         setGpsError(msg)
@@ -114,22 +142,13 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
       setGpsError('')
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          const next = {
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-            accuracyM: Math.round(pos.coords.accuracy || 0),
-          }
+          const next = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracyM: Math.round(pos.coords.accuracy || 0) }
           setGps(next)
           setGpsState('ready')
           resolve(next)
         },
         (err) => {
-          const msg =
-            err.code === 1
-              ? 'Location permission denied. Enable Location for this website to mark attendance.'
-              : err.code === 2
-                ? 'GPS signal unavailable. Turn on device Location / GPS and try again.'
-                : 'Location request timed out. Move near a window and tap Refresh GPS.'
+          const msg = err.code === 1 ? 'Location permission denied. Allow GPS to mark attendance.' : 'GPS signal unavailable. Turn on device Location and tap Refresh GPS.'
           setGpsState('error')
           setGpsError(msg)
           reject(new Error(msg))
@@ -143,260 +162,193 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
     void fetchLocation().catch(() => undefined)
   }, [fetchLocation])
 
+  async function captureLiveSelfie(): Promise<string> {
+    if (!settings.requireSelfie) return ''
+    const video = videoRef.current
+    if (!video || !streamRef.current || video.videoWidth < 100) {
+      throw new Error('Front camera is not ready. Tap Restart Camera and look into the frame.')
+    }
+    const canvas = document.createElement('canvas')
+    const w = 420
+    const h = Math.max(240, Math.round((video.videoHeight / video.videoWidth) * w))
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('Could not capture live selfie.')
+
+    ctx.drawImage(video, 0, 0, w, h)
+    const frame1 = ctx.getImageData(0, 0, w, h).data
+    await new Promise((r) => window.setTimeout(r, 450))
+    ctx.drawImage(video, 0, 0, w, h)
+    const frame2 = ctx.getImageData(0, 0, w, h).data
+
+    let diffSum = 0
+    let samples = 0
+    for (let i = 0; i < frame1.length; i += 48) {
+      diffSum += Math.abs(frame1[i] - frame2[i]) + Math.abs(frame1[i + 1] - frame2[i + 1])
+      samples += 2
+    }
+    const avgDiff = samples ? diffSum / samples : 0
+    if (avgDiff < 0.7) {
+      throw new Error('No live camera movement detected. Hold your phone naturally and blink or move slightly.')
+    }
+
+    const dataUrl = canvas.toDataURL('image/webp', 0.72)
+    return dataUrl.split(',')[1] ?? ''
+  }
+
   async function submitAction(action: 'in' | 'out') {
     setBusy(true)
-    setStatusMessage(null)
+    setStatusMsg(null)
     try {
+      setStepLabel('Checking live selfie…')
+      const photoBase64 = await captureLiveSelfie()
+      setStepLabel('Verifying GPS location…')
       const freshGps = await fetchLocation()
+      setStepLabel('Saving attendance…')
       const res = await markEmployeeAttendance({
-        data: {
-          token,
-          action,
-          pin,
-          lat: freshGps.lat,
-          lng: freshGps.lng,
-          accuracyM: freshGps.accuracyM,
-        },
+        data: { token, action, pin, deviceKey: deviceKey || getOrCreateDeviceKey(), photoBase64, lat: freshGps.lat, lng: freshGps.lng, accuracyM: freshGps.accuracyM },
       })
       const refreshed = await getEmployeePortalData({ data: { token } })
       setPortal(refreshed)
       setPin('')
-      setStatusMessage({
-        text:
-          action === 'in'
-            ? `Check In recorded (${res.distanceM}m from office).`
-            : `Check Out recorded (${res.distanceM}m from office).`,
+      if (action === 'out') stopCamera()
+      setStatusMsg({
+        text: action === 'in' ? `Check In saved (${res.distanceM}m from office).` : `Check Out saved (${res.distanceM}m from office).`,
         tone: 'success',
       })
     } catch (cause) {
-      setStatusMessage({
-        text: cause instanceof Error ? cause.message : 'Could not mark attendance.',
-        tone: 'error',
-      })
+      setStatusMsg({ text: cause instanceof Error ? cause.message : 'Could not mark attendance.', tone: 'error' })
     } finally {
+      setStepLabel('')
       setBusy(false)
     }
   }
 
-  const { employee, settings, todayIst, todayLog, recentLogs, summary } = portal
-  const currentDistM = gps
-    ? distanceMeters(gps.lat, gps.lng, settings.officeLat, settings.officeLng)
-    : null
-  const inRange = currentDistM !== null && currentDistM <= settings.allowedRadiusM
-  const hasCheckedIn = Boolean(todayLog?.checkInAt)
-  const hasCheckedOut = Boolean(todayLog?.checkOutAt)
+  const dist = gps ? distanceMeters(gps.lat, gps.lng, settings.officeLat, settings.officeLng) : null
+  const inRange = dist !== null && dist <= settings.allowedRadiusM
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] px-4 py-6 text-[#1D2939] sm:px-6 sm:py-10">
-      <div className="mx-auto max-w-lg space-y-5">
+    <div className="min-h-screen bg-[#F9FAFB] px-4 py-6 text-[#1D2939] sm:px-6">
+      <div className="mx-auto max-w-lg space-y-4">
         <header className="rounded-2xl border border-[#E4E7EC] bg-white p-5 shadow-xs">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#465FFF]">
-                British Education &amp; Immigration
-              </p>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#465FFF]">British Education &amp; Immigration</p>
               <h1 className="mt-1 text-2xl font-bold text-[#1D2939]">{employee.name}</h1>
-              {employee.designation && <p className="text-sm text-[#667085]">{employee.designation}</p>}
+              {employee.designation && <p className="text-xs text-[#667085]">{employee.designation}</p>}
             </div>
-            <span className="rounded-full bg-[#ECF3FF] px-3 py-1 text-xs font-semibold text-[#465FFF]">
-              {todayIst}
-            </span>
+            <span className="rounded-full bg-[#ECF3FF] px-3 py-1 text-xs font-semibold text-[#465FFF]">{todayIst}</span>
           </div>
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-[#E4E7EC] pt-3 text-xs text-[#667085]">
-            <span className="inline-flex items-center gap-1.5 font-medium">
-              <Clock className="size-3.5 text-[#465FFF]" />
-              IST: <strong className="text-[#1D2939]">{liveTime || '—'}</strong>
-            </span>
-            <span>
-              Shift: {employee.expectedInTime} – {employee.expectedOutTime}
-            </span>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#E4E7EC] pt-3 text-xs text-[#667085]">
+            <span className="inline-flex items-center gap-1.5 font-medium"><Clock className="size-3.5 text-[#465FFF]" /> IST: <strong className="text-[#1D2939]">{liveTime || '—'}</strong></span>
+            <span>Shift: {employee.expectedInTime} – {employee.expectedOutTime}</span>
           </div>
         </header>
 
-        {/* GPS Location Card */}
-        <section className="rounded-2xl border border-[#E4E7EC] bg-white p-5 shadow-xs">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="flex items-center gap-2 text-sm font-bold text-[#1D2939]">
-              <MapPin className="size-4 text-[#465FFF]" />
-              Live GPS Location (Required)
-            </h2>
-            <button
-              type="button"
-              onClick={() => void fetchLocation().catch(() => undefined)}
-              disabled={gpsState === 'loading' || busy}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[#E4E7EC] px-3 py-1.5 text-xs font-semibold text-[#1D2939] hover:bg-[#F9FAFB] disabled:opacity-50"
-            >
-              <RefreshCw className={`size-3.5 ${gpsState === 'loading' ? 'animate-spin' : ''}`} />
-              Refresh GPS
+        {/* GPS Status */}
+        <section className="rounded-2xl border border-[#E4E7EC] bg-white p-4 shadow-xs">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[#1D2939]"><MapPin className="size-4 text-[#465FFF]" /> GPS Location</h2>
+            <button type="button" onClick={() => void fetchLocation().catch(() => undefined)} disabled={gpsState === 'loading' || busy} className="inline-flex items-center gap-1 rounded-lg border border-[#E4E7EC] px-2.5 py-1 text-xs font-semibold text-[#1D2939] hover:bg-[#F9FAFB]">
+              <RefreshCw className={`size-3 ${gpsState === 'loading' ? 'animate-spin' : ''}`} /> Refresh
             </button>
           </div>
-
-          {gpsState === 'loading' && (
-            <p className="mt-3 text-xs text-[#667085]">Reading accurate GPS coordinates…</p>
-          )}
-
-          {gpsState === 'error' && (
-            <p className="mt-3 rounded-xl bg-[#FEF3F2] p-3 text-xs font-medium text-[#F04438]">
-              {gpsError}
-            </p>
-          )}
-
+          {gpsState === 'error' && <p className="mt-2 rounded-xl bg-[#FEF3F2] p-2.5 text-xs font-medium text-[#F04438]">{gpsError}</p>}
           {gps && (
-            <div className="mt-3 grid grid-cols-2 gap-2.5 text-xs">
-              <div className="rounded-xl bg-[#F9FAFB] p-3">
-                <p className="text-[#667085]">Distance from Office</p>
-                <p className={`mt-1 text-sm font-bold ${inRange ? 'text-[#12B76A]' : 'text-[#F79009]'}`}>
-                  {currentDistM}m {inRange ? '· Inside Range ✓' : `(Max ${settings.allowedRadiusM}m)`}
-                </p>
-              </div>
-              <div className="rounded-xl bg-[#F9FAFB] p-3">
-                <p className="text-[#667085]">GPS Accuracy</p>
-                <p className="mt-1 text-sm font-bold text-[#1D2939]">±{gps.accuracyM}m</p>
-              </div>
+            <div className="mt-2.5 grid grid-cols-2 gap-2 text-xs">
+              <div className="rounded-xl bg-[#F9FAFB] p-2.5"><p className="text-[#667085]">Distance</p><p className={`font-bold ${inRange ? 'text-[#12B76A]' : 'text-[#F79009]'}`}>{dist}m {inRange ? '· In Range ✓' : `(Max ${settings.allowedRadiusM}m)`}</p></div>
+              <div className="rounded-xl bg-[#F9FAFB] p-2.5"><p className="text-[#667085]">Accuracy</p><p className="font-bold text-[#1D2939]">±{gps.accuracyM}m</p></div>
             </div>
-          )}
-
-          {settings.requireOfficeWifiIp && (
-            <p className="mt-3 text-[11px] font-medium text-[#667085]">
-              Office Wi-Fi IP check is active for this workplace.
-            </p>
           )}
         </section>
 
-        {/* Check In / Out Box */}
+        {/* Today Check In / Out Card */}
         <section className="rounded-2xl border border-[#E4E7EC] bg-white p-5 shadow-xs space-y-4">
           <div className="grid grid-cols-2 gap-3 text-center">
-            <div className="rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-3">
-              <p className="text-[11px] font-medium text-[#667085]">Today Check In</p>
-              <p className="mt-1 text-lg font-bold text-[#1D2939]">{formatIstTime(todayLog?.checkInAt ?? '')}</p>
-            </div>
-            <div className="rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-3">
-              <p className="text-[11px] font-medium text-[#667085]">Today Check Out</p>
-              <p className="mt-1 text-lg font-bold text-[#1D2939]">{formatIstTime(todayLog?.checkOutAt ?? '')}</p>
-            </div>
+            <div className="rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-3"><p className="text-[11px] font-medium text-[#667085]">Today Check In</p><p className="mt-1 text-lg font-bold text-[#1D2939]">{fmtIstTime(todayLog?.checkInAt ?? '')}</p></div>
+            <div className="rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-3"><p className="text-[11px] font-medium text-[#667085]">Today Check Out</p><p className="mt-1 text-lg font-bold text-[#1D2939]">{fmtIstTime(todayLog?.checkOutAt ?? '')}</p></div>
           </div>
 
-          {statusMessage && (
-            <p
-              role="status"
-              className={`rounded-xl p-3 text-xs font-semibold ${
-                statusMessage.tone === 'success'
-                  ? 'bg-[#ECFDF3] text-[#12B76A]'
-                  : 'bg-[#FEF3F2] text-[#F04438]'
-              }`}
-            >
-              {statusMessage.text}
+          {settings.requireSelfie && !hasCheckedOut && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="inline-flex items-center gap-1.5 font-semibold text-[#1D2939]"><Camera className="size-3.5 text-[#465FFF]" /> Live Camera Selfie</span>
+                <button type="button" onClick={() => void startCamera()} className="text-[11px] font-semibold text-[#465FFF] hover:underline">Restart Camera</button>
+              </div>
+              {cameraState === 'error' ? (
+                <p className="rounded-xl bg-[#FEF3F2] p-3 text-xs font-medium text-[#F04438]">{cameraError}</p>
+              ) : (
+                <div className="relative overflow-hidden rounded-xl border border-[#E4E7EC] bg-black aspect-[4/3]">
+                  <video ref={videoRef} autoPlay playsInline muted className="size-full scale-x-[-1] object-cover" />
+                </div>
+              )}
+            </div>
+          )}
+
+          {statusMsg && (
+            <p role="status" className={`rounded-xl p-3 text-xs font-semibold ${statusMsg.tone === 'success' ? 'bg-[#ECFDF3] text-[#12B76A]' : 'bg-[#FEF3F2] text-[#F04438]'}`}>
+              {statusMsg.text}
             </p>
           )}
 
           {!hasCheckedOut && employee.hasPin && (
             <label className="block">
-              <span className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-[#1D2939]">
-                <Lock className="size-3.5 text-[#465FFF]" />
-                Enter your PIN
-              </span>
-              <input
-                type="password"
-                inputMode="numeric"
-                maxLength={8}
-                value={pin}
-                onChange={(e) => setPin(e.currentTarget.value.replace(/\D/g, ''))}
-                placeholder="4-digit PIN"
-                className="min-h-11 w-full rounded-xl border border-[#E4E7EC] px-3.5 text-sm font-semibold text-[#1D2939] outline-none focus:border-[#465FFF]"
-              />
+              <span className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-[#1D2939]"><Lock className="size-3.5 text-[#465FFF]" /> Enter PIN</span>
+              <input type="password" inputMode="numeric" maxLength={8} value={pin} onChange={(e) => setPin(e.currentTarget.value.replace(/\D/g, ''))} placeholder="4-digit PIN" className="field" />
             </label>
           )}
 
           {!hasCheckedIn ? (
-            <button
-              type="button"
-              disabled={busy || gpsState !== 'ready' || (employee.hasPin && pin.length < 4)}
-              onClick={() => void submitAction('in')}
-              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#465FFF] px-5 py-3 text-sm font-bold text-white shadow-xs transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <CheckCircle2 className="size-4" />
-              {busy ? 'Marking Check In…' : 'Mark Check In'}
+            <button type="button" disabled={busy || gpsState !== 'ready' || (settings.requireSelfie && cameraState !== 'ready') || (employee.hasPin && pin.length < 4)} onClick={() => void submitAction('in')} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#465FFF] px-5 py-3 text-sm font-bold text-white shadow-xs disabled:opacity-50">
+              <CheckCircle2 className="size-4" /> {busy ? stepLabel || 'Marking…' : 'Mark Check In'}
             </button>
           ) : !hasCheckedOut ? (
-            <button
-              type="button"
-              disabled={busy || gpsState !== 'ready' || (employee.hasPin && pin.length < 4)}
-              onClick={() => void submitAction('out')}
-              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#1D2939] px-5 py-3 text-sm font-bold text-white shadow-xs transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Clock className="size-4" />
-              {busy ? 'Marking Check Out…' : 'Mark Check Out'}
+            <button type="button" disabled={busy || gpsState !== 'ready' || (settings.requireSelfie && cameraState !== 'ready') || (employee.hasPin && pin.length < 4)} onClick={() => void submitAction('out')} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#1D2939] px-5 py-3 text-sm font-bold text-white shadow-xs disabled:opacity-50">
+              <Clock className="size-4" /> {busy ? stepLabel || 'Marking…' : 'Mark Check Out'}
             </button>
           ) : (
             <div className="rounded-xl bg-[#ECFDF3] p-4 text-center text-sm font-bold text-[#12B76A]">
-              Today&apos;s attendance is complete · Worked {formatHours(todayLog?.workMinutes ?? 0)}
+              Today&apos;s attendance complete · Worked {fmtHours(todayLog?.workMinutes ?? 0)}
             </div>
           )}
         </section>
 
-        {/* Current Cycle Summary */}
-        <section className="rounded-2xl border border-[#E4E7EC] bg-white p-5 shadow-xs">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="flex items-center gap-2 text-sm font-bold text-[#1D2939]">
-              <CalendarDays className="size-4 text-[#465FFF]" />
-              Your Current Month Cycle
-            </h2>
-            <span className="text-[11px] font-medium text-[#667085]">
-              {summary.cycleStartDate} → {summary.cycleEndDate}
-            </span>
-          </div>
-          <div className="mt-4 grid grid-cols-4 gap-2 text-center text-xs">
-            <div className="rounded-xl bg-[#ECFDF3] p-2.5">
-              <p className="text-[10px] font-medium text-[#667085]">Present</p>
-              <p className="mt-1 text-base font-bold text-[#12B76A]">{summary.presentDays}</p>
-            </div>
-            <div className="rounded-xl bg-[#FFFAEB] p-2.5">
-              <p className="text-[10px] font-medium text-[#667085]">Half / Leave</p>
-              <p className="mt-1 text-base font-bold text-[#F79009]">
-                {summary.halfDays + summary.leaveDays}
-              </p>
-            </div>
-            <div className="rounded-xl bg-[#FEF3F2] p-2.5">
-              <p className="text-[10px] font-medium text-[#667085]">Late</p>
-              <p className="mt-1 text-base font-bold text-[#F04438]">{summary.lateCount}</p>
-            </div>
-            <div className="rounded-xl bg-[#ECF3FF] p-2.5">
-              <p className="text-[10px] font-medium text-[#667085]">Hours</p>
-              <p className="mt-1 text-base font-bold text-[#465FFF]">{Math.floor(summary.totalWorkMinutes / 60)}h</p>
-            </div>
-          </div>
-        </section>
+        {/* Show More Toggle (Hidden by default so page stays minimal) */}
+        <button type="button" onClick={() => setShowMore((v) => !v)} className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#E4E7EC] bg-white py-3 text-xs font-semibold text-[#667085] hover:bg-[#F9FAFB]">
+          <span>{showMore ? 'Hide cycle summary & history' : 'Show my cycle summary & recent days'}</span>
+          <ChevronDown className={`size-4 transition-transform ${showMore ? 'rotate-180' : ''}`} />
+        </button>
 
-        {/* Recent History */}
-        <section className="rounded-2xl border border-[#E4E7EC] bg-white p-5 shadow-xs">
-          <h2 className="text-sm font-bold text-[#1D2939]">Recent Days</h2>
-          <div className="mt-3 divide-y divide-[#E4E7EC] text-xs">
-            {recentLogs.map((item) => (
-              <div key={item.id} className="flex items-center justify-between gap-3 py-2.5">
-                <div>
-                  <p className="font-semibold text-[#1D2939]">{item.workDate}</p>
-                  <p className="text-[#667085]">
-                    In {formatIstTime(item.checkInAt)} · Out {formatIstTime(item.checkOutAt)}
-                  </p>
-                </div>
-                <span
-                  className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-                    item.status === 'Present'
-                      ? 'bg-[#ECFDF3] text-[#12B76A]'
-                      : item.status === 'Half Day'
-                        ? 'bg-[#FFFAEB] text-[#F79009]'
-                        : 'bg-[#FEF3F2] text-[#F04438]'
-                  }`}
-                >
-                  {item.status}
-                </span>
+        {showMore && (
+          <div className="space-y-4">
+            <section className="rounded-2xl border border-[#E4E7EC] bg-white p-5 shadow-xs">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="flex items-center gap-2 text-sm font-bold text-[#1D2939]"><CalendarDays className="size-4 text-[#465FFF]" /> Current Cycle</h2>
+                <span className="text-[11px] font-medium text-[#667085]">{summary.cycleStartDate} → {summary.cycleEndDate}</span>
               </div>
-            ))}
-            {recentLogs.length === 0 && (
-              <p className="py-4 text-center text-[#667085]">No attendance logs recorded yet.</p>
-            )}
+              <div className="mt-3 grid grid-cols-4 gap-2 text-center text-xs">
+                <div className="rounded-xl bg-[#ECFDF3] p-2"><p className="text-[10px] text-[#667085]">Present</p><p className="font-bold text-[#12B76A]">{summary.presentDays}</p></div>
+                <div className="rounded-xl bg-[#FFFAEB] p-2"><p className="text-[10px] text-[#667085]">Half/Leave</p><p className="font-bold text-[#F79009]">{summary.halfDays + summary.leaveDays}</p></div>
+                <div className="rounded-xl bg-[#FEF3F2] p-2"><p className="text-[10px] text-[#667085]">Late</p><p className="font-bold text-[#F04438]">{summary.lateCount}</p></div>
+                <div className="rounded-xl bg-[#ECF3FF] p-2"><p className="text-[10px] text-[#667085]">Hours</p><p className="font-bold text-[#465FFF]">{Math.floor(summary.totalWorkMinutes / 60)}h</p></div>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-[#E4E7EC] bg-white p-5 shadow-xs">
+              <h2 className="text-sm font-bold text-[#1D2939]">Recent Days</h2>
+              <div className="mt-3 divide-y divide-[#E4E7EC] text-xs">
+                {recentLogs.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between gap-3 py-2.5">
+                    <div><p className="font-semibold text-[#1D2939]">{item.workDate}</p><p className="text-[#667085]">In {fmtIstTime(item.checkInAt)} · Out {fmtIstTime(item.checkOutAt)}</p></div>
+                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${item.status === 'Present' ? 'bg-[#ECFDF3] text-[#12B76A]' : item.status === 'Half Day' ? 'bg-[#FFFAEB] text-[#F79009]' : 'bg-[#FEF3F2] text-[#F04438]'}`}>{item.status}</span>
+                  </div>
+                ))}
+                {recentLogs.length === 0 && <p className="py-4 text-center text-[#667085]">No logs yet.</p>}
+              </div>
+            </section>
           </div>
-        </section>
+        )}
       </div>
     </div>
   )

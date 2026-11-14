@@ -1,5 +1,5 @@
 import type { FormEvent } from 'react'
-import type { AttendanceStatus } from '@/lib/content-types'
+import type { AttendanceEditHistoryRecord, AttendanceStatus, EmployeeRecord } from '@/lib/content-types'
 
 export type EmployeeDraft = {
   id: number
@@ -10,6 +10,7 @@ export type EmployeeDraft = {
   pin: string
   clearPin: boolean
   cycleStartDay: number
+  monthlySalary: number
   expectedInTime: string
   expectedOutTime: string
   officeOnly: boolean
@@ -17,6 +18,7 @@ export type EmployeeDraft = {
 }
 
 export type LogDraft = {
+  mode: 'create' | 'edit'
   employeeId: number
   employeeName: string
   workDate: string
@@ -25,6 +27,19 @@ export type LogDraft = {
   checkOutTime: string
   isLate: boolean
   editNote: string
+  editHistory: AttendanceEditHistoryRecord[]
+}
+
+function formatIstHistoryTime(iso: string) {
+  return new Date(iso).toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  })
 }
 
 export function EmployeeFormModal({
@@ -70,9 +85,21 @@ export function EmployeeFormModal({
           </label>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <label className="text-xs font-semibold text-[#1D2939]">
-            Cycle Start Day (1–28) *
+            Monthly Salary (₹)
+            <input
+              type="number"
+              min={0}
+              max={10000000}
+              value={draft.monthlySalary}
+              onChange={(e) => onChange({ ...draft, monthlySalary: Math.max(0, Number(e.target.value) || 0) })}
+              className="field mt-1"
+              placeholder="e.g. 15000"
+            />
+          </label>
+          <label className="text-xs font-semibold text-[#1D2939]">
+            Salary Cycle Start Day (1–28) *
             <input
               type="number"
               min={1}
@@ -83,6 +110,9 @@ export function EmployeeFormModal({
               className="field mt-1"
             />
           </label>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
           <label className="text-xs font-semibold text-[#1D2939]">
             Shift In Time
             <input type="time" required value={draft.expectedInTime} onChange={(e) => onChange({ ...draft, expectedInTime: e.target.value })} className="field mt-1" />
@@ -137,12 +167,14 @@ export function EmployeeFormModal({
 
 export function AttendanceEditModal({
   draft,
+  employees,
   busy,
   onChange,
   onClose,
   onSubmit,
 }: {
   draft: LogDraft
+  employees: EmployeeRecord[]
   busy: boolean
   onChange: (next: LogDraft) => void
   onClose: () => void
@@ -150,14 +182,56 @@ export function AttendanceEditModal({
 }) {
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4 backdrop-blur-xs" role="dialog" aria-modal="true">
-      <form onSubmit={onSubmit} className="w-full max-w-md rounded-2xl border border-[#E4E7EC] bg-white p-6 shadow-xl space-y-4">
+      <form onSubmit={onSubmit} className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-[#E4E7EC] bg-white p-6 shadow-xl space-y-4">
         <div className="flex items-center justify-between border-b border-[#E4E7EC] pb-3">
           <div>
-            <h3 className="text-lg font-bold text-[#1D2939]">Edit Attendance</h3>
-            <p className="text-xs text-[#667085]">{draft.employeeName} · {draft.workDate}</p>
+            <h3 className="text-lg font-bold text-[#1D2939]">
+              {draft.mode === 'create' ? 'Add Manual Attendance' : 'Edit Attendance'}
+            </h3>
+            {draft.mode === 'edit' && <p className="text-xs text-[#667085]">{draft.employeeName} · {draft.workDate}</p>}
           </div>
           <button type="button" onClick={onClose} className="text-sm font-bold text-[#667085] hover:text-[#1D2939]">✕</button>
         </div>
+
+        {draft.mode === 'create' && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="text-xs font-semibold text-[#1D2939]">
+              Select Employee *
+              <select
+                required
+                value={draft.employeeId}
+                onChange={(e) => {
+                  const emp = employees.find((item) => item.id === Number(e.target.value))
+                  if (!emp) return
+                  onChange({
+                    ...draft,
+                    employeeId: emp.id,
+                    employeeName: emp.name,
+                    checkInTime: emp.expectedInTime,
+                    checkOutTime: emp.expectedOutTime,
+                  })
+                }}
+                className="field mt-1"
+              >
+                {employees.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-xs font-semibold text-[#1D2939]">
+              Date *
+              <input
+                type="date"
+                required
+                value={draft.workDate}
+                onChange={(e) => onChange({ ...draft, workDate: e.target.value })}
+                className="field mt-1"
+              />
+            </label>
+          </div>
+        )}
 
         <label className="block text-xs font-semibold text-[#1D2939]">
           Status
@@ -186,9 +260,32 @@ export function AttendanceEditModal({
         </label>
 
         <label className="block text-xs font-semibold text-[#1D2939]">
-          Edit Note / Reason
-          <input value={draft.editNote} onChange={(e) => onChange({ ...draft, editNote: e.target.value })} className="field mt-1" placeholder="e.g. Field visit / forgot to check out" />
+          Reason / Edit Note {draft.mode === 'edit' ? '*' : ''}
+          <input
+            required={draft.mode === 'edit'}
+            value={draft.editNote}
+            onChange={(e) => onChange({ ...draft, editNote: e.target.value })}
+            className="field mt-1"
+            placeholder="e.g. Field visit / forgot to check out"
+          />
         </label>
+
+        {draft.editHistory.length > 0 && (
+          <div className="rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-3">
+            <p className="text-xs font-bold text-[#1D2939]">Edit History ({draft.editHistory.length})</p>
+            <ul className="mt-2 max-h-40 space-y-2 overflow-y-auto text-[11px]">
+              {draft.editHistory.map((h) => (
+                <li key={h.id} className="rounded-lg bg-white p-2 ring-1 ring-[#E4E7EC]">
+                  <p className="font-semibold text-[#1D2939]">
+                    {h.editorName || h.editorEmail} · <span className="font-normal text-[#667085]">{formatIstHistoryTime(h.createdAt)}</span>
+                  </p>
+                  <p className="mt-0.5 text-[#465FFF]">{h.changesSummary}</p>
+                  {h.reason && <p className="mt-0.5 text-[#667085]">Reason: {h.reason}</p>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className="flex justify-end gap-2 border-t border-[#E4E7EC] pt-3">
           <button type="button" onClick={onClose} className="rounded-xl border border-[#E4E7EC] px-4 py-2 text-xs font-bold text-[#1D2939]">Cancel</button>

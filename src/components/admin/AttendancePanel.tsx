@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { CalendarDays, Check, Copy, Download, ExternalLink, MapPin, Pencil, Plus, RefreshCw, Trash2, Users } from 'lucide-react'
-import { deleteEmployee, exportAttendanceExcel, getAdminAttendanceSnapshot, regenerateEmployeeToken, saveAttendanceSettings, saveEmployee, updateAttendanceRecord } from '@/lib/attendance-functions'
+import { CalendarDays, Camera, Check, Copy, Download, ExternalLink, History, MapPin, Pencil, Plus, RefreshCw, Smartphone, Trash2, Users } from 'lucide-react'
+import { deleteEmployee, exportAttendanceExcel, getAdminAttendanceSnapshot, regenerateEmployeeToken, resetEmployeeDevice, saveAttendanceSettings, saveEmployee, updateAttendanceRecord } from '@/lib/attendance-functions'
 import type { AdminAttendanceSnapshot, AttendanceLogRecord, AttendanceSettings, EmployeeRecord } from '@/lib/content-types'
 import { AttendanceEditModal, EmployeeFormModal, type EmployeeDraft, type LogDraft } from './AttendanceModals'
 
@@ -11,10 +11,8 @@ function currentIstMonth() {
   return `${parts.find((p) => p.type === 'year')?.value ?? '2026'}-${parts.find((p) => p.type === 'month')?.value ?? '01'}`
 }
 
-function formatIstTime(iso: string) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })
-}
+const fmtIstTime = (iso: string) =>
+  iso ? new Date(iso).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '—'
 
 function istHHMM(iso: string) {
   if (!iso) return ''
@@ -25,6 +23,7 @@ function istHHMM(iso: string) {
 }
 
 const fmtHours = (mins: number) => (mins ? `${Math.floor(mins / 60)}h ${mins % 60}m` : '0h 0m')
+const fmtInr = (amount: number) => `₹${Math.round(amount).toLocaleString('en-IN')}`
 const mapHref = (lat: number | null, lng: number | null) => (lat !== null && lng !== null ? `https://maps.google.com/?q=${lat},${lng}` : '')
 
 export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void }) {
@@ -71,7 +70,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
       link.download = result.filename
       link.click()
       URL.revokeObjectURL(url)
-      onNotice('Attendance report exported to Excel.')
+      onNotice('Attendance & salary report exported to Excel.')
     } catch (cause) {
       onNotice(cause instanceof Error ? cause.message : 'Export failed.')
     } finally {
@@ -103,7 +102,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
       await updateAttendanceRecord({ data: logDraft })
       setLogDraft(null)
       await load(month)
-      onNotice('Attendance record saved.')
+      onNotice('Attendance record saved with audit history.')
     } catch (cause) {
       onNotice(cause instanceof Error ? cause.message : 'Could not save record.')
     } finally {
@@ -121,6 +120,18 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
       onNotice('Office GPS & security settings saved.')
     } catch (cause) {
       onNotice(cause instanceof Error ? cause.message : 'Could not save settings.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleResetDevice(emp: EmployeeRecord) {
+    if (!window.confirm(`Refresh device lock for ${emp.name}? Next phone that opens their link with PIN will become their bound device.`)) return
+    setBusy(true)
+    try {
+      await resetEmployeeDevice({ data: { id: emp.id } })
+      await load(month)
+      onNotice(`Device lock refreshed for ${emp.name}.`)
     } finally {
       setBusy(false)
     }
@@ -165,6 +176,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
 
   function openEditLog(log: AttendanceLogRecord) {
     setLogDraft({
+      mode: 'edit',
       employeeId: log.employeeId,
       employeeName: log.employeeName,
       workDate: log.workDate,
@@ -172,7 +184,8 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
       checkInTime: istHHMM(log.checkInAt),
       checkOutTime: istHHMM(log.checkOutAt),
       isLate: log.isLate,
-      editNote: log.editNote,
+      editNote: '',
+      editHistory: log.editHistory,
     })
   }
 
@@ -189,8 +202,8 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-[#465FFF]">Super Admin Only</p>
-          <h2 className="mt-1 text-2xl font-bold text-[#1D2939] sm:text-3xl">Staff Attendance &amp; Cycles</h2>
-          <p className="mt-1 text-sm text-[#667085]">GPS-verified In/Out logs, custom salary cycles per employee, and Excel exports.</p>
+          <h2 className="mt-1 text-2xl font-bold text-[#1D2939] sm:text-3xl">Staff Attendance &amp; Salary</h2>
+          <p className="mt-1 text-sm text-[#667085]">Device-locked GPS/selfie attendance, audit history, and Sunday-adjusted monthly salary.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <input type="month" value={month} onChange={(e) => setMonth(e.currentTarget.value)} aria-label="Select month" className="min-h-10 rounded-xl border border-[#E4E7EC] bg-white px-3 text-sm font-semibold text-[#1D2939]" />
@@ -209,8 +222,8 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
 
       <div className="flex flex-wrap gap-2 border-b border-[#E4E7EC] pb-3">
         {([
-          ['logs', 'Daily Logs & GPS', MapPin],
-          ['monthly', 'Monthly Cycle Report', CalendarDays],
+          ['logs', 'Daily Logs, Selfie & History', MapPin],
+          ['monthly', 'Monthly Cycle & Salary', CalendarDays],
           ['employees', 'Employees & Office GPS', Users],
         ] as const).map(([id, label, Icon]) => (
           <button key={id} type="button" onClick={() => setSubTab(id)} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition ${subTab === id ? 'bg-[#ECF3FF] text-[#465FFF]' : 'bg-white text-[#667085] border border-[#E4E7EC] hover:bg-[#F9FAFB]'}`}>
@@ -233,7 +246,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
             {employees.length > 0 && (
               <button
                 type="button"
-                onClick={() => setLogDraft({ employeeId: employees[0].id, employeeName: employees[0].name, workDate: filterDate || todayIst, status: 'Present', checkInTime: employees[0].expectedInTime, checkOutTime: employees[0].expectedOutTime, isLate: false, editNote: '' })}
+                onClick={() => setLogDraft({ mode: 'create', employeeId: filterEmpId || employees[0].id, employeeName: employees[0].name, workDate: filterDate || todayIst, status: 'Present', checkInTime: employees[0].expectedInTime, checkOutTime: employees[0].expectedOutTime, isLate: false, editNote: '', editHistory: [] })}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] px-3.5 py-2 text-xs font-bold text-[#1D2939] hover:bg-[#ECF3FF]"
               >
                 <Plus className="size-3.5 text-[#465FFF]" /> Manual Entry
@@ -242,15 +255,15 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
           </div>
 
           <div className="overflow-x-auto rounded-2xl border border-[#E4E7EC] bg-white">
-            <table className="w-full min-w-[760px] text-left text-xs">
+            <table className="w-full min-w-[820px] text-left text-xs">
               <thead className="border-b border-[#E4E7EC] bg-[#F9FAFB] text-[11px] uppercase text-[#667085]">
                 <tr>
                   <th className="px-4 py-3">Employee / Date</th>
                   <th className="px-4 py-3">In / Out (IST)</th>
-                  <th className="px-4 py-3">In Location</th>
-                  <th className="px-4 py-3">Out Location</th>
-                  <th className="px-4 py-3">Status &amp; Flags</th>
-                  <th className="px-4 py-3 text-right">Action</th>
+                  <th className="px-4 py-3">In Proof (GPS / Selfie)</th>
+                  <th className="px-4 py-3">Out Proof (GPS / Selfie)</th>
+                  <th className="px-4 py-3">Status &amp; Audit</th>
+                  <th className="px-4 py-3 text-right">Edit / History</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E4E7EC]">
@@ -269,9 +282,10 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                       <td className="px-4 py-3">
                         {log.inLat !== null ? (
                           <div className="space-y-0.5">
-                            <a href={mapHref(log.inLat, log.inLng)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-[#465FFF] hover:underline">
-                              {log.inDistanceM ?? 0}m <ExternalLink className="size-3" />
-                            </a>
+                            <div className="flex items-center gap-2">
+                              <a href={mapHref(log.inLat, log.inLng)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-[#465FFF] hover:underline">{log.inDistanceM ?? 0}m <ExternalLink className="size-3" /></a>
+                              {log.inPhotoSrc && <a href={log.inPhotoSrc} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-[#12B76A] hover:underline"><Camera className="size-3" /> Selfie</a>}
+                            </div>
                             <p className="text-[10px] text-[#667085]">{log.inIpCity || log.inIpCountry || 'IN'} · {log.inIp}</p>
                           </div>
                         ) : <span className="text-[#98A2B3]">—</span>}
@@ -279,9 +293,10 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                       <td className="px-4 py-3">
                         {log.outLat !== null ? (
                           <div className="space-y-0.5">
-                            <a href={mapHref(log.outLat, log.outLng)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-[#465FFF] hover:underline">
-                              {log.outDistanceM ?? 0}m <ExternalLink className="size-3" />
-                            </a>
+                            <div className="flex items-center gap-2">
+                              <a href={mapHref(log.outLat, log.outLng)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-[#465FFF] hover:underline">{log.outDistanceM ?? 0}m <ExternalLink className="size-3" /></a>
+                              {log.outPhotoSrc && <a href={log.outPhotoSrc} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-[#12B76A] hover:underline"><Camera className="size-3" /> Selfie</a>}
+                            </div>
                             <p className="text-[10px] text-[#667085]">{log.outIpCity || log.outIpCountry || 'IN'} · {log.outIp}</p>
                           </div>
                         ) : <span className="text-[#98A2B3]">—</span>}
@@ -289,11 +304,12 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                       <td className="px-4 py-3">
                         <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${log.status === 'Present' ? 'bg-[#ECFDF3] text-[#12B76A]' : log.status === 'Half Day' ? 'bg-[#FFFAEB] text-[#F79009]' : 'bg-[#FEF3F2] text-[#F04438]'}`}>{log.status}</span>
                         {flags.length > 0 && <p className="mt-1 text-[10px] font-semibold text-[#F04438]">{flags.join(', ')}</p>}
-                        {log.editedBy && <p className="mt-0.5 text-[10px] text-[#667085]">Edited: {log.editNote || log.editedBy}</p>}
+                        {log.editedBy && <p className="mt-0.5 text-[10px] text-[#667085]">By {log.editedBy} · {log.editNote}</p>}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button type="button" onClick={() => openEditLog(log)} className="inline-flex items-center gap-1 rounded-lg border border-[#E4E7EC] px-2.5 py-1.5 text-xs font-semibold text-[#1D2939] hover:bg-[#ECF3FF]">
-                          <Pencil className="size-3" /> Edit
+                          {log.editHistory.length > 0 ? <History className="size-3 text-[#465FFF]" /> : <Pencil className="size-3" />}
+                          {log.editHistory.length > 0 ? `Edit / History (${log.editHistory.length})` : 'Edit'}
                         </button>
                       </td>
                     </tr>
@@ -314,6 +330,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                 <div>
                   <h3 className="text-base font-bold text-[#1D2939]">{s.employee.name}</h3>
                   <p className="text-xs text-[#667085]">Cycle Day {s.employee.cycleStartDay} · {s.cycleStartDate} → {s.cycleEndDate}</p>
+                  <p className="mt-0.5 text-[11px] font-medium text-[#465FFF]">{s.totalDays} days − {s.sundaysCount} Sundays = {s.workingDays} working days</p>
                 </div>
                 <button type="button" disabled={busy} onClick={() => void downloadExcel(s.employee.id)} className="inline-flex items-center gap-1 rounded-lg border border-[#E4E7EC] px-3 py-1.5 text-xs font-semibold text-[#465FFF] hover:bg-[#ECF3FF]">
                   <Download className="size-3.5" /> Excel
@@ -327,14 +344,19 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                 <div className="rounded-xl bg-[#FFFAEB] p-2"><p className="text-[10px] text-[#667085]">Late</p><p className="font-bold text-[#F79009]">{s.lateCount}</p></div>
                 <div className="rounded-xl bg-[#ECF3FF] p-2"><p className="text-[10px] text-[#667085]">Hours</p><p className="font-bold text-[#465FFF]">{Math.floor(s.totalWorkMinutes / 60)}h</p></div>
               </div>
-              {(s.flaggedCount > 0 || s.missedCheckOutCount > 0) && (
-                <p className="text-xs font-semibold text-[#F04438]">
-                  {s.flaggedCount} GPS/VPN flag(s) · {s.missedCheckOutCount} missed check-out(s)
-                </p>
-              )}
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#F9FAFB] px-3.5 py-2.5 text-xs">
+                <div>
+                  <span className="text-[#667085]">Monthly: </span>
+                  <strong className="text-[#1D2939]">{s.employee.monthlySalary > 0 ? fmtInr(s.employee.monthlySalary) : 'Not set'}</strong>
+                  {s.perDaySalary > 0 && <span className="text-[#667085]"> ({fmtInr(s.perDaySalary)}/day · {s.payableDays} payable)</span>}
+                </div>
+                {s.employee.monthlySalary > 0 && (
+                  <p className="text-sm font-bold text-[#12B76A]">Earned: {fmtInr(s.earnedSalary)}</p>
+                )}
+              </div>
             </article>
           ))}
-          {summaries.length === 0 && <p className="rounded-2xl border border-[#E4E7EC] bg-white p-8 text-center text-sm text-[#667085] md:col-span-2">Add employees first to view monthly cycle reports.</p>}
+          {summaries.length === 0 && <p className="rounded-2xl border border-[#E4E7EC] bg-white p-8 text-center text-sm text-[#667085] md:col-span-2">Add employees first to view monthly cycle &amp; salary reports.</p>}
         </div>
       )}
 
@@ -343,7 +365,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-[#1D2939]">Employees ({employees.length})</h3>
-              <button type="button" onClick={() => setEmpDraft({ id: 0, name: '', designation: '', phone: '', email: '', pin: '', clearPin: false, cycleStartDay: 1, expectedInTime: '09:30', expectedOutTime: '19:30', officeOnly: true, active: true })} className="inline-flex items-center gap-1.5 rounded-xl bg-[#465FFF] px-4 py-2 text-xs font-bold text-white">
+              <button type="button" onClick={() => setEmpDraft({ id: 0, name: '', designation: '', phone: '', email: '', pin: '', clearPin: false, cycleStartDay: 1, monthlySalary: 0, expectedInTime: '09:30', expectedOutTime: '19:30', officeOnly: true, active: true })} className="inline-flex items-center gap-1.5 rounded-xl bg-[#465FFF] px-4 py-2 text-xs font-bold text-white">
                 <Plus className="size-4" /> Add Employee
               </button>
             </div>
@@ -351,11 +373,24 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
               <article key={emp.id} className="rounded-2xl border border-[#E4E7EC] bg-white p-4 space-y-3">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <h4 className="font-bold text-[#1D2939]">{emp.name} {!emp.active && <span className="ml-2 rounded-full bg-[#FEF3F2] px-2 py-0.5 text-[10px] text-[#F04438]">Inactive</span>}</h4>
-                    <p className="text-xs text-[#667085]">{emp.designation || 'Staff'} · Cycle Day {emp.cycleStartDay} · Shift {emp.expectedInTime}–{emp.expectedOutTime} · {emp.hasPin ? 'PIN Set' : 'No PIN'}</p>
+                    <h4 className="font-bold text-[#1D2939]">
+                      {emp.name}
+                      {!emp.active && <span className="ml-2 rounded-full bg-[#FEF3F2] px-2 py-0.5 text-[10px] text-[#F04438]">Inactive</span>}
+                      <span className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${emp.deviceBound ? 'bg-[#ECFDF3] text-[#12B76A]' : 'bg-[#F2F4F7] text-[#667085]'}`}>
+                        {emp.deviceBound ? 'Device Locked' : 'Ready for 1st Phone'}
+                      </span>
+                    </h4>
+                    <p className="text-xs text-[#667085]">
+                      {emp.designation || 'Staff'} · Salary {emp.monthlySalary > 0 ? fmtInr(emp.monthlySalary) : 'Not set'} · Cycle Day {emp.cycleStartDay} · {emp.expectedInTime}–{emp.expectedOutTime} · {emp.hasPin ? 'PIN Set' : 'No PIN'}
+                    </p>
                   </div>
-                  <div className="flex gap-1.5">
-                    <button type="button" onClick={() => setEmpDraft({ id: emp.id, name: emp.name, designation: emp.designation, phone: emp.phone, email: emp.email, pin: '', clearPin: false, cycleStartDay: emp.cycleStartDay, expectedInTime: emp.expectedInTime, expectedOutTime: emp.expectedOutTime, officeOnly: emp.officeOnly, active: emp.active })} className="rounded-lg border border-[#E4E7EC] p-2 text-[#1D2939] hover:bg-[#F9FAFB]" aria-label="Edit employee"><Pencil className="size-3.5" /></button>
+                  <div className="flex flex-wrap gap-1.5">
+                    {emp.deviceBound && (
+                      <button type="button" disabled={busy} onClick={() => void handleResetDevice(emp)} className="inline-flex items-center gap-1 rounded-lg border border-[#E4E7EC] px-2.5 py-1.5 text-[11px] font-semibold text-[#465FFF] hover:bg-[#ECF3FF]" title="Refresh Device Lock">
+                        <Smartphone className="size-3.5" /> Reset Device
+                      </button>
+                    )}
+                    <button type="button" onClick={() => setEmpDraft({ id: emp.id, name: emp.name, designation: emp.designation, phone: emp.phone, email: emp.email, pin: '', clearPin: false, cycleStartDay: emp.cycleStartDay, monthlySalary: emp.monthlySalary, expectedInTime: emp.expectedInTime, expectedOutTime: emp.expectedOutTime, officeOnly: emp.officeOnly, active: emp.active })} className="rounded-lg border border-[#E4E7EC] p-2 text-[#1D2939] hover:bg-[#F9FAFB]" aria-label="Edit employee"><Pencil className="size-3.5" /></button>
                     <button type="button" disabled={busy} onClick={() => void handleRegenerate(emp)} className="rounded-lg border border-[#E4E7EC] p-2 text-[#1D2939] hover:bg-[#F9FAFB]" title="New link" aria-label="Regenerate link"><RefreshCw className="size-3.5" /></button>
                     <button type="button" disabled={busy} onClick={() => void handleDeleteEmp(emp)} className="rounded-lg border border-red-200 p-2 text-[#F04438] hover:bg-red-50" aria-label="Delete employee"><Trash2 className="size-3.5" /></button>
                   </div>
@@ -373,7 +408,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
 
           {settingsDraft && (
             <form onSubmit={handleSaveSettings} className="h-fit rounded-2xl border border-[#E4E7EC] bg-white p-5 space-y-4">
-              <h3 className="text-base font-bold text-[#1D2939]">Office GPS &amp; Anti-VPN Rules</h3>
+              <h3 className="text-base font-bold text-[#1D2939]">Office GPS, Selfie &amp; Anti-VPN</h3>
               <label className="block text-xs font-semibold text-[#1D2939]">Office Name<input value={settingsDraft.officeName} onChange={(e) => setSettingsDraft({ ...settingsDraft, officeName: e.target.value })} className="field mt-1" /></label>
               <div className="grid grid-cols-2 gap-3">
                 <label className="text-xs font-semibold text-[#1D2939]">Latitude<input type="number" step="any" value={settingsDraft.officeLat} onChange={(e) => setSettingsDraft({ ...settingsDraft, officeLat: Number(e.target.value) })} className="field mt-1" /></label>
@@ -383,24 +418,15 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                 <label className="text-xs font-semibold text-[#1D2939]">Radius (meters)<input type="number" min={30} max={5000} value={settingsDraft.allowedRadiusM} onChange={(e) => setSettingsDraft({ ...settingsDraft, allowedRadiusM: Number(e.target.value) })} className="field mt-1" /></label>
                 <label className="text-xs font-semibold text-[#1D2939]">Max GPS Accuracy (m)<input type="number" min={20} max={2000} value={settingsDraft.maxAccuracyM} onChange={(e) => setSettingsDraft({ ...settingsDraft, maxAccuracyM: Number(e.target.value) })} className="field mt-1" /></label>
               </div>
-              <label className="flex items-center gap-2 text-xs font-semibold text-[#1D2939]">
-                <input type="checkbox" checked={settingsDraft.blockVpnOrForeignIp} onChange={(e) => setSettingsDraft({ ...settingsDraft, blockVpnOrForeignIp: e.target.checked })} />
-                Block foreign / VPN IP addresses
-              </label>
+              <label className="flex items-center gap-2 text-xs font-semibold text-[#1D2939]"><input type="checkbox" checked={settingsDraft.requireSelfie} onChange={(e) => setSettingsDraft({ ...settingsDraft, requireSelfie: e.target.checked })} />Require Live Front-Camera Selfie (with motion check)</label>
+              <label className="flex items-center gap-2 text-xs font-semibold text-[#1D2939]"><input type="checkbox" checked={settingsDraft.blockVpnOrForeignIp} onChange={(e) => setSettingsDraft({ ...settingsDraft, blockVpnOrForeignIp: e.target.checked })} />Block foreign / VPN IP addresses</label>
               <div className="rounded-xl bg-[#F9FAFB] p-3 space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-semibold text-[#1D2939]">Office Wi-Fi Public IP</span>
-                  {currentRequestIp && (
-                    <button type="button" onClick={() => setSettingsDraft({ ...settingsDraft, officeWifiIp: currentRequestIp })} className="text-[11px] font-bold text-[#465FFF] hover:underline">
-                      Use My IP ({currentRequestIp})
-                    </button>
-                  )}
+                  {currentRequestIp && <button type="button" onClick={() => setSettingsDraft({ ...settingsDraft, officeWifiIp: currentRequestIp })} className="text-[11px] font-bold text-[#465FFF] hover:underline">Use My IP ({currentRequestIp})</button>}
                 </div>
                 <input value={settingsDraft.officeWifiIp} onChange={(e) => setSettingsDraft({ ...settingsDraft, officeWifiIp: e.target.value })} placeholder="Optional Office Wi-Fi IP" className="field" />
-                <label className="flex items-center gap-2 text-xs font-semibold text-[#1D2939]">
-                  <input type="checkbox" checked={settingsDraft.requireOfficeWifiIp} onChange={(e) => setSettingsDraft({ ...settingsDraft, requireOfficeWifiIp: e.target.checked })} />
-                  Require Office Wi-Fi IP to mark attendance
-                </label>
+                <label className="flex items-center gap-2 text-xs font-semibold text-[#1D2939]"><input type="checkbox" checked={settingsDraft.requireOfficeWifiIp} onChange={(e) => setSettingsDraft({ ...settingsDraft, requireOfficeWifiIp: e.target.checked })} />Require Office Wi-Fi IP to mark attendance</label>
               </div>
               <button type="submit" disabled={busy} className="w-full rounded-xl bg-[#465FFF] py-2.5 text-xs font-bold text-white disabled:opacity-50">Save GPS Settings</button>
             </form>
@@ -409,7 +435,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
       )}
 
       {empDraft && <EmployeeFormModal draft={empDraft} busy={busy} onChange={setEmpDraft} onClose={() => setEmpDraft(null)} onSubmit={handleSaveEmployee} />}
-      {logDraft && <AttendanceEditModal draft={logDraft} busy={busy} onChange={setLogDraft} onClose={() => setLogDraft(null)} onSubmit={handleSaveLog} />}
+      {logDraft && <AttendanceEditModal draft={logDraft} employees={employees} busy={busy} onChange={setLogDraft} onClose={() => setLogDraft(null)} onSubmit={handleSaveLog} />}
     </section>
   )
 }
