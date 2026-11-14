@@ -24,6 +24,10 @@ export const Route = createFileRoute('/contact')({
 function ContactPage() {
   const { interest } = Route.useSearch()
   const { settings } = RootRoute.useLoaderData()
+  const rawWaDigits = (settings.phones[1] || settings.phones[0] || site.whatsapp)
+    .replace(/\D/g, '')
+    .replace(/^0+/, '')
+  const waPhone = rawWaDigits.length === 10 ? `91${rawWaDigits}` : rawWaDigits
   return (
     <>
       <PageHero
@@ -88,7 +92,7 @@ function ContactPage() {
               </li>
             </ul>
             <div className="mt-8 flex flex-wrap gap-3">
-              <a href={`https://wa.me/${site.whatsapp}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-full bg-[#25D366] px-5 py-3 text-sm font-bold">
+              <a href={`https://wa.me/${waPhone}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-full bg-[#25D366] px-5 py-3 text-sm font-bold">
                 <MessageCircle className="size-4" /> WhatsApp
               </a>
               <a href={site.mapUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-full bg-coral-500 px-5 py-3 text-sm font-bold">

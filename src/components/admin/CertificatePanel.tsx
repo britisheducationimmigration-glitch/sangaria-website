@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { ImagePlus, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { deleteCertificate, saveCertificate } from '@/lib/admin-functions'
 import type { AdminCertificate } from '@/lib/content-types'
@@ -61,18 +61,32 @@ export function CertificatePanel({ items, onReload, onNotice }: {
   const [dirty, setDirty] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const previewUrl = useRef('')
+
+  useEffect(() => () => {
+    if (previewUrl.current) URL.revokeObjectURL(previewUrl.current)
+  }, [])
+
+  function releasePreview() {
+    if (previewUrl.current) {
+      URL.revokeObjectURL(previewUrl.current)
+      previewUrl.current = ''
+    }
+  }
 
   function mayDiscard() {
     return !dirty || window.confirm('Discard the unsaved certificate changes?')
   }
   function startNew() {
     if (!mayDiscard()) return
+    releasePreview()
     setDraft(emptyDraft())
     setDirty(false)
     setError('')
   }
   function startEdit(item: AdminCertificate) {
     if (!mayDiscard()) return
+    releasePreview()
     setDraft({
       id: item.id, title: item.title, issuer: item.issuer, category: item.category,
       credentialDate: item.credentialDate, altText: item.altText, imageSrc: item.imageSrc,
@@ -84,6 +98,7 @@ export function CertificatePanel({ items, onReload, onNotice }: {
   }
   function cancelEdit() {
     if (!mayDiscard()) return
+    releasePreview()
     setDraft(null)
     setDirty(false)
     setError('')
@@ -98,6 +113,8 @@ export function CertificatePanel({ items, onReload, onNotice }: {
     if (!file) return
     try {
       const image = await compressImage(file)
+      releasePreview()
+      previewUrl.current = image.imageSrc
       setDraft((current) => current ? { ...current, ...image } : current)
       setDirty(true)
       setError('')
@@ -117,6 +134,7 @@ export function CertificatePanel({ items, onReload, onNotice }: {
         imageBase64: draft.imageBase64, imageMimeType: draft.imageMimeType,
         homepageFeatured: draft.homepageFeatured, published: draft.published, sortOrder: draft.sortOrder,
       } })
+      releasePreview()
       setDraft(null)
       setDirty(false)
       onNotice(draft.published ? 'Certificate saved.' : 'Certificate saved as a draft.')
@@ -135,6 +153,7 @@ export function CertificatePanel({ items, onReload, onNotice }: {
       onNotice('Certificate removed.')
       await onReload()
       if (draft?.id === item.id) {
+        releasePreview()
         setDraft(null)
         setDirty(false)
       }

@@ -43,7 +43,8 @@ export function EnquiryForm({
     setOtherCountry('')
   }, [defaultCountry])
 
-  const isPhoneValid = /^[6-9]\d{9}$/.test(phone.replace(/\D/g, '')) || phone.replace(/\D/g, '').length === 10
+const cleanPhoneDigits = phone.replace(/\D/g, '').replace(/^0+/, '')
+  const isPhoneValid = cleanPhoneDigits.length >= 10 && cleanPhoneDigits.length <= 13
   const isNameValid = name.trim().length >= 2
   const isEmailValid = !email || /^\S+@\S+\.\S+$/.test(email.trim())
 
@@ -224,7 +225,7 @@ export function EnquiryForm({
         <div>
           <div className="flex items-center justify-between">
             <label className={labelCls} htmlFor={`${source}-phone`}>Phone / WhatsApp *</label>
-            {isPhoneValid && <span className="text-[11px] font-bold text-emerald-500 flex items-center gap-0.5">✓ 10 Digits</span>}
+            {isPhoneValid && <span className="text-[11px] font-bold text-emerald-500 flex items-center gap-0.5">✓ Valid</span>}
           </div>
           <div className="relative">
             <input

@@ -8,7 +8,7 @@ import { Eyebrow } from '@/components/Section'
 import { InteractiveFlightGlobe } from '@/components/InteractiveFlightGlobe'
 import { ServiceIcon } from '@/components/ServiceIcon'
 import { visaServices } from '@/data/fixtures'
-import { getPublicCountryCatalogue, getPublicContent } from '@/lib/public-functions'
+import { getPublicCashflow, getPublicCountryCatalogue, getPublicContent } from '@/lib/public-functions'
 import { site } from '@/data/site'
 import { img } from '@/lib/utils'
 import { GoogleReviewCta } from '@/components/GoogleReviewCta'
@@ -25,9 +25,13 @@ const CertificateCarousel = lazy(() =>
 )
 
 export const Route = createFileRoute('/')({
-  loader: async () => {
-    const [content, countryPages] = await Promise.all([getPublicContent(), getPublicCountryCatalogue()])
-    return { ...content, countryPages }
+ loader: async () => {
+    const [content, countryPages, cashflow] = await Promise.all([
+      getPublicContent(),
+      getPublicCountryCatalogue(),
+      getPublicCashflow(),
+    ])
+    return { ...content, countryPages, cashflow }
   },
   head: () => createPageSeo({
     title: 'Study Visas & IELTS Coaching in Sangaria | British Education',
@@ -97,11 +101,13 @@ const homeJumpSections = [
 ] as const
 
 function Home() {
-  const { approvals, posts, testimonials, certificates, settings, countryPages } = Route.useLoaderData()
+ const { approvals, posts, testimonials, certificates, settings, countryPages, cashflow } = Route.useLoaderData()
   const countries = countryPages.map((entry) => entry.country)
   const homepageApprovals = approvals.filter((story) => story.homepageFeatured !== false)
   const homepageTestimonials = testimonials.filter((story) => story.homepageFeatured !== false)
-  const [selectedCountry, setSelectedCountry] = useState('canada')
+  const [selectedCountry, setSelectedCountry] = useState(() =>
+    countries.some((c) => c.slug === 'canada') ? 'canada' : (countries[0]?.slug ?? ''),
+  )
   const [selectedVisa, setSelectedVisa] = useState('study')
   const [showAllTestimonials, setShowAllTestimonials] = useState(false)
   const [showAllTestimonialsMobile, setShowAllTestimonialsMobile] = useState(false)
@@ -616,7 +622,7 @@ function Home() {
 
         {/* FAMILY CASHFLOW PLANNER (Mobile) */}
         <Suspense fallback={<div className="my-8 h-40 animate-pulse rounded-3xl bg-forest-900/20" />}>
-          <FamilyCashflowPlanner />
+          <FamilyCashflowPlanner initialData={cashflow} />
         </Suspense>
 
         {/* RECENT APPROVALS (MOBILE) */}
@@ -1149,7 +1155,7 @@ function Home() {
 
         {/* FAMILY CASHFLOW PLANNER (Desktop) */}
         <Suspense fallback={<div className="my-8 h-40 animate-pulse rounded-3xl bg-forest-900/20" />}>
-          <FamilyCashflowPlanner />
+         <FamilyCashflowPlanner initialData={cashflow} />
         </Suspense>
 
         {/* DESKTOP RECENT APPROVALS */}
