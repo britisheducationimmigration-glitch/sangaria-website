@@ -278,7 +278,33 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                      <td className="px-4 py-3">
                         <p className="font-semibold text-[#1D2939]">In: {fmtIstTime(log.checkInAt)} {log.isLate && <span className="ml-1 rounded bg-[#FFFAEB] px-1.5 py-0.5 text-[10px] text-[#F79009]">Late</span>}</p>
                         <p className="text-[#667085]">Out: {fmtIstTime(log.checkOutAt)}</p>
-                        {log.breakMinutes > 0 && <p className="text-[10px] font-medium text-[#465FFF]">Break: {fmtHours(log.breakMinutes)} ({log.breaks.length}x)</p>}
+                        {log.breaks.length > 0 && (
+                          <div className="mt-1.5 space-y-1">
+                            {log.breaks.map((br, idx) => (
+                              <div key={idx} className={`rounded-lg px-2 py-1 text-[10px] ${br.inAt ? 'bg-[#ECF3FF] text-[#465FFF]' : 'bg-[#FFFAEB] font-semibold text-[#F79009]'}`}>
+                                <span>
+                                  {br.inAt
+                                    ? `Break: ${fmtIstTime(br.outAt)} → ${fmtIstTime(br.inAt)}`
+                                    : `Out now since ${fmtIstTime(br.outAt)}`}
+                                  {br.note ? ` · ${br.note}` : ''}
+                                </span>
+                                {br.outLat !== null && (
+                                  <a href={mapHref(br.outLat, br.outLng)} target="_blank" rel="noreferrer" className="ml-1.5 underline">
+                                    Out Map ({br.outDistanceM ?? 0}m)
+                                  </a>
+                                )}
+                                {br.inLat !== null && (
+                                  <a href={mapHref(br.inLat, br.inLng)} target="_blank" rel="noreferrer" className="ml-1.5 underline">
+                                    Back Map ({br.inDistanceM ?? 0}m)
+                                  </a>
+                                )}
+                              </div>
+                            ))}
+                            {log.breakMinutes > 0 && (
+                              <p className="text-[10px] font-semibold text-[#667085]">Total Break: {fmtHours(log.breakMinutes)}</p>
+                            )}
+                          </div>
+                        )}
                       </td>
                      <td className="px-4 py-3">
                         {log.inLat !== null || log.inPhotoSrc ? (
