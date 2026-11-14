@@ -276,8 +276,8 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                         <p className="text-[#667085]">{log.workDate} · {fmtHours(log.workMinutes)}</p>
                       </td>
                       <td className="px-4 py-3">
-                        <p className="font-semibold text-[#1D2939]">In: {formatIstTime(log.checkInAt)} {log.isLate && <span className="ml-1 rounded bg-[#FFFAEB] px-1.5 py-0.5 text-[10px] text-[#F79009]">Late</span>}</p>
-                        <p className="text-[#667085]">Out: {formatIstTime(log.checkOutAt)}</p>
+                        <p className="font-semibold text-[#1D2939]">In: {fmtIstTime(log.checkInAt)} {log.isLate && <span className="ml-1 rounded bg-[#FFFAEB] px-1.5 py-0.5 text-[10px] text-[#F79009]">Late</span>}</p>
+                        <p className="text-[#667085]">Out: {fmtIstTime(log.checkOutAt)}</p>
                       </td>
                       <td className="px-4 py-3">
                         {log.inLat !== null ? (
