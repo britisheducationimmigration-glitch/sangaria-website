@@ -155,3 +155,87 @@ export type AdminUser = {
   name: string
   role: AdminRole
 }
+export type AttendanceStatus = 'Present' | 'Half Day' | 'Leave' | 'Absent'
+
+export type EmployeeRecord = {
+  id: number
+  name: string
+  designation: string
+  phone: string
+  email: string
+  accessToken: string
+  hasPin: boolean
+  cycleStartDay: number
+  expectedInTime: string
+  expectedOutTime: string
+  officeOnly: boolean
+  active: boolean
+  createdAt: string
+}
+
+export type AttendanceLogRecord = {
+  id: number
+  employeeId: number
+  employeeName: string
+  designation: string
+  workDate: string
+  checkInAt: string
+  checkOutAt: string
+  inLat: number | null
+  inLng: number | null
+  inAccuracyM: number | null
+  inDistanceM: number | null
+  inIp: string
+  inIpCity: string
+  inIpCountry: string
+  inFlags: string[]
+  outLat: number | null
+  outLng: number | null
+  outAccuracyM: number | null
+  outDistanceM: number | null
+  outIp: string
+  outIpCity: string
+  outIpCountry: string
+  outFlags: string[]
+  status: AttendanceStatus
+  workMinutes: number
+  isLate: boolean
+  editedBy: string
+  editNote: string
+  updatedAt: string
+}
+
+export type AttendanceSettings = {
+  officeName: string
+  officeLat: number
+  officeLng: number
+  allowedRadiusM: number
+  maxAccuracyM: number
+  blockVpnOrForeignIp: boolean
+  officeWifiIp: string
+  requireOfficeWifiIp: boolean
+}
+
+export type EmployeeCycleSummary = {
+  employee: EmployeeRecord
+  cycleStartDate: string
+  cycleEndDate: string
+  totalDays: number
+  presentDays: number
+  halfDays: number
+  leaveDays: number
+  absentDays: number
+  lateCount: number
+  flaggedCount: number
+  missedCheckOutCount: number
+  totalWorkMinutes: number
+}
+
+export type AdminAttendanceSnapshot = {
+  settings: AttendanceSettings
+  employees: EmployeeRecord[]
+  logs: AttendanceLogRecord[]
+  summaries: EmployeeCycleSummary[]
+  selectedMonth: string
+  todayIst: string
+}

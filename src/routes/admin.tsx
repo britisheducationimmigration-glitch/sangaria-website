@@ -1,9 +1,34 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { Phone, MessageCircle } from 'lucide-react'
+import {
+  BarChart3,
+  BookOpen,
+  CalendarCheck2,
+  Coins,
+  FileText,
+  Globe,
+  GraduationCap,
+  Inbox,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  MessageCircle,
+  Newspaper,
+  Phone,
+  Search,
+  Settings,
+  ShieldAlert,
+  Sparkles,
+  Trophy,
+  UserCog,
+  Users,
+  X,
+} from 'lucide-react'
 import { getAdminCashflow, getAdminSnapshot, addEnquiryActivity, deleteAdminUser, deleteBatch, deleteEnquiry, deleteEnquiryActivity, deletePost, exportEnquiries, saveAdminUser, saveBatch, saveCashflow, savePost, updateEnquiry, updateEnquiryActivity, updateSettings, saveFaq, saveTrustStat, saveContactDetails } from '@/lib/admin-functions'
+import { AttendancePanel } from '@/components/admin/AttendancePanel'
 import { CertificatePanel } from '@/components/admin/CertificatePanel'
 import { StoryEditor } from '@/components/admin/StoryEditor'
+import { TailAdminDashboard } from '@/components/admin/TailAdminDashboard'
 import type { AdminPost, AdminRole, AdminSnapshot, AdminStory, AdminUser, CoachingBatch, Enquiry, EnquiryStatus } from '@/lib/content-types'
 import { defaultCashflowData, CountryCashflow } from '@/data/cashflow'
 import { formatBatchStartDate, getBatchDateStatus, isValidBatchStartDate } from '@/lib/batch-dates'
@@ -13,11 +38,14 @@ import { StudyPlanPanel } from '@/components/admin/StudyPlanPanel'
 import { applyScheduledCashflowPolicy, getPolicyWatchStatus, policyWatchItems } from '@/data/policy-watch'
 
 export const Route = createFileRoute('/admin')({
-  head: () => ({ meta: [{ title: 'Admin · British Education and Immigration' }, { name: 'robots', content: 'noindex,nofollow,noarchive' }] }),
+  head: () => ({
+    meta: [{ title: 'Admin · British Education and Immigration' }, { name: 'robots', content: 'noindex,nofollow,noarchive' }],
+    links: [{ rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap' }],
+  }),
   component: AdminPage,
 })
 
-type Tab = 'enquiries' | 'news' | 'stories' | 'certificates' | 'batches' | 'budget' | 'settings' | 'users' | 'demo' | 'review' | 'reports' | 'policy' | 'countries' | 'studyPlans'
+type Tab = 'dashboard' | 'enquiries' | 'attendance' | 'news' | 'stories' | 'certificates' | 'batches' | 'budget' | 'settings' | 'users' | 'demo' | 'review' | 'reports' | 'policy' | 'countries' | 'studyPlans'
 
 const roleLabels: Record<AdminRole, string> = { super_admin: 'Super Admin', content_editor: 'Content Editor', enquiry_manager: 'Enquiry Manager' }
 
@@ -27,7 +55,8 @@ const blankStory: Omit<AdminStory, 'id'> = { kind: 'testimonial', name: '', city
 function AdminPage() {
   const [snapshot, setSnapshot] = useState<AdminSnapshot | null>(null)
   const [error, setError] = useState('')
-  const [tab, setTab] = useState<Tab>('enquiries')
+  const [tab, setTab] = useState<Tab>('dashboard')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<EnquiryStatus | 'All'>('All')
   const [dateFrom, setDateFrom] = useState('')
@@ -50,12 +79,28 @@ function AdminPage() {
   }
 
   useEffect(() => { void reload() }, [])
-  useEffect(() => { if (snapshot?.user.role === 'content_editor' && tab === 'enquiries') setTab('news') }, [snapshot?.user.role, tab])
+  useEffect(() => {
+    if (snapshot?.user.role === 'content_editor' && (tab === 'dashboard' || tab === 'enquiries')) setTab('news')
+  }, [snapshot?.user.role, tab])
+
+  useEffect(() => {
+    if (!sidebarOpen) return
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setSidebarOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [sidebarOpen])
 
   if (!snapshot) {
     return (
       <section className="grid min-h-screen place-items-center bg-cream px-6 py-16">
-        <AdminAuthCard onLoginSuccess={reload} />
+        <div className="w-full max-w-md space-y-4">
+          {error && error !== 'Unauthorized' && (
+            <p role="alert" className="rounded-2xl bg-red-100 px-4 py-3 text-center text-xs font-bold text-red-900">
+              {error}
+            </p>
+          )}
+          <AdminAuthCard onLoginSuccess={reload} />
+        </div>
       </section>
     )
   }
@@ -68,11 +113,69 @@ function AdminPage() {
   const newLeadQueue = snapshot.enquiries.filter((item) => item.status === 'New')
   const draftQueue = snapshot.posts.filter((item) => !item.published)
   const policyWatchCount = policyWatchItems.filter((item) => getPolicyWatchStatus(item) !== 'Effective').length
-  const tabs: Array<[Tab, string]> = snapshot.user.role === 'super_admin'
-    ? [['enquiries', `Enquiries (${snapshot.enquiryStats.total})`], ['demo', `Demo requests (${snapshot.enquiryStats.demoRequests})`], ['review', `Review queue (${newLeadQueue.length + draftQueue.length})`], ['reports', 'Reports'], ['policy', `Policy watch (${policyWatchCount})`], ['countries', 'Countries'], ['studyPlans', 'Study Plans'], ['news', 'News & Updates'], ['stories', 'Success Stories'], ['certificates', 'Certificates'], ['batches', 'Coaching batches'], ['budget', '💰 Cashflow Budget'], ['settings', 'Site settings'], ['users', 'Users & roles']]
+
+  type NavItem = { id: Tab; label: string; icon: typeof LayoutDashboard; count?: number; badge?: string }
+  type NavGroup = { group: string; items: NavItem[] }
+
+  const navGroups: NavGroup[] = snapshot.user.role === 'super_admin'
+    ? [
+        {
+          group: 'MENU',
+          items: [
+            { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+            { id: 'enquiries', label: 'Enquiries', icon: Inbox, count: snapshot.enquiryStats.total },
+            { id: 'demo', label: 'Demo Requests', icon: GraduationCap, count: snapshot.enquiryStats.demoRequests },
+            { id: 'review', label: 'Review Queue', icon: Sparkles, count: newLeadQueue.length + draftQueue.length },
+            { id: 'reports', label: 'Reports', icon: BarChart3 },
+            { id: 'attendance', label: 'Attendance', icon: CalendarCheck2, badge: 'NEW' },
+          ],
+        },
+        {
+          group: 'WEBSITE CONTENT',
+          items: [
+            { id: 'countries', label: 'Countries', icon: Globe },
+            { id: 'studyPlans', label: 'Study Plans', icon: BookOpen },
+            { id: 'policy', label: 'Policy Watch', icon: ShieldAlert, count: policyWatchCount },
+            { id: 'news', label: 'News & Updates', icon: Newspaper },
+            { id: 'stories', label: 'Success Stories', icon: Trophy },
+            { id: 'certificates', label: 'Certificates', icon: FileText },
+            { id: 'batches', label: 'Coaching Batches', icon: Users },
+            { id: 'budget', label: 'Cashflow Budget', icon: Coins },
+          ],
+        },
+        {
+          group: 'SYSTEM',
+          items: [
+            { id: 'settings', label: 'Site Settings', icon: Settings },
+            { id: 'users', label: 'Users & Roles', icon: UserCog },
+          ],
+        },
+      ]
     : snapshot.user.role === 'content_editor'
-      ? [['review', `Review queue (${draftQueue.length})`], ['news', 'News & Updates'], ['stories', 'Success Stories'], ['certificates', 'Certificates'], ['batches', 'Coaching batches']]
-      : [['enquiries', `Enquiries (${snapshot.enquiries.length})`], ['demo', `Demo requests (${snapshot.enquiryStats.demoRequests})`], ['review', `Review queue (${newLeadQueue.length})`], ['reports', 'Reports']]
+      ? [
+          {
+            group: 'CONTENT',
+            items: [
+              { id: 'review', label: 'Review Queue', icon: Sparkles, count: draftQueue.length },
+              { id: 'news', label: 'News & Updates', icon: Newspaper },
+              { id: 'stories', label: 'Success Stories', icon: Trophy },
+              { id: 'certificates', label: 'Certificates', icon: FileText },
+              { id: 'batches', label: 'Coaching Batches', icon: Users },
+            ],
+          },
+        ]
+      : [
+          {
+            group: 'MENU',
+            items: [
+              { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+              { id: 'enquiries', label: 'Enquiries', icon: Inbox, count: snapshot.enquiries.length },
+              { id: 'demo', label: 'Demo Requests', icon: GraduationCap, count: snapshot.enquiryStats.demoRequests },
+              { id: 'review', label: 'Review Queue', icon: Sparkles, count: newLeadQueue.length },
+              { id: 'reports', label: 'Reports', icon: BarChart3 },
+            ],
+          },
+        ]
 
   function showNotice(message: string) {
     setNotice(message)
@@ -85,69 +188,182 @@ function AdminPage() {
     if (value !== 'settings') setSettingsDirty(false)
     if (value !== 'studyPlans') setStudyPlanDirty(false)
     setTab(value)
+    setSidebarOpen(false)
   }
 
   return (
-    <div className="min-h-screen bg-cream text-forest-900">
-      <header className="border-b border-forest-900/10 bg-white">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-8 sm:py-5">
-          <div className="min-w-0">
-            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-coral-600">Owner dashboard</p>
-            <h1 className="mt-1 text-xl font-extrabold leading-tight text-forest-900 sm:text-2xl">British Education &amp; Immigration</h1>
-          </div>
-          <div className="grid gap-3 rounded-2xl border border-forest-900/10 bg-cream p-3 sm:flex sm:flex-col sm:items-end sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0">
-            <div className="min-w-0 text-left text-xs text-forest-900/70 sm:text-right">
-              <p className="font-semibold text-forest-900">{snapshot.user.name}</p>
-              <p className="break-all">{snapshot.user.email}</p>
-              <p className="font-bold text-coral-600">{roleLabels[snapshot.user.role]}</p>
+    <div className="tailadmin-shell flex min-h-screen bg-[#F9FAFB] text-[#1D2939]">
+      {/* Mobile Sidebar Backdrop */}
+      {sidebarOpen && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs lg:hidden"
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Left Sidebar (TailAdmin 290px) */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-[290px] flex-col border-r border-[#E4E7EC] bg-white transition-transform duration-200 lg:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="flex h-[76px] shrink-0 items-center justify-between border-b border-[#E4E7EC] px-6">
+          <div className="flex items-center gap-3">
+            <span className="grid size-9 place-items-center rounded-xl bg-[#465FFF] text-sm font-bold text-white shadow-xs">
+              BEI
+            </span>
+            <div>
+              <p className="text-base font-bold leading-none text-[#1D2939]">British Education</p>
+              <p className="mt-1 text-[11px] font-medium text-[#667085]">Admin Workspace</p>
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
-              <button type="button" onClick={() => setShowChangePass(true)} className="min-h-11 rounded-xl border border-forest-900/15 bg-white px-3 text-xs font-bold text-forest-900 transition hover:bg-forest-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500 sm:px-4 sm:text-sm">Change password</button>
-              <a href="/admin/oauth/logout" className="inline-flex min-h-11 items-center justify-center rounded-xl bg-coral-500 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-coral-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500">Log out</a>
-            </div>
           </div>
-        </div>
-      </header>
-      <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
-        <div className="mb-8">
-          <label htmlFor="admin-section-select" className="mb-2 block text-xs font-bold uppercase tracking-wide text-forest-900/60 sm:hidden">Admin section</label>
-          <select
-            id="admin-section-select"
-            value={tab}
-            onChange={(event) => selectTab(event.currentTarget.value as Tab)}
-            className="min-h-12 w-full rounded-xl border border-forest-900/15 bg-white px-4 text-sm font-bold text-forest-900 shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500 sm:hidden"
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Close sidebar"
+            className="rounded-lg p-1.5 text-[#667085] hover:bg-[#F9FAFB] lg:hidden"
           >
-            {tabs.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
-          <nav className="hidden gap-2 overflow-x-auto overscroll-x-contain pb-2 sm:flex lg:flex-wrap lg:overflow-visible" aria-label="Admin sections">
-            {tabs.map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => selectTab(value)}
-                className={`min-h-11 shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold transition ${tab === value ? 'bg-forest-900 text-white shadow-sm' : 'bg-white ring-1 ring-forest-900/10 hover:bg-forest-50'}`}
-              >
-                {label}
-              </button>
-            ))}
-          </nav>
+            <X className="size-5" />
+          </button>
         </div>
-        {notice && <p className="mb-5 rounded-xl bg-emerald-100 px-4 py-3 text-sm font-bold text-emerald-900">{notice}</p>}
-        {tab === 'enquiries' && <EnquiriesPanel enquiries={filtered} stats={snapshot.enquiryStats} query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter} dateFrom={dateFrom} setDateFrom={setDateFrom} dateTo={dateTo} setDateTo={setDateTo} onReload={reload} onNotice={showNotice} canDelete={snapshot.user.role === 'super_admin'} canManageComments={snapshot.user.role === 'super_admin'} />}
-        {tab === 'demo' && <DemoRequestsPanel enquiries={snapshot.enquiries.filter((item) => item.source === 'coaching')} totalCount={snapshot.enquiryStats.demoRequests} onReload={reload} onNotice={showNotice} canDelete={snapshot.user.role === 'super_admin'} canManageComments={snapshot.user.role === 'super_admin'} />}
-        {tab === 'review' && <ReviewQueuePanel enquiries={newLeadQueue} drafts={draftQueue} onOpenEnquiries={() => { setQuery(''); setStatusFilter('New'); setTab('enquiries') }} onOpenDraft={(post) => { setSelectedPost(post); setTab('news') }} />}
-        {tab === 'reports' && <ReportsPanel stats={snapshot.enquiryStats} />}
-        {tab === 'policy' && <PolicyWatchPanel />}
-        {tab === 'countries' && <CountryPanel />}
-        {tab === 'studyPlans' && <StudyPlanPanel onDirtyChange={setStudyPlanDirty} />}
-        {tab === 'news' && <ContentPanel type="news" items={snapshot.posts} selected={selectedPost} onSelect={(item) => setSelectedPost(item as AdminPost | null)} onReload={reload} onNotice={showNotice} />}
-        {tab === 'stories' && <ContentPanel type="stories" items={snapshot.stories} selected={selectedStory} onSelect={(item) => setSelectedStory(item as AdminStory | null)} onReload={reload} onNotice={showNotice} />}
-        {tab === 'certificates' && <CertificatePanel items={snapshot.certificates} onReload={reload} onNotice={showNotice} />}
-        {tab === 'batches' && <BatchPanel items={snapshot.batches} selected={selectedBatch} onSelect={setSelectedBatch} onReload={reload} onNotice={showNotice} />}
-        {tab === 'budget' && <CashflowAdminPanel onNotice={showNotice} />}
-        {tab === 'settings' && <SettingsPanel settings={snapshot.settings} onReload={reload} onNotice={showNotice} onDirtyChange={setSettingsDirty} />}
-        {tab === 'users' && <UsersPanel users={snapshot.users} currentEmail={snapshot.user.email} onReload={reload} onNotice={showNotice} />}
-        {showChangePass && <ChangePasswordModal onClose={() => setShowChangePass(false)} onNotice={showNotice} />}
+
+        <nav className="flex-1 space-y-6 overflow-y-auto px-4 py-5" aria-label="Admin sidebar">
+          {navGroups.map((grp) => (
+            <div key={grp.group}>
+              <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-[#98A2B3]">
+                {grp.group}
+              </p>
+              <ul className="space-y-1">
+                {grp.items.map((item) => {
+                  const Icon = item.icon
+                  const active = tab === item.id
+                  return (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        onClick={() => selectTab(item.id)}
+                        className={`flex min-h-[42px] w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm font-medium transition ${
+                          active
+                            ? 'bg-[#ECF3FF] font-semibold text-[#465FFF]'
+                            : 'text-[#667085] hover:bg-[#F9FAFB] hover:text-[#1D2939]'
+                        }`}
+                      >
+                        <span className="flex min-w-0 items-center gap-3">
+                          <Icon className="size-[18px] shrink-0" />
+                          <span className="truncate">{item.label}</span>
+                        </span>
+                        {item.badge ? (
+                          <span className="rounded-full bg-[#ECFDF3] px-2 py-0.5 text-[10px] font-bold text-[#12B76A]">
+                            {item.badge}
+                          </span>
+                        ) : item.count !== undefined ? (
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                              active ? 'bg-white text-[#465FFF]' : 'bg-[#F2F4F7] text-[#667085]'
+                            }`}
+                          >
+                            {item.count}
+                          </span>
+                        ) : null}
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          ))}
+        </nav>
+
+        <div className="border-t border-[#E4E7EC] p-4">
+          <div className="rounded-xl bg-[#F9FAFB] p-3 text-xs">
+            <p className="font-semibold text-[#1D2939]">{snapshot.user.name}</p>
+            <p className="truncate text-[#667085]">{snapshot.user.email}</p>
+            <p className="mt-1 font-semibold text-[#465FFF]">{roleLabels[snapshot.user.role]}</p>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content Region */}
+      <div className="flex min-w-0 flex-1 flex-col lg:pl-[290px]">
+        <header className="sticky top-0 z-30 flex h-[76px] items-center justify-between gap-3 border-b border-[#E4E7EC] bg-white px-4 sm:px-6">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open navigation menu"
+              className="grid size-10 shrink-0 place-items-center rounded-xl border border-[#E4E7EC] text-[#1D2939] hover:bg-[#F9FAFB] lg:hidden"
+            >
+              <Menu className="size-5" />
+            </button>
+            {snapshot.user.role !== 'content_editor' && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  selectTab('enquiries')
+                }}
+                className="relative hidden max-w-sm flex-1 sm:block"
+              >
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#98A2B3]" />
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search leads by name, phone, country…"
+                  className="h-10 w-full rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] pl-9 pr-3 text-sm text-[#1D2939] outline-none focus:border-[#465FFF] focus:bg-white"
+                />
+              </form>
+            )}
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowChangePass(true)}
+              className="min-h-10 rounded-xl border border-[#E4E7EC] bg-white px-3 text-xs font-semibold text-[#1D2939] hover:bg-[#F9FAFB] sm:px-4"
+            >
+              Change password
+            </button>
+            <a
+              href="/admin/oauth/logout"
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-[#465FFF] px-3.5 text-xs font-semibold text-white shadow-xs hover:opacity-95 sm:px-4"
+            >
+              <LogOut className="size-3.5" />
+              <span>Log out</span>
+            </a>
+          </div>
+        </header>
+
+        <div className="mx-auto w-full max-w-7xl flex-1 p-4 sm:p-6">
+          {notice && (
+            <p role="status" className="mb-5 rounded-xl border border-[#12B76A]/25 bg-[#ECFDF3] px-4 py-3 text-sm font-semibold text-[#12B76A]">
+              {notice}
+            </p>
+          )}
+          {tab === 'dashboard' && snapshot.user.role !== 'content_editor' && (
+            <TailAdminDashboard
+              snapshot={snapshot}
+              onOpenEnquiries={() => selectTab('enquiries')}
+              onOpenAttendance={() => selectTab('attendance')}
+              canOpenAttendance={snapshot.user.role === 'super_admin'}
+            />
+          )}
+          {tab === 'enquiries' && <EnquiriesPanel enquiries={filtered} stats={snapshot.enquiryStats} query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter} dateFrom={dateFrom} setDateFrom={setDateFrom} dateTo={dateTo} setDateTo={setDateTo} onReload={reload} onNotice={showNotice} canDelete={snapshot.user.role === 'super_admin'} canManageComments={snapshot.user.role === 'super_admin'} />}
+          {tab === 'attendance' && snapshot.user.role === 'super_admin' && <AttendancePanel onNotice={showNotice} />}
+          {tab === 'demo' && <DemoRequestsPanel enquiries={snapshot.enquiries.filter((item) => item.source === 'coaching')} totalCount={snapshot.enquiryStats.demoRequests} onReload={reload} onNotice={showNotice} canDelete={snapshot.user.role === 'super_admin'} canManageComments={snapshot.user.role === 'super_admin'} />}
+          {tab === 'review' && <ReviewQueuePanel enquiries={newLeadQueue} drafts={draftQueue} onOpenEnquiries={() => { setQuery(''); setStatusFilter('New'); selectTab('enquiries') }} onOpenDraft={(post) => { setSelectedPost(post); selectTab('news') }} />}
+          {tab === 'reports' && <ReportsPanel stats={snapshot.enquiryStats} />}
+          {tab === 'policy' && <PolicyWatchPanel />}
+          {tab === 'countries' && <CountryPanel />}
+          {tab === 'studyPlans' && <StudyPlanPanel onDirtyChange={setStudyPlanDirty} />}
+          {tab === 'news' && <ContentPanel type="news" items={snapshot.posts} selected={selectedPost} onSelect={(item) => setSelectedPost(item as AdminPost | null)} onReload={reload} onNotice={showNotice} />}
+          {tab === 'stories' && <ContentPanel type="stories" items={snapshot.stories} selected={selectedStory} onSelect={(item) => setSelectedStory(item as AdminStory | null)} onReload={reload} onNotice={showNotice} />}
+          {tab === 'certificates' && <CertificatePanel items={snapshot.certificates} onReload={reload} onNotice={showNotice} />}
+          {tab === 'batches' && <BatchPanel items={snapshot.batches} selected={selectedBatch} onSelect={setSelectedBatch} onReload={reload} onNotice={showNotice} />}
+          {tab === 'budget' && <CashflowAdminPanel onNotice={showNotice} />}
+          {tab === 'settings' && <SettingsPanel settings={snapshot.settings} onReload={reload} onNotice={showNotice} onDirtyChange={setSettingsDirty} />}
+          {tab === 'users' && <UsersPanel users={snapshot.users} currentEmail={snapshot.user.email} onReload={reload} onNotice={showNotice} />}
+          {showChangePass && <ChangePasswordModal onClose={() => setShowChangePass(false)} onNotice={showNotice} />}
+        </div>
       </div>
     </div>
   )
@@ -436,6 +652,35 @@ function ChangePasswordModal({ onClose, onNotice }: { onClose: () => void; onNot
     </div>
   )
 }
+function formatIstDateTime(value: string) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  })
+}
+
+function currentIstDateTimeMinute() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(new Date())
+  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? '00'
+  const hour = get('hour') === '24' ? '00' : get('hour')
+  return `${get('year')}-${get('month')}-${get('day')}T${hour}:${get('minute')}`
+}
 function formatFollowUpLabel(value: string) {
   if (!value) return ''
   const [datePart, timePart] = value.slice(0, 16).split('T')
@@ -629,7 +874,8 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
 
 function DemoRequestsPanel({ enquiries, totalCount, onReload, onNotice, canDelete, canManageComments }: { enquiries: Enquiry[]; totalCount: number; onReload: () => Promise<void>; onNotice: (message: string) => void; canDelete: boolean; canManageComments: boolean }) {
   const [dueOnly, setDueOnly] = useState(false)
-  const dueRequests = enquiries.filter((item) => item.nextFollowUpAt && new Date(item.nextFollowUpAt).getTime() <= Date.now() && !['Converted', 'Closed'].includes(item.status))
+  const nowIst = currentIstDateTimeMinute()
+  const dueRequests = enquiries.filter((item) => item.nextFollowUpAt && item.nextFollowUpAt.slice(0, 16) <= nowIst && !['Converted', 'Closed'].includes(item.status))
   const visible = dueOnly ? dueRequests : enquiries
   return (
     <section>
@@ -654,7 +900,7 @@ function ReviewQueuePanel({ enquiries, drafts, onOpenEnquiries, onOpenDraft }: {
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="rounded-3xl bg-white p-5 ring-1 ring-forest-900/10">
           <div className="mb-4 flex items-center justify-between gap-3"><h3 className="text-lg font-extrabold">New enquiries</h3><span className="rounded-full bg-coral-50 px-3 py-1 text-xs font-bold text-coral-700">{enquiries.length}</span></div>
-          <div className="grid gap-3">{enquiries.slice(0, 10).map((item) => <div key={item.id} className="rounded-2xl bg-cream p-4"><p className="font-bold">{item.name}</p><p className="mt-1 text-sm text-forest-900/60">{item.interest || 'General counselling'}{item.country ? ' · ' + item.country : ''}</p><p className="mt-1 text-xs text-forest-900/50">{new Date(item.createdAt).toLocaleString()}</p></div>)}{enquiries.length === 0 && <p className="text-sm text-forest-900/55">No new enquiries are waiting.</p>}</div>
+   <div className="grid gap-3">{enquiries.slice(0, 10).map((item) => <div key={item.id} className="rounded-2xl bg-cream p-4"><p className="font-bold">{item.name}</p><p className="mt-1 text-sm text-forest-900/60">{item.interest || 'General counselling'}{item.country ? ' · ' + item.country : ''}</p><p className="mt-1 text-xs text-forest-900/50">{formatIstDateTime(item.createdAt)}</p></div>)}{enquiries.length === 0 && <p className="text-sm text-forest-900/55">No new enquiries are waiting.</p>}</div>
           {enquiries.length > 0 && <button type="button" onClick={onOpenEnquiries} className="mt-4 rounded-full bg-forest-900 px-4 py-2 text-sm font-bold text-white">Review new enquiries</button>}
         </section>
         <section className="rounded-3xl bg-white p-5 ring-1 ring-forest-900/10">
@@ -806,7 +1052,7 @@ function EnquiryCard({ item, onReload, onNotice, canDelete, canManageComments }:
             <span className="rounded-full bg-coral-50 px-3 py-1 text-xs font-bold text-coral-700">{item.status}</span>
             {item.nextFollowUpAt && <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">Follow-up {formatFollowUpLabel(item.nextFollowUpAt)}</span>}
           </div>
-          <p className="mt-1 text-sm text-forest-900/60">{new Date(item.createdAt).toLocaleString()} · {item.source || 'website'}{item.assignedTo && <> · Assigned to {item.assignedTo}</>}</p>
+          <p className="mt-1 text-sm text-forest-900/60">{formatIstDateTime(item.createdAt)} · {item.source || 'website'}{item.assignedTo && <> · Assigned to {item.assignedTo}</>}</p>
           
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <span className="font-bold text-sm text-forest-900">{item.phone}</span>

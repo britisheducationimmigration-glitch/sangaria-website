@@ -591,3 +591,41 @@ main .scroll-reveal:focus-within .scroll-reveal-item {
     -webkit-print-color-adjust: exact;
   }
 }
+/* Scoped TailAdmin Dashboard theme for /admin only */
+.tailadmin-shell {
+  --font-ui: 'Outfit', 'Figtree', ui-sans-serif, system-ui, sans-serif;
+  --ta-canvas: #f9fafb;
+  --ta-surface: #ffffff;
+  --ta-border: #e4e7ec;
+  --ta-text: #1d2939;
+  --ta-muted: #667085;
+  --ta-brand: #465fff;
+  --ta-brand-soft: #ecf3ff;
+  font-family: var(--font-ui);
+  background-color: var(--ta-canvas);
+  color: var(--ta-text);
+}
+
+.tailadmin-shell h1,
+.tailadmin-shell h2,
+.tailadmin-shell h3,
+.tailadmin-shell h4 {
+  font-family: var(--font-ui);
+  letter-spacing: -0.015em;
+}
+
+.tailadmin-shell .field {
+  border-color: var(--ta-border);
+  border-radius: 0.625rem;
+  color: var(--ta-text);
+  font-size: 14px;
+}
+
+.tailadmin-shell .field:focus {
+  border-color: var(--ta-brand);
+  box-shadow: 0 0 0 3px rgb(70 95 255 / 0.14);
+}
+
+.tailadmin-shell :where(a[href], button, input, select, textarea, summary):focus-visible {
+  outline-color: var(--ta-brand);
+}

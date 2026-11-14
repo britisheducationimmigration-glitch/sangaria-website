@@ -672,7 +672,7 @@ function Home() {
               >
                 {showAllTestimonialsMobile
                   ? 'Show Fewer Reviews ↑'
-                  : `Show More Reviews (${homepageTestimonials.length - 2}+ और देखें) ↓`}
+                  : `Show More Reviews (${homepageTestimonials.length - 2}+ more) ↓`}
               </button>
             )}
 
@@ -1202,7 +1202,7 @@ function Home() {
                     onClick={() => setShowAllTestimonials(!showAllTestimonials)}
                     className="rounded-full border border-forest-900/20 bg-white px-7 py-3.5 font-bold text-forest-900 hover-contrast-cta shadow-sm transition hover:bg-forest-900 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-900"
                   >
-                    {showAllTestimonials ? 'Show Fewer Reviews ↑' : `Show More Reviews (${homepageTestimonials.length - 3}+ और देखें) ↓`}
+                    {showAllTestimonials ? 'Show Fewer Reviews ↑' : `Show More Reviews (${homepageTestimonials.length - 3}+ More) ↓`}
                   </button>
                 </div>
               )}

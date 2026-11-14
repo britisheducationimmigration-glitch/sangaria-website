@@ -139,11 +139,12 @@ export const Route = createRootRoute({
 function RootDocument({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const isAdmin = pathname.startsWith('/admin')
+  const isPortal = isAdmin || pathname.startsWith('/attendance')
   const { settings, countries } = Route.useLoaderData()
 
   // ⚡ Non-blocking GTM: Page load hone ke turant baad background me chalega (Speed boost)
   useEffect(() => {
-    if (isAdmin || typeof window === 'undefined') return
+    if (isPortal || typeof window === 'undefined') return
 
     const loadGTM = () => {
       if ((window as any).__gtmLoaded) return
@@ -163,8 +164,8 @@ function RootDocument({ children }: { children: ReactNode }) {
     }
   }, [isAdmin])
 
-  useEffect(() => {
-    if (isAdmin || window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) return
+ useEffect(() => {
+    if (isPortal || window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) return
     const main = document.querySelector('main')
     if (!main) return
 
@@ -212,11 +213,11 @@ function RootDocument({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        {!isAdmin && <SiteHeader settings={settings} />}
-        <main className={isAdmin ? 'admin-main' : 'public-main'}>{children}</main>
-        {!isAdmin && <SiteFooter settings={settings} countries={countries} />}
-        {!isAdmin && <WhatsAppButton />}
-        {!isAdmin && <EnquiryPopup />}
+        {!isPortal && <SiteHeader settings={settings} />}
+        <main className={isAdmin ? 'admin-main' : isPortal ? 'attendance-main' : 'public-main'}>{children}</main>
+        {!isPortal && <SiteFooter settings={settings} countries={countries} />}
+        {!isPortal && <WhatsAppButton />}
+        {!isPortal && <EnquiryPopup />}
         <Analytics />
         <Scripts />
       </body>
