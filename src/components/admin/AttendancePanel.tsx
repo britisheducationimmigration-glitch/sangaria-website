@@ -43,8 +43,10 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
   const [settingsDraft, setSettingsDraft] = useState<AttendanceSettings | null>(null)
   const [copiedId, setCopiedId] = useState<number | null>(null)
   const loadSequence = useRef(0)
+  const refreshInFlight = useRef(false)
+  const [lastUpdated, setLastUpdated] = useState('')
 
-  async function load(targetMonth = month) {
+  async function load(targetMonth = month, background = false) {
     const request = ++loadSequence.current
     setLoading(true)
     setError('')
@@ -54,7 +56,8 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
       if (request !== loadSequence.current) return
       setFinalizations(locked)
       setSnapshot(next)
-      setSettingsDraft(next.settings)
+      if (!background) setSettingsDraft(next.settings)
+      setLastUpdated(new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }))
       setFilterDate((prev) => prev.startsWith(targetMonth) ? prev : next.todayIst.startsWith(targetMonth) ? next.todayIst : `${targetMonth}-01`)
     } catch (cause) {
       if (request !== loadSequence.current) return
@@ -68,6 +71,32 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
     void load(month)
     return () => { loadSequence.current++ }
   }, [month])
+
+  useEffect(() => {
+    try {
+      const saved = window.sessionStorage.getItem('bei-attendance-subtab')
+      if (saved === 'logs' || saved === 'monthly' || saved === 'employees') setSubTab(saved)
+    } catch { /* Browser storage is optional. */ }
+  }, [])
+
+  useEffect(() => {
+    const refresh = async () => {
+      if (document.visibilityState !== 'visible' || busy || empDraft || logDraft || subTab === 'employees' || refreshInFlight.current) return
+      refreshInFlight.current = true
+      try { await load(month, true) } finally { refreshInFlight.current = false }
+    }
+    const onVisible = () => { void refresh() }
+    const timer = window.setInterval(onVisible, 30_000)
+    window.addEventListener('focus', onVisible)
+    window.addEventListener('online', onVisible)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('focus', onVisible)
+      window.removeEventListener('online', onVisible)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [month, busy, empDraft, logDraft, subTab])
 
   async function downloadExcel(employeeId = 0) {
     setBusy(true)
@@ -260,6 +289,10 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#667085]">
+        <span role="status">{loading ? 'Updating attendance…' : lastUpdated ? 'Updated ' + lastUpdated + ' IST' : ''}{subTab !== 'employees' && ' · Auto-refresh every 30 seconds while visible'}</span>
+        <button type="button" disabled={loading || busy || Boolean(empDraft) || Boolean(logDraft)} onClick={() => void load(month, true)} className="inline-flex items-center gap-1 rounded-lg border border-[#E4E7EC] bg-white px-3 py-2 font-semibold text-[#465FFF] disabled:opacity-50"><RefreshCw className={loading ? 'size-3.5 animate-spin' : 'size-3.5'} />Refresh now</button>
+      </div>
       {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-2xl border border-[#E4E7EC] bg-white p-5"><p className="text-xs font-medium text-[#667085]">Active Staff</p><p className="mt-2 text-3xl font-bold text-[#1D2939]">{employees.filter((e) => e.active).length}</p></div>
@@ -274,7 +307,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
           ['monthly', 'Monthly Cycle & Salary', CalendarDays],
           ['employees', 'Employees & Office GPS', Users],
         ] as const).map(([id, label, Icon]) => (
-          <button key={id} type="button" onClick={() => setSubTab(id)} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition ${subTab === id ? 'bg-[#ECF3FF] text-[#465FFF]' : 'bg-white text-[#667085] border border-[#E4E7EC] hover:bg-[#F9FAFB]'}`}>
+          <button key={id} type="button" onClick={() => { setSubTab(id); try { window.sessionStorage.setItem('bei-attendance-subtab', id) } catch { /* Optional UI state. */ } }} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition ${subTab === id ? 'bg-[#ECF3FF] text-[#465FFF]' : 'bg-white text-[#667085] border border-[#E4E7EC] hover:bg-[#F9FAFB]'}`}>
             <Icon className="size-4" /> {label}
           </button>
         ))}

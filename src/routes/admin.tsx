@@ -54,6 +54,7 @@ const blankStory: Omit<AdminStory, 'id'> = { kind: 'testimonial', name: '', city
 
 function AdminPage() {
   const [snapshot, setSnapshot] = useState<AdminSnapshot | null>(null)
+  const [checkingSession, setCheckingSession] = useState(true)
   const [error, setError] = useState('')
   const [tab, setTab] = useState<Tab>('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -75,13 +76,27 @@ function AdminPage() {
       setSnapshot(await getAdminSnapshot())
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Admin access is not configured yet.')
+    } finally {
+      setCheckingSession(false)
     }
   }
 
   useEffect(() => { void reload() }, [])
   useEffect(() => {
-    if (snapshot?.user.role === 'content_editor' && (tab === 'dashboard' || tab === 'enquiries')) setTab('news')
-  }, [snapshot?.user.role, tab])
+    const role = snapshot?.user.role
+    if (!role) return
+    const allowed: Tab[] = role === 'super_admin'
+      ? ['dashboard', 'enquiries', 'attendance', 'news', 'stories', 'certificates', 'batches', 'budget', 'settings', 'users', 'demo', 'review', 'reports', 'policy', 'countries', 'studyPlans']
+      : role === 'content_editor'
+        ? ['review', 'news', 'stories', 'certificates', 'batches']
+        : ['dashboard', 'enquiries', 'demo', 'review', 'reports']
+    let selected: Tab = role === 'content_editor' ? 'news' : 'dashboard'
+    try {
+      const saved = window.sessionStorage.getItem('bei-admin-tab:' + role) as Tab | null
+      if (saved && allowed.includes(saved)) selected = saved
+    } catch { /* Storage can be disabled; navigation still works. */ }
+    setTab(selected)
+  }, [snapshot?.user.role])
 
   useEffect(() => {
     if (!sidebarOpen) return
@@ -89,6 +104,10 @@ function AdminPage() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [sidebarOpen])
+
+  if (!snapshot && checkingSession) {
+    return <section className="grid min-h-screen place-items-center bg-cream px-6 py-16"><p role="status" className="text-sm font-semibold">Checking admin session…</p></section>
+  }
 
   if (!snapshot) {
     return (
@@ -188,6 +207,7 @@ function AdminPage() {
     if (value !== 'settings') setSettingsDirty(false)
     if (value !== 'studyPlans') setStudyPlanDirty(false)
     setTab(value)
+    try { window.sessionStorage.setItem('bei-admin-tab:' + snapshot!.user.role, value) } catch { /* Optional browser state only. */ }
     setSidebarOpen(false)
   }
 

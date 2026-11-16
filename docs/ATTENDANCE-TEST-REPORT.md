@@ -47,3 +47,7 @@ Live browser automation could not attach to the available browser. Physical phon
 Browser location can be spoofed, the localStorage device key can be copied, and a camera image is not biometric identity/liveness proof. Foreign-IP and mismatch checks cannot detect every Indian VPN exit. Original evidence, exact trusted office IP and admin review improve auditability; they do not provide hardware attestation.
 
 Photos are removed after 60 days by a bounded daily cleanup; attendance and original textual audit events remain. Ensure database backups and the configured host proxy headers before operational payroll use. No real payroll payment is initiated by this application.
+
+## Refresh behavior
+
+Admin navigation restores the selected role-allowed section from per-browser-tab session storage after a page reload. Session checks show a loading state instead of briefly displaying the login form. The selected attendance subtab is also restored. Daily logs and monthly reports refresh every 30 seconds while the page is visible, and on focus/reconnection. Refresh is paused while editing or saving and on the employee/settings screen. A Refresh now action updates attendance without reloading the browser; background refresh preserves settings drafts. Polling adds database reads only while an eligible attendance view is open.
