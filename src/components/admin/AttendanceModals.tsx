@@ -71,7 +71,7 @@ export function EmployeeFormModal({
       >
         <div className="flex items-center justify-between border-b border-[#E4E7EC] pb-3">
           <h3 className="text-lg font-bold text-[#1D2939]">{draft.id ? 'Edit Employee' : 'Add Employee'}</h3>
-          <button type="button" onClick={onClose} className="text-sm font-bold text-[#667085] hover:text-[#1D2939]">?</button>
+          <button type="button" onClick={onClose} className="text-sm font-bold text-[#667085] hover:text-[#1D2939]">✕</button>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -107,7 +107,7 @@ export function EmployeeFormModal({
             />
           </label>
           <label className="text-xs font-semibold text-[#1D2939]">
-            Salary Cycle Start Day (1-31) *
+            Salary Cycle Start Day (1–31) *
             <input
               type="number"
               min={1}
@@ -145,7 +145,7 @@ export function EmployeeFormModal({
         </fieldset>
 
         <label className="block text-xs font-semibold text-[#1D2939]">
-          {draft.id ? 'New 4-8 Digit PIN (leave blank to keep old PIN)' : '4-8 Digit PIN (recommended)'}
+          {draft.id ? 'New 4–8 Digit PIN (leave blank to keep old PIN)' : '4–8 Digit PIN (recommended)'}
           <input
             type="password"
             inputMode="numeric"
@@ -178,7 +178,7 @@ export function EmployeeFormModal({
         <div className="flex justify-end gap-2 border-t border-[#E4E7EC] pt-3">
           <button type="button" onClick={onClose} className="rounded-xl border border-[#E4E7EC] px-4 py-2 text-xs font-bold text-[#1D2939]">Cancel</button>
           <button type="submit" disabled={busy} className="rounded-xl bg-[#465FFF] px-5 py-2 text-xs font-bold text-white disabled:opacity-50">
-            {busy ? 'Saving.' : 'Save Employee'}
+            {busy ? 'Saving…' : 'Save Employee'}
           </button>
         </div>
       </form>
@@ -209,9 +209,9 @@ export function AttendanceEditModal({
             <h3 className="text-lg font-bold text-[#1D2939]">
               {draft.mode === 'create' ? 'Add Manual Attendance' : 'Edit Attendance'}
             </h3>
-            {draft.mode === 'edit' && <p className="text-xs text-[#667085]">{draft.employeeName} � {draft.workDate}</p>}
+            {draft.mode === 'edit' && <p className="text-xs text-[#667085]">{draft.employeeName} · {draft.workDate}</p>}
           </div>
-          <button type="button" onClick={onClose} className="text-sm font-bold text-[#667085] hover:text-[#1D2939]">?</button>
+          <button type="button" onClick={onClose} className="text-sm font-bold text-[#667085] hover:text-[#1D2939]">✕</button>
         </div>
 
         {draft.mode === 'create' && (
@@ -306,7 +306,7 @@ export function AttendanceEditModal({
               {draft.editHistory.map((h) => (
                 <li key={h.id} className="rounded-lg bg-white p-2 ring-1 ring-[#E4E7EC]">
                   <p className="font-semibold text-[#1D2939]">
-                    {h.editorName || h.editorEmail} � <span className="font-normal text-[#667085]">{formatIstHistoryTime(h.createdAt)}</span>
+                    {h.editorName || h.editorEmail} · <span className="font-normal text-[#667085]">{formatIstHistoryTime(h.createdAt)}</span>
                   </p>
                   <p className="mt-0.5 text-[#465FFF]">{h.changesSummary}</p>
                   {h.reason && <p className="mt-0.5 text-[#667085]">Reason: {h.reason}</p>}
@@ -319,7 +319,7 @@ export function AttendanceEditModal({
         <div className="flex justify-end gap-2 border-t border-[#E4E7EC] pt-3">
           <button type="button" onClick={onClose} className="rounded-xl border border-[#E4E7EC] px-4 py-2 text-xs font-bold text-[#1D2939]">Cancel</button>
           <button type="submit" disabled={busy} className="rounded-xl bg-[#465FFF] px-5 py-2 text-xs font-bold text-white disabled:opacity-50">
-            {busy ? 'Saving.' : 'Save Attendance'}
+            {busy ? 'Saving…' : 'Save Attendance'}
           </button>
         </div>
       </form>

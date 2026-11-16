@@ -12,7 +12,7 @@ function currentIstMonth() {
 }
 
 const fmtIstTime = (iso: string) =>
-  iso ? new Date(iso).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '-'
+  iso ? new Date(iso).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '—'
 
 function istHHMM(iso: string) {
   if (!iso) return ''
@@ -224,7 +224,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
     })
   }
 
-  if (loading && !snapshot) return <div className="rounded-2xl border border-[#E4E7EC] bg-white p-8 text-sm text-[#667085]">Loading attendance.</div>
+  if (loading && !snapshot) return <div className="rounded-2xl border border-[#E4E7EC] bg-white p-8 text-sm text-[#667085]">Loading attendance…</div>
   if (error && !snapshot) return <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm font-semibold text-red-700">{error}</div>
   if (!snapshot) return null
 
@@ -319,7 +319,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                     <tr key={log.id} className="hover:bg-[#F9FAFB]">
                       <td className="px-4 py-3">
                         <p className="font-bold text-[#1D2939]">{log.employeeName}</p>
-                        <p className="text-[#667085]">{log.workDate} � {fmtHours(log.workMinutes)}</p>
+                        <p className="text-[#667085]">{log.workDate} · {fmtHours(log.workMinutes)}</p>
                       </td>
                      <td className="px-4 py-3">
                         <p className="font-semibold text-[#1D2939]">In: {fmtIstTime(log.checkInAt)} {log.isLate && <span className="ml-1 rounded bg-[#FFFAEB] px-1.5 py-0.5 text-[10px] text-[#F79009]">Late</span>}</p>
@@ -330,9 +330,9 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                               <div key={idx} className={`rounded-lg px-2 py-1 text-[10px] ${br.inAt ? 'bg-[#ECF3FF] text-[#465FFF]' : 'bg-[#FFFAEB] font-semibold text-[#F79009]'}`}>
                                 <span>
                                   {br.inAt
-                                    ? `Break: ${fmtIstTime(br.outAt)}  ${fmtIstTime(br.inAt)}`
+                                    ? `Break: ${fmtIstTime(br.outAt)} → ${fmtIstTime(br.inAt)}`
                                     : `Out now since ${fmtIstTime(br.outAt)}`}
-                                  {br.note ? ` � ${br.note}` : ''}
+                                  {br.note ? ` · ${br.note}` : ''}
                                 </span>
                                 {br.outLat !== null && (
                                   <a href={mapHref(br.outLat, br.outLng)} target="_blank" rel="noreferrer" className="ml-1.5 underline">
@@ -362,10 +362,10 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                             )}
                             <div className="space-y-0.5">
                               {log.inLat !== null && <a href={mapHref(log.inLat, log.inLng)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-[#465FFF] hover:underline">{log.inDistanceM ?? 0}m <ExternalLink className="size-3" /></a>}
-                              <p className="text-[10px] text-[#667085]">{log.inIpCity || log.inIpCountry || 'IN'} � {log.inIp}</p>
+                              <p className="text-[10px] text-[#667085]">{log.inIpCity || log.inIpCountry || 'IN'} · {log.inIp}</p>
                             </div>
                           </div>
-                        ) : <span className="text-[#98A2B3]">-</span>}
+                        ) : <span className="text-[#98A2B3]">—</span>}
                       </td>
                       <td className="px-4 py-3">
                         {log.outLat !== null || log.outPhotoSrc ? (
@@ -377,15 +377,15 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                             )}
                             <div className="space-y-0.5">
                               {log.outLat !== null && <a href={mapHref(log.outLat, log.outLng)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-[#465FFF] hover:underline">{log.outDistanceM ?? 0}m <ExternalLink className="size-3" /></a>}
-                              <p className="text-[10px] text-[#667085]">{log.outIpCity || log.outIpCountry || 'IN'} � {log.outIp}</p>
+                              <p className="text-[10px] text-[#667085]">{log.outIpCity || log.outIpCountry || 'IN'} · {log.outIp}</p>
                             </div>
                           </div>
-                        ) : <span className="text-[#98A2B3]">-</span>}
+                        ) : <span className="text-[#98A2B3]">—</span>}
                       </td>
                       <td className="px-4 py-3">
                         <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${log.status === 'Present' ? 'bg-[#ECFDF3] text-[#12B76A]' : log.status === 'Half Day' ? 'bg-[#FFFAEB] text-[#F79009]' : 'bg-[#FEF3F2] text-[#F04438]'}`}>{log.status}</span>
                         {flags.length > 0 && <p className="mt-1 text-[10px] font-semibold text-[#F04438]">{flags.join(', ')}</p>}
-                        {log.editedBy && <p className="mt-0.5 text-[10px] text-[#667085]">By {log.editedBy} � {log.editNote}</p>}
+                        {log.editedBy && <p className="mt-0.5 text-[10px] text-[#667085]">By {log.editedBy} · {log.editNote}</p>}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button type="button" onClick={() => openEditLog(log)} className="inline-flex items-center gap-1 rounded-lg border border-[#E4E7EC] px-2.5 py-1.5 text-xs font-semibold text-[#1D2939] hover:bg-[#ECF3FF]">
@@ -402,7 +402,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
           </div>}
           {logView === 'calendar' && (
             <div className="rounded-2xl border border-[#E4E7EC] bg-white p-4">
-              <h3 className="mb-3 text-sm font-bold">{month} � select a day to open its timeline</h3>
+              <h3 className="mb-3 text-sm font-bold">{month} · select a day to open its timeline</h3>
               <div className="grid grid-cols-7 gap-1 sm:gap-2">
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => <p key={day} className="py-2 text-center text-[10px] font-semibold text-[#667085]">{day}</p>)}
                 {Array.from({ length: calendarStart.getUTCDay() }, (_, i) => <div key={'empty-' + i} />)}
@@ -423,7 +423,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                   ...log.breaks.flatMap((br) => [{ at: br.outAt, label: 'Break out' + (br.note ? ': ' + br.note : ''), lat: br.outLat, lng: br.outLng }, ...(br.inAt ? [{ at: br.inAt, label: 'Returned', lat: br.inLat, lng: br.inLng }] : [])]),
                   ...(log.checkOutAt ? [{ at: log.checkOutAt, label: 'Check out', lat: log.outLat, lng: log.outLng }] : []),
                 ].sort((a, b) => a.at.localeCompare(b.at))
-                return <article key={log.id} className="rounded-2xl border border-[#E4E7EC] bg-white p-5"><div className="mb-4 flex items-start justify-between gap-3"><div><h3 className="font-bold">{log.employeeName}</h3><p className="text-xs text-[#667085]">{log.workDate} � {log.status} � {fmtHours(log.workMinutes)} net</p>{requiresReview(log) && <p className="mt-1 text-xs font-semibold text-[#F04438]">Missing or automatic OUT needs review</p>}</div><button type="button" onClick={() => openEditLog(log)} className="rounded-lg border border-[#E4E7EC] px-3 py-2 text-xs font-semibold text-[#465FFF]">Review / history</button></div><ol className="space-y-3 border-l-2 border-[#E4E7EC] pl-4">{events.map((event, i) => <li key={i} className="text-xs"><p className="font-semibold">{fmtIstTime(event.at)} � {event.label}</p>{event.lat !== null && event.lng !== null && <a href={mapHref(event.lat, event.lng)} target="_blank" rel="noreferrer" className="text-[#465FFF] underline">View location</a>}</li>)}{!log.checkOutAt && log.checkInAt && <li className="text-xs font-semibold text-[#F79009]">OUT not recorded � hours pending</li>}</ol></article>
+                return <article key={log.id} className="rounded-2xl border border-[#E4E7EC] bg-white p-5"><div className="mb-4 flex items-start justify-between gap-3"><div><h3 className="font-bold">{log.employeeName}</h3><p className="text-xs text-[#667085]">{log.workDate} · {log.status} · {fmtHours(log.workMinutes)} net</p>{requiresReview(log) && <p className="mt-1 text-xs font-semibold text-[#F04438]">Missing or automatic OUT needs review</p>}</div><button type="button" onClick={() => openEditLog(log)} className="rounded-lg border border-[#E4E7EC] px-3 py-2 text-xs font-semibold text-[#465FFF]">Review / history</button></div><ol className="space-y-3 border-l-2 border-[#E4E7EC] pl-4">{events.map((event, i) => <li key={i} className="text-xs"><p className="font-semibold">{fmtIstTime(event.at)} · {event.label}</p>{event.lat !== null && event.lng !== null && <a href={mapHref(event.lat, event.lng)} target="_blank" rel="noreferrer" className="text-[#465FFF] underline">View location</a>}</li>)}{!log.checkOutAt && log.checkInAt && <li className="text-xs font-semibold text-[#F79009]">OUT not recorded · hours pending</li>}</ol></article>
               })}
               {visibleLogs.length === 0 && <p className="rounded-xl bg-white p-6 text-center text-sm text-[#667085]">No entries match this date and employee.</p>}
             </div>
@@ -439,8 +439,8 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="text-base font-bold text-[#1D2939]">{s.employee.name}</h3>
-                  <p className="text-xs text-[#667085]">Cycle Day {s.employee.cycleStartDay} � {s.cycleStartDate}  {s.cycleEndDate}</p>
-                  <p className="mt-0.5 text-[11px] font-medium text-[#465FFF]">{s.totalDays} days - {s.sundaysCount} Sundays = {s.workingDays} working days</p>
+                  <p className="text-xs text-[#667085]">Cycle Day {s.employee.cycleStartDay} · {s.cycleStartDate} → {s.cycleEndDate}</p>
+                  <p className="mt-0.5 text-[11px] font-medium text-[#465FFF]">{s.totalDays} days − {s.sundaysCount} Sundays = {s.workingDays} working days</p>
                 </div>
                 <button type="button" disabled={busy} onClick={() => void downloadExcel(s.employee.id)} className="inline-flex items-center gap-1 rounded-lg border border-[#E4E7EC] px-3 py-1.5 text-xs font-semibold text-[#465FFF] hover:bg-[#ECF3FF]">
                   <Download className="size-3.5" /> Excel
@@ -448,7 +448,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                 <button type="button" disabled={busy} onClick={() => void downloadCsv(s.employee.id)} className="rounded-lg border border-[#E4E7EC] px-3 py-1.5 text-xs font-semibold text-[#465FFF] disabled:opacity-50">CSV</button>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#E4E7EC] p-3 text-xs">
-                {finalizations.some((item) => item.employeeId === s.employee.id) ? <span className="font-semibold text-[#12B76A]">Finalized � report locked</span> : <><span className="text-[#667085]">Draft � {s.missedCheckOutCount} missing OUT</span><button type="button" disabled={busy || s.cycleEndDate >= todayIst || s.missedCheckOutCount > 0} onClick={() => void finalizeCycle(s.employee.id)} className="rounded-lg bg-[#465FFF] px-3 py-2 font-semibold text-white disabled:opacity-40">Finalize completed cycle</button></>}
+                {finalizations.some((item) => item.employeeId === s.employee.id) ? <span className="font-semibold text-[#12B76A]">Finalized · report locked</span> : <><span className="text-[#667085]">Draft · {s.missedCheckOutCount} missing OUT</span><button type="button" disabled={busy || s.cycleEndDate >= todayIst || s.missedCheckOutCount > 0} onClick={() => void finalizeCycle(s.employee.id)} className="rounded-lg bg-[#465FFF] px-3 py-2 font-semibold text-white disabled:opacity-40">Finalize completed cycle</button></>}
               </div>
               <div className="grid grid-cols-3 gap-2 text-center text-xs sm:grid-cols-6">
                 <div className="rounded-xl bg-[#ECFDF3] p-2"><p className="text-[10px] text-[#667085]">Present</p><p className="font-bold text-[#12B76A]">{s.presentDays}</p></div>
@@ -462,7 +462,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                 <div>
                   <span className="text-[#667085]">Monthly: </span>
                   <strong className="text-[#1D2939]">{s.employee.monthlySalary > 0 ? fmtInr(s.employee.monthlySalary) : 'Not set'}</strong>
-                  {s.perDaySalary > 0 && <span className="text-[#667085]"> ({fmtInr(s.perDaySalary)}/day � {s.payableDays} payable)</span>}
+                  {s.perDaySalary > 0 && <span className="text-[#667085]"> ({fmtInr(s.perDaySalary)}/day · {s.payableDays} payable)</span>}
                 </div>
                 {s.employee.monthlySalary > 0 && (
                   <p className="text-sm font-bold text-[#12B76A]">Earned: {fmtInr(s.earnedSalary)}</p>
@@ -495,7 +495,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                       </span>
                     </h4>
                     <p className="text-xs text-[#667085]">
-                      {emp.designation || 'Staff'} � Salary {emp.monthlySalary > 0 ? fmtInr(emp.monthlySalary) : 'Not set'} � Cycle Day {emp.cycleStartDay} � {emp.expectedInTime}-{emp.expectedOutTime} � {emp.hasPin ? 'PIN Set' : 'No PIN'}
+                      {emp.designation || 'Staff'} · Salary {emp.monthlySalary > 0 ? fmtInr(emp.monthlySalary) : 'Not set'} · Cycle Day {emp.cycleStartDay} · {emp.expectedInTime}–{emp.expectedOutTime} · {emp.hasPin ? 'PIN Set' : 'No PIN'}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-1.5">

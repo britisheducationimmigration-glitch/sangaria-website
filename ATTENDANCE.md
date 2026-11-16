@@ -1,6 +1,6 @@
 # Attendance operations
 
-## Pause checkpoint - 14 November 2026
+## Pause checkpoint — 14 November 2026
 
 Work is paused at the user's request. Resume on Monday, 16 November, only when the user returns. Branch: `preview/admin-theme-attendance-20261114`; never merge/push `main` without explicit instruction.
 
@@ -17,7 +17,7 @@ Attendance is available under Super Admin. Employees receive a private attendanc
 - A missing OUT remains pending review: no synthetic 10 PM checkout or invented working hours.
 - Existing automatic 10 PM checkouts require a reasoned Super Admin correction before payroll finalization.
 - Net hours subtract the union of break intervals, clipped to the shift. Overnight shifts can be closed within 24 hours; older incomplete shifts require admin correction.
-- Cycle starts support days 1-31. Short months clamp the boundary to the last date, and the next cycle starts at that boundary without overlap.
+- Cycle starts support days 1–31. Short months clamp the boundary to the last date, and the next cycle starts at that boundary without overlap.
 - Weekly offs and holidays are excluded from scheduled working days. Work on those days is shown separately and does not automatically increase salary. Paid leave is payable; legacy Leave and Unpaid Leave are unpaid.
 - Joining/leaving dates limit eligible days. Salary, schedule, grace and leave policy changes have effective dates. Existing profiles get a baseline policy when first edited.
 - Cycle day changes are blocked once attendance exists, preventing historical overlaps/gaps. A cycle transition would require a separately reviewed migration.

@@ -576,13 +576,13 @@ export const updateAttendanceRecord = createServerFn({ method: 'POST' })
       const approvedFlags = [...new Set([...flags.filter((flag) => !checkOutDate || !flag.startsWith('MISSING_OUT')), 'ADMIN_REVIEW_APPROVED'])]
       await execute('UPDATE attendance_logs SET out_flags_json = ? WHERE id = ?', [JSON.stringify(approvedFlags), Number(prev.id)])
       logId = Number(prev.id)
-      const oldIn = prev.check_in_at ? istTimeHHMM(String(prev.check_in_at)) : '-'
-      const oldOut = prev.check_out_at ? istTimeHHMM(String(prev.check_out_at)) : '-'
+      const oldIn = prev.check_in_at ? istTimeHHMM(String(prev.check_in_at)) : '—'
+      const oldOut = prev.check_out_at ? istTimeHHMM(String(prev.check_out_at)) : '—'
       const parts = [
-        String(prev.status) !== data.status ? `Status: ${prev.status}  ${data.status}` : '',
-        oldIn !== (data.checkInTime || '-') ? `In: ${oldIn}  ${data.checkInTime || '-'}` : '',
-        oldOut !== (data.checkOutTime || '-') ? `Out: ${oldOut}  ${data.checkOutTime || '-'}` : '',
-        Boolean(prev.is_late) !== data.isLate ? `Late: ${Boolean(prev.is_late) ? 'Yes' : 'No'}  ${data.isLate ? 'Yes' : 'No'}` : '',
+        String(prev.status) !== data.status ? `Status: ${prev.status} → ${data.status}` : '',
+        oldIn !== (data.checkInTime || '—') ? `In: ${oldIn} → ${data.checkInTime || '—'}` : '',
+        oldOut !== (data.checkOutTime || '—') ? `Out: ${oldOut} → ${data.checkOutTime || '—'}` : '',
+        Boolean(prev.is_late) !== data.isLate ? `Late: ${Boolean(prev.is_late) ? 'Yes' : 'No'} → ${data.isLate ? 'Yes' : 'No'}` : '',
       ].filter(Boolean)
       summaryText = parts.join(' | ') || 'Record re-saved'
 
@@ -591,7 +591,7 @@ export const updateAttendanceRecord = createServerFn({ method: 'POST' })
         [checkInDate, checkOutDate, data.status, workMinutes, breakMinutes, data.isLate ? 1 : 0, `${context.user.name} (${context.user.email})`, data.editNote, logId],
       )
     } else {
-      summaryText = `Status: ${data.status} | In: ${data.checkInTime || '-'} | Out: ${data.checkOutTime || '-'}`
+      summaryText = `Status: ${data.status} | In: ${data.checkInTime || '—'} | Out: ${data.checkOutTime || '—'}`
       const res = await execute(
         `INSERT INTO attendance_logs (employee_id, work_date, check_in_at, check_out_at, status, work_minutes, is_late, edited_by, edit_note)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
