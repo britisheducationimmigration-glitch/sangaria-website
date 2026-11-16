@@ -395,8 +395,8 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                         {log.inLat !== null || log.inPhotoSrc ? (
                           <div className="flex items-center gap-2.5">
                             {log.inPhotoSrc && (
-                              <a href={log.inPhotoSrc} target="_blank" rel="noreferrer" title="Open full In selfie" className="shrink-0">
-                                <img src={log.inPhotoSrc} alt={`${log.employeeName} in selfie`} className="size-11 rounded-lg border border-[#E4E7EC] object-cover shadow-xs" />
+                              <a href={log.inPhotoSrc + '&view=mirror'} target="_blank" rel="noreferrer" title="Open full In selfie" className="shrink-0">
+                                <img src={log.inPhotoSrc} alt={`${log.employeeName} in selfie`} className="size-11 rounded-lg border border-[#E4E7EC] object-cover shadow-xs scale-x-[-1]" />
                               </a>
                             )}
                             <div className="space-y-0.5">
@@ -410,8 +410,8 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                         {log.outLat !== null || log.outPhotoSrc ? (
                           <div className="flex items-center gap-2.5">
                             {log.outPhotoSrc && (
-                              <a href={log.outPhotoSrc} target="_blank" rel="noreferrer" title="Open full Out selfie" className="shrink-0">
-                                <img src={log.outPhotoSrc} alt={`${log.employeeName} out selfie`} className="size-11 rounded-lg border border-[#E4E7EC] object-cover shadow-xs" />
+                              <a href={log.outPhotoSrc + '&view=mirror'} target="_blank" rel="noreferrer" title="Open full Out selfie" className="shrink-0">
+                                <img src={log.outPhotoSrc} alt={`${log.employeeName} out selfie`} className="size-11 rounded-lg border border-[#E4E7EC] object-cover shadow-xs scale-x-[-1]" />
                               </a>
                             )}
                             <div className="space-y-0.5">

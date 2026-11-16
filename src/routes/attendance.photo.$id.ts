@@ -26,6 +26,18 @@ export const Route = createFileRoute('/attendance/photo/$id')({
           const blob = rows[0]?.photo_blob
           if (!blob) return new Response('Not found', { status: 404 })
 
+          if (url.searchParams.get('view') === 'mirror') {
+            const src = '/attendance/photo/' + id + '?type=' + type
+            return new Response('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Mirrored attendance selfie</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#101828}img{max-width:95vw;max-height:95vh;object-fit:contain;transform:scaleX(-1)}</style></head><body><img src="' + src + '" alt="Mirrored attendance selfie"></body></html>', {
+              headers: {
+                'Content-Type': 'text/html; charset=utf-8',
+                'Cache-Control': 'private, no-store',
+                'X-Content-Type-Options': 'nosniff',
+                'Content-Security-Policy': "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'none'",
+              },
+            })
+          }
+
           const bytes = Buffer.isBuffer(blob) ? blob : Buffer.from(blob as Uint8Array)
           const body = new ArrayBuffer(bytes.byteLength)
           new Uint8Array(body).set(bytes)
