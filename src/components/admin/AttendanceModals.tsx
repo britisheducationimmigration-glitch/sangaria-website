@@ -75,6 +75,26 @@ function formatIstHistoryTime(iso: string) {
   })
 }
 
+function attendanceHistorySummary(history: AttendanceEditHistoryRecord) {
+  const format = (key: string, value: string | number | boolean | null | undefined) => {
+    if (value === null || value === undefined || value === '') return 'Not recorded'
+    if (key === 'checkInAt' || key === 'checkOutAt') return formatIstHistoryTime(String(value)) + ' IST'
+    if (key === 'isLate') return value ? 'Yes' : 'No'
+    if (key === 'workMinutes' || key === 'breakMinutes') return `${value} min`
+    return String(value)
+  }
+  if (history.after) {
+    const fields = [['checkInAt', 'Check-in'], ['checkOutAt', 'Check-out'], ['status', 'Status'], ['workMinutes', 'Working time'], ['breakMinutes', 'Break time'], ['isLate', 'Late arrival']]
+    const changes = fields.filter(([key]) => history.after?.[key] !== history.before?.[key])
+      .map(([key, label]) => `${label}: ${format(key, history.before?.[key])} → ${format(key, history.after?.[key])}`)
+    return changes.join(' · ') || 'Record saved without changes'
+  }
+  // Older entries have only a summary. Keep them readable without exposing UTC timestamps.
+  return history.changesSummary
+    .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z/g, iso => formatIstHistoryTime(iso) + ' IST')
+    .replaceAll('(UTC)', '(IST)').replaceAll('true', 'Yes').replaceAll('false', 'No')
+}
+
 export function EmployeeFormModal({
   draft,
   busy,
@@ -340,8 +360,7 @@ export function AttendanceEditModal({
                   <p className="font-semibold text-[#1D2939]">
                     {h.editorName || h.editorEmail} · <span className="font-normal text-[#667085]">{formatIstHistoryTime(h.createdAt)}</span>
                   </p>
-                  <p className="mt-0.5 text-[#465FFF]">{h.changesSummary}</p>
-                  {(h.before || h.after) && <details className="mt-1"><summary className="cursor-pointer">Before / after evidence (UTC)</summary><pre className="mt-1 max-w-full overflow-auto whitespace-pre-wrap text-[10px]">{JSON.stringify({ before: h.before, after: h.after }, null, 2)}</pre></details>}
+                  <p className="mt-0.5 break-words text-[#465FFF]">{attendanceHistorySummary(h)}</p>
                   {h.reason && <p className="mt-0.5 text-[#667085]">Reason: {h.reason}</p>}
                 </li>
               ))}
