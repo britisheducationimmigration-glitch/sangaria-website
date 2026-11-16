@@ -8,7 +8,9 @@
     "start": "node .output/server/index.mjs",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
-    "test:attendance": "node --test src/lib/attendance-calculations.test.mjs"
+    "test:attendance": "node --test src/lib/attendance-calculations.test.mjs",
+    "test:attendance:server": "node --experimental-vm-modules --test tests/attendance-boundaries.test.mjs",
+    "test:attendance:mysql": "node --experimental-vm-modules --test tests/attendance-mysql.test.mjs"
   },
   "dependencies": {
     "@tanstack/react-router": "1.170.46",

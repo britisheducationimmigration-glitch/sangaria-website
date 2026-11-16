@@ -8,6 +8,18 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: attendance-ci-root-only
+          MYSQL_DATABASE: attendance_test
+          MYSQL_USER: attendance_test
+          MYSQL_PASSWORD: attendance-ci-test-only
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -u root -pattendance-ci-root-only"
+          --health-interval=5s --health-timeout=5s --health-retries=20
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -20,4 +32,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run typecheck
       - run: pnpm run test:attendance
+      - run: pnpm run test:attendance:server
+      - run: pnpm run test:attendance:mysql
+        env:
+          TEST_DATABASE_URL: mysql://attendance_test:attendance-ci-test-only@127.0.0.1:3306/attendance_test
       - run: pnpm run build
