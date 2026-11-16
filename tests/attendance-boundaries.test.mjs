@@ -11,6 +11,7 @@ test('location: valid office, missing headers, invalid coordinates and accuracy'
   assert.equal(verify().flags.length, 0)
   for (const [lat, lng] of [[NaN,74.5],[91,74.5],[29.8,181],[0,0]]) assert.throws(() => verify({ lat, lng }))
   assert.throws(() => verify({ accuracyM: 51 }), /accuracy/)
+  for (const accuracyM of [0,-10,NaN]) assert.throws(() => verify({accuracyM}), /accuracy/)
   assert.throws(() => verify({ lat: 30 }), /away/)
   assert.ok(verify({ lat: 30, officeOnly: false }).flags.some(f => f.startsWith('OUT_OF_OFFICE')))
 })

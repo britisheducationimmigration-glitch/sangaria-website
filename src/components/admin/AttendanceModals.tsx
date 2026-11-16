@@ -1,5 +1,28 @@
-import type { FormEvent } from 'react'
+import { useEffect, useId, useRef, type FormEvent } from 'react'
 import type { AttendanceEditHistoryRecord, AttendanceStatus, EmployeeRecord } from '@/lib/content-types'
+
+function useModalDialog(onClose: () => void, busy: boolean) {
+  const ref = useRef<HTMLDivElement>(null)
+  const current = useRef({ onClose, busy })
+  current.current = { onClose, busy }
+  useEffect(() => {
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const dialog = ref.current
+    const controls = () => Array.from(dialog?.querySelectorAll<HTMLElement>('input:not(:disabled),select:not(:disabled),button:not(:disabled),textarea:not(:disabled),[tabindex="0"]') ?? []).filter(el => el.getClientRects().length)
+    controls()[0]?.focus()
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !current.current.busy) { event.preventDefault(); current.current.onClose() }
+      if (event.key !== 'Tab') return
+      const items = controls(), first = items[0], last = items.at(-1)
+      if (!first) { event.preventDefault(); return }
+      if (event.shiftKey && (document.activeElement === first || !dialog?.contains(document.activeElement))) { event.preventDefault(); last?.focus() }
+      else if (!event.shiftKey && (document.activeElement === last || !dialog?.contains(document.activeElement))) { event.preventDefault(); first.focus() }
+    }
+    document.addEventListener('keydown', keydown)
+    return () => { document.removeEventListener('keydown', keydown); previous?.focus() }
+  }, [])
+  return ref
+}
 
 export type EmployeeDraft = {
   id: number
@@ -63,14 +86,16 @@ export function EmployeeFormModal({
   onClose: () => void
   onSubmit: (e: FormEvent) => void
 }) {
+  const dialogRef = useModalDialog(onClose, busy)
+  const titleId = useId()
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4 backdrop-blur-xs" role="dialog" aria-modal="true">
+    <div ref={dialogRef} className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4 backdrop-blur-xs" role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <form
         onSubmit={onSubmit}
         className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-[#E4E7EC] bg-white p-6 shadow-xl space-y-4"
       >
         <div className="flex items-center justify-between border-b border-[#E4E7EC] pb-3">
-          <h3 className="text-lg font-bold text-[#1D2939]">{draft.id ? 'Edit Employee' : 'Add Employee'}</h3>
+          <h3 id={titleId} className="text-lg font-bold text-[#1D2939]">{draft.id ? 'Edit Employee' : 'Add Employee'}</h3>
           <button type="button" onClick={onClose} className="text-sm font-bold text-[#667085] hover:text-[#1D2939]">✕</button>
         </div>
 
@@ -201,12 +226,14 @@ export function AttendanceEditModal({
   onClose: () => void
   onSubmit: (e: FormEvent) => void
 }) {
+  const dialogRef = useModalDialog(onClose, busy)
+  const titleId = useId()
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4 backdrop-blur-xs" role="dialog" aria-modal="true">
+    <div ref={dialogRef} className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4 backdrop-blur-xs" role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <form onSubmit={onSubmit} className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-[#E4E7EC] bg-white p-6 shadow-xl space-y-4">
         <div className="flex items-center justify-between border-b border-[#E4E7EC] pb-3">
           <div>
-            <h3 className="text-lg font-bold text-[#1D2939]">
+            <h3 id={titleId} className="text-lg font-bold text-[#1D2939]">
               {draft.mode === 'create' ? 'Add Manual Attendance' : 'Edit Attendance'}
             </h3>
             {draft.mode === 'edit' && <p className="text-xs text-[#667085]">{draft.employeeName} · {draft.workDate}</p>}

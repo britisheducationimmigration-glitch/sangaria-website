@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { CalendarDays, Check, Copy, Download, ExternalLink, History, MapPin, Pencil, Plus, RefreshCw, Smartphone, Trash2, Users } from 'lucide-react'
 import { deleteEmployee, exportAttendanceCsv, exportAttendanceExcel, finalizeAttendanceCycle, getAttendanceCycleFinalizations, getAdminAttendanceSnapshot, regenerateEmployeeToken, resetEmployeeDevice, saveAttendanceSettings, saveEmployee, updateAttendanceRecord } from '@/lib/attendance-functions'
 import type { AdminAttendanceSnapshot, AttendanceLogRecord, AttendanceSettings, EmployeeRecord } from '@/lib/content-types'
@@ -42,25 +42,31 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
   const [logDraft, setLogDraft] = useState<LogDraft | null>(null)
   const [settingsDraft, setSettingsDraft] = useState<AttendanceSettings | null>(null)
   const [copiedId, setCopiedId] = useState<number | null>(null)
+  const loadSequence = useRef(0)
 
   async function load(targetMonth = month) {
+    const request = ++loadSequence.current
     setLoading(true)
     setError('')
     try {
       const next = await getAdminAttendanceSnapshot({ data: { month: targetMonth } })
-      setFinalizations(await getAttendanceCycleFinalizations({ data: { month: targetMonth } }))
+      const locked = await getAttendanceCycleFinalizations({ data: { month: targetMonth } })
+      if (request !== loadSequence.current) return
+      setFinalizations(locked)
       setSnapshot(next)
       setSettingsDraft(next.settings)
-      setFilterDate((prev) => prev || next.todayIst)
+      setFilterDate((prev) => prev.startsWith(targetMonth) ? prev : next.todayIst.startsWith(targetMonth) ? next.todayIst : `${targetMonth}-01`)
     } catch (cause) {
+      if (request !== loadSequence.current) return
       setError(cause instanceof Error ? cause.message : 'Could not load attendance.')
     } finally {
-      setLoading(false)
+      if (request === loadSequence.current) setLoading(false)
     }
   }
 
   useEffect(() => {
     void load(month)
+    return () => { loadSequence.current++ }
   }, [month])
 
   async function downloadExcel(employeeId = 0) {
@@ -440,7 +446,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                 <div>
                   <h3 className="text-base font-bold text-[#1D2939]">{s.employee.name}</h3>
                   <p className="text-xs text-[#667085]">Cycle Day {s.employee.cycleStartDay} · {s.cycleStartDate} → {s.cycleEndDate}</p>
-                  <p className="mt-0.5 text-[11px] font-medium text-[#465FFF]">{s.totalDays} days − {s.sundaysCount} Sundays = {s.workingDays} working days</p>
+                  <p className="mt-0.5 text-[11px] font-medium text-[#465FFF]">{s.totalDays} cycle days; {s.workingDays} scheduled working days (weekly offs and holidays excluded)</p>
                 </div>
                 <button type="button" disabled={busy} onClick={() => void downloadExcel(s.employee.id)} className="inline-flex items-center gap-1 rounded-lg border border-[#E4E7EC] px-3 py-1.5 text-xs font-semibold text-[#465FFF] hover:bg-[#ECF3FF]">
                   <Download className="size-3.5" /> Excel

@@ -151,7 +151,7 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
       setGpsError('')
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          const next = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracyM: Math.round(pos.coords.accuracy || 0) }
+          const next = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracyM: pos.coords.accuracy }
           setGps(next)
           setGpsState('ready')
           resolve(next)

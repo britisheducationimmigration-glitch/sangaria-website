@@ -1,5 +1,9 @@
 # Attendance operations
 
+## Resumed verification — 16 November 2026
+
+Work resumed on the same preview branch. Exact UTF-8 upload repair restored GitHub CI and Vercel builds. Calculation/server suites and an isolated MySQL 8 integration run passed; HTTP smoke checks passed locally. See [the verification report](docs/ATTENDANCE-TEST-REPORT.md) for scenarios, test boundaries and remaining physical-device/hosting checks, and [the source audit](docs/SITE-AUDIT.md) for site-wide findings. The pause checkpoint below is historical.
+
 ## Pause checkpoint — 14 November 2026
 
 Work is paused at the user's request. Resume on Monday, 16 November, only when the user returns. Branch: `preview/admin-theme-attendance-20261114`; never merge/push `main` without explicit instruction.

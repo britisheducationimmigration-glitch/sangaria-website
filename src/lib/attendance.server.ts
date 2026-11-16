@@ -267,7 +267,8 @@ export function verifyAttendanceLocation(params: {
     throw new Error('Could not read a real GPS coordinate. Turn on device location and retry.')
   }
 
-  const safeAccuracy = Math.max(0, Math.round(Number.isFinite(accuracyM) ? accuracyM : 9999))
+  if (!Number.isFinite(accuracyM) || accuracyM <= 0) throw new Error('Valid positive GPS accuracy is required')
+  const safeAccuracy = Math.max(1, Math.round(accuracyM))
   if (safeAccuracy > settings.maxAccuracyM) {
     throw new Error(`GPS accuracy is too weak (${safeAccuracy}m). Enable Precise Location and try again.`)
   }

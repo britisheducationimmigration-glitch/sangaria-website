@@ -1,9 +1,23 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import mysql from 'mysql2/promise'
+import { inflateRawSync } from 'node:zlib'
 import { attendanceRuntime } from './attendance-runtime.mjs'
 
 const uri = process.env.TEST_DATABASE_URL
+function workbookEntries(base64) {
+  const zip=Buffer.from(base64,'base64'), files=new Map()
+  for(let offset=0;offset+30<zip.length && zip.readUInt32LE(offset)===0x04034b50;) {
+    const method=zip.readUInt16LE(offset+8), size=zip.readUInt32LE(offset+18)
+    const nameLength=zip.readUInt16LE(offset+26), extra=zip.readUInt16LE(offset+28)
+    const start=offset+30+nameLength+extra
+    const name=zip.subarray(offset+30,offset+30+nameLength).toString('utf8')
+    const data=zip.subarray(start,start+size)
+    files.set(name,(method===8?inflateRawSync(data):data).toString('utf8'))
+    offset=start+size
+  }
+  return files
+}
 test('actual MySQL schema, punches, concurrency, corrections and frozen reports', { skip: !uri, timeout: 120000 }, async t => {
   // This suite never accepts DATABASE_URL and cannot connect to a production-named DB.
   const url = new URL(uri)
@@ -66,6 +80,14 @@ test('actual MySQL schema, punches, concurrency, corrections and frozen reports'
     const [events]=await pool.query('SELECT * FROM attendance_punch_events')
     assert.equal(original.length,1);assert.equal(events.length,4)
   })
+  await t.test('audit failure rolls back attendance mutation in the same transaction', async () => {
+    await pool.query("CREATE TRIGGER attendance_test_reject_history BEFORE INSERT ON attendance_edit_history FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Test audit failure'")
+    try {
+      await assert.rejects(manual({mode:'edit',workDate:'2026-11-16',checkInTime:'09:30',checkOutTime:'19:30',editNote:'Must roll back'}),/Test audit failure/)
+    } finally { await pool.query('DROP TRIGGER attendance_test_reject_history') }
+    const [rows]=await pool.query('SELECT work_minutes FROM attendance_logs WHERE employee_id=? AND work_date=?',[employee.id,'2026-11-16'])
+    assert.equal(rows[0].work_minutes,480)
+  })
   await t.test('finalized reports freeze payroll, block edits and export XLSX/CSV', async () => {
     await manual({})
     await api.finalizeAttendanceCycle({data:{month:'2026-10',employeeId:employee.id}})
@@ -76,17 +98,49 @@ test('actual MySQL schema, punches, concurrency, corrections and frozen reports'
     assert.equal(before.earnedSalary,after.earnedSalary)
     const excel=await api.exportAttendanceExcel({data:{month:'2026-10',employeeId:employee.id}})
     assert.equal(Buffer.from(excel.base64,'base64').subarray(0,2).toString(),'PK')
+    const workbook=workbookEntries(excel.base64)
+    const manifest=workbook.get('xl/workbook.xml')
+    for(const name of ['Salary &amp; Cycle Summary','Daily Logs &amp; GPS','Break Details','Correction History','Original Punch Evidence']) assert.ok(manifest.includes(name),name)
+    const summaryXml=workbook.get('xl/worksheets/sheet1.xml')
+    assert.ok(summaryXml.includes('Integration Test'))
+    assert.ok(summaryXml.includes(`<v>${before.earnedSalary}</v>`))
+    assert.ok(summaryXml.includes('<v>25000</v>'))
     const csv=await api.exportAttendanceCsv({data:{month:'2026-10',employeeId:employee.id}})
     assert.ok(Buffer.from(csv.base64,'base64').toString().includes('Integration Test'))
+  })
+  await t.test('simultaneous correction and finalization preserve one consistent report', async () => {
+    await manual({workDate:'2026-09-07'})
+    const results=await Promise.allSettled([
+      manual({mode:'edit',workDate:'2026-09-07',checkOutTime:'19:00',editNote:'Concurrent correction'}),
+      api.finalizeAttendanceCycle({data:{month:'2026-09',employeeId:employee.id}}),
+    ])
+    assert.equal(results[1].status,'fulfilled')
+    const [snapshots]=await pool.query('SELECT snapshot_json FROM attendance_cycle_snapshots WHERE employee_id=? AND selected_month=?',[employee.id,'2026-09'])
+    const saved=JSON.parse(snapshots[0].snapshot_json)
+    const [logs]=await pool.query('SELECT work_minutes FROM attendance_logs WHERE employee_id=? AND work_date=?',[employee.id,'2026-09-07'])
+    assert.equal(saved.logs[0].workMinutes,logs[0].work_minutes)
+    await assert.rejects(manual({mode:'edit',workDate:'2026-09-07',editNote:'Locked now'}),/finalized/)
+  })
+  await t.test('an existing migrated schema restarts without erasing records', async () => {
+    const second=await attendanceRuntime(pool)
+    await second.server.ensureAttendanceSchema()
+    const report=await second.api.getAdminAttendanceSnapshot({data:{month:'2026-10'}})
+    assert.equal(report.employees.length,1)
+    assert.ok(report.summaries[0].earnedSalary>0)
   })
   await t.test('overnight OUT works and archive keeps history while revoking link', async () => {
     state.now='2026-11-17T16:30:00Z';await punch('in')
     state.now='2026-11-18T00:30:00Z';await punch('out')
     const [rows]=await pool.query('SELECT work_minutes FROM attendance_logs WHERE employee_id=? AND work_date=?',[employee.id,'2026-11-17'])
     assert.equal(rows[0].work_minutes,480)
+    await api.resetEmployeeDevice({data:{id:employee.id}})
+    const oldToken=employee.accessToken
+    const replacement=await api.regenerateEmployeeToken({data:{id:employee.id}})
+    employee.accessToken=replacement.accessToken
+    await assert.rejects(api.getEmployeePortalData({data:{token:oldToken}}),/not found/)
     await api.deleteEmployee({data:{id:employee.id}})
     await assert.rejects(api.getEmployeePortalData({data:{token:employee.accessToken}}),/not found|deactivated/)
     const [logs]=await pool.query('SELECT id FROM attendance_logs WHERE employee_id=?',[employee.id])
-    assert.equal(logs.length,3)
+    assert.equal(logs.length,4)
   })
 })

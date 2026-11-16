@@ -4,5 +4,6 @@ Allow: /
 Disallow: /admin
 Disallow: /admin/
 Disallow: /api/
+Disallow: /attendance/
 
 Sitemap: https://www.britisheducationandimmigration.com/sitemap.xml

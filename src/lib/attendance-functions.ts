@@ -166,6 +166,7 @@ export const markEmployeeAttendance = createServerFn({ method: 'POST' })
     const note = stringValue(input.note, 160)
     const deviceKey = stringValue(input.deviceKey, 120)
     const photoBase64 = typeof input.photoBase64 === 'string' ? input.photoBase64.trim() : ''
+    if (typeof input.lat !== 'number' || typeof input.lng !== 'number' || typeof input.accuracyM !== 'number') throw new Error('Valid GPS coordinates and accuracy are required')
     const lat = Number(input.lat)
     const lng = Number(input.lng)
     const accuracyM = Number(input.accuracyM)
@@ -651,7 +652,7 @@ export const exportAttendanceExcel = createServerFn({ method: 'GET' })
     const summaryRows = summaries.map((s) => [
       s.employee.name, s.employee.designation || '-', `Day ${s.employee.cycleStartDay}`, `${s.cycleStartDate} to ${s.cycleEndDate}`,
       s.totalDays, s.sundaysCount, s.workingDays, s.presentDays, s.halfDays, s.leaveDays, s.absentDays,
-      s.payableDays, s.employee.monthlySalary, s.perDaySalary, s.earnedSalary, s.lateCount, s.flaggedCount, fmtHrs(s.totalWorkMinutes),
+      s.payableDays, s.employee.monthlySalary, s.perDaySalary, s.earnedSalary, s.lateCount, s.flaggedCount, fmtHrs(s.totalWorkMinutes), fmtHrs(s.offDayWorkMinutes ?? 0),
     ])
 
     const filteredLogs = logs.filter((log) => {
@@ -679,12 +680,12 @@ export const exportAttendanceExcel = createServerFn({ method: 'GET' })
         {
           name: 'Salary & Cycle Summary',
           rows: [
-            ['Employee', 'Role', 'Cycle Day', 'Cycle Period', 'Cycle Days', 'Sundays', 'Working Days', 'Present', 'Half Day', 'Leave', 'Absent', 'Payable Days', 'Monthly Salary (INR)', 'Per Working Day (INR)', 'Calculated Salary (INR)', 'Late', 'Flags', 'Total Hours'],
+            ['Employee', 'Role', 'Cycle Day', 'Cycle Period', 'Cycle Days', 'Sundays', 'Working Days', 'Present', 'Half Day', 'Leave', 'Absent', 'Payable Days', 'Monthly Salary (INR)', 'Per Working Day (INR)', 'Calculated Salary (INR)', 'Late', 'Flags', 'Total Hours', 'Off-day Hours (separate)'],
             ...summaryRows,
           ],
           widths: [20, 16, 10, 24, 11, 10, 12, 10, 10, 10, 10, 12, 18, 18, 20, 8, 8, 12],
           headerRows: [1],
-          filter: `A1:R${Math.max(1, summaryRows.length + 1)}`,
+          filter: `A1:S${Math.max(1, summaryRows.length + 1)}`,
         },
         {
           name: 'Daily Logs & GPS',
@@ -761,7 +762,7 @@ export const exportAttendanceCsv = createServerFn({ method: 'GET' })
   .handler(async ({ data }) => {
     const snapshot = await getAdminAttendanceSnapshot({ data: { month: data.month } })
     const summaries = snapshot.summaries.filter((summary) => !data.employeeId || summary.employee.id === data.employeeId)
-    const rows: unknown[][] = [['Employee', 'Cycle Start', 'Cycle End', 'Present', 'Half Day', 'Leave', 'Absent', 'Missing OUT', 'Payable Days', 'Monthly Salary INR', 'Calculated Salary INR', 'Work Minutes']]
-    for (const summary of summaries) rows.push([summary.employee.name, summary.cycleStartDate, summary.cycleEndDate, summary.presentDays, summary.halfDays, summary.leaveDays, summary.absentDays, summary.missedCheckOutCount, summary.payableDays, summary.employee.monthlySalary, summary.earnedSalary, summary.totalWorkMinutes])
+    const rows: unknown[][] = [['Employee', 'Cycle Start', 'Cycle End', 'Present', 'Half Day', 'Leave', 'Absent', 'Missing OUT', 'Payable Days', 'Monthly Salary INR', 'Calculated Salary INR', 'Work Minutes', 'Off-day Work Minutes (separate)']]
+    for (const summary of summaries) rows.push([summary.employee.name, summary.cycleStartDate, summary.cycleEndDate, summary.presentDays, summary.halfDays, summary.leaveDays, summary.absentDays, summary.missedCheckOutCount, summary.payableDays, summary.employee.monthlySalary, summary.earnedSalary, summary.totalWorkMinutes, summary.offDayWorkMinutes ?? 0])
     return { filename: `bei-attendance-salary-${data.month}.csv`, base64: Buffer.from(csvText(rows), 'utf8').toString('base64') }
   })
