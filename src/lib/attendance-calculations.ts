@@ -2,6 +2,14 @@ import type { AttendanceBreakRecord, AttendanceLogRecord, EmployeeCycleSummary, 
 
 export type EmployeePolicyHistory = { employeeId: number; effectiveDate: string; policy: Partial<EmployeeRecord> }
 
+export function classifyShift(minutes: number, employee: Pick<EmployeeRecord, 'halfDayMinutes' | 'minimumHalfDayMinutes'>, halfOut = false) {
+  const full = employee.halfDayMinutes ?? 300
+  const half = employee.minimumHalfDayMinutes ?? 0
+  if (minutes > 0 && !halfOut && minutes >= full) return 'Present' as const
+  if (half > 0 && minutes >= half) return 'Half Day' as const
+  return 'Review Required' as const
+}
+
 export function getEmployeeCycleRange(selectedMonth: string, cycleStartDay: number) {
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(selectedMonth)) throw new Error('Invalid report month')
   const [year, month] = selectedMonth.split('-').map(Number)
@@ -62,12 +70,14 @@ export function buildEmployeeCycleSummaries(employees: EmployeeRecord[], logs: A
       if (!log) { if (date < todayIst) absentDays++; continue }
       if (log.status === 'Absent' || log.status === 'Leave' || log.status === 'Unpaid Leave') { absentDays++; continue }
       const complete = Boolean(log.checkInAt && log.checkOutAt) && (!log.outFlags.includes('AUTO_CHECKOUT_10PM') || log.outFlags.includes('ADMIN_REVIEW_APPROVED'))
-      const fraction = log.status === 'Paid Leave' ? 1 : complete ? log.status === 'Half Day' ? 0.5 : log.status === 'Present' ? 1 : 0 : 0
+      const approved = log.outFlags.includes('ADMIN_REVIEW_APPROVED')
+      const halfEligible = approved || ((policy.minimumHalfDayMinutes ?? 0) > 0 && log.workMinutes >= policy.minimumHalfDayMinutes!)
+      const fraction = log.status === 'Paid Leave' ? 1 : complete ? log.status === 'Half Day' && halfEligible ? 0.5 : log.status === 'Present' ? 1 : 0 : 0
       payableDays += fraction
       earnedSalary += workingDays ? salary * fraction / workingDays : 0
     }
     for (const log of empLogs) if (!scheduled.has(log.workDate)) offDayWorkMinutes += log.workMinutes || 0
-    const completeLogs = empLogs.filter(l => l.checkInAt && l.checkOutAt && (!l.outFlags.includes('AUTO_CHECKOUT_10PM') || l.outFlags.includes('ADMIN_REVIEW_APPROVED')) && eligible(l.workDate, resolveEmployeePolicy(employee, policies, l.workDate)))
+    const completeLogs = empLogs.filter(l => l.workDate <= todayIst && l.checkInAt && l.checkOutAt && (!l.outFlags.includes('AUTO_CHECKOUT_10PM') || l.outFlags.includes('ADMIN_REVIEW_APPROVED')) && eligible(l.workDate, resolveEmployeePolicy(employee, policies, l.workDate)))
     return {
       employee, cycleStartDate: startDate, cycleEndDate: endDate, totalDays,
       sundaysCount: countSundaysInRange(startDate, endDate), workingDays,
@@ -78,6 +88,7 @@ export function buildEmployeeCycleSummaries(employees: EmployeeRecord[], logs: A
       earnedSalary: Math.round(earnedSalary), lateCount: empLogs.filter(l => l.isLate).length,
       flaggedCount: empLogs.filter(l => l.inFlags.length || l.outFlags.length).length,
       missedCheckOutCount: empLogs.filter(l => l.checkInAt && !l.checkOutAt && l.workDate < todayIst).length,
+      reviewRequiredCount: empLogs.filter(l => l.status === 'Review Required' || (l.status === 'Half Day' && !l.outFlags.includes('ADMIN_REVIEW_APPROVED') && ((resolveEmployeePolicy(employee, policies, l.workDate).minimumHalfDayMinutes ?? 0) <= 0 || l.workMinutes < (resolveEmployeePolicy(employee, policies, l.workDate).minimumHalfDayMinutes ?? 0)))).length,
       totalWorkMinutes: completeLogs.reduce((sum, l) => sum + (l.workMinutes || 0), 0), offDayWorkMinutes,
     }
   })

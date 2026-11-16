@@ -32,7 +32,10 @@ async function ensureColumn(poolInstance: Pool, table: string, column: string, d
     'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ? LIMIT 1',
     [table, column],
   )
-  if (rows.length === 0) await poolInstance.query(`ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${definition}`)
+  if (rows.length === 0) {
+    try { await poolInstance.query(`ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${definition}`) }
+    catch (error) { if ((error as { code?: string }).code !== 'ER_DUP_FIELDNAME') throw error }
+  }
 }
 
 async function seed(poolInstance: Pool) {
@@ -122,18 +125,11 @@ export async function getDb() {
 
   if (!schemaPromise) {
     schemaPromise = (async () => {
-      // Check if DB is already created to avoid 20 redundant queries on cold start
-      try {
-        const [tables] = await poolInstance.query<DbRow[]>(
-          "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'site_settings' LIMIT 1"
-        )
-        if (tables.length > 0) {
-          schemaInitialized = true
-          return poolInstance
-        }
-      } catch {
-        // Fallback to table creation if schema check fails
-      }
+      // Bump the version for subsequent general schema migrations.
+      await poolInstance.query('CREATE TABLE IF NOT EXISTS app_schema_migrations (version INT NOT NULL PRIMARY KEY, applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)')
+      const [versions] = await poolInstance.query<DbRow[]>('SELECT version FROM app_schema_migrations WHERE version = 1')
+      if (versions.length) { schemaInitialized = true; return poolInstance }
+      const [existing] = await poolInstance.query<DbRow[]>("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'site_settings'")
 
       await poolInstance.query(`
         CREATE TABLE IF NOT EXISTS site_settings (
@@ -284,7 +280,9 @@ export async function getDb() {
         )
       `)
       await ensureColumn(poolInstance, 'admin_users', 'password_hash', "VARCHAR(255) NOT NULL DEFAULT ''")
-      await seed(poolInstance)
+      if (existing.length === 0) await seed(poolInstance)
+      else await poolInstance.query('INSERT IGNORE INTO site_settings (id) VALUES (1)')
+      await poolInstance.query('INSERT IGNORE INTO app_schema_migrations (version) VALUES (1)')
       schemaInitialized = true
       return poolInstance
     })().catch((error) => {
@@ -307,6 +305,21 @@ export async function execute(sql: string, values: Array<string | number | boole
   if (!database) throw new Error('Database is not configured')
   const [result] = await database.execute<ResultSetHeader>(sql, values)
   return result
+}
+
+export async function databaseTransaction<T>(action: (connection: mysql.PoolConnection) => Promise<T>): Promise<T> {
+  const database = await getDb()
+  if (!database) throw new Error('Database is not configured')
+  const connection = await database.getConnection()
+  try {
+    await connection.beginTransaction()
+    const result = await action(connection)
+    await connection.commit()
+    return result
+  } catch (error) {
+    await connection.rollback()
+    throw error
+  } finally { connection.release() }
 }
 
 export function jsonArray(value: unknown) {

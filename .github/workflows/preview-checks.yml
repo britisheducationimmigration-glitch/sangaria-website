@@ -13,6 +13,7 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: attendance-ci-root-only
+          MYSQL_ROOT_HOST: '%'
           MYSQL_DATABASE: attendance_test
           MYSQL_USER: attendance_test
           MYSQL_PASSWORD: attendance-ci-test-only
@@ -33,8 +34,20 @@ jobs:
       - run: pnpm run typecheck
       - run: pnpm run test:attendance
       - run: pnpm run test:attendance:server
+      - run: pnpm run test:site
+      - run: pnpm run test:database:migration
+        env:
+          TEST_DATABASE_URL: mysql://attendance_test:attendance-ci-test-only@127.0.0.1:3306/attendance_test
+      - run: pnpm run test:database:backup
+        env:
+          TEST_ADMIN_DATABASE_URL: mysql://root:attendance-ci-root-only@127.0.0.1:3306/attendance_test
       - run: pnpm run test:attendance:mysql
         env:
           TEST_DATABASE_URL: mysql://attendance_test:attendance-ci-test-only@127.0.0.1:3306/attendance_test
       - run: pnpm run build
+      - run: pnpm run audit:source
+      - uses: actions/upload-artifact@v4
+        with:
+          name: source-audit
+          path: docs/AUDIT-*.csv
       - run: pnpm run test:http

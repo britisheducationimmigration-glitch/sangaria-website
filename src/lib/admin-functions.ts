@@ -1,5 +1,5 @@
 import { createMiddleware, createServerFn } from '@tanstack/react-start'
-import { execute, jsonArray, queryRows } from './db.server'
+import { databaseTransaction, execute, jsonArray, queryRows } from './db.server'
 import type { AdminCertificate, AdminPost, AdminRole, AdminSnapshot, AdminStory, CoachingBatch, Enquiry, EnquiryActivity, EnquiryStatus } from './content-types'
 import { Buffer } from 'node:buffer'
 import { asFaqList, asTrustStatList, readSiteSettings } from './site-settings'
@@ -484,8 +484,10 @@ export const deleteEnquiryActivity = createServerFn({ method: 'POST' }).middlewa
 
 export const deleteEnquiry = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => ({ id: numberValue((data as Record<string, unknown>)?.id) })).handler(async ({ data, context }) => {
   if (context.role !== 'super_admin') throw new Error('Only a super admin can delete enquiries')
-  await execute('DELETE FROM enquiry_activities WHERE enquiry_id = ?', [data.id])
-  await execute('DELETE FROM enquiries WHERE id = ?', [data.id])
+  await databaseTransaction(async connection => {
+    await connection.execute('DELETE FROM enquiry_activities WHERE enquiry_id = ?', [data.id])
+    await connection.execute('DELETE FROM enquiries WHERE id = ?', [data.id])
+  })
   return { ok: true }
 })
 

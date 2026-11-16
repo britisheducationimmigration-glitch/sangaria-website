@@ -5,7 +5,6 @@ import { execute, queryRows } from './db.server'
 import { attendanceTransaction, csvText, ensureAttendanceReliabilitySchema } from './attendance-reliability.server'
 import { checkRateLimit } from './rate-limit.server'
 import {
-  autoCloseOpenCheckIns,
   buildEmployeeCycleSummaries,
   currentIstMonth,
   ensureAttendanceSchema,
@@ -21,6 +20,7 @@ import {
   readEmployeePolicies,
   resolveEmployeePolicy,
   calculateWorkMinutes,
+  classifyShift,
   readAttendanceSettings,
   todayIstDate,
   verifyAttendanceLocation,
@@ -57,8 +57,8 @@ function portalLog(log: AttendanceLogRecord | null) {
 }
 
 function payrollPolicy(employee: EmployeeRecord) {
-  const { cycleStartDay, monthlySalary, expectedInTime, expectedOutTime, joiningDate, leavingDate, halfDayMinutes, lateGraceMinutes, weeklyOffDays, holidayDates } = employee
-  return { cycleStartDay, monthlySalary, expectedInTime, expectedOutTime, joiningDate, leavingDate, halfDayMinutes, lateGraceMinutes, weeklyOffDays, holidayDates }
+  const { cycleStartDay, monthlySalary, expectedInTime, expectedOutTime, joiningDate, leavingDate, halfDayMinutes, minimumHalfDayMinutes = 0, lateGraceMinutes, weeklyOffDays, holidayDates } = employee
+  return { cycleStartDay, monthlySalary, expectedInTime, expectedOutTime, joiningDate, leavingDate, halfDayMinutes, minimumHalfDayMinutes, lateGraceMinutes, weeklyOffDays, holidayDates }
 }
 
 function stringValue(value: unknown, max = 500) {
@@ -95,11 +95,11 @@ export const getEmployeePortalData = createServerFn({ method: 'GET' })
     return { token }
   })
   .handler(async ({ data }) => {
-    await autoCloseOpenCheckIns()
+    await ensureAttendanceSchema()
     await ensureAttendanceReliabilitySchema()
     const empRows = await queryRows('SELECT * FROM employees WHERE access_token = ? LIMIT 1', [data.token])
     if (empRows.length === 0) throw new Error('Attendance link not found')
-    const policies = await readEmployeePolicies()
+    const policies = await readEmployeePolicies(Number(empRows[0].id))
     const employee = resolveEmployeePolicy(mapEmployeeRow(empRows[0]), policies, todayIstDate())
     if (!employee.active) throw new Error('This employee attendance link has been deactivated. Contact admin.')
 
@@ -308,9 +308,8 @@ export const markEmployeeAttendance = createServerFn({ method: 'POST' })
         return sum + Math.max(0, Math.round((new Date(br.inAt).getTime() - new Date(br.outAt).getTime()) / 60_000))
       }, 0)
         const workMinutes = calculateWorkMinutes(new Date(String(existing.check_in_at)), now, breaks)
-      const isHalfDay = data.action === 'half_out' || workMinutes < (employee.halfDayMinutes ?? 300)
-      const finalFlags = isHalfDay ? [...loc.flags, 'HALF_DAY_OUT'] : loc.flags
-      const finalStatus: AttendanceStatus = isHalfDay ? 'Half Day' : 'Present'
+      const finalStatus: AttendanceStatus = classifyShift(workMinutes, employee, data.action === 'half_out')
+      const finalFlags = finalStatus === 'Review Required' ? [...loc.flags, 'INSUFFICIENT_HOURS_REVIEW_REQUIRED'] : finalStatus === 'Half Day' ? [...loc.flags, 'HALF_DAY_OUT'] : loc.flags
       await execute(
         `UPDATE attendance_logs SET check_out_at = ?, out_lat = ?, out_lng = ?, out_accuracy_m = ?, out_distance_m = ?,
          out_ip = ?, out_ip_city = ?, out_ip_country = ?, out_flags_json = ?, out_photo_data = ?, media_version = ?,
@@ -333,14 +332,14 @@ export const getAdminAttendanceSnapshot = createServerFn({ method: 'GET' })
   .middleware([superAdminMiddleware])
   .validator((data: unknown) => {
     const rawMonth = stringValue((data as Record<string, unknown>)?.month, 7)
-    return { selectedMonth: /^\d{4}-(?:0[1-9]|1[0-2])$/.test(rawMonth) ? rawMonth : currentIstMonth() }
+    return { selectedMonth: /^\d{4}-(?:0[1-9]|1[0-2])$/.test(rawMonth) ? rawMonth : currentIstMonth(), lightweight: Boolean((data as Record<string, unknown>)?.lightweight) }
   })
   .handler(async ({ data }): Promise<AdminAttendanceSnapshot & { currentRequestIp: string }> => {
-    await autoCloseOpenCheckIns()
+    await ensureAttendanceSchema()
     await ensureAttendanceReliabilitySchema()
     const [year, month] = data.selectedMonth.split('-').map(Number)
-    const rangeStart = new Date(Date.UTC(year, month - 2, 1)).toISOString().slice(0, 10)
-    const rangeEnd = new Date(Date.UTC(year, month + 1, 28)).toISOString().slice(0, 10)
+    const rangeStart = new Date(Date.UTC(year, month - 1, 1)).toISOString().slice(0, 10)
+    const rangeEnd = new Date(Date.UTC(year, month + 1, 0)).toISOString().slice(0, 10)
 
     const [settings, empRows, logRows] = await Promise.all([
       readAttendanceSettings(),
@@ -349,7 +348,7 @@ export const getAdminAttendanceSnapshot = createServerFn({ method: 'GET' })
     ])
 
     const logIds = logRows.map((r) => Number(r.id))
-    const historyRows = logIds.length
+    const historyRows = !data.lightweight && logIds.length
       ? await queryRows(`SELECT * FROM attendance_edit_history WHERE attendance_log_id IN (${logIds.map(() => '?').join(',')}) ORDER BY created_at DESC, id DESC`, logIds)
       : []
 
@@ -364,12 +363,27 @@ export const getAdminAttendanceSnapshot = createServerFn({ method: 'GET' })
     const employees = empRows.map(mapEmployeeRow)
     const logs = logRows.map((r) => mapAttendanceRow(r, historyByLog.get(Number(r.id)) ?? []))
     const todayIst = todayIstDate()
-    let summaries = buildEmployeeCycleSummaries(employees, logs, data.selectedMonth, todayIst, await readEmployeePolicies())
+    let summaries = buildEmployeeCycleSummaries(employees, logs, data.selectedMonth, todayIst, await readEmployeePolicies(undefined, rangeStart, rangeEnd))
     summaries = await applyFinalizedSummaries(summaries, data.selectedMonth)
     const headers = readHeadersFromRequest()
     const currentRequestIp = (headers.get('x-real-ip') || (headers.get('x-forwarded-for') ?? '').split(',')[0] || '').trim()
 
     return { settings, employees, logs, summaries, selectedMonth: data.selectedMonth, todayIst, currentRequestIp }
+  })
+
+export const getAttendanceRecordHistory = createServerFn({ method: 'GET' })
+  .middleware([superAdminMiddleware])
+  .validator((data: unknown) => {
+    const input = (data ?? {}) as Record<string, unknown>
+    const employeeId = Math.floor(numberValue(input.employeeId, 0))
+    const workDate = stringValue(input.workDate, 10)
+    if (employeeId <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(workDate)) throw new Error('Valid attendance record is required')
+    return { employeeId, workDate }
+  })
+  .handler(async ({ data }) => {
+    await ensureAttendanceSchema()
+    const rows = await queryRows('SELECT * FROM attendance_edit_history WHERE employee_id = ? AND work_date = ? ORDER BY created_at DESC, id DESC', [data.employeeId, data.workDate])
+    return rows.map(mapEditHistoryRow)
   })
 
 export const saveEmployee = createServerFn({ method: 'POST' })
@@ -393,6 +407,8 @@ export const saveEmployee = createServerFn({ method: 'POST' })
     const joiningDate = stringValue(input.joiningDate, 10)
     const leavingDate = stringValue(input.leavingDate, 10)
     const halfDayMinutes = Math.max(1, Math.min(1440, Math.round(numberValue(input.halfDayMinutes, 300))))
+    const minimumHalfDayMinutes = Math.max(0, Math.min(halfDayMinutes, Math.round(numberValue(input.minimumHalfDayMinutes, 0))))
+    const policyReason = stringValue(input.policyReason, 500)
     const lateGraceMinutes = Math.max(0, Math.min(240, Math.round(numberValue(input.lateGraceMinutes, 0))))
     const weeklyOffDays = Array.isArray(input.weeklyOffDays) ? [...new Set(input.weeklyOffDays.map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n <= 6))] : [0]
     const holidayDates = Array.isArray(input.holidayDates) ? input.holidayDates.map(String).filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date)) : []
@@ -404,9 +420,9 @@ export const saveEmployee = createServerFn({ method: 'POST' })
     if (!name) throw new Error('Employee name is required')
     if (pin && !/^\d{4,8}$/.test(pin)) throw new Error('Employee PIN must be 4 to 8 digits')
     if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(expectedInTime) || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(expectedOutTime)) throw new Error('Shift times must be HH:MM')
-    return { id, name, designation, phone, email, pin, clearPin, cycleStartDay, monthlySalary, expectedInTime, expectedOutTime, officeOnly, active, effectiveDate, joiningDate, leavingDate, halfDayMinutes, lateGraceMinutes, weeklyOffDays, holidayDates }
+    return { id, name, designation, phone, email, pin, clearPin, cycleStartDay, monthlySalary, expectedInTime, expectedOutTime, officeOnly, active, effectiveDate, joiningDate, leavingDate, halfDayMinutes, minimumHalfDayMinutes, lateGraceMinutes, weeklyOffDays, holidayDates, policyReason }
   })
-  .handler(async ({ data }): Promise<EmployeeRecord> => {
+  .handler(async ({ data, context }): Promise<EmployeeRecord> => {
     await ensureAttendanceSchema()
     return attendanceTransaction(async ({ queryRows, execute }) => {
     if (data.id > 0) {
@@ -416,7 +432,13 @@ export const saveEmployee = createServerFn({ method: 'POST' })
         const attendance = await queryRows('SELECT id FROM attendance_logs WHERE employee_id = ? LIMIT 1', [data.id])
         if (attendance.length) throw new Error('Cycle start day cannot change after attendance exists. Archive this profile and create a new employment profile for a new cycle.')
       }
-      const policies = await queryRows('SELECT id FROM employee_policy_history WHERE employee_id = ? LIMIT 1', [data.id])
+      const policies = await queryRows('SELECT employee_id, effective_date, policy_json FROM employee_policy_history WHERE employee_id = ?', [data.id])
+      const beforePolicy = payrollPolicy(resolveEmployeePolicy(mapEmployeeRow(previous[0]), policies.map(row => ({ employeeId: Number(row.employee_id), effectiveDate: String(row.effective_date), policy: JSON.parse(String(row.policy_json)) })), data.effectiveDate))
+      const afterPolicy = payrollPolicy({ ...mapEmployeeRow(previous[0]), ...data })
+      if (JSON.stringify(beforePolicy) !== JSON.stringify(afterPolicy)) {
+        if (!data.policyReason) throw new Error('Enter a reason for changing payroll policy')
+        await execute('INSERT INTO employee_policy_audit (employee_id, effective_date, actor_email, reason, before_json, after_json) VALUES (?, ?, ?, ?, ?, ?)', [data.id, data.effectiveDate, context.user.email, data.policyReason, JSON.stringify(beforePolicy), JSON.stringify(afterPolicy)])
+      }
       if (!policies.length) {
         await execute('INSERT INTO employee_policy_history (employee_id, effective_date, policy_json) VALUES (?, ?, ?)', [data.id, '1900-01-01', JSON.stringify(payrollPolicy(mapEmployeeRow(previous[0])))])
       }
@@ -429,8 +451,8 @@ export const saveEmployee = createServerFn({ method: 'POST' })
       } else {
         await execute(`UPDATE employees SET name = ?, designation = ?, phone = ?, email = ?, cycle_start_day = ?, monthly_salary = ?, expected_in_time = ?, expected_out_time = ?, office_only = ?, active = ? WHERE id = ?`, [...common, ...tail])
       }
-      await execute('INSERT INTO employee_policy_history (employee_id, effective_date, policy_json) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE policy_json = VALUES(policy_json)', [data.id, data.effectiveDate, JSON.stringify({ cycleStartDay: data.cycleStartDay, monthlySalary: data.monthlySalary, expectedInTime: data.expectedInTime, expectedOutTime: data.expectedOutTime, joiningDate: data.joiningDate, leavingDate: data.leavingDate, halfDayMinutes: data.halfDayMinutes, lateGraceMinutes: data.lateGraceMinutes, weeklyOffDays: data.weeklyOffDays, holidayDates: data.holidayDates })])
-      await execute('UPDATE employees SET joining_date = ?, leaving_date = ?, half_day_minutes = ?, late_grace_minutes = ?, weekly_off_days_json = ?, holiday_dates_json = ? WHERE id = ?', [data.joiningDate || '', data.leavingDate || '', data.halfDayMinutes, data.lateGraceMinutes, JSON.stringify(data.weeklyOffDays), JSON.stringify(data.holidayDates), data.id])
+      await execute('INSERT INTO employee_policy_history (employee_id, effective_date, policy_json) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE policy_json = VALUES(policy_json)', [data.id, data.effectiveDate, JSON.stringify({ cycleStartDay: data.cycleStartDay, monthlySalary: data.monthlySalary, expectedInTime: data.expectedInTime, expectedOutTime: data.expectedOutTime, joiningDate: data.joiningDate, leavingDate: data.leavingDate, halfDayMinutes: data.halfDayMinutes, minimumHalfDayMinutes: data.minimumHalfDayMinutes, lateGraceMinutes: data.lateGraceMinutes, weeklyOffDays: data.weeklyOffDays, holidayDates: data.holidayDates })])
+      await execute('UPDATE employees SET joining_date = ?, leaving_date = ?, half_day_minutes = ?, minimum_half_day_minutes = ?, late_grace_minutes = ?, weekly_off_days_json = ?, holiday_dates_json = ? WHERE id = ?', [data.joiningDate || '', data.leavingDate || '', data.halfDayMinutes, data.minimumHalfDayMinutes, data.lateGraceMinutes, JSON.stringify(data.weeklyOffDays), JSON.stringify(data.holidayDates), data.id])
       const rows = await queryRows('SELECT * FROM employees WHERE id = ? LIMIT 1', [data.id])
       if (!rows.length) throw new Error('Employee not found')
       return mapEmployeeRow(rows[0])
@@ -444,8 +466,8 @@ export const saveEmployee = createServerFn({ method: 'POST' })
       [data.name, data.designation, data.phone, data.email, token, data.pin ? hashEmployeePin(data.pin) : '', data.cycleStartDay, data.monthlySalary, data.expectedInTime, data.expectedOutTime, data.officeOnly ? 1 : 0, data.active ? 1 : 0],
     )
     data.id = Number(result.insertId)
-      await execute('INSERT INTO employee_policy_history (employee_id, effective_date, policy_json) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE policy_json = VALUES(policy_json)', [data.id, data.effectiveDate, JSON.stringify({ cycleStartDay: data.cycleStartDay, monthlySalary: data.monthlySalary, expectedInTime: data.expectedInTime, expectedOutTime: data.expectedOutTime, joiningDate: data.joiningDate, leavingDate: data.leavingDate, halfDayMinutes: data.halfDayMinutes, lateGraceMinutes: data.lateGraceMinutes, weeklyOffDays: data.weeklyOffDays, holidayDates: data.holidayDates })])
-      await execute('UPDATE employees SET joining_date = ?, leaving_date = ?, half_day_minutes = ?, late_grace_minutes = ?, weekly_off_days_json = ?, holiday_dates_json = ? WHERE id = ?', [data.joiningDate || '', data.leavingDate || '', data.halfDayMinutes, data.lateGraceMinutes, JSON.stringify(data.weeklyOffDays), JSON.stringify(data.holidayDates), data.id])
+      await execute('INSERT INTO employee_policy_history (employee_id, effective_date, policy_json) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE policy_json = VALUES(policy_json)', [data.id, data.effectiveDate, JSON.stringify({ cycleStartDay: data.cycleStartDay, monthlySalary: data.monthlySalary, expectedInTime: data.expectedInTime, expectedOutTime: data.expectedOutTime, joiningDate: data.joiningDate, leavingDate: data.leavingDate, halfDayMinutes: data.halfDayMinutes, minimumHalfDayMinutes: data.minimumHalfDayMinutes, lateGraceMinutes: data.lateGraceMinutes, weeklyOffDays: data.weeklyOffDays, holidayDates: data.holidayDates })])
+      await execute('UPDATE employees SET joining_date = ?, leaving_date = ?, half_day_minutes = ?, minimum_half_day_minutes = ?, late_grace_minutes = ?, weekly_off_days_json = ?, holiday_dates_json = ? WHERE id = ?', [data.joiningDate || '', data.leavingDate || '', data.halfDayMinutes, data.minimumHalfDayMinutes, data.lateGraceMinutes, JSON.stringify(data.weeklyOffDays), JSON.stringify(data.holidayDates), data.id])
 
     const rows = await queryRows('SELECT * FROM employees WHERE id = ? LIMIT 1', [data.id])
     return mapEmployeeRow(rows[0])
@@ -525,7 +547,7 @@ export const updateAttendanceRecord = createServerFn({ method: 'POST' })
 
     if (employeeId <= 0) throw new Error('Employee is required')
     if (!/^\d{4}-\d{2}-\d{2}$/.test(workDate) || !Number.isFinite(new Date(workDate + 'T00:00:00Z').getTime()) || new Date(workDate + 'T00:00:00Z').toISOString().slice(0, 10) !== workDate) throw new Error('Valid date (YYYY-MM-DD) is required')
-    if (!['Present', 'Half Day', 'Leave', 'Paid Leave', 'Unpaid Leave', 'Absent'].includes(status)) throw new Error('Invalid status')
+    if (!['Present', 'Half Day', 'Review Required', 'Leave', 'Paid Leave', 'Unpaid Leave', 'Absent'].includes(status)) throw new Error('Invalid status')
     if (checkInTime && !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(checkInTime)) throw new Error('Check-in time must be HH:MM')
     if (checkOutTime && !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(checkOutTime)) throw new Error('Check-out time must be HH:MM')
     if (checkOutTime && !checkInTime) throw new Error('Check-in time is required when Check-out time is entered')
@@ -546,6 +568,8 @@ export const updateAttendanceRecord = createServerFn({ method: 'POST' })
       throw new Error('Check-out time must be after Check-in time (no overlapping times).')
     }
 
+    if (checkInDate && checkOutDate && checkOutDate.getTime() - checkInDate.getTime() > 86_400_000) throw new Error('A single attendance shift cannot exceed 24 hours')
+
     const employees = await queryRows('SELECT id FROM employees WHERE id = ? FOR UPDATE', [data.employeeId])
     if (!employees.length) throw new Error('Employee not found')
     await assertCycleUnlocked(queryRows, data.employeeId, data.workDate)
@@ -553,7 +577,7 @@ export const updateAttendanceRecord = createServerFn({ method: 'POST' })
     const prev = existingRows[0]
     if (data.mode === 'edit' && !prev) throw new Error('Attendance record no longer exists. Refresh and retry.')
     if (checkInDate) {
-      const overlap = await queryRows('SELECT id FROM attendance_logs WHERE employee_id = ? AND id <> ? AND check_in_at IS NOT NULL AND check_in_at < ? AND (check_out_at IS NULL OR check_out_at > ?) LIMIT 1', [data.employeeId, Number(prev?.id ?? 0), checkOutDate ?? new Date(checkInDate.getTime() + 1), checkInDate])
+      const overlap = await queryRows('SELECT id FROM attendance_logs WHERE employee_id = ? AND id <> ? AND check_in_at IS NOT NULL AND (? IS NULL OR check_in_at < ?) AND (check_out_at IS NULL OR check_out_at > ?) LIMIT 1', [data.employeeId, Number(prev?.id ?? 0), checkOutDate, checkOutDate, checkInDate])
       if (overlap.length) throw new Error('Attendance times overlap another shift for this employee')
     }
     const preservedBreaks = parseBreaksJson(prev?.breaks_json)
@@ -577,13 +601,17 @@ export const updateAttendanceRecord = createServerFn({ method: 'POST' })
       const approvedFlags = [...new Set([...flags.filter((flag) => !checkOutDate || !flag.startsWith('MISSING_OUT')), 'ADMIN_REVIEW_APPROVED'])]
       await execute('UPDATE attendance_logs SET out_flags_json = ? WHERE id = ?', [JSON.stringify(approvedFlags), Number(prev.id)])
       logId = Number(prev.id)
-      const oldIn = prev.check_in_at ? istTimeHHMM(String(prev.check_in_at)) : '—'
-      const oldOut = prev.check_out_at ? istTimeHHMM(String(prev.check_out_at)) : '—'
+      const oldIn = prev.check_in_at ? new Date(String(prev.check_in_at)).toISOString() : '-'
+      const oldOut = prev.check_out_at ? new Date(String(prev.check_out_at)).toISOString() : '-'
+      const newIn = checkInDate?.toISOString() || '-'
+      const newOut = checkOutDate?.toISOString() || '-'
       const parts = [
-        String(prev.status) !== data.status ? `Status: ${prev.status} → ${data.status}` : '',
-        oldIn !== (data.checkInTime || '—') ? `In: ${oldIn} → ${data.checkInTime || '—'}` : '',
-        oldOut !== (data.checkOutTime || '—') ? `Out: ${oldOut} → ${data.checkOutTime || '—'}` : '',
-        Boolean(prev.is_late) !== data.isLate ? `Late: ${Boolean(prev.is_late) ? 'Yes' : 'No'} → ${data.isLate ? 'Yes' : 'No'}` : '',
+        String(prev.status) !== data.status ? `Status: ${prev.status} -> ${data.status}` : '',
+        oldIn !== newIn ? `In (UTC): ${oldIn} -> ${newIn}` : '',
+        oldOut !== newOut ? `Out (UTC): ${oldOut} -> ${newOut}` : '',
+        Number(prev.work_minutes) !== workMinutes ? `Net minutes: ${prev.work_minutes} -> ${workMinutes}` : '',
+        Number(prev.break_minutes) !== breakMinutes ? `Break minutes: ${prev.break_minutes} -> ${breakMinutes}` : '',
+        Boolean(prev.is_late) !== data.isLate ? `Late: ${Boolean(prev.is_late)} -> ${data.isLate}` : '',
       ].filter(Boolean)
       summaryText = parts.join(' | ') || 'Record re-saved'
 
@@ -594,17 +622,17 @@ export const updateAttendanceRecord = createServerFn({ method: 'POST' })
     } else {
       summaryText = `Status: ${data.status} | In: ${data.checkInTime || '—'} | Out: ${data.checkOutTime || '—'}`
       const res = await execute(
-        `INSERT INTO attendance_logs (employee_id, work_date, check_in_at, check_out_at, status, work_minutes, is_late, edited_by, edit_note)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [data.employeeId, data.workDate, checkInDate, checkOutDate, data.status, workMinutes, data.isLate ? 1 : 0, `${context.user.name} (${context.user.email})`, data.editNote || 'Manual entry by Super Admin'],
+        `INSERT INTO attendance_logs (employee_id, work_date, check_in_at, check_out_at, status, work_minutes, is_late, edited_by, edit_note, out_flags_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [data.employeeId, data.workDate, checkInDate, checkOutDate, data.status, workMinutes, data.isLate ? 1 : 0, `${context.user.name} (${context.user.email})`, data.editNote || 'Manual entry by Super Admin', JSON.stringify(['ADMIN_REVIEW_APPROVED'])],
       )
       logId = Number(res.insertId)
     }
 
     await execute(
-      `INSERT INTO attendance_edit_history (attendance_log_id, employee_id, work_date, editor_name, editor_email, action, changes_summary, reason)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [logId, data.employeeId, data.workDate, context.user.name, context.user.email, prev ? 'edit' : 'create', summaryText, data.editNote || 'Manual entry'],
+      `INSERT INTO attendance_edit_history (attendance_log_id, employee_id, work_date, editor_name, editor_email, action, changes_summary, reason, before_json, after_json)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [logId, data.employeeId, data.workDate, context.user.name, context.user.email, prev ? 'edit' : 'create', summaryText, data.editNote || 'Manual entry', prev ? JSON.stringify({ checkInAt: prev.check_in_at, checkOutAt: prev.check_out_at, status: prev.status, workMinutes: prev.work_minutes, breakMinutes: prev.break_minutes, isLate: Boolean(prev.is_late) }) : null, JSON.stringify({ checkInAt: checkInDate, checkOutAt: checkOutDate, status: data.status, workMinutes, breakMinutes, isLate: data.isLate })],
     )
 
     const [rows, historyRows] = await Promise.all([
@@ -671,7 +699,7 @@ export const exportAttendanceExcel = createServerFn({ method: 'GET' })
     const histories = ids.length ? await queryRows(`SELECT h.*, e.name AS employee_name FROM attendance_edit_history h JOIN employees e ON e.id = h.employee_id WHERE h.attendance_log_id IN (${ids.map(() => '?').join(',')}) ORDER BY h.created_at`, ids) : []
     const evidence = ids.length ? await queryRows(`SELECT log_id, action, snapshot_json, created_at FROM attendance_punch_events WHERE log_id IN (${ids.map(() => '?').join(',')}) UNION ALL SELECT log_id, 'original-baseline' AS action, snapshot_json, created_at FROM attendance_original_punches WHERE log_id IN (${ids.map(() => '?').join(',')}) ORDER BY created_at`, [...ids, ...ids]) : []
     const breakRows = filteredLogs.flatMap((log) => log.breaks.map((br) => [log.workDate, log.employeeName, br.outAt, br.inAt || 'Open', br.note, mapUrl(br.outLat, br.outLng), mapUrl(br.inLat, br.inLng)]))
-    const historyRows = histories.map((h) => [String(h.work_date), String(h.employee_name), String(h.editor_name), String(h.editor_email), String(h.action), String(h.changes_summary), String(h.reason), new Date(String(h.created_at)).toISOString()])
+    const historyRows = histories.map((h) => [String(h.work_date), String(h.employee_name), String(h.editor_name), String(h.editor_email), String(h.action), String(h.changes_summary), String(h.reason), new Date(String(h.created_at)).toISOString(), h.before_json ? String(h.before_json) : '', h.after_json ? String(h.after_json) : ''])
     const evidenceRows = evidence.map((row) => [Number(row.log_id), String(row.action), new Date(String(row.created_at)).toISOString(), String(row.snapshot_json)])
     const { createLeadsWorkbook } = await import('./xlsx.server')
     return {
@@ -698,7 +726,7 @@ export const exportAttendanceExcel = createServerFn({ method: 'GET' })
           filter: `A1:S${Math.max(1, detailRows.length + 1)}`,
         },
         { name: 'Break Details', rows: [['Work Date', 'Employee', 'Out (UTC)', 'Return (UTC)', 'Reason', 'Out Map', 'Return Map'], ...breakRows], headerRows: [1], widths: [13, 22, 26, 26, 35, 35, 35] },
-        { name: 'Correction History', rows: [['Date', 'Employee', 'Editor', 'Editor Email', 'Action', 'Changes', 'Reason', 'Saved (UTC)'], ...historyRows], headerRows: [1], widths: [13, 22, 22, 30, 12, 60, 45, 26] },
+        { name: 'Correction History', rows: [['Date', 'Employee', 'Editor', 'Editor Email', 'Action', 'Changes', 'Reason', 'Saved (UTC)', 'Before JSON (UTC)', 'After JSON (UTC)'], ...historyRows], headerRows: [1], widths: [13, 22, 22, 30, 12, 60, 45, 26, 80, 80] },
         { name: 'Original Punch Evidence', rows: [['Log ID', 'Action', 'Saved (UTC)', 'Immutable Evidence JSON'], ...evidenceRows], headerRows: [1], widths: [12, 16, 26, 100] },
       ]),
     }
@@ -710,7 +738,7 @@ function parseSnapshot(value: unknown): { summary: EmployeeCycleSummary; logs: A
 async function applyFinalizedSummaries(summaries: EmployeeCycleSummary[], month: string) {
   const rows = await queryRows('SELECT employee_id, snapshot_json FROM attendance_cycle_snapshots WHERE selected_month = ?', [month])
   const finalized = new Map(rows.map((row) => [Number(row.employee_id), parseSnapshot(row.snapshot_json).summary]))
-  return summaries.map((summary) => finalized.get(summary.employee.id) ?? summary)
+  return summaries.map((summary) => finalized.has(summary.employee.id) ? { ...finalized.get(summary.employee.id)!, finalized: true } : summary)
 }
 const reportInput = (data: unknown) => {
   const input = (data ?? {}) as Record<string, unknown>
@@ -751,6 +779,7 @@ export const finalizeAttendanceCycle = createServerFn({ method: 'POST' })
       const overlap = await queryRows('SELECT id FROM attendance_cycle_snapshots WHERE employee_id = ? AND cycle_start_date <= ? AND cycle_end_date >= ? LIMIT 1', [employee.id, range.endDate, range.startDate])
       if (overlap.length) throw new Error('This cycle overlaps an already finalized report')
       const summary = buildEmployeeCycleSummaries([employee], logs, data.month, todayIstDate(), policies)[0]
+      if ((summary.reviewRequiredCount ?? 0) > 0) throw new Error('Resolve insufficient-hours attendance before finalizing')
       await execute('INSERT INTO attendance_cycle_snapshots (employee_id, selected_month, cycle_start_date, cycle_end_date, snapshot_json, finalized_by) VALUES (?, ?, ?, ?, ?, ?)', [employee.id, data.month, summary.cycleStartDate, summary.cycleEndDate, JSON.stringify({ summary, logs }), context.user.email])
       return { ok: true }
     })

@@ -6,7 +6,7 @@ import ts from 'typescript'
 
 // Execute the actual server source, replacing only transport/auth/environment adapters.
 // SQL, transactions, validators, payroll, schema migrations and exports are unchanged.
-export async function attendanceRuntime(database) {
+export async function attendanceRuntime(database, { realDb = false } = {}) {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
   const state = { now: '2026-11-16T04:00:00Z', role: 'super_admin', signedIn: true, headers: new Headers({ 'x-real-ip': '203.0.113.10', 'x-vercel-ip-country': 'IN' }) }
   const NativeDate = Date
@@ -14,7 +14,7 @@ export async function attendanceRuntime(database) {
     constructor(...args) { super(...(args.length ? args : [state.now])) }
     static now() { return new NativeDate(state.now).getTime() }
   }
-  const context = vm.createContext({ console, Buffer, Date: Clock, Headers, Response, Request, URL, TextEncoder, TextDecoder, setTimeout, clearTimeout, process: { env: { SESSION_SECRET: 'attendance-test-only-secret-32-characters' } } })
+  const context = vm.createContext({ console, Buffer, Date: Clock, Headers, Response, Request, URL, TextEncoder, TextDecoder, setTimeout, clearTimeout, process: { env: { SESSION_SECRET: 'attendance-test-only-secret-32-characters', DATABASE_URL: realDb ? 'mysql://test/attendance_test' : undefined } } })
   const cache = new Map()
   const db = {
     getDb: async () => database,
@@ -48,8 +48,11 @@ export async function attendanceRuntime(database) {
     if (specifier === '@tanstack/react-start') return synthetic(specifier, transport)
     if (specifier === '@tanstack/react-start/server') return synthetic(specifier, { getRequestHeader: name => state.headers.get(name) })
     if (specifier === '@/data/site') return synthetic(specifier, { site: { latitude: 29.8, longitude: 74.5 } })
-    if (specifier === './db.server') return synthetic('test-db', db)
-    if (specifier === './auth.server') return synthetic('test-auth', { getSessionUser: async () => state.signedIn ? { name: 'Test Admin', email: 'admin@example.test' } : null, ensureAdminRecord: async () => true, getAdminRole: async () => state.role })
+    if (specifier === './db.server' && !realDb) return synthetic('test-db', db)
+    if (specifier === 'mysql2/promise') return synthetic(specifier, { default: { createPool: () => database } })
+    if (specifier === '@/data/fixtures') return synthetic(specifier, { approvals: [], coachingSchedule: [], posts: [], testimonials: [] })
+    if (specifier === '@/data/certificates') return synthetic(specifier, { defaultCertificates: [] })
+    if (specifier === './auth.server') return synthetic('test-auth', { getSessionUser: async () => state.signedIn ? { name: 'Test Admin', email: 'admin@example.test' } : null, ensureAdminRecord: async () => true, getAdminRole: async () => state.role, hashPassword: () => 'test-hash' })
     if (specifier.startsWith('node:')) return synthetic(specifier, await import(specifier))
     let filename = path.resolve(path.dirname(parent), specifier)
     if (!path.extname(filename) || filename.endsWith('.server')) filename += '.ts'
@@ -64,5 +67,6 @@ export async function attendanceRuntime(database) {
   await module.link((specifier, parent) => load(specifier, parent.identifier))
   await module.evaluate()
   const server = await load('./attendance.server')
-  return { api: module.namespace, server: server.namespace, state }
+  const databaseModule = await load('./db.server')
+  return { api: module.namespace, server: server.namespace, state, database: databaseModule.namespace }
 }

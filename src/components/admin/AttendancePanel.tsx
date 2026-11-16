@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { CalendarDays, Check, Copy, Download, ExternalLink, History, MapPin, Pencil, Plus, RefreshCw, Smartphone, Trash2, Users } from 'lucide-react'
-import { deleteEmployee, exportAttendanceCsv, exportAttendanceExcel, finalizeAttendanceCycle, getAttendanceCycleFinalizations, getAdminAttendanceSnapshot, regenerateEmployeeToken, resetEmployeeDevice, saveAttendanceSettings, saveEmployee, updateAttendanceRecord } from '@/lib/attendance-functions'
+import { deleteEmployee, exportAttendanceCsv, exportAttendanceExcel, finalizeAttendanceCycle, getAttendanceCycleFinalizations, getAdminAttendanceSnapshot, getAttendanceRecordHistory, regenerateEmployeeToken, resetEmployeeDevice, saveAttendanceSettings, saveEmployee, updateAttendanceRecord } from '@/lib/attendance-functions'
 import type { AdminAttendanceSnapshot, AttendanceLogRecord, AttendanceSettings, EmployeeRecord } from '@/lib/content-types'
 import { AttendanceEditModal, EmployeeFormModal, type EmployeeDraft, type LogDraft } from './AttendanceModals'
 
@@ -51,10 +51,10 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
     setLoading(true)
     setError('')
     try {
-      const next = await getAdminAttendanceSnapshot({ data: { month: targetMonth } })
-      const locked = await getAttendanceCycleFinalizations({ data: { month: targetMonth } })
+      const next = await getAdminAttendanceSnapshot({ data: { month: targetMonth, lightweight: background } })
+      const locked = background ? null : await getAttendanceCycleFinalizations({ data: { month: targetMonth } })
       if (request !== loadSequence.current) return
-      setFinalizations(locked)
+      if (locked) setFinalizations(locked)
       setSnapshot(next)
       if (!background) setSettingsDraft(next.settings)
       setLastUpdated(new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }))
@@ -257,6 +257,10 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
       editNote: '',
       editHistory: log.editHistory,
     })
+    void getAttendanceRecordHistory({ data: { employeeId: log.employeeId, workDate: log.workDate } })
+      .then(editHistory => setLogDraft(current => current?.employeeId === log.employeeId && current.workDate === log.workDate ? { ...current, editHistory } : current))
+      .catch(cause => onNotice(cause instanceof Error ? cause.message : 'Could not load correction history.'))
+
   }
 
   if (loading && !snapshot) return <div className="rounded-2xl border border-[#E4E7EC] bg-white p-8 text-sm text-[#667085]">Loading attendance…</div>
@@ -265,7 +269,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
 
   const { employees, logs, summaries, todayIst, currentRequestIp } = snapshot
   const todayLogs = logs.filter((l) => l.workDate === todayIst)
-  const requiresReview = (log: AttendanceLogRecord) => Boolean((log.checkInAt && !log.checkOutAt && log.workDate < todayIst) || [...log.inFlags, ...log.outFlags].some((flag) => flag.includes('MISSING') || flag.includes('AUTO_CHECKOUT')))
+  const requiresReview = (log: AttendanceLogRecord) => Boolean(log.status === 'Review Required' || (log.checkInAt && !log.checkOutAt && log.workDate < todayIst) || [...log.inFlags, ...log.outFlags].some((flag) => flag.includes('MISSING') || flag.includes('AUTO_CHECKOUT') || (flag.includes('REVIEW_REQUIRED') && !log.outFlags.includes('ADMIN_REVIEW_APPROVED'))))
   const visibleLogs = logs.filter((l) => (!filterDate || l.workDate === filterDate) && (!filterEmpId || l.employeeId === filterEmpId) && (!reviewOnly || requiresReview(l)))
   const calendarLogs = logs.filter((l) => l.workDate.startsWith(month) && (!filterEmpId || l.employeeId === filterEmpId) && (!reviewOnly || requiresReview(l)))
   const calendarStart = new Date(month + '-01T00:00:00Z')
@@ -487,7 +491,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                 <button type="button" disabled={busy} onClick={() => void downloadCsv(s.employee.id)} className="rounded-lg border border-[#E4E7EC] px-3 py-1.5 text-xs font-semibold text-[#465FFF] disabled:opacity-50">CSV</button>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#E4E7EC] p-3 text-xs">
-                {finalizations.some((item) => item.employeeId === s.employee.id) ? <span className="font-semibold text-[#12B76A]">Finalized · report locked</span> : <><span className="text-[#667085]">Draft · {s.missedCheckOutCount} missing OUT</span><button type="button" disabled={busy || s.cycleEndDate >= todayIst || s.missedCheckOutCount > 0} onClick={() => void finalizeCycle(s.employee.id)} className="rounded-lg bg-[#465FFF] px-3 py-2 font-semibold text-white disabled:opacity-40">Finalize completed cycle</button></>}
+                {(s.finalized || finalizations.some((item) => item.employeeId === s.employee.id)) ? <span className="font-semibold text-[#12B76A]">Finalized · report locked</span> : <><span className="text-[#667085]">Draft · {s.missedCheckOutCount} missing OUT · {s.reviewRequiredCount ?? 0} short shifts to review</span><button type="button" disabled={busy || s.cycleEndDate >= todayIst || s.missedCheckOutCount > 0 || (s.reviewRequiredCount ?? 0) > 0} onClick={() => void finalizeCycle(s.employee.id)} className="rounded-lg bg-[#465FFF] px-3 py-2 font-semibold text-white disabled:opacity-40">Finalize completed cycle</button></>}
               </div>
               <div className="grid grid-cols-3 gap-2 text-center text-xs sm:grid-cols-6">
                 <div className="rounded-xl bg-[#ECFDF3] p-2"><p className="text-[10px] text-[#667085]">Present</p><p className="font-bold text-[#12B76A]">{s.presentDays}</p></div>
@@ -518,7 +522,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-[#1D2939]">Employees ({employees.length})</h3>
-              <button type="button" onClick={() => setEmpDraft({ id: 0, name: '', designation: '', phone: '', email: '', pin: '', clearPin: false, cycleStartDay: 1, monthlySalary: 0, expectedInTime: '09:30', expectedOutTime: '19:30', officeOnly: true, active: true, joiningDate: todayIst, leavingDate: '', halfDayMinutes: 300, lateGraceMinutes: 0, weeklyOffDays: [0], holidayDates: [], effectiveDate: todayIst })} className="inline-flex items-center gap-1.5 rounded-xl bg-[#465FFF] px-4 py-2 text-xs font-bold text-white">
+              <button type="button" onClick={() => setEmpDraft({ id: 0, name: '', designation: '', phone: '', email: '', pin: '', clearPin: false, cycleStartDay: 1, monthlySalary: 0, expectedInTime: '09:30', expectedOutTime: '19:30', officeOnly: true, active: true, joiningDate: todayIst, leavingDate: '', halfDayMinutes: 300, minimumHalfDayMinutes: 0, policyReason: '', lateGraceMinutes: 0, weeklyOffDays: [0], holidayDates: [], effectiveDate: todayIst })} className="inline-flex items-center gap-1.5 rounded-xl bg-[#465FFF] px-4 py-2 text-xs font-bold text-white">
                 <Plus className="size-4" /> Add Employee
               </button>
             </div>
@@ -543,7 +547,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                         <Smartphone className="size-3.5" /> Reset Device
                       </button>
                     )}
-                    <button type="button" onClick={() => setEmpDraft({ id: emp.id, name: emp.name, designation: emp.designation, phone: emp.phone, email: emp.email, pin: '', clearPin: false, cycleStartDay: emp.cycleStartDay, monthlySalary: emp.monthlySalary, expectedInTime: emp.expectedInTime, expectedOutTime: emp.expectedOutTime, officeOnly: emp.officeOnly, active: emp.active, joiningDate: emp.joiningDate ?? '', leavingDate: emp.leavingDate ?? '', halfDayMinutes: emp.halfDayMinutes ?? 300, lateGraceMinutes: emp.lateGraceMinutes ?? 0, weeklyOffDays: emp.weeklyOffDays ?? [0], holidayDates: emp.holidayDates ?? [], effectiveDate: todayIst })} className="rounded-lg border border-[#E4E7EC] p-2 text-[#1D2939] hover:bg-[#F9FAFB]" aria-label="Edit employee"><Pencil className="size-3.5" /></button>
+                    <button type="button" onClick={() => setEmpDraft({ id: emp.id, name: emp.name, designation: emp.designation, phone: emp.phone, email: emp.email, pin: '', clearPin: false, cycleStartDay: emp.cycleStartDay, monthlySalary: emp.monthlySalary, expectedInTime: emp.expectedInTime, expectedOutTime: emp.expectedOutTime, officeOnly: emp.officeOnly, active: emp.active, joiningDate: emp.joiningDate ?? '', leavingDate: emp.leavingDate ?? '', halfDayMinutes: emp.halfDayMinutes ?? 300, minimumHalfDayMinutes: emp.minimumHalfDayMinutes ?? 0, policyReason: '', lateGraceMinutes: emp.lateGraceMinutes ?? 0, weeklyOffDays: emp.weeklyOffDays ?? [0], holidayDates: emp.holidayDates ?? [], effectiveDate: todayIst })} className="rounded-lg border border-[#E4E7EC] p-2 text-[#1D2939] hover:bg-[#F9FAFB]" aria-label="Edit employee"><Pencil className="size-3.5" /></button>
                     <button type="button" disabled={busy} onClick={() => void handleRegenerate(emp)} className="rounded-lg border border-[#E4E7EC] p-2 text-[#1D2939] hover:bg-[#F9FAFB]" title="New link" aria-label="Regenerate link"><RefreshCw className="size-3.5" /></button>
                     <button type="button" disabled={busy} onClick={() => void handleDeleteEmp(emp)} className="rounded-lg border border-red-200 p-2 text-[#F04438] hover:bg-red-50" aria-label="Archive employee"><Trash2 className="size-3.5" /></button>
                   </div>

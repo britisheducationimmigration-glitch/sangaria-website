@@ -29,7 +29,7 @@ test('actual MySQL schema, punches, concurrency, corrections and frozen reports'
   const { api, server, state } = await attendanceRuntime(pool)
   const settings = { ...server.defaultAttendanceSettings, officeLat: 29.8, officeLng: 74.5, requireSelfie: false, requireOfficeWifiIp: false }
   let employee
-  const save = data => api.saveEmployee({ data: { name:'Integration Test', pin:'1234', monthlySalary:25000, effectiveDate:'2026-01-01', joiningDate:'2026-01-01', cycleStartDay:1, expectedInTime:'09:30', expectedOutTime:'18:00', ...data } })
+  const save = data => api.saveEmployee({ data: { name:'Integration Test', pin:'1234', monthlySalary:25000, effectiveDate:'2026-01-01', joiningDate:'2026-01-01', cycleStartDay:1, policyReason:'Integration policy update', expectedInTime:'09:30', expectedOutTime:'18:00', ...data } })
   const punch = (action, change = {}) => api.markEmployeeAttendance({ data: { token:employee.accessToken, pin:'1234', deviceKey:'test-device-identifier-1234', lat:29.8, lng:74.5, accuracyM:10, action, ...change } })
   const manual = data => api.updateAttendanceRecord({ data: { mode:'create', employeeId:employee.id, workDate:'2026-10-05', status:'Present', checkInTime:'09:00', checkOutTime:'18:00', editNote:'Test evidence', ...data } })
   await t.test('fresh migrations and repeated startup are idempotent', async () => {
@@ -128,6 +128,25 @@ test('actual MySQL schema, punches, concurrency, corrections and frozen reports'
     assert.equal(report.employees.length,1)
     assert.ok(report.summaries[0].earnedSalary>0)
   })
+  await t.test('open manual shifts reject future overlaps in both insertion orders', async () => {
+    await manual({workDate:'2026-08-04'})
+    await assert.rejects(manual({workDate:'2026-08-03',checkOutTime:''}),/overlap/)
+    await manual({workDate:'2026-11-19',checkOutTime:''})
+    await assert.rejects(manual({workDate:'2026-11-20'}),/overlap/)
+    await manual({mode:'edit',workDate:'2026-11-19',status:'Absent',checkInTime:'',checkOutTime:'',editNote:'Close test record'})
+  })
+  await t.test('overnight correction history records complete dates and net hours', async () => {
+    await manual({workDate:'2026-08-05',checkInTime:'05:00',checkOutTime:'06:00'})
+    const edited=await manual({mode:'edit',workDate:'2026-08-05',checkInTime:'22:00',checkOutTime:'06:00',checkOutNextDay:true,editNote:'Correct overnight shift'})
+    const history=await api.getAttendanceRecordHistory({data:{employeeId:employee.id,workDate:'2026-08-05'}})
+    assert.equal(edited.workMinutes,480)
+    assert.ok(history[0].after.checkOutAt.startsWith('2026-08-06'))
+    assert.ok(history[0].changesSummary.includes('2026-08-06'))
+    const [audit]=await pool.query('SELECT * FROM employee_policy_audit WHERE employee_id=?',[employee.id])
+    assert.ok(audit.length>0)
+    assert.equal(audit[0].actor_email,'admin@example.test')
+    assert.ok(audit[0].before_json.includes('25000'))
+  })
   await t.test('overnight OUT works and archive keeps history while revoking link', async () => {
     state.now='2026-11-17T16:30:00Z';await punch('in')
     state.now='2026-11-18T00:30:00Z';await punch('out')
@@ -138,9 +157,22 @@ test('actual MySQL schema, punches, concurrency, corrections and frozen reports'
     const replacement=await api.regenerateEmployeeToken({data:{id:employee.id}})
     employee.accessToken=replacement.accessToken
     await assert.rejects(api.getEmployeePortalData({data:{token:oldToken}}),/not found/)
+    const [beforeArchive]=await pool.query('SELECT id FROM attendance_logs WHERE employee_id=?',[employee.id])
     await api.deleteEmployee({data:{id:employee.id}})
     await assert.rejects(api.getEmployeePortalData({data:{token:employee.accessToken}}),/not found|deactivated/)
     const [logs]=await pool.query('SELECT id FROM attendance_logs WHERE employee_id=?',[employee.id])
-    assert.equal(logs.length,4)
+    assert.equal(logs.length,beforeArchive.length)
+  })
+  await t.test('one-minute OUT is held for review; explicit admin approval is audited', async () => {
+    employee=await save({name:'Short shift test'})
+    state.now='2026-10-06T04:00:00Z';await punch('in')
+    state.now='2026-10-06T04:01:00Z';await punch('out')
+    const [rows]=await pool.query('SELECT status FROM attendance_logs WHERE employee_id=?',[employee.id])
+    assert.equal(rows[0].status,'Review Required')
+    state.now='2026-11-16T04:00:00Z'
+    await assert.rejects(api.finalizeAttendanceCycle({data:{month:'2026-10',employeeId:employee.id}}),/insufficient-hours/)
+    await manual({mode:'edit',workDate:'2026-10-06',status:'Half Day',checkInTime:'09:30',checkOutTime:'09:31',editNote:'Explicit exceptional half-day approval'})
+    const report=await api.getAdminAttendanceSnapshot({data:{month:'2026-10'}})
+    assert.equal(report.summaries.find(s=>s.employee.id===employee.id).payableDays,0.5)
   })
 })

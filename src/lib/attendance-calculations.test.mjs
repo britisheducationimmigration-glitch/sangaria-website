@@ -1,8 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { getEmployeeCycleRange, calculateWorkMinutes, buildEmployeeCycleSummaries } from './attendance-calculations.ts'
+import { getEmployeeCycleRange, calculateWorkMinutes, buildEmployeeCycleSummaries, classifyShift } from './attendance-calculations.ts'
 
-const employee = { id: 1, name: 'Test', cycleStartDay: 1, monthlySalary: 26000 }
+const employee = { id: 1, name: 'Test', cycleStartDay: 1, monthlySalary: 26000, halfDayMinutes: 480, minimumHalfDayMinutes: 240 }
 const log = (date, status = 'Present', complete = true) => ({ employeeId: 1, workDate: date, status, checkInAt: `${date}T04:00:00Z`, checkOutAt: complete ? `${date}T12:00:00Z` : '', workMinutes: complete ? 480 : 0, inFlags: [], outFlags: [] })
 
 test('31st cycles clamp February and remain contiguous across leap years', () => {
@@ -62,4 +62,18 @@ test('configured holidays and weekly offs do not count absence or duplicate pay'
   assert.equal(s.absentDays, 0)
   assert.equal(s.payableDays, 0)
   assert.equal(s.offDayWorkMinutes, 480)
+})
+
+test('short shifts cannot automatically earn half-day pay', () => {
+  for (const minutes of [0, 1, 239]) assert.equal(classifyShift(minutes, employee), 'Review Required')
+  assert.equal(classifyShift(240, employee), 'Half Day')
+  assert.equal(classifyShift(480, employee), 'Present')
+  assert.equal(classifyShift(480, employee, true), 'Half Day')
+  assert.equal(classifyShift(300, { halfDayMinutes: 480 }), 'Review Required')
+  const short = { ...log('2026-11-02', 'Half Day'), workMinutes: 1 }
+  const summary = buildEmployeeCycleSummaries([employee], [short], '2026-11', '2026-12-01')[0]
+  assert.equal(summary.payableDays, 0)
+  assert.equal(summary.reviewRequiredCount, 1)
+  short.outFlags.push('ADMIN_REVIEW_APPROVED')
+  assert.equal(buildEmployeeCycleSummaries([employee], [short], '2026-11', '2026-12-01')[0].payableDays, 0.5)
 })

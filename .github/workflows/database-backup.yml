@@ -1,0 +1,38 @@
+name: Private encrypted database backup
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 21 * * *'
+permissions:
+  contents: read
+jobs:
+  backup:
+    if: vars.DATABASE_BACKUP_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: database-backup
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Export, encrypt and upload to private backup storage
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ vars.BACKUP_AWS_REGION }}
+          BACKUP_BUCKET: ${{ vars.BACKUP_BUCKET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$BACKUP_BUCKET"
+          export_file="$RUNNER_TEMP/bei-$(date -u +%Y%m%dT%H%M%SZ).bin"
+          node scripts/database-backup.mjs backup "$export_file"
+          aws s3 cp "$export_file" "s3://$BACKUP_BUCKET/database/$(basename "$export_file")" --sse AES256 --only-show-errors

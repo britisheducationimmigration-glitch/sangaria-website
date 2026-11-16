@@ -3,7 +3,7 @@ import '@tanstack/react-start/server-only'
 import crypto from 'node:crypto'
 import { site } from '@/data/site'
 import { execute, getDb, queryRows } from './db.server'
-export { getEmployeeCycleRange, countSundaysInRange, buildEmployeeCycleSummaries, calculateWorkMinutes, resolveEmployeePolicy } from './attendance-calculations'
+export { getEmployeeCycleRange, countSundaysInRange, buildEmployeeCycleSummaries, calculateWorkMinutes, resolveEmployeePolicy, classifyShift } from './attendance-calculations'
 import type { EmployeePolicyHistory } from './attendance-calculations'
 import type {
    AttendanceBreakRecord,
@@ -76,6 +76,7 @@ export async function ensureAttendanceSchema() {
       await ensureCol('employees', 'joining_date', "VARCHAR(10) NOT NULL DEFAULT ''")
       await ensureCol('employees', 'leaving_date', "VARCHAR(10) NOT NULL DEFAULT ''")
       await ensureCol('employees', 'half_day_minutes', 'INT NOT NULL DEFAULT 300')
+      await ensureCol('employees', 'minimum_half_day_minutes', 'INT NOT NULL DEFAULT 0')
       await ensureCol('employees', 'late_grace_minutes', 'INT NOT NULL DEFAULT 0')
       await ensureCol('employees', 'weekly_off_days_json', 'TEXT NULL')
       await ensureCol('employees', 'holiday_dates_json', 'TEXT NULL')
@@ -146,6 +147,16 @@ export async function ensureAttendanceSchema() {
           INDEX attendance_history_log_idx (attendance_log_id, created_at)
         )
       `)
+      await ensureCol('attendance_edit_history', 'before_json', 'LONGTEXT NULL')
+      await ensureCol('attendance_edit_history', 'after_json', 'LONGTEXT NULL')
+      await execute(`CREATE TABLE IF NOT EXISTS employee_policy_audit (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        employee_id BIGINT UNSIGNED NOT NULL, effective_date VARCHAR(10) NOT NULL,
+        actor_email VARCHAR(190) NOT NULL, reason VARCHAR(500) NOT NULL,
+        before_json LONGTEXT NULL, after_json LONGTEXT NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX policy_audit_employee_idx (employee_id, created_at)
+      )`)
     })().catch((error) => {
       attendanceSchemaPromise = null
       throw error
@@ -337,9 +348,15 @@ export async function autoCloseOpenCheckIns() {
     if (!flags.includes('MISSING_OUT_REVIEW_REQUIRED')) await execute('UPDATE attendance_logs SET out_flags_json = ?, work_minutes = 0 WHERE id = ? AND check_out_at IS NULL', [JSON.stringify([...flags, 'MISSING_OUT_REVIEW_REQUIRED']), Number(row.id)])
   }
 }
-export async function readEmployeePolicies(): Promise<EmployeePolicyHistory[]> {
+export async function readEmployeePolicies(employeeId?: number, startDate?: string, endDate?: string): Promise<EmployeePolicyHistory[]> {
   await ensureAttendanceSchema()
-  const rows = await queryRows('SELECT employee_id, effective_date, policy_json FROM employee_policy_history ORDER BY effective_date ASC')
+  const conditions: string[] = [], values: (string | number)[] = []
+  if (employeeId) { conditions.push('p.employee_id = ?'); values.push(employeeId) }
+  if (startDate && endDate) {
+    conditions.push('p.effective_date <= ? AND (p.effective_date >= ? OR NOT EXISTS (SELECT 1 FROM employee_policy_history n WHERE n.employee_id = p.employee_id AND n.effective_date < ? AND n.effective_date > p.effective_date))')
+    values.push(endDate, startDate, startDate)
+  }
+  const rows = await queryRows('SELECT p.employee_id, p.effective_date, p.policy_json FROM employee_policy_history p' + (conditions.length ? ' WHERE ' + conditions.join(' AND ') : '') + ' ORDER BY p.effective_date ASC', values)
   return rows.flatMap(row => {
     try { return [{ employeeId: Number(row.employee_id), effectiveDate: String(row.effective_date), policy: JSON.parse(String(row.policy_json)) as Partial<EmployeeRecord> }] } catch { return [] }
   })
@@ -383,6 +400,7 @@ export function mapEmployeeRow(row: Record<string, unknown>): EmployeeRecord {
     joiningDate: String(row.joining_date ?? ''),
     leavingDate: String(row.leaving_date ?? ''),
     halfDayMinutes: Math.max(1, Number(row.half_day_minutes ?? 300)),
+    minimumHalfDayMinutes: Math.max(0, Number(row.minimum_half_day_minutes ?? 0)),
     lateGraceMinutes: Math.max(0, Number(row.late_grace_minutes ?? 0)),
     weeklyOffDays: parseNumberArray(row.weekly_off_days_json, [0]),
     holidayDates: parseStringArray(row.holiday_dates_json),
@@ -395,7 +413,12 @@ export function mapEmployeeRow(row: Record<string, unknown>): EmployeeRecord {
 }
 
 export function mapEditHistoryRow(row: Record<string, unknown>): AttendanceEditHistoryRecord {
+  const parseEvidence = (value: unknown) => {
+    try { return value ? JSON.parse(String(value)) as Record<string, string | number | boolean | null> : null } catch { return null }
+  }
   return {
+    before: parseEvidence(row.before_json),
+    after: parseEvidence(row.after_json),
     id: Number(row.id),
     attendanceLogId: Number(row.attendance_log_id),
     employeeId: Number(row.employee_id),
