@@ -38,6 +38,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
   const [reviewOnly, setReviewOnly] = useState(false)
   const [logView, setLogView] = useState<'table' | 'calendar' | 'timeline'>('table')
   const [finalizations, setFinalizations] = useState<Awaited<ReturnType<typeof getAttendanceCycleFinalizations>>>([])
+  const [employeeSaveError, setEmployeeSaveError] = useState('')
   const [empDraft, setEmpDraft] = useState<EmployeeDraft | null>(null)
   const [logDraft, setLogDraft] = useState<LogDraft | null>(null)
   const [settingsDraft, setSettingsDraft] = useState<AttendanceSettings | null>(null)
@@ -144,6 +145,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
   async function handleSaveEmployee(e: FormEvent) {
     e.preventDefault()
     if (!empDraft) return
+    setEmployeeSaveError('')
     setBusy(true)
     try {
       await saveEmployee({ data: empDraft })
@@ -151,7 +153,9 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
       await load(month)
       onNotice('Employee saved.')
     } catch (cause) {
-      onNotice(cause instanceof Error ? cause.message : 'Could not save employee.')
+      const message = cause instanceof Error ? cause.message : 'Could not save employee.'
+      setEmployeeSaveError(message)
+      onNotice(message)
     } finally {
       setBusy(false)
     }
@@ -607,7 +611,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
         </div>
       )}
 
-      {empDraft && <EmployeeFormModal draft={empDraft} busy={busy} onChange={setEmpDraft} onClose={() => setEmpDraft(null)} onSubmit={handleSaveEmployee} />}
+      {empDraft && <EmployeeFormModal draft={empDraft} error={employeeSaveError} busy={busy} onChange={setEmpDraft} onClose={() => setEmpDraft(null)} onSubmit={handleSaveEmployee} />}
       {logDraft && <AttendanceEditModal draft={logDraft} employees={employees} busy={busy} onChange={setLogDraft} onClose={() => setLogDraft(null)} onSubmit={handleSaveLog} />}
     </section>
   )

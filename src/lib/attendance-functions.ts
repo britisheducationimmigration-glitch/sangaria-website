@@ -429,16 +429,11 @@ export const saveEmployee = createServerFn({ method: 'POST' })
     if (data.id > 0) {
       const previous = await queryRows('SELECT * FROM employees WHERE id = ? FOR UPDATE', [data.id])
       if (!previous.length) throw new Error('Employee not found')
-      if (Number(previous[0].cycle_start_day) !== data.cycleStartDay) {
-        const attendance = await queryRows('SELECT id FROM attendance_logs WHERE employee_id = ? LIMIT 1', [data.id])
-        if (attendance.length) throw new Error('Cycle start day cannot change after attendance exists. Archive this profile and create a new employment profile for a new cycle.')
-      }
       const policies = await queryRows('SELECT employee_id, effective_date, policy_json FROM employee_policy_history WHERE employee_id = ?', [data.id])
       const beforePolicy = payrollPolicy(resolveEmployeePolicy(mapEmployeeRow(previous[0]), policies.map(row => ({ employeeId: Number(row.employee_id), effectiveDate: String(row.effective_date), policy: JSON.parse(String(row.policy_json)) })), data.effectiveDate))
       const afterPolicy = payrollPolicy({ ...mapEmployeeRow(previous[0]), ...data })
       if (JSON.stringify(beforePolicy) !== JSON.stringify(afterPolicy)) {
-        if (!data.policyReason) throw new Error('Enter a reason for changing payroll policy')
-        await execute('INSERT INTO employee_policy_audit (employee_id, effective_date, actor_email, reason, before_json, after_json) VALUES (?, ?, ?, ?, ?, ?)', [data.id, data.effectiveDate, context.user.email, data.policyReason, JSON.stringify(beforePolicy), JSON.stringify(afterPolicy)])
+        await execute('INSERT INTO employee_policy_audit (employee_id, effective_date, actor_email, reason, before_json, after_json) VALUES (?, ?, ?, ?, ?, ?)', [data.id, data.effectiveDate, context.user.email, data.policyReason || 'Employee profile updated by admin', JSON.stringify(beforePolicy), JSON.stringify(afterPolicy)])
       }
       if (!policies.length) {
         await execute('INSERT INTO employee_policy_history (employee_id, effective_date, policy_json) VALUES (?, ?, ?)', [data.id, '1900-01-01', JSON.stringify(payrollPolicy(mapEmployeeRow(previous[0])))])

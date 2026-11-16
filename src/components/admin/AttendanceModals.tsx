@@ -98,12 +98,14 @@ function attendanceHistorySummary(history: AttendanceEditHistoryRecord) {
 }
 
 export function EmployeeFormModal({
+  error,
   draft,
   busy,
   onChange,
   onClose,
   onSubmit,
 }: {
+  error?: string
   draft: EmployeeDraft
   busy: boolean
   onChange: (next: EmployeeDraft) => void
@@ -123,6 +125,7 @@ export function EmployeeFormModal({
           <button type="button" onClick={onClose} className="text-sm font-bold text-[#667085] hover:text-[#1D2939]">✕</button>
         </div>
 
+        {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="text-xs font-semibold text-[#1D2939]">
             Full Name *
@@ -189,8 +192,8 @@ export function EmployeeFormModal({
             <label className="text-xs font-semibold">Full-day minimum (minutes)<input type="number" min={1} max={1440} value={draft.halfDayMinutes} onChange={(e) => onChange({ ...draft, halfDayMinutes: Number(e.target.value) })} className="field mt-1" /></label>
             <label className="text-xs font-semibold">Late grace (minutes)<input type="number" min={0} max={240} value={draft.lateGraceMinutes} onChange={(e) => onChange({ ...draft, lateGraceMinutes: Number(e.target.value) })} className="field mt-1" /></label>
           </div>
-          {draft.id > 0 && <label className="block text-xs font-semibold">Reason for payroll policy change<input maxLength={500} value={draft.policyReason} onChange={(e) => onChange({ ...draft, policyReason: e.target.value })} className="field mt-1" placeholder="Required when salary or policy changes" /></label>}
-          <label className="block text-xs font-semibold">Policy effective from<input type="date" required value={draft.effectiveDate} onChange={(e) => onChange({ ...draft, effectiveDate: e.target.value })} className="field mt-1" /><span className="mt-1 block font-normal text-[#667085]">Salary, cycle and policy changes use this date. Finalized reports stay locked.</span></label>
+          {draft.id > 0 && <label className="block text-xs font-semibold">Reason for payroll policy change (optional)<input maxLength={500} value={draft.policyReason} onChange={(e) => onChange({ ...draft, policyReason: e.target.value })} className="field mt-1" placeholder="Optional note; change history is recorded automatically" /></label>}
+          <label className="block text-xs font-semibold">Policy effective from<input type="date" required value={draft.effectiveDate} onChange={(e) => onChange({ ...draft, effectiveDate: e.target.value })} className="field mt-1" /><span className="mt-1 block font-normal text-[#667085]">Changes apply from this date. For an initial salary entered later, choose the joining date if it should apply from joining. Finalized reports stay locked.</span></label>
           <div className="text-xs font-semibold">Weekly off<div className="mt-2 flex flex-wrap gap-3">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((label, day) => <label key={day} className="flex items-center gap-1"><input type="checkbox" checked={draft.weeklyOffDays.includes(day)} onChange={(e) => onChange({ ...draft, weeklyOffDays: e.target.checked ? [...draft.weeklyOffDays, day].sort() : draft.weeklyOffDays.filter((d) => d !== day) })} />{label}</label>)}</div></div>
           <label className="block text-xs font-semibold">Paid holidays (one YYYY-MM-DD date per line)<textarea defaultValue={draft.holidayDates.join('\n')} onBlur={(e) => onChange({ ...draft, holidayDates: e.target.value.split(/\s+/).filter(Boolean) })} rows={3} className="field mt-1" placeholder="2026-12-25" /></label>
         </fieldset>
