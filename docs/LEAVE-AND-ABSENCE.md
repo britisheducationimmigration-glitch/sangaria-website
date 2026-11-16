@@ -1,0 +1,13 @@
+# Leave and unapproved office absence
+
+Leave approval is managed by Super Admin. Employees cannot approve their own paid leave. Open Attendance > Logs > Leave / Manual Entry, select employee/date, choose Paid Leave or Unpaid Leave and enter the approval reason. Existing records can be changed through Edit. Full-day leave has no IN/OUT times. An employee cannot overwrite admin-marked leave/absence by checking in; admin must correct that record first.
+
+Paid Leave counts as a paid working day; Unpaid Leave and the legacy Leave status do not. A past eligible working day without a punch is counted as absent in salary calculations, even though no physical log row is manufactured. Today remains pending; weekly offs, holidays and employment dates follow existing policy. This delivery does not add employee leave applications or automatic approvals.
+
+For an employee who checked in, left without informing and returned later, open that day's Edit form. Under Record unapproved absence enter the exact departure and return date/times in IST, with a reason. Add the interval after the employee returns; both times are required. The interval must lie inside the recorded shift, cannot be in the future and can cross midnight when its dates are correct. Multiple observations are saved as admin-labelled break records, with no fabricated GPS evidence. Existing breaks and original punch evidence are preserved. Overlapping intervals are merged when calculating net hours, preventing double deduction.
+
+If OUT already exists, net working hours and status are recalculated using that day's employee full-day/minimum-half-day policy. If the employee has not checked out yet, the interval is retained and used at final OUT. Existing full/half-day salary rules apply; this is not an invented per-minute salary fine. A full-day unpaid/disciplinary decision can be explicitly marked Absent or Unpaid Leave by admin with a reason. Insufficient hours remain Review Required when no half-day threshold is configured. Finalized cycles remain locked.
+
+There is no continuous GPS surveillance or automatic detection that someone left the office. The admin records an observed interval. Every addition saves actor, reason, before/after hours and the interval in correction history; the normal break timeline and workbook contain the admin-labelled interval. Raw JSON is retained only as server/export evidence, not displayed in the edit modal.
+
+SQL regressions cover paid/unpaid leave accounting, protection from employee overwrite, completed/open shift deductions, overlapping intervals, invalid/reversed/out-of-shift times, subsequent employee checkout and correction history. Use the existing half-day settings to reflect the office's actual policy.

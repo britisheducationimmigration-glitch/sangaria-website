@@ -58,6 +58,8 @@ export type LogDraft = {
   checkInTime: string
   checkOutTime: string
   checkOutNextDay?: boolean
+  absenceStart?: string
+  absenceEnd?: string
   isLate: boolean
   editNote: string
   editHistory: AttendanceEditHistoryRecord[]
@@ -84,7 +86,7 @@ function attendanceHistorySummary(history: AttendanceEditHistoryRecord) {
     return String(value)
   }
   if (history.after) {
-    const fields = [['checkInAt', 'Check-in'], ['checkOutAt', 'Check-out'], ['status', 'Status'], ['workMinutes', 'Working time'], ['breakMinutes', 'Break time'], ['isLate', 'Late arrival']]
+    const fields = [['checkInAt', 'Check-in'], ['checkOutAt', 'Check-out'], ['status', 'Status'], ['workMinutes', 'Working time'], ['breakMinutes', 'Break time'], ['isLate', 'Late arrival'], ['absenceStart', 'Unapproved absence from (IST)'], ['absenceEnd', 'Returned at (IST)']]
     const changes = fields.filter(([key]) => history.after?.[key] !== history.before?.[key])
       .map(([key, label]) => `${label}: ${format(key, history.before?.[key])} → ${format(key, history.after?.[key])}`)
     return changes.join(' · ') || 'Record saved without changes'
@@ -279,8 +281,8 @@ export function AttendanceEditModal({
                     ...draft,
                     employeeId: emp.id,
                     employeeName: emp.name,
-                    checkInTime: emp.expectedInTime,
-                    checkOutTime: emp.expectedOutTime,
+                    checkInTime: ['Leave', 'Paid Leave', 'Unpaid Leave', 'Absent'].includes(draft.status) ? '' : emp.expectedInTime,
+                    checkOutTime: ['Leave', 'Paid Leave', 'Unpaid Leave', 'Absent'].includes(draft.status) ? '' : emp.expectedOutTime,
                     checkOutNextDay: emp.expectedOutTime <= emp.expectedInTime,
                   })
                 }}
@@ -308,7 +310,7 @@ export function AttendanceEditModal({
 
         <label className="block text-xs font-semibold text-[#1D2939]">
           Status
-          <select value={draft.status} onChange={(e) => { const status = e.target.value as AttendanceStatus; onChange({ ...draft, status, ...(['Leave', 'Paid Leave', 'Unpaid Leave', 'Absent'].includes(status) ? { checkInTime: '', checkOutTime: '', checkOutNextDay: false, isLate: false } : {}) }) }} className="field mt-1">
+          <select value={draft.status} onChange={(e) => { const status = e.target.value as AttendanceStatus; onChange({ ...draft, status, ...(['Leave', 'Paid Leave', 'Unpaid Leave', 'Absent'].includes(status) ? { checkInTime: '', checkOutTime: '', checkOutNextDay: false, isLate: false, absenceStart: "", absenceEnd: "" } : {}) }) }} className="field mt-1">
             <option>Present</option>
             <option>Half Day</option>
             <option>Review Required</option>
@@ -340,10 +342,17 @@ export function AttendanceEditModal({
           Mark as Late arrival
         </label>
 
+        {!['Leave', 'Paid Leave', 'Unpaid Leave', 'Absent'].includes(draft.status) && <fieldset className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
+          <legend className="px-1 text-xs font-bold">Record unapproved absence</legend>
+          <p className="text-xs text-[#667085]">After the employee returns, record when they left and returned. This time is excluded from working hours; overlapping breaks are deducted once. Completed shifts are reclassified using the employee's hour rules.</p>
+          <label className="block text-xs font-semibold">Left office (IST)<input type="datetime-local" value={draft.absenceStart ?? ''} onChange={e => onChange({...draft,absenceStart:e.target.value})} className="field mt-1" /></label>
+          <label className="block text-xs font-semibold">Returned (IST)<input type="datetime-local" value={draft.absenceEnd ?? ''} onChange={e => onChange({...draft,absenceEnd:e.target.value})} className="field mt-1" /></label>
+        </fieldset>}
+        <p className="text-xs text-[#667085]">Approved leave is marked by admin: Paid Leave counts for salary; Unpaid Leave does not. No punch on a past working day counts as absence. Use a reason for every leave or correction.</p>
         <label className="block text-xs font-semibold text-[#1D2939]">
-          Reason / Edit Note {draft.mode === 'edit' ? '*' : ''}
+          Reason / Edit Note *
           <input
-            required={draft.mode === 'edit'}
+            required
             value={draft.editNote}
             onChange={(e) => onChange({ ...draft, editNote: e.target.value })}
             className="field mt-1"

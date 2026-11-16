@@ -352,7 +352,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                 onClick={() => setLogDraft({ mode: 'create', employeeId: selectedEmployee.id, employeeName: selectedEmployee.name, workDate: filterDate || todayIst, status: 'Present', checkInTime: selectedEmployee.expectedInTime, checkOutTime: selectedEmployee.expectedOutTime, checkOutNextDay: selectedEmployee.expectedOutTime <= selectedEmployee.expectedInTime, isLate: false, editNote: '', editHistory: [] })}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] px-3.5 py-2 text-xs font-bold text-[#1D2939] hover:bg-[#ECF3FF]"
               >
-                <Plus className="size-3.5 text-[#465FFF]" /> Manual Entry
+                <Plus className="size-3.5 text-[#465FFF]" /> Leave / Manual Entry
               </button>
             )}
           </div>

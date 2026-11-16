@@ -236,7 +236,7 @@ export const markEmployeeAttendance = createServerFn({ method: 'POST' })
 
     let today = todayIstDate()
     const now = new Date()
-    const existingRows = await queryRows('SELECT id, check_in_at, check_out_at, breaks_json FROM attendance_logs WHERE employee_id = ? AND work_date = ? LIMIT 1 FOR UPDATE', [employee.id, today])
+    const existingRows = await queryRows('SELECT id, status, check_in_at, check_out_at, breaks_json FROM attendance_logs WHERE employee_id = ? AND work_date = ? LIMIT 1 FOR UPDATE', [employee.id, today])
     let existing = existingRows[0]
     const openRows = await queryRows('SELECT id, work_date, check_in_at, check_out_at, breaks_json FROM attendance_logs WHERE employee_id = ? AND check_in_at IS NOT NULL AND check_out_at IS NULL ORDER BY work_date DESC LIMIT 1 FOR UPDATE', [employee.id])
     const open = openRows[0]
@@ -251,6 +251,7 @@ export const markEmployeeAttendance = createServerFn({ method: 'POST' })
     await assertCycleUnlocked(queryRows, employee.id, today)
 
     if (data.action === 'in') {
+      if (existing && ['Leave', 'Paid Leave', 'Unpaid Leave', 'Absent'].includes(String(existing.status))) throw new Error('Admin has marked leave or absence for today. Contact admin to change it before checking in.')
       if (existing?.check_in_at) throw new Error('You have already checked in today.')
       const isLate = (Number(istTimeHHMM(now).slice(0, 2)) * 60 + Number(istTimeHHMM(now).slice(3))) > (Number(employee.expectedInTime.slice(0, 2)) * 60 + Number(employee.expectedInTime.slice(3)) + (employee.lateGraceMinutes ?? 0)) ? 1 : 0
       if (existing) {
@@ -573,6 +574,12 @@ export const updateAttendanceRecord = createServerFn({ method: 'POST' })
     const isLate = Boolean(input.isLate)
     const checkOutNextDay = Boolean(input.checkOutNextDay)
     const editNote = stringValue(input.editNote, 500)
+    const absenceStart = stringValue(input.absenceStart, 16)
+    const absenceEnd = stringValue(input.absenceEnd, 16)
+    if (absenceStart || absenceEnd) {
+      if (!absenceStart || !absenceEnd || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(absenceStart) || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(absenceEnd)) throw new Error('Enter both unapproved absence date/times')
+      if (!editNote) throw new Error('A reason is required for unapproved absence')
+    }
 
     if (employeeId <= 0) throw new Error('Employee is required')
     if (!/^\d{4}-\d{2}-\d{2}$/.test(workDate) || !Number.isFinite(new Date(workDate + 'T00:00:00Z').getTime()) || new Date(workDate + 'T00:00:00Z').toISOString().slice(0, 10) !== workDate) throw new Error('Valid date (YYYY-MM-DD) is required')
@@ -580,9 +587,10 @@ export const updateAttendanceRecord = createServerFn({ method: 'POST' })
     if (checkInTime && !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(checkInTime)) throw new Error('Check-in time must be HH:MM')
     if (checkOutTime && !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(checkOutTime)) throw new Error('Check-out time must be HH:MM')
     if (checkOutTime && !checkInTime) throw new Error('Check-in time is required when Check-out time is entered')
-    if (mode === 'edit' && !editNote) throw new Error('Please enter a reason for editing this attendance entry')
+    if ((mode === 'edit' || ['Leave', 'Paid Leave', 'Unpaid Leave', 'Absent'].includes(status)) && !editNote) throw new Error('Please enter a reason for editing attendance or approving leave/absence')
+    if (['Leave', 'Paid Leave', 'Unpaid Leave', 'Absent'].includes(status) && (checkInTime || checkOutTime || absenceStart)) throw new Error('Full-day leave/absence cannot include shift times or an absence interval')
 
-    return { mode: mode as 'create' | 'edit', employeeId, workDate, status, checkInTime, checkOutTime, checkOutNextDay, isLate, editNote }
+    return { mode: mode as 'create' | 'edit', employeeId, workDate, status, checkInTime, checkOutTime, checkOutNextDay, isLate, editNote, absenceStart, absenceEnd }
   })
   .handler(async ({ data, context }): Promise<AttendanceLogRecord> => {
     await ensureAttendanceSchema()
@@ -599,7 +607,7 @@ export const updateAttendanceRecord = createServerFn({ method: 'POST' })
 
     if (checkInDate && checkOutDate && checkOutDate.getTime() - checkInDate.getTime() > 86_400_000) throw new Error('A single attendance shift cannot exceed 24 hours')
 
-    const employees = await queryRows('SELECT id FROM employees WHERE id = ? FOR UPDATE', [data.employeeId])
+    const employees = await queryRows('SELECT * FROM employees WHERE id = ? FOR UPDATE', [data.employeeId])
     if (!employees.length) throw new Error('Employee not found')
     await assertCycleUnlocked(queryRows, data.employeeId, data.workDate)
     const existingRows = await queryRows('SELECT * FROM attendance_logs WHERE employee_id = ? AND work_date = ? LIMIT 1 FOR UPDATE', [data.employeeId, data.workDate])
@@ -610,8 +618,21 @@ export const updateAttendanceRecord = createServerFn({ method: 'POST' })
       if (overlap.length) throw new Error('Attendance times overlap another shift for this employee')
     }
     const preservedBreaks = parseBreaksJson(prev?.breaks_json)
+    if (data.absenceStart) {
+      const start = new Date(data.absenceStart + ':00+05:30'), end = new Date(data.absenceEnd + ':00+05:30')
+      const localValue = (date: Date) => new Date(date.getTime() + 19_800_000).toISOString().slice(0, 16)
+      if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || localValue(start) !== data.absenceStart || localValue(end) !== data.absenceEnd || end <= start) throw new Error('Invalid unapproved absence interval')
+      if (!checkInDate || start < checkInDate || end > (checkOutDate ?? new Date()) || end > new Date()) throw new Error('Unapproved absence must be within the recorded shift and cannot be in the future')
+      if (preservedBreaks.length >= 100) throw new Error('Too many intervals; contact support')
+      preservedBreaks.push({outAt:start.toISOString(),inAt:end.toISOString(),outLat:null,outLng:null,outDistanceM:null,inLat:null,inLng:null,inDistanceM:null,note:'Admin - unapproved absence: ' + data.editNote})
+    }
     const workMinutes = checkInDate && checkOutDate ? calculateWorkMinutes(checkInDate, checkOutDate, preservedBreaks) : 0
     const breakMinutes = checkInDate && checkOutDate ? Math.max(0, Math.round((checkOutDate.getTime() - checkInDate.getTime()) / 60_000) - workMinutes) : 0
+    if (data.absenceStart && checkOutDate) {
+      const policies = await queryRows('SELECT employee_id, effective_date, policy_json FROM employee_policy_history WHERE employee_id = ?', [data.employeeId])
+      const employee = resolveEmployeePolicy(mapEmployeeRow(employees[0]), policies.map(row => ({employeeId:Number(row.employee_id),effectiveDate:String(row.effective_date),policy:JSON.parse(String(row.policy_json))})), data.workDate)
+      data.status = classifyShift(workMinutes, employee)
+    }
     if (prev) {
       // Exclude image bytes; images and GPS columns are left unchanged by corrections.
       const { in_photo_data: _inPhoto, out_photo_data: _outPhoto, ...original } = prev
@@ -658,10 +679,15 @@ export const updateAttendanceRecord = createServerFn({ method: 'POST' })
       logId = Number(res.insertId)
     }
 
+    if (data.absenceStart) {
+      await execute('UPDATE attendance_logs SET breaks_json = ?, break_minutes = ? WHERE id = ?', [JSON.stringify(preservedBreaks), breakMinutes, logId])
+      summaryText += ` | Unapproved absence (IST): ${data.absenceStart} to ${data.absenceEnd}`
+    }
+
     await execute(
       `INSERT INTO attendance_edit_history (attendance_log_id, employee_id, work_date, editor_name, editor_email, action, changes_summary, reason, before_json, after_json)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [logId, data.employeeId, data.workDate, context.user.name, context.user.email, prev ? 'edit' : 'create', summaryText, data.editNote || 'Manual entry', prev ? JSON.stringify({ checkInAt: prev.check_in_at, checkOutAt: prev.check_out_at, status: prev.status, workMinutes: prev.work_minutes, breakMinutes: prev.break_minutes, isLate: Boolean(prev.is_late) }) : null, JSON.stringify({ checkInAt: checkInDate, checkOutAt: checkOutDate, status: data.status, workMinutes, breakMinutes, isLate: data.isLate })],
+      [logId, data.employeeId, data.workDate, context.user.name, context.user.email, prev ? 'edit' : 'create', summaryText, data.editNote || 'Manual entry', prev ? JSON.stringify({ checkInAt: prev.check_in_at, checkOutAt: prev.check_out_at, status: prev.status, workMinutes: prev.work_minutes, breakMinutes: prev.break_minutes, isLate: Boolean(prev.is_late) }) : null, JSON.stringify({ checkInAt: checkInDate, checkOutAt: checkOutDate, status: data.status, workMinutes, breakMinutes, isLate: data.isLate, ...(data.absenceStart ? {absenceStart:data.absenceStart,absenceEnd:data.absenceEnd} : {}) })],
     )
 
     const [rows, historyRows] = await Promise.all([

@@ -175,6 +175,33 @@ test('actual MySQL schema, punches, concurrency, corrections and frozen reports'
     const report=await api.getAdminAttendanceSnapshot({data:{month:'2026-10'}})
     assert.equal(report.summaries.find(s=>s.employee.id===employee.id).payableDays,0.5)
   })
+  await t.test('admin leave stays approved and unapproved absence deducts net time only once', async () => {
+    await save({id:employee.id,name:employee.name,minimumHalfDayMinutes:240,halfDayMinutes:480,effectiveDate:'2026-01-01'})
+    for(const [date,status] of [['2026-07-07','Paid Leave'],['2026-07-08','Unpaid Leave'],['2026-07-09','Absent']]) {
+      await manual({workDate:date,status,checkInTime:'',checkOutTime:'',editNote:'Approved by admin'})
+    }
+    state.now='2026-07-07T04:00:00Z'
+    await assert.rejects(punch('in'),/Admin has marked leave/)
+    const leaveReport=await api.getAdminAttendanceSnapshot({data:{month:'2026-07'}})
+    assert.equal(leaveReport.summaries.find(s=>s.employee.id===employee.id).payableDays,1)
+    state.now='2026-11-16T04:00:00Z'
+    await manual({workDate:'2026-07-06'})
+    const adjusted=await manual({mode:'edit',workDate:'2026-07-06',absenceStart:'2026-07-06T12:00',absenceEnd:'2026-07-06T15:00',editNote:'Left without informing'})
+    assert.equal(adjusted.workMinutes,360);assert.equal(adjusted.breakMinutes,180);assert.equal(adjusted.status,'Half Day')
+    const overlap=await manual({mode:'edit',workDate:'2026-07-06',absenceStart:'2026-07-06T13:00',absenceEnd:'2026-07-06T14:00',editNote:'Overlapping observation'})
+    assert.equal(overlap.workMinutes,360)
+    await assert.rejects(manual({mode:'edit',workDate:'2026-07-06',absenceStart:'2026-07-06T08:00',absenceEnd:'2026-07-06T10:00'}),/within the recorded shift/)
+    await assert.rejects(manual({mode:'edit',workDate:'2026-07-06',absenceStart:'2026-07-06T15:00',absenceEnd:'2026-07-06T12:00'}),/Invalid unapproved/)
+    state.now='2026-11-20T04:00:00Z';await punch('in')
+    state.now='2026-11-20T06:00:00Z'
+    await manual({mode:'edit',workDate:'2026-11-20',checkInTime:'09:30',checkOutTime:'',absenceStart:'2026-11-20T10:00',absenceEnd:'2026-11-20T11:00',editNote:'Returned before final checkout'})
+    state.now='2026-11-20T12:00:00Z';await punch('out')
+    const [rows]=await pool.query('SELECT work_minutes,status FROM attendance_logs WHERE employee_id=? AND work_date=?',[employee.id,'2026-11-20'])
+    assert.equal(rows[0].work_minutes,420);assert.equal(rows[0].status,'Half Day')
+    const history=await api.getAttendanceRecordHistory({data:{employeeId:employee.id,workDate:'2026-07-06'}})
+    assert.ok(history.some(h=>h.after.absenceStart==='2026-07-06T12:00'))
+    state.now='2026-11-16T04:00:00Z'
+  })
   await t.test('permanent deletion confirms name, rolls back failures and removes only the selected employee', async () => {
     await api.finalizeAttendanceCycle({data:{month:'2026-10',employeeId:employee.id}})
     await save({id:employee.id,name:employee.name,monthlySalary:30000,effectiveDate:'2026-11-01'})
