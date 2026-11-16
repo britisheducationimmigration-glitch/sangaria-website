@@ -233,7 +233,7 @@ test('actual MySQL schema, punches, concurrency, corrections and frozen reports'
     const original=await api.saveEmployee({data:{name:'Initial profile',monthlySalary:0,effectiveDate:'2026-11-14',joiningDate:'2026-11-14'}})
     const changed={id:original.id,name:'Updated profile',designation:'Trainer',phone:'9876543210',email:'trainer@example.test',monthlySalary:22000,cycleStartDay:1,expectedInTime:'10:00',expectedOutTime:'18:30',officeOnly:false,active:true,joiningDate:'2026-11-14',leavingDate:'2027-12-31',halfDayMinutes:480,minimumHalfDayMinutes:240,lateGraceMinutes:15,weeklyOffDays:[0,6],holidayDates:['2026-12-25'],effectiveDate:'2026-11-14',pin:'5678'}
     const saved=await api.saveEmployee({data:changed})
-    for(const key of ['name','designation','phone','email','monthlySalary','cycleStartDay','expectedInTime','expectedOutTime','officeOnly','active','joiningDate','leavingDate','halfDayMinutes','minimumHalfDayMinutes','lateGraceMinutes','weeklyOffDays','holidayDates']) assert.deepEqual(saved[key],changed[key],key)
+    for(const key of ['name','designation','phone','email','monthlySalary','cycleStartDay','expectedInTime','expectedOutTime','officeOnly','active','joiningDate','leavingDate','halfDayMinutes','minimumHalfDayMinutes','lateGraceMinutes','weeklyOffDays','holidayDates']) assert.deepEqual(JSON.parse(JSON.stringify(saved[key])),changed[key],key)
     const [rows]=await pool.query('SELECT pin_hash FROM employees WHERE id=?',[saved.id])
     assert.ok(server.verifyEmployeePin('5678',rows[0].pin_hash))
     const [audit]=await pool.query('SELECT reason,before_json,after_json FROM employee_policy_audit WHERE employee_id=?',[saved.id])
