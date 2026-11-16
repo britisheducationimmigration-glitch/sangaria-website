@@ -81,10 +81,10 @@ test('actual MySQL schema, punches, concurrency, corrections and frozen reports'
     assert.equal(original.length,1);assert.equal(events.length,4)
   })
   await t.test('audit failure rolls back attendance mutation in the same transaction', async () => {
-    await pool.query("CREATE TRIGGER attendance_test_reject_history BEFORE INSERT ON attendance_edit_history FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Test audit failure'")
+    await pool.query('RENAME TABLE attendance_edit_history TO attendance_edit_history_test_backup')
     try {
-      await assert.rejects(manual({mode:'edit',workDate:'2026-11-16',checkInTime:'09:30',checkOutTime:'19:30',editNote:'Must roll back'}),/Test audit failure/)
-    } finally { await pool.query('DROP TRIGGER attendance_test_reject_history') }
+      await assert.rejects(manual({mode:'edit',workDate:'2026-11-16',checkInTime:'09:30',checkOutTime:'19:30',editNote:'Must roll back'}),/doesn't exist/)
+    } finally { await pool.query('RENAME TABLE attendance_edit_history_test_backup TO attendance_edit_history') }
     const [rows]=await pool.query('SELECT work_minutes FROM attendance_logs WHERE employee_id=? AND work_date=?',[employee.id,'2026-11-16'])
     assert.equal(rows[0].work_minutes,480)
   })
