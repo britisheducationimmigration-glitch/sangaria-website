@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { CalendarDays, Check, Copy, Download, ExternalLink, History, MapPin, Pencil, Plus, RefreshCw, Smartphone, Trash2, Users } from 'lucide-react'
-import { deleteEmployee, exportAttendanceCsv, exportAttendanceExcel, finalizeAttendanceCycle, getAttendanceCycleFinalizations, getAdminAttendanceSnapshot, getAttendanceRecordHistory, regenerateEmployeeToken, resetEmployeeDevice, saveAttendanceSettings, saveEmployee, updateAttendanceRecord } from '@/lib/attendance-functions'
+import { deleteEmployee, permanentlyDeleteEmployee, exportAttendanceCsv, exportAttendanceExcel, finalizeAttendanceCycle, getAttendanceCycleFinalizations, getAdminAttendanceSnapshot, getAttendanceRecordHistory, regenerateEmployeeToken, resetEmployeeDevice, saveAttendanceSettings, saveEmployee, updateAttendanceRecord } from '@/lib/attendance-functions'
 import type { AdminAttendanceSnapshot, AttendanceLogRecord, AttendanceSettings, EmployeeRecord } from '@/lib/content-types'
 import { AttendanceEditModal, EmployeeFormModal, type EmployeeDraft, type LogDraft } from './AttendanceModals'
 
@@ -228,6 +228,20 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
     } finally {
       setBusy(false)
     }
+  }
+
+  async function handlePermanentDeleteEmp(emp: EmployeeRecord) {
+    const confirmationName = window.prompt(`Permanently delete ${emp.name} (ID ${emp.id})? This removes all attendance, selfies, correction history, policies and finalized salary reports from this website. This cannot be undone here. Type the employee's full name to continue:`)
+    if (confirmationName === null) return
+    if (confirmationName.trim() !== emp.name.trim()) { onNotice('Name did not match. Nothing was deleted.'); return }
+    setBusy(true)
+    try {
+      await permanentlyDeleteEmployee({ data: { id: emp.id, confirmationName } })
+      if (filterEmpId === emp.id) setFilterEmpId(0)
+      await load(month)
+      onNotice('Employee and all associated website records permanently deleted.')
+    } catch (cause) { onNotice(cause instanceof Error ? cause.message : 'Could not permanently delete employee.') }
+    finally { setBusy(false) }
   }
 
   const portalUrl = (token: string) => (typeof window === 'undefined' ? `/attendance/${token}` : `${window.location.origin}/attendance/${token}`)
@@ -549,7 +563,8 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                     )}
                     <button type="button" onClick={() => setEmpDraft({ id: emp.id, name: emp.name, designation: emp.designation, phone: emp.phone, email: emp.email, pin: '', clearPin: false, cycleStartDay: emp.cycleStartDay, monthlySalary: emp.monthlySalary, expectedInTime: emp.expectedInTime, expectedOutTime: emp.expectedOutTime, officeOnly: emp.officeOnly, active: emp.active, joiningDate: emp.joiningDate ?? '', leavingDate: emp.leavingDate ?? '', halfDayMinutes: emp.halfDayMinutes ?? 300, minimumHalfDayMinutes: emp.minimumHalfDayMinutes ?? 0, policyReason: '', lateGraceMinutes: emp.lateGraceMinutes ?? 0, weeklyOffDays: emp.weeklyOffDays ?? [0], holidayDates: emp.holidayDates ?? [], effectiveDate: todayIst })} className="rounded-lg border border-[#E4E7EC] p-2 text-[#1D2939] hover:bg-[#F9FAFB]" aria-label="Edit employee"><Pencil className="size-3.5" /></button>
                     <button type="button" disabled={busy} onClick={() => void handleRegenerate(emp)} className="rounded-lg border border-[#E4E7EC] p-2 text-[#1D2939] hover:bg-[#F9FAFB]" title="New link" aria-label="Regenerate link"><RefreshCw className="size-3.5" /></button>
-                    <button type="button" disabled={busy} onClick={() => void handleDeleteEmp(emp)} className="rounded-lg border border-red-200 p-2 text-[#F04438] hover:bg-red-50" aria-label="Archive employee"><Trash2 className="size-3.5" /></button>
+                    <button type="button" disabled={busy} onClick={() => void handleDeleteEmp(emp)} className="rounded-lg border border-[#E4E7EC] px-2 py-1.5 text-xs font-semibold text-[#667085] hover:bg-[#F9FAFB]">Archive</button>
+                    <button type="button" disabled={busy} onClick={() => void handlePermanentDeleteEmp(emp)} className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2 py-1.5 text-xs font-semibold text-[#F04438] hover:bg-red-50"><Trash2 className="size-3.5" /> Permanently Delete</button>
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 rounded-xl bg-[#F9FAFB] p-2.5 text-xs">

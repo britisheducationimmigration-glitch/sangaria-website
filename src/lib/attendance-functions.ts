@@ -505,6 +505,35 @@ export const deleteEmployee = createServerFn({ method: 'POST' })
     return { ok: true }
   })
 
+export const permanentlyDeleteEmployee = createServerFn({ method: 'POST' })
+  .middleware([superAdminMiddleware])
+  .validator((data: unknown) => {
+    const input = (data ?? {}) as Record<string, unknown>
+    const id = Math.floor(numberValue(input.id, 0))
+    const confirmationName = stringValue(input.confirmationName, 140)
+    if (id <= 0 || !confirmationName) throw new Error('Employee ID and confirmation name are required')
+    return { id, confirmationName }
+  })
+  .handler(async ({ data }) => {
+    await ensureAttendanceSchema()
+    await ensureAttendanceReliabilitySchema()
+    return attendanceTransaction(async ({ queryRows, execute }) => {
+      // Same parent lock as punches/corrections/finalization: deletion is atomic.
+      const employees = await queryRows('SELECT id, name FROM employees WHERE id = ? FOR UPDATE', [data.id])
+      if (!employees.length) throw new Error('Employee not found')
+      if (String(employees[0].name).trim() !== data.confirmationName) throw new Error('Employee name does not match. Nothing was deleted.')
+      await execute('DELETE p FROM attendance_punch_events p JOIN attendance_logs l ON l.id = p.log_id WHERE l.employee_id = ?', [data.id])
+      await execute('DELETE p FROM attendance_original_punches p JOIN attendance_logs l ON l.id = p.log_id WHERE l.employee_id = ?', [data.id])
+      await execute('DELETE FROM attendance_edit_history WHERE employee_id = ?', [data.id])
+      await execute('DELETE FROM attendance_logs WHERE employee_id = ?', [data.id])
+      await execute('DELETE FROM attendance_cycle_snapshots WHERE employee_id = ?', [data.id])
+      await execute('DELETE FROM employee_policy_audit WHERE employee_id = ?', [data.id])
+      await execute('DELETE FROM employee_policy_history WHERE employee_id = ?', [data.id])
+      await execute('DELETE FROM employees WHERE id = ?', [data.id])
+      return { ok: true }
+    })
+  })
+
 export const saveAttendanceSettings = createServerFn({ method: 'POST' })
   .middleware([superAdminMiddleware])
   .validator((data: unknown): AttendanceSettings => {

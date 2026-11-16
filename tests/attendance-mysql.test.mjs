@@ -175,4 +175,31 @@ test('actual MySQL schema, punches, concurrency, corrections and frozen reports'
     const report=await api.getAdminAttendanceSnapshot({data:{month:'2026-10'}})
     assert.equal(report.summaries.find(s=>s.employee.id===employee.id).payableDays,0.5)
   })
+  await t.test('permanent deletion confirms name, rolls back failures and removes only the selected employee', async () => {
+    await api.finalizeAttendanceCycle({data:{month:'2026-10',employeeId:employee.id}})
+    await save({id:employee.id,name:employee.name,monthlySalary:30000,effectiveDate:'2026-11-01'})
+    const [logs]=await pool.query('SELECT id FROM attendance_logs WHERE employee_id=?',[employee.id])
+    const logIds=logs.map(log=>log.id)
+    const [otherLogs]=await pool.query('SELECT id FROM attendance_logs WHERE employee_id<>? ORDER BY id',[employee.id])
+    assert.ok(logIds.length>0);assert.ok(otherLogs.length>0)
+    const deletion={id:employee.id,confirmationName:employee.name}
+    await assert.rejects(api.permanentlyDeleteEmployee({data:{...deletion,confirmationName:'Wrong name'}}),/does not match/)
+    // Fail after evidence/log deletes to prove the whole transaction rolls back.
+    await pool.query('RENAME TABLE employee_policy_audit TO employee_policy_audit_delete_test')
+    try { await assert.rejects(api.permanentlyDeleteEmployee({data:deletion}),/doesn't exist/) }
+    finally { await pool.query('RENAME TABLE employee_policy_audit_delete_test TO employee_policy_audit') }
+    assert.equal((await pool.query('SELECT id FROM attendance_logs WHERE employee_id=?',[employee.id]))[0].length,logIds.length)
+    assert.ok((await pool.query('SELECT log_id FROM attendance_original_punches WHERE log_id IN (?)',[logIds]))[0].length>0)
+    await api.permanentlyDeleteEmployee({data:deletion})
+    for(const table of ['attendance_logs','attendance_edit_history','attendance_cycle_snapshots','employee_policy_history','employee_policy_audit']) {
+      assert.equal((await pool.query('SELECT COUNT(*) AS n FROM '+table+' WHERE employee_id=?',[employee.id]))[0][0].n,0,table)
+    }
+    for(const table of ['attendance_original_punches','attendance_punch_events']) {
+      assert.equal((await pool.query('SELECT COUNT(*) AS n FROM '+table+' WHERE log_id IN (?)',[logIds]))[0][0].n,0,table)
+    }
+    assert.equal((await pool.query('SELECT id FROM employees WHERE id=?',[employee.id]))[0].length,0)
+    assert.deepEqual((await pool.query('SELECT id FROM attendance_logs WHERE employee_id<>? ORDER BY id',[employee.id]))[0],otherLogs)
+    await assert.rejects(api.getEmployeePortalData({data:{token:employee.accessToken}}),/not found/)
+    await assert.rejects(api.permanentlyDeleteEmployee({data:deletion}),/not found/)
+  })
 })

@@ -29,6 +29,7 @@ test('employee PIN is salted, verified and compared correctly', () => {
 })
 test('server rejects employee/editor access to every administrative operation', async () => {
   state.role = 'editor'
+  await assert.rejects(api.permanentlyDeleteEmployee({data:{id:1,confirmationName:'Test'}}), /Forbidden/)
   const calls = [ ['getAttendanceRecordHistory',{employeeId:1,workDate:'2026-11-16'}], ['getAdminAttendanceSnapshot',{month:'2026-11'}],['saveEmployee',{name:'Test'}],['resetEmployeeDevice',{id:1}],['regenerateEmployeeToken',{id:1}],['deleteEmployee',{id:1}],['saveAttendanceSettings',settings],['updateAttendanceRecord',{employeeId:1,workDate:'2026-11-16',status:'Present',mode:'create'}],['exportAttendanceExcel',{month:'2026-11'}],['exportAttendanceCsv',{month:'2026-11'}],['getAttendanceCycleFinalizations',{month:'2026-11'}],['finalizeAttendanceCycle',{month:'2026-11',employeeId:1}] ]
   for (const [name,data] of calls) await assert.rejects(api[name]({data}), /Forbidden/)
   state.signedIn = false
