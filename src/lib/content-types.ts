@@ -145,6 +145,8 @@ export type AdminSnapshot = {
     newLast7Days: number
     demoRequests: number
     byStatus: Record<string, number>
+    byMonth: Record<string, number>
+    topCountries: Array<{ country: string; count: number }>
     bySource: Record<string, number>
   }
 }

@@ -191,7 +191,7 @@ function CountriesPage() {
       </section>
 
       {selectedSlugs.length > 0 && (
-        <div className="fixed inset-x-3 bottom-20 z-40 mx-auto flex max-w-xl items-center justify-between gap-3 rounded-2xl bg-forest-950 p-3 text-white shadow-xl ring-1 ring-white/15 sm:inset-x-6">
+        <div className="fixed inset-x-3 bottom-20 z-40 mx-auto flex max-w-xl items-center justify-between gap-3 rounded-2xl bg-forest-950 p-3 text-white shadow-xl ring-1 ring-white/15 sm:inset-x-6 sm:bottom-28">
           <div aria-live="polite"><p className="font-mono text-[10px] font-bold uppercase tracking-wider text-coral-300">{selectedSlugs.length} / 3 selected</p><p className="text-xs text-white/75">{selectedSlugs.length < 2 ? 'Choose one more' : 'Ready to compare'}</p></div>
           <div className="flex shrink-0 items-center gap-2">
             <button type="button" onClick={() => { setSelectedSlugs([]); setShowComparison(false); setCompareNotice('') }} className="min-h-11 rounded-full px-3 py-2 text-xs font-bold text-white/80 hover:bg-white/10">Clear</button>

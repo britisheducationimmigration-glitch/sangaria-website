@@ -30,7 +30,7 @@ test('employee PIN is salted, verified and compared correctly', () => {
 test('server rejects employee/editor access to every administrative operation', async () => {
   state.role = 'editor'
   await assert.rejects(api.permanentlyDeleteEmployee({data:{id:1,confirmationName:'Test'}}), /Forbidden/)
-  const calls = [ ['getAttendanceRecordHistory',{employeeId:1,workDate:'2026-11-16'}], ['getAdminAttendanceSnapshot',{month:'2026-11'}],['saveEmployee',{name:'Test'}],['resetEmployeeDevice',{id:1}],['regenerateEmployeeToken',{id:1}],['deleteEmployee',{id:1}],['saveAttendanceSettings',settings],['updateAttendanceRecord',{employeeId:1,workDate:'2026-11-16',status:'Present',mode:'create'}],['exportAttendanceExcel',{month:'2026-11'}],['exportAttendanceCsv',{month:'2026-11'}],['getAttendanceCycleFinalizations',{month:'2026-11'}],['finalizeAttendanceCycle',{month:'2026-11',employeeId:1}] ]
+  const calls = [ ['getAttendanceRecordHistory',{employeeId:1,workDate:'2026-11-16'}], ['getAdminAttendanceSnapshot',{month:'2026-11'}],['saveEmployee',{name:'Test'}],['resetEmployeeDevice',{id:1}],['regenerateEmployeeToken',{id:1}],['deleteEmployee',{id:1}],['saveAttendanceSettings',settings],['updateAttendanceRecord',{employeeId:1,workDate:'2026-11-16',status:'Present',mode:'create',checkInTime:'09:00'}],['exportAttendanceExcel',{month:'2026-11'}],['exportAttendanceCsv',{month:'2026-11'}],['getAttendanceCycleFinalizations',{month:'2026-11'}],['finalizeAttendanceCycle',{month:'2026-11',employeeId:1}] ]
   for (const [name,data] of calls) await assert.rejects(api[name]({data}), /Forbidden/)
   state.signedIn = false
   await assert.rejects(api.getAdminAttendanceSnapshot({data:{month:'2026-11'}}), /Unauthorized/)
@@ -40,4 +40,17 @@ test('validators reject impossible dates and invalid times before SQL', async ()
   for (const workDate of ['2026-02-30','2026-13-01','wrong']) await assert.rejects(api.updateAttendanceRecord({data:{mode:'create',employeeId:1,workDate,status:'Present'}}), /date/)
   await assert.rejects(api.updateAttendanceRecord({data:{mode:'create',employeeId:1,workDate:'2026-11-16',status:'Present',checkInTime:'25:00'}}), /HH:MM/)
   await assert.rejects(api.saveEmployee({data:{name:'Test',effectiveDate:'2026-02-30'}}), /date/)
+})
+
+test('invalid holiday entries are rejected instead of silently dropped', async () => {
+  for (const date of ['bad-date', '2026-02-30']) await assert.rejects(api.saveEmployee({data:{name:'Test', holidayDates:[date]}}), /Invalid holiday date/)
+})
+test('multiple configured office IPs accept either router address', () => {
+  assert.equal(verify({ settings:{...settings,requireOfficeWifiIp:true,officeWifiIp:'203.0.113.1, 2001:db8::1'}, headers:new Headers({'x-real-ip':'2001:db8::1'}) }).ip, '2001:db8::1')
+})
+
+test('daytime shift validation rejects empty completed shifts and next-day OUT', async () => {
+  for (const change of [{}, {status:'Half Day',checkInTime:'09:00'}, {checkInTime:'09:00',checkOutTime:'17:00',checkOutNextDay:true}]) {
+    await assert.rejects(api.updateAttendanceRecord({data:{mode:'create',employeeId:1,workDate:'2026-11-16',status:'Present',...change}}), /required|same-day/)
+  }
 })

@@ -70,6 +70,7 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
   const [portal, setPortal] = useState<PortalSuccess>(initial)
   const [pin, setPin] = useState('')
   const [deviceKey, setDeviceKey] = useState('')
+  const gpsCapturedAt = useRef(0)
   const [gps, setGps] = useState<{ lat: number; lng: number; accuracyM: number } | null>(null)
   const [gpsState, setGpsState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
   const [gpsError, setGpsError] = useState('')
@@ -85,7 +86,7 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
 
-  const { employee, settings, todayIst, todayLog, recentLogs, summary } = portal
+  const { employee, settings, todayIst, todayLog, recentLogs, summary, missedPreviousOutDate } = portal
   const hasCheckedIn = Boolean(todayLog?.checkInAt)
   const hasCheckedOut = Boolean(todayLog?.checkOutAt)
 
@@ -149,21 +150,24 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
       }
       setGpsState('loading')
       setGpsError('')
-      navigator.geolocation.getCurrentPosition(
+      const requestPosition = (retry: boolean) => navigator.geolocation.getCurrentPosition(
         (pos) => {
+          gpsCapturedAt.current = pos.timestamp
           const next = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracyM: pos.coords.accuracy }
           setGps(next)
           setGpsState('ready')
           resolve(next)
         },
         (err) => {
+          if (!retry && err.code === 3 && Date.now() - gpsCapturedAt.current < 20_000) { requestPosition(true); return }
           const msg = err.code === 1 ? 'Location permission denied. Allow GPS to mark attendance.' : 'GPS signal unavailable. Turn on device Location and tap Refresh GPS.'
           setGpsState('error')
           setGpsError(msg)
           reject(new Error(msg))
         },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: retry ? 20000 : 0 },
       )
+      requestPosition(false)
     })
   }, [])
 
@@ -264,6 +268,7 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
           </div>
         </header>
 
+        {missedPreviousOutDate && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">Missing Check Out for {missedPreviousOutDate}. Contact Super Admin to correct it before marking attendance.</p>}
         {/* GPS Status */}
         <section className="rounded-2xl border border-[#E4E7EC] bg-white p-4 shadow-xs">
           <div className="flex items-center justify-between gap-2">
@@ -276,7 +281,7 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
           {gps && (
             <div className="mt-2.5 grid grid-cols-2 gap-2 text-xs">
               <div className="rounded-xl bg-[#F9FAFB] p-2.5"><p className="text-[#667085]">Distance</p><p className={`font-bold ${inRange ? 'text-[#12B76A]' : 'text-[#F79009]'}`}>{dist}m {inRange ? '· In Range ✓' : `(Max ${settings.allowedRadiusM}m)`}</p></div>
-              <div className="rounded-xl bg-[#F9FAFB] p-2.5"><p className="text-[#667085]">Accuracy</p><p className="font-bold text-[#1D2939]">±{gps.accuracyM}m</p></div>
+              <div className="rounded-xl bg-[#F9FAFB] p-2.5"><p className="text-[#667085]">Accuracy</p><p className="font-bold text-[#1D2939]">±{Math.round(gps.accuracyM)}m</p></div>
             </div>
           )}
         </section>
@@ -318,29 +323,29 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
           )}
 
          {!hasCheckedIn ? (
-            <button type="button" disabled={busy || gpsState !== 'ready' || (settings.requireSelfie && cameraState !== 'ready') || (employee.hasPin && pin.length < 4)} onClick={() => void submitAction('in')} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#465FFF] px-5 py-3 text-sm font-bold text-white shadow-xs disabled:opacity-50">
+            <button type="button" disabled={Boolean(missedPreviousOutDate) || busy || gpsState !== 'ready' || (settings.requireSelfie && cameraState !== 'ready') || (employee.hasPin && pin.length < 4)} onClick={() => void submitAction('in')} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#465FFF] px-5 py-3 text-sm font-bold text-white shadow-xs disabled:opacity-50">
               <CheckCircle2 className="size-4" /> {busy ? stepLabel || 'Marking…' : 'Mark Check In'}
             </button>
           ) : !hasCheckedOut ? (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2.5">
-                <button type="button" disabled={busy || gpsState !== 'ready' || (settings.requireSelfie && cameraState !== 'ready') || (employee.hasPin && pin.length < 4)} onClick={() => void submitAction('out')} className="flex min-h-12 items-center justify-center gap-1.5 rounded-xl bg-[#1D2939] px-3 py-3 text-xs font-bold text-white shadow-xs disabled:opacity-50 sm:text-sm">
+                <button type="button" disabled={Boolean(missedPreviousOutDate) || busy || gpsState !== 'ready' || (settings.requireSelfie && cameraState !== 'ready') || (employee.hasPin && pin.length < 4)} onClick={() => void submitAction('out')} className="flex min-h-12 items-center justify-center gap-1.5 rounded-xl bg-[#1D2939] px-3 py-3 text-xs font-bold text-white shadow-xs disabled:opacity-50 sm:text-sm">
                   <Clock className="size-4" /> {busy ? stepLabel || 'Saving…' : 'Check Out'}
                 </button>
-                <button type="button" disabled={busy || gpsState !== 'ready' || (settings.requireSelfie && cameraState !== 'ready') || (employee.hasPin && pin.length < 4)} onClick={() => void submitAction('half_out')} className="flex min-h-12 items-center justify-center gap-1.5 rounded-xl border border-[#F79009] bg-[#FFFAEB] px-3 py-3 text-xs font-bold text-[#F79009] disabled:opacity-50 sm:text-sm">
+                <button type="button" disabled={Boolean(missedPreviousOutDate) || busy || gpsState !== 'ready' || (settings.requireSelfie && cameraState !== 'ready') || (employee.hasPin && pin.length < 4)} onClick={() => void submitAction('half_out')} className="flex min-h-12 items-center justify-center gap-1.5 rounded-xl border border-[#F79009] bg-[#FFFAEB] px-3 py-3 text-xs font-bold text-[#F79009] disabled:opacity-50 sm:text-sm">
                   Half Day Out
                 </button>
               </div>
 
               <div className="rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-3 space-y-2">
                 {hasOpenBreak ? (
-                  <button type="button" disabled={busy || gpsState !== 'ready' || (employee.hasPin && pin.length < 4)} onClick={() => void submitAction('break_in')} className="flex min-h-10 w-full items-center justify-center rounded-xl bg-[#12B76A] px-4 py-2 text-xs font-bold text-white disabled:opacity-50">
+                  <button type="button" disabled={Boolean(missedPreviousOutDate) || busy || gpsState !== 'ready' || (employee.hasPin && pin.length < 4)} onClick={() => void submitAction('break_in')} className="flex min-h-10 w-full items-center justify-center rounded-xl bg-[#12B76A] px-4 py-2 text-xs font-bold text-white disabled:opacity-50">
                     {busy ? stepLabel || 'Saving…' : 'Back in Office (Resume Shift)'}
                   </button>
                 ) : (
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <input value={breakNote} onChange={(e) => setBreakNote(e.target.value)} maxLength={120} placeholder="Reason if stepping out (e.g. Lunch / Bank)" className="field flex-1 !py-2 !text-xs" />
-                    <button type="button" disabled={busy || gpsState !== 'ready' || (employee.hasPin && pin.length < 4)} onClick={() => void submitAction('break_out')} className="min-h-10 shrink-0 rounded-xl border border-[#E4E7EC] bg-white px-3.5 py-2 text-xs font-bold text-[#1D2939] hover:bg-[#ECF3FF] disabled:opacity-50">
+                    <button type="button" disabled={Boolean(missedPreviousOutDate) || busy || gpsState !== 'ready' || (employee.hasPin && pin.length < 4)} onClick={() => void submitAction('break_out')} className="min-h-10 shrink-0 rounded-xl border border-[#E4E7EC] bg-white px-3.5 py-2 text-xs font-bold text-[#1D2939] hover:bg-[#ECF3FF] disabled:opacity-50">
                       Step Out / Break
                     </button>
                   </div>

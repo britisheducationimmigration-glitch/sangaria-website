@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useLoaderData, useNavigate } from '@tanstack/react-router'
 import { Plane, MapPin, X, ArrowRight, MessageCircle, RotateCcw, Download, Scissors } from 'lucide-react'
 
-export function BoardingPassGenerator() {
+export function BoardingPassGenerator({ id }: { id?: string } = {}) {
+  const generatedId = useId()
+  const dialogRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate() 
   const rootData = useLoaderData({ from: '__root__' })
   const rawHelpline = (rootData?.settings.phones[1] || rootData?.settings.phones[0] || '9772570478').trim()
@@ -18,6 +20,23 @@ export function BoardingPassGenerator() {
   const [customIntake, setCustomIntake] = useState('')
   const [open, setOpen] = useState(false)
   const [flipped, setFlipped] = useState(false)
+  useEffect(() => {
+    if (!open) return
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const dialog = dialogRef.current
+    dialog?.focus()
+    const keydown = (event: KeyboardEvent) => {
+      if (document.querySelector('[role="dialog"][data-share-prompt]') || document.getElementById('enquiry-popup-title')) return
+      if (event.key === 'Escape') { event.preventDefault(); setOpen(false) }
+      if (event.key !== 'Tab') return
+      const controls = Array.from(dialog?.querySelectorAll<HTMLElement>('button:not(:disabled),a[href],[tabindex="0"]') ?? []).filter(el => el.getClientRects().length)
+      const first = controls[0], last = controls.at(-1)
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) { event.preventDefault(); last?.focus() }
+      else if (!event.shiftKey && (document.activeElement === last || document.activeElement === dialog)) { event.preventDefault(); first?.focus() }
+    }
+    document.addEventListener('keydown', keydown)
+    return () => { document.removeEventListener('keydown', keydown); previous?.focus() }
+  }, [open])
 
   // Resolve display values & codes
   const displayOrigin = origin === 'CUSTOM' ? (customOrigin.trim() || 'Custom City') : origin
@@ -38,7 +57,7 @@ export function BoardingPassGenerator() {
   const shareText = `✈️ My Future Flight Boarding Pass:\n👤 Passenger: ${passName}\n📍 Origin: ${displayOrigin}\n🌍 Destination: ${displayDest}\n🎯 Visa Goal: ${displayVisa}\n📅 Intake: ${displayIntake}\n\n🏛️ British Education & Immigration, Sangaria\n👉 Check eligibility: https://britisheducationandimmigration.com`
 
   const shareWA = () => {
-    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`, '_blank')
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`, '_blank', 'noopener,noreferrer')
   }
 
   const handleMakeReal = () => {
@@ -187,7 +206,7 @@ export function BoardingPassGenerator() {
   }
 
   return (
-    <section id="boarding-pass-section" className="relative overflow-hidden bg-forest-950 py-16 px-4 sm:px-6 border-y border-white/10 text-white">
+    <section id={id ?? `boarding-pass-${generatedId}`} className="relative overflow-hidden bg-forest-950 py-16 px-4 sm:px-6 border-y border-white/10 text-white">
       <div className="relative mx-auto max-w-5xl">
         <div className="text-center mb-8">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-forest-900 border border-white/15 px-3.5 py-1 text-xs font-semibold text-coral-400 mb-3 shadow-sm">
@@ -347,7 +366,7 @@ export function BoardingPassGenerator() {
 
       {/* POPUP MODAL */}
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-forest-950/85 backdrop-blur-md">
+        <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Your boarding pass" tabIndex={-1} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-forest-950/85 backdrop-blur-md">
           <div className="relative w-full max-w-lg rounded-3xl bg-forest-900 border border-white/20 p-5 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between gap-3 pb-3 border-b border-white/10 mb-4">
               <span className="text-sm font-extrabold text-white">✨ Your Boarding Pass is Ready!</span>

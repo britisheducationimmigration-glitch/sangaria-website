@@ -1,3 +1,4 @@
+import { validCronAuthorization } from '../src/lib/cron-secret.server.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { getSupportedVideoEmbedUrl } from '../src/lib/video.ts'
@@ -24,4 +25,10 @@ test('eligibility scores respect required factors',()=>{
   const rules={factors:[{id:'language',label:'Language',goals:['study'],options:[{value:'yes',points:10},{value:'no',points:0}]}],bands:[{min:0,label:'Test'}],countries:[{name:'Test',minScore:{study:50},minFactor:{language:10}}]}
   assert.equal(evaluate(rules,'study',{language:'yes'}).score,100)
   assert.equal(evaluate(rules,'study',{language:'no'}).countries[0].matchesChecklist,false)
+})
+
+test('cron authorization fails closed for absent, wrong and unequal-length values', () => {
+  assert.equal(validCronAuthorization('Bearer secret', 'secret'), true)
+  for (const value of [null, '', 'secret', 'Bearer secrex', 'Bearer secret-extra']) assert.equal(validCronAuthorization(value, 'secret'), false)
+  assert.equal(validCronAuthorization('Bearer ', ''), false)
 })

@@ -14,6 +14,7 @@ export function EnquiryForm({
   dark = false,
   compact = false,
   onSuccess,
+  onSharePromptChange,
 }: {
   source: string
   defaultInterest?: string
@@ -22,6 +23,7 @@ export function EnquiryForm({
   dark?: boolean
   compact?: boolean
   onSuccess?: () => void
+  onSharePromptChange?: (open: boolean) => void
 }) {
   const rootData = useLoaderData({ from: '__root__' })
   const countryOptions = rootData?.countries ?? fixtureCountries
@@ -30,6 +32,7 @@ export function EnquiryForm({
   const [state, setState] = useState<'idle' | 'sending' | 'done' | 'error'>('idle')
   const [whatsappUrl, setWhatsappUrl] = useState('')
   const [showSharePrompt, setShowSharePrompt] = useState(false)
+  useEffect(() => { onSharePromptChange?.(showSharePrompt); return () => onSharePromptChange?.(false) }, [showSharePrompt, onSharePromptChange])
 
   // Live validation states
   const [name, setName] = useState('')
@@ -51,11 +54,11 @@ const cleanPhoneDigits = phone.replace(/\D/g, '').replace(/^0+/, '')
   useEffect(() => {
     if (state !== 'done' || !showSharePrompt) return
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setShowSharePrompt(false)
+      if (event.key === 'Escape') { event.preventDefault(); setShowSharePrompt(false); onSuccess?.() }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [state, showSharePrompt])
+  }, [state, showSharePrompt, onSuccess])
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -137,13 +140,10 @@ const cleanPhoneDigits = phone.replace(/\D/g, '').replace(/^0+/, '')
         {showSharePrompt && (
           <div
             className="fixed inset-0 z-[100] grid place-items-center bg-forest-950/70 p-4 backdrop-blur-sm"
-            role="dialog"
+            role="dialog" data-share-prompt
             aria-modal="true"
             aria-labelledby={`${source}-enquiry-confirmation-title`}
             aria-describedby={`${source}-enquiry-confirmation-description`}
-            onKeyDown={(event) => {
-              if (event.key === 'Escape') setShowSharePrompt(false)
-            }}
           >
             <div className="w-full max-w-md rounded-3xl bg-white p-6 text-center text-forest-900 shadow-2xl sm:p-8">
               <CheckCircle2 className="mx-auto size-12 text-emerald-600" />
@@ -236,7 +236,7 @@ const cleanPhoneDigits = phone.replace(/\D/g, '').replace(/^0+/, '')
               inputMode="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              pattern="[0-9+\s-]{10,15}"
+              pattern="[0-9+\s()\-]{10,20}"
               className={cn('field pr-9 transition-colors', isPhoneValid && 'border-emerald-500/60 focus:border-emerald-500')}
               placeholder="10-digit mobile"
             />

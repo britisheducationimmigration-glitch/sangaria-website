@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { CalendarDays, Check, Copy, Download, ExternalLink, History, MapPin, Pencil, Plus, RefreshCw, Smartphone, Trash2, Users } from 'lucide-react'
-import { deleteEmployee, permanentlyDeleteEmployee, exportAttendanceCsv, exportAttendanceExcel, finalizeAttendanceCycle, getAttendanceCycleFinalizations, getAdminAttendanceSnapshot, getAttendanceRecordHistory, regenerateEmployeeToken, resetEmployeeDevice, saveAttendanceSettings, saveEmployee, updateAttendanceRecord } from '@/lib/attendance-functions'
+import { getAttendancePhotoCleanupPreview, cleanOldAttendancePhotos, deleteEmployee, permanentlyDeleteEmployee, exportAttendanceCsv, exportAttendanceExcel, finalizeAttendanceCycle, getAdminAttendanceSnapshot, getAttendanceRecordHistory, regenerateEmployeeToken, resetEmployeeDevice, saveAttendanceSettings, saveEmployee, updateAttendanceRecord } from '@/lib/attendance-functions'
 import type { AdminAttendanceSnapshot, AttendanceLogRecord, AttendanceSettings, EmployeeRecord } from '@/lib/content-types'
 import { AttendanceEditModal, EmployeeFormModal, type EmployeeDraft, type LogDraft } from './AttendanceModals'
 
@@ -37,12 +37,12 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
   const [filterEmpId, setFilterEmpId] = useState(0)
   const [reviewOnly, setReviewOnly] = useState(false)
   const [logView, setLogView] = useState<'table' | 'calendar' | 'timeline'>('table')
-  const [finalizations, setFinalizations] = useState<Awaited<ReturnType<typeof getAttendanceCycleFinalizations>>>([])
   const [employeeSaveError, setEmployeeSaveError] = useState('')
   const [empDraft, setEmpDraft] = useState<EmployeeDraft | null>(null)
   const [logDraft, setLogDraft] = useState<LogDraft | null>(null)
   const [settingsDraft, setSettingsDraft] = useState<AttendanceSettings | null>(null)
   const [copiedId, setCopiedId] = useState<number | null>(null)
+  const lastLoadedMonthRef = useRef('')
   const loadSequence = useRef(0)
   const refreshInFlight = useRef(false)
   const [lastUpdated, setLastUpdated] = useState('')
@@ -53,13 +53,14 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
     setError('')
     try {
       const next = await getAdminAttendanceSnapshot({ data: { month: targetMonth, lightweight: background } })
-      const locked = background ? null : await getAttendanceCycleFinalizations({ data: { month: targetMonth } })
       if (request !== loadSequence.current) return
-      if (locked) setFinalizations(locked)
       setSnapshot(next)
       if (!background) setSettingsDraft(next.settings)
       setLastUpdated(new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }))
-      setFilterDate((prev) => prev.startsWith(targetMonth) ? prev : next.todayIst.startsWith(targetMonth) ? next.todayIst : `${targetMonth}-01`)
+      if (lastLoadedMonthRef.current !== targetMonth) {
+        setFilterDate(next.todayIst.startsWith(targetMonth) ? next.todayIst : `${targetMonth}-01`)
+        lastLoadedMonthRef.current = targetMonth
+      }
     } catch (cause) {
       if (request !== loadSequence.current) return
       setError(cause instanceof Error ? cause.message : 'Could not load attendance.')
@@ -98,6 +99,19 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
       document.removeEventListener('visibilitychange', onVisible)
     }
   }, [month, busy, empDraft, logDraft, subTab])
+
+  async function cleanupPhotos() {
+    setBusy(true)
+    try {
+      const preview = await getAttendancePhotoCleanupPreview()
+      if (!preview.photos) { onNotice('No selfies older than 60 days.'); return }
+      if (!window.confirm(`Permanently delete old selfies before ${preview.cutoff}? ${preview.photos} photos across ${preview.records} records qualify; at most 2,000 records are cleaned per run. Attendance, salary and audit records are kept.`)) return
+      const result = await cleanOldAttendancePhotos({ data: { cutoff: preview.cutoff, confirmed: true } })
+      await load(month)
+      onNotice(`Old selfies cleared from ${result.cleared} attendance records.`)
+    } catch (cause) { onNotice(cause instanceof Error ? cause.message : 'Cleanup failed') }
+    finally { setBusy(false) }
+  }
 
   async function downloadExcel(employeeId = 0) {
     setBusy(true)
@@ -270,7 +284,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
       status: log.status,
       checkInTime: istHHMM(log.checkInAt),
       checkOutTime: istHHMM(log.checkOutAt),
-      checkOutNextDay: Boolean(log.checkInAt && log.checkOutAt && new Date(new Date(log.checkOutAt).getTime() + 19_800_000).toISOString().slice(0, 10) > new Date(new Date(log.checkInAt).getTime() + 19_800_000).toISOString().slice(0, 10)),
+      checkOutNextDay: false,
       isLate: log.isLate,
       editNote: '',
       editHistory: log.editHistory,
@@ -287,12 +301,13 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
 
   const { employees, logs, summaries, todayIst, currentRequestIp } = snapshot
   const todayLogs = logs.filter((l) => l.workDate === todayIst)
+  const displayStatus = (log: AttendanceLogRecord) => log.checkInAt && !log.checkOutAt ? log.workDate < todayIst ? 'Missing OUT' : 'In Progress' : log.status
   const requiresReview = (log: AttendanceLogRecord) => Boolean(log.status === 'Review Required' || (log.checkInAt && !log.checkOutAt && log.workDate < todayIst) || [...log.inFlags, ...log.outFlags].some((flag) => flag.includes('MISSING') || flag.includes('AUTO_CHECKOUT') || (flag.includes('REVIEW_REQUIRED') && !log.outFlags.includes('ADMIN_REVIEW_APPROVED'))))
   const visibleLogs = logs.filter((l) => (!filterDate || l.workDate === filterDate) && (!filterEmpId || l.employeeId === filterEmpId) && (!reviewOnly || requiresReview(l)))
   const calendarLogs = logs.filter((l) => l.workDate.startsWith(month) && (!filterEmpId || l.employeeId === filterEmpId) && (!reviewOnly || requiresReview(l)))
   const calendarStart = new Date(month + '-01T00:00:00Z')
   const calendarDays = new Date(Date.UTC(calendarStart.getUTCFullYear(), calendarStart.getUTCMonth() + 1, 0)).getUTCDate()
-  const selectedEmployee = employees.find((employee) => employee.id === filterEmpId) ?? employees[0]
+  const selectedEmployee = employees.find((employee) => employee.id === filterEmpId) ?? employees.find(employee => employee.active) ?? employees[0]
 
   return (
     <section className="space-y-6">
@@ -353,7 +368,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
             {employees.length > 0 && (
               <button
                 type="button"
-                onClick={() => setLogDraft({ mode: 'create', employeeId: selectedEmployee.id, employeeName: selectedEmployee.name, workDate: filterDate || todayIst, status: 'Present', checkInTime: selectedEmployee.expectedInTime, checkOutTime: selectedEmployee.expectedOutTime, checkOutNextDay: selectedEmployee.expectedOutTime <= selectedEmployee.expectedInTime, isLate: false, editNote: '', editHistory: [] })}
+                onClick={() => setLogDraft({ mode: 'create', employeeId: selectedEmployee.id, employeeName: selectedEmployee.name, workDate: filterDate || todayIst, status: 'Present', checkInTime: selectedEmployee.expectedInTime, checkOutTime: selectedEmployee.expectedOutTime, checkOutNextDay: false, isLate: false, editNote: '', editHistory: [] })}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] px-3.5 py-2 text-xs font-bold text-[#1D2939] hover:bg-[#ECF3FF]"
               >
                 <Plus className="size-3.5 text-[#465FFF]" /> Leave / Manual Entry
@@ -444,7 +459,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                         ) : <span className="text-[#98A2B3]">—</span>}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${log.status === 'Present' ? 'bg-[#ECFDF3] text-[#12B76A]' : log.status === 'Half Day' ? 'bg-[#FFFAEB] text-[#F79009]' : 'bg-[#FEF3F2] text-[#F04438]'}`}>{log.status}</span>
+                        <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${log.checkInAt && !log.checkOutAt ? 'bg-[#FFFAEB] text-[#F79009]' : log.status === 'Present' ? 'bg-[#ECFDF3] text-[#12B76A]' : log.status === 'Half Day' ? 'bg-[#FFFAEB] text-[#F79009]' : 'bg-[#FEF3F2] text-[#F04438]'}`}>{displayStatus(log)}</span>
                         {flags.length > 0 && <p className="mt-1 text-[10px] font-semibold text-[#F04438]">{flags.join(', ')}</p>}
                         {log.editedBy && <p className="mt-0.5 text-[10px] text-[#667085]">By {log.editedBy} · {log.editNote}</p>}
                       </td>
@@ -484,7 +499,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                   ...log.breaks.flatMap((br) => [{ at: br.outAt, label: 'Break out' + (br.note ? ': ' + br.note : ''), lat: br.outLat, lng: br.outLng }, ...(br.inAt ? [{ at: br.inAt, label: 'Returned', lat: br.inLat, lng: br.inLng }] : [])]),
                   ...(log.checkOutAt ? [{ at: log.checkOutAt, label: 'Check out', lat: log.outLat, lng: log.outLng }] : []),
                 ].sort((a, b) => a.at.localeCompare(b.at))
-                return <article key={log.id} className="rounded-2xl border border-[#E4E7EC] bg-white p-5"><div className="mb-4 flex items-start justify-between gap-3"><div><h3 className="font-bold">{log.employeeName}</h3><p className="text-xs text-[#667085]">{log.workDate} · {log.status} · {fmtHours(log.workMinutes)} net</p>{requiresReview(log) && <p className="mt-1 text-xs font-semibold text-[#F04438]">Missing or automatic OUT needs review</p>}</div><button type="button" onClick={() => openEditLog(log)} className="rounded-lg border border-[#E4E7EC] px-3 py-2 text-xs font-semibold text-[#465FFF]">Review / history</button></div><ol className="space-y-3 border-l-2 border-[#E4E7EC] pl-4">{events.map((event, i) => <li key={i} className="text-xs"><p className="font-semibold">{fmtIstTime(event.at)} · {event.label}</p>{event.lat !== null && event.lng !== null && <a href={mapHref(event.lat, event.lng)} target="_blank" rel="noreferrer" className="text-[#465FFF] underline">View location</a>}</li>)}{!log.checkOutAt && log.checkInAt && <li className="text-xs font-semibold text-[#F79009]">OUT not recorded · hours pending</li>}</ol></article>
+                return <article key={log.id} className="rounded-2xl border border-[#E4E7EC] bg-white p-5"><div className="mb-4 flex items-start justify-between gap-3"><div><h3 className="font-bold">{log.employeeName}</h3><p className="text-xs text-[#667085]">{log.workDate} · {displayStatus(log)} · {fmtHours(log.workMinutes)} net</p>{requiresReview(log) && <p className="mt-1 text-xs font-semibold text-[#F04438]">Missing or automatic OUT needs review</p>}</div><button type="button" onClick={() => openEditLog(log)} className="rounded-lg border border-[#E4E7EC] px-3 py-2 text-xs font-semibold text-[#465FFF]">Review / history</button></div><ol className="space-y-3 border-l-2 border-[#E4E7EC] pl-4">{events.map((event, i) => <li key={i} className="text-xs"><p className="font-semibold">{fmtIstTime(event.at)} · {event.label}</p>{event.lat !== null && event.lng !== null && <a href={mapHref(event.lat, event.lng)} target="_blank" rel="noreferrer" className="text-[#465FFF] underline">View location</a>}</li>)}{!log.checkOutAt && log.checkInAt && <li className="text-xs font-semibold text-[#F79009]">OUT not recorded · hours pending</li>}</ol></article>
               })}
               {visibleLogs.length === 0 && <p className="rounded-xl bg-white p-6 text-center text-sm text-[#667085]">No entries match this date and employee.</p>}
             </div>
@@ -509,7 +524,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                 <button type="button" disabled={busy} onClick={() => void downloadCsv(s.employee.id)} className="rounded-lg border border-[#E4E7EC] px-3 py-1.5 text-xs font-semibold text-[#465FFF] disabled:opacity-50">CSV</button>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#E4E7EC] p-3 text-xs">
-                {(s.finalized || finalizations.some((item) => item.employeeId === s.employee.id)) ? <span className="font-semibold text-[#12B76A]">Finalized · report locked</span> : <><span className="text-[#667085]">Draft · {s.missedCheckOutCount} missing OUT · {s.reviewRequiredCount ?? 0} short shifts to review</span><button type="button" disabled={busy || s.cycleEndDate >= todayIst || s.missedCheckOutCount > 0 || (s.reviewRequiredCount ?? 0) > 0} onClick={() => void finalizeCycle(s.employee.id)} className="rounded-lg bg-[#465FFF] px-3 py-2 font-semibold text-white disabled:opacity-40">Finalize completed cycle</button></>}
+                {s.finalized ? <span className="font-semibold text-[#12B76A]">Finalized · report locked</span> : <><span className="text-[#667085]">Draft · {s.missedCheckOutCount} missing OUT · {s.reviewRequiredCount ?? 0} short shifts to review</span><button type="button" disabled={busy || s.cycleEndDate >= todayIst || s.missedCheckOutCount > 0 || (s.reviewRequiredCount ?? 0) > 0} onClick={() => void finalizeCycle(s.employee.id)} className="rounded-lg bg-[#465FFF] px-3 py-2 font-semibold text-white disabled:opacity-40">Finalize completed cycle</button></>}
               </div>
               <div className="grid grid-cols-3 gap-2 text-center text-xs sm:grid-cols-6">
                 <div className="rounded-xl bg-[#ECFDF3] p-2"><p className="text-[10px] text-[#667085]">Present</p><p className="font-bold text-[#12B76A]">{s.presentDays}</p></div>
@@ -540,7 +555,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-[#1D2939]">Employees ({employees.length})</h3>
-              <button type="button" onClick={() => setEmpDraft({ id: 0, name: '', designation: '', phone: '', email: '', pin: '', clearPin: false, cycleStartDay: 1, monthlySalary: 0, expectedInTime: '09:30', expectedOutTime: '19:30', officeOnly: true, active: true, joiningDate: todayIst, leavingDate: '', halfDayMinutes: 300, minimumHalfDayMinutes: 0, policyReason: '', lateGraceMinutes: 0, weeklyOffDays: [0], holidayDates: [], effectiveDate: todayIst })} className="inline-flex items-center gap-1.5 rounded-xl bg-[#465FFF] px-4 py-2 text-xs font-bold text-white">
+              <button type="button" onClick={() => { setEmployeeSaveError(''); setEmpDraft({ id: 0, name: '', designation: '', phone: '', email: '', pin: '', clearPin: false, cycleStartDay: 1, monthlySalary: 0, expectedInTime: '09:30', expectedOutTime: '19:30', officeOnly: true, active: true, joiningDate: todayIst, leavingDate: '', halfDayMinutes: 300, minimumHalfDayMinutes: 0, policyReason: '', lateGraceMinutes: 0, weeklyOffDays: [0], holidayDates: [], effectiveDate: todayIst }); }} className="inline-flex items-center gap-1.5 rounded-xl bg-[#465FFF] px-4 py-2 text-xs font-bold text-white">
                 <Plus className="size-4" /> Add Employee
               </button>
             </div>
@@ -565,7 +580,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                         <Smartphone className="size-3.5" /> Reset Device
                       </button>
                     )}
-                    <button type="button" onClick={() => setEmpDraft({ id: emp.id, name: emp.name, designation: emp.designation, phone: emp.phone, email: emp.email, pin: '', clearPin: false, cycleStartDay: emp.cycleStartDay, monthlySalary: emp.monthlySalary, expectedInTime: emp.expectedInTime, expectedOutTime: emp.expectedOutTime, officeOnly: emp.officeOnly, active: emp.active, joiningDate: emp.joiningDate ?? '', leavingDate: emp.leavingDate ?? '', halfDayMinutes: emp.halfDayMinutes ?? 300, minimumHalfDayMinutes: emp.minimumHalfDayMinutes ?? 0, policyReason: '', lateGraceMinutes: emp.lateGraceMinutes ?? 0, weeklyOffDays: emp.weeklyOffDays ?? [0], holidayDates: emp.holidayDates ?? [], effectiveDate: todayIst })} className="rounded-lg border border-[#E4E7EC] p-2 text-[#1D2939] hover:bg-[#F9FAFB]" aria-label="Edit employee"><Pencil className="size-3.5" /></button>
+                    <button type="button" onClick={() => { setEmployeeSaveError(''); setEmpDraft({ id: emp.id, name: emp.name, designation: emp.designation, phone: emp.phone, email: emp.email, pin: '', clearPin: false, cycleStartDay: emp.cycleStartDay, monthlySalary: emp.monthlySalary, expectedInTime: emp.expectedInTime, expectedOutTime: emp.expectedOutTime, officeOnly: emp.officeOnly, active: emp.active, joiningDate: emp.joiningDate ?? '', leavingDate: emp.leavingDate ?? '', halfDayMinutes: emp.halfDayMinutes ?? 300, minimumHalfDayMinutes: emp.minimumHalfDayMinutes ?? 0, policyReason: '', lateGraceMinutes: emp.lateGraceMinutes ?? 0, weeklyOffDays: emp.weeklyOffDays ?? [0], holidayDates: emp.holidayDates ?? [], effectiveDate: todayIst }); }} className="rounded-lg border border-[#E4E7EC] p-2 text-[#1D2939] hover:bg-[#F9FAFB]" aria-label="Edit employee"><Pencil className="size-3.5" /></button>
                     <button type="button" disabled={busy} onClick={() => void handleRegenerate(emp)} className="rounded-lg border border-[#E4E7EC] p-2 text-[#1D2939] hover:bg-[#F9FAFB]" title="New link" aria-label="Regenerate link"><RefreshCw className="size-3.5" /></button>
                     <button type="button" disabled={busy} onClick={() => void handleDeleteEmp(emp)} className="rounded-lg border border-[#E4E7EC] px-2 py-1.5 text-xs font-semibold text-[#667085] hover:bg-[#F9FAFB]">Archive</button>
                     <button type="button" disabled={busy} onClick={() => void handlePermanentDeleteEmp(emp)} className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2 py-1.5 text-xs font-semibold text-[#F04438] hover:bg-red-50"><Trash2 className="size-3.5" /> Permanently Delete</button>
@@ -611,7 +626,8 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
         </div>
       )}
 
-      {empDraft && <EmployeeFormModal draft={empDraft} error={employeeSaveError} busy={busy} onChange={setEmpDraft} onClose={() => setEmpDraft(null)} onSubmit={handleSaveEmployee} />}
+      <div className="flex flex-wrap items-center gap-3 text-xs">{month === todayIst.slice(0, 7) && <span>Not Checked In Today: {employees.filter(emp => emp.active && !logs.some(log => log.employeeId === emp.id && log.workDate === todayIst)).length}</span>}<button type="button" disabled={busy} onClick={() => void cleanupPhotos()} className="rounded-lg border px-3 py-2">Clean &gt;60d Selfies</button></div>
+      {empDraft && <EmployeeFormModal draft={empDraft} error={employeeSaveError} busy={busy} onChange={setEmpDraft} onClose={() => { setEmployeeSaveError(''); setEmpDraft(null) }} onSubmit={handleSaveEmployee} />}
       {logDraft && <AttendanceEditModal draft={logDraft} employees={employees} busy={busy} onChange={setLogDraft} onClose={() => setLogDraft(null)} onSubmit={handleSaveLog} />}
     </section>
   )

@@ -51,7 +51,7 @@ export function CertificateCarousel({ certificates, id }: { certificates: Public
   const changePage = (direction: number) => setPageIndex((current) => (current + direction + pages.length) % pages.length)
 
   return (
-    <section id={id} aria-label="Our certificates and training" aria-roledescription="carousel" className="border-b border-forest-900/10 bg-sand/60 px-5 py-14 md:py-20">
+    <section id={id} aria-label="Our certificates and training" aria-roledescription="carousel" className="scroll-mt-36 lg:scroll-mt-44 border-b border-forest-900/10 bg-sand/60 px-5 py-14 md:py-20">
       <div
         className="mx-auto max-w-7xl"
         onMouseEnter={() => setPaused(true)}

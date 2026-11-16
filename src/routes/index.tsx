@@ -33,11 +33,11 @@ export const Route = createFileRoute('/')({
     ])
     return { ...content, countryPages, cashflow }
   },
-  head: () => createPageSeo({
+  head: () => { const seo = createPageSeo({
     title: 'Study Visas & IELTS Coaching in Sangaria | British Education',
     description: 'Get study visa guidance, IELTS/PTE coaching and free profile evaluation in Sangaria, Rajasthan. Compare destinations and explore next steps.',
     path: '/',
-  }),
+  }); return { ...seo, links: [...(seo.links ?? []), { rel: 'preload', as: 'image', href: '/img/hero.webp', type: 'image/webp' }] } },
   component: Home,
 })
 
@@ -453,7 +453,7 @@ function Home() {
         )}
 
         {/* SERVICES SECTION (MOBILE) */}
-        <section id="services-m" className="px-5 py-20 border-b border-forest-900/10 bg-white">
+        <section id="services-m" className="scroll-mt-36 lg:scroll-mt-44 px-5 py-20 border-b border-forest-900/10 bg-white">
           <div className="flex items-end justify-between mb-8">
             <div>
               <Eyebrow>What we do</Eyebrow>
@@ -495,7 +495,7 @@ function Home() {
         </section>
 
         {/* DESTINATIONS SECTION (MOBILE & HALF-SCREEN) */}
-        <section id="destinations-m" className="bg-sand/60 bg-dots px-5 py-20 border-b border-forest-900/10">
+        <section id="destinations-m" className="scroll-mt-36 lg:scroll-mt-44 bg-sand/60 bg-dots px-5 py-20 border-b border-forest-900/10">
           <div className="mb-8">
             <Eyebrow>Destinations</Eyebrow>
             <h2 className="mt-2 text-2xl font-extrabold text-forest-900">Choose where your next chapter begins.</h2>
@@ -554,7 +554,7 @@ function Home() {
         </Suspense>
 
         {/* COACHING SECTION (MOBILE) */}
-        <section id="coaching-m" className="px-5 py-20 border-b border-forest-900/10 bg-white">
+        <section id="coaching-m" className="scroll-mt-36 lg:scroll-mt-44 px-5 py-20 border-b border-forest-900/10 bg-white">
           <div className="relative overflow-hidden rounded-3xl shadow-lg mb-8">
             <img
               src={img('/img/coaching.webp', 640, 420)}
@@ -627,7 +627,7 @@ function Home() {
 
         {/* RECENT APPROVALS (MOBILE) */}
         {homepageApprovals.length > 0 && (
-          <section id="approvals-m" className="px-5 py-20 border-b border-forest-900/10 bg-white">
+          <section id="approvals-m" className="scroll-mt-36 lg:scroll-mt-44 px-5 py-20 border-b border-forest-900/10 bg-white">
             <div className="mb-8">
               <Eyebrow>Fresh approvals</Eyebrow>
               <h2 className="mt-2 text-2xl font-extrabold text-forest-900">Visas that landed this month.</h2>
@@ -652,7 +652,7 @@ function Home() {
 
         {/* TESTIMONIALS (MOBILE) */}
         {homepageTestimonials.length > 0 && (
-          <section id="reviews-m" className="bg-sand/60 px-5 py-12 border-b border-forest-900/10">
+          <section id="reviews-m" className="scroll-mt-36 lg:scroll-mt-44 bg-sand/60 px-5 py-12 border-b border-forest-900/10">
             <div className="mb-6">
               <Eyebrow>Testimonials</Eyebrow>
               <h2 className="mt-2 text-2xl font-extrabold text-forest-900">Real students. Real visas.</h2>
@@ -713,7 +713,7 @@ function Home() {
         </section>
 
         {/* FAQ + ENQUIRY (MOBILE) */}
-        <section id="enquiry-m" className="px-5 py-20 pb-32">
+        <section id="enquiry-m" className="scroll-mt-36 lg:scroll-mt-44 px-5 py-20 pb-32">
           <div className="mb-10">
             <Eyebrow>FAQs</Eyebrow>
             <h2 className="mt-2 text-2xl font-extrabold text-forest-900">Questions we hear every day.</h2>
@@ -1016,7 +1016,7 @@ function Home() {
         )}
 
         {/* DESKTOP SERVICES (STEP 2: rounded-[2.5rem] & shadow) */}
-        <section id="services-desktop" className="mx-auto max-w-7xl px-6 py-24">
+        <section id="services-desktop" className="scroll-mt-36 lg:scroll-mt-44 mx-auto max-w-7xl px-6 py-24">
           <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
             <div>
               <Eyebrow>What we do</Eyebrow>
@@ -1049,7 +1049,7 @@ function Home() {
         </section>
 
         {/* DESKTOP COUNTRIES (STEP 2: rounded-[2.5rem]) */}
-        <section id="destinations-desktop" className="bg-sand/60 bg-dots py-24">
+        <section id="destinations-desktop" className="scroll-mt-36 lg:scroll-mt-44 bg-sand/60 bg-dots py-24">
           <div className="mx-auto max-w-7xl px-6">
             <Eyebrow>Destinations</Eyebrow>
             <h2 className="mt-4 max-w-3xl text-4xl font-extrabold text-forest-900 md:text-5xl">Choose where your next chapter begins.</h2>
@@ -1097,7 +1097,7 @@ function Home() {
         </Suspense>
 
         {/* DESKTOP COACHING */}
-        <section id="coaching-desktop" className="mx-auto grid max-w-7xl items-center gap-14 px-6 py-24 lg:grid-cols-2">
+        <section id="coaching-desktop" className="scroll-mt-36 lg:scroll-mt-44 mx-auto grid max-w-7xl items-center gap-14 px-6 py-24 lg:grid-cols-2">
           <div className="relative">
             <img
               src={img('/img/coaching.webp', 760, 560)}
@@ -1160,7 +1160,7 @@ function Home() {
 
         {/* DESKTOP RECENT APPROVALS */}
         {homepageApprovals.length > 0 && (
-          <section id="approvals-desktop" className="mx-auto max-w-7xl px-6 py-24">
+          <section id="approvals-desktop" className="scroll-mt-36 lg:scroll-mt-44 mx-auto max-w-7xl px-6 py-24">
             <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
               <div>
                 <Eyebrow>Fresh approvals</Eyebrow>
@@ -1185,7 +1185,7 @@ function Home() {
 
         {/* DESKTOP TESTIMONIALS */}
         {homepageTestimonials.length > 0 && (
-          <section id="reviews-desktop" className="bg-sand/60 py-24">
+          <section id="reviews-desktop" className="scroll-mt-36 lg:scroll-mt-44 bg-sand/60 py-24">
             <div className="mx-auto max-w-7xl px-6">
               <Eyebrow>Testimonials</Eyebrow>
               <h2 className="mt-4 max-w-2xl text-4xl font-extrabold text-forest-900 md:text-5xl">Real students. Real families. Real visas.</h2>
@@ -1237,7 +1237,7 @@ function Home() {
         </section>
 
         {/* DESKTOP FAQ + ENQUIRY */}
-        <section id="enquiry" className="mx-auto grid max-w-7xl gap-12 px-6 pb-28 lg:grid-cols-[1fr_1.1fr]">
+        <section id="enquiry" className="scroll-mt-36 lg:scroll-mt-44 mx-auto grid max-w-7xl gap-12 px-6 pb-28 lg:grid-cols-[1fr_1.1fr]">
           <div>
             <Eyebrow>FAQs</Eyebrow>
             <h2 className="mt-4 text-4xl font-extrabold text-forest-900">Questions we hear every day.</h2>

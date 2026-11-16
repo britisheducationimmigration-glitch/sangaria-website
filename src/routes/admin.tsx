@@ -1,3 +1,4 @@
+import { getEnquiriesPage } from '@/lib/admin-functions'
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import {
@@ -67,6 +68,8 @@ function AdminPage() {
   const [selectedBatch, setSelectedBatch] = useState<CoachingBatch | null>(null)
   const [notice, setNotice] = useState('')
   const [showChangePass, setShowChangePass] = useState(false)
+  const [batchDirty, setBatchDirty] = useState(false)
+  const [cashflowDirty, setCashflowDirty] = useState(false)
   const [settingsDirty, setSettingsDirty] = useState(false)
   const [studyPlanDirty, setStudyPlanDirty] = useState(false)
 
@@ -126,7 +129,7 @@ function AdminPage() {
 
   const filtered = snapshot.enquiries.filter((item) => {
     const haystack = `${item.name} ${item.phone} ${item.email} ${item.city} ${item.country} ${item.interest} ${item.status} ${item.assignedTo} ${item.source} ${item.summary}`.toLowerCase()
-    const created = item.createdAt.slice(0, 10)
+    const created = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(item.createdAt))
     return haystack.includes(query.toLowerCase()) && (statusFilter === 'All' || item.status === statusFilter) && (!dateFrom || created >= dateFrom) && (!dateTo || created <= dateTo)
   })
   const newLeadQueue = snapshot.enquiries.filter((item) => item.status === 'New')
@@ -202,6 +205,8 @@ function AdminPage() {
   }
 
   function selectTab(value: Tab) {
+    if ((batchDirty || cashflowDirty) && !window.confirm('You have unsaved changes. Leave this section and discard them?')) return
+    setBatchDirty(false); setCashflowDirty(false)
     if (settingsDirty && value !== 'settings' && !window.confirm('You have unsaved changes in Site settings. Leave this section and discard them?')) return
     if (studyPlanDirty && value !== 'studyPlans' && !window.confirm('You have unsaved Study Plan changes. Leave this section and discard them?')) return
     if (value !== 'settings') setSettingsDirty(false)
@@ -378,8 +383,8 @@ function AdminPage() {
           {tab === 'news' && <ContentPanel type="news" items={snapshot.posts} selected={selectedPost} onSelect={(item) => setSelectedPost(item as AdminPost | null)} onReload={reload} onNotice={showNotice} />}
           {tab === 'stories' && <ContentPanel type="stories" items={snapshot.stories} selected={selectedStory} onSelect={(item) => setSelectedStory(item as AdminStory | null)} onReload={reload} onNotice={showNotice} />}
           {tab === 'certificates' && <CertificatePanel items={snapshot.certificates} onReload={reload} onNotice={showNotice} />}
-          {tab === 'batches' && <BatchPanel items={snapshot.batches} selected={selectedBatch} onSelect={setSelectedBatch} onReload={reload} onNotice={showNotice} />}
-          {tab === 'budget' && <CashflowAdminPanel onNotice={showNotice} />}
+          {tab === 'batches' && <BatchPanel onDirtyChange={setBatchDirty} items={snapshot.batches} selected={selectedBatch} onSelect={setSelectedBatch} onReload={reload} onNotice={showNotice} />}
+          {tab === 'budget' && <CashflowAdminPanel onDirtyChange={setCashflowDirty} onNotice={showNotice} />}
           {tab === 'settings' && <SettingsPanel settings={snapshot.settings} onReload={reload} onNotice={showNotice} onDirtyChange={setSettingsDirty} />}
           {tab === 'users' && <UsersPanel users={snapshot.users} currentEmail={snapshot.user.email} onReload={reload} onNotice={showNotice} />}
           {showChangePass && <ChangePasswordModal onClose={() => setShowChangePass(false)} onNotice={showNotice} />}
@@ -718,25 +723,30 @@ function formatFollowUpLabel(value: string) {
   })
 }
 
-function isDueTodayInIndia(nextFollowUpAt: string, status: EnquiryStatus) {
-  if (!nextFollowUpAt || ['Converted', 'Closed'].includes(status)) return false
-  const todayIst = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Kolkata',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date())
-  return nextFollowUpAt.slice(0, 10) === todayIst
-}
-
 function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setStatusFilter, dateFrom, setDateFrom, dateTo, setDateTo, onReload, onNotice, canDelete, canManageComments }: { enquiries: Enquiry[]; stats: AdminSnapshot['enquiryStats']; query: string; setQuery: (value: string) => void; statusFilter: EnquiryStatus | 'All'; setStatusFilter: (value: EnquiryStatus | 'All') => void; dateFrom: string; setDateFrom: (value: string) => void; dateTo: string; setDateTo: (value: string) => void; onReload: () => Promise<void>; onNotice: (message: string) => void; canDelete: boolean; canManageComments: boolean }) {
   const [viewMode, setViewMode] = useState<'list' | 'board'>('list')
   const [selectedBoardLeadId, setSelectedBoardLeadId] = useState<number | null>(null)
   const [dueTodayOnly, setDueTodayOnly] = useState(false)
-  const visibleEnquiries = dueTodayOnly
-    ? enquiries.filter((item) => isDueTodayInIndia(item.nextFollowUpAt, item.status))
-    : enquiries
-  
+  const [page, setPage] = useState(1)
+  const [pageResult, setPageResult] = useState<{ items: Enquiry[]; total: number; page: number }>({ items: [], total: 0, page: 1 })
+  const [pageError, setPageError] = useState('')
+  const [pageLoading, setPageLoading] = useState(true)
+  const [revision, setRevision] = useState(0)
+  useEffect(() => { setPage(1) }, [query, statusFilter, dateFrom, dateTo, dueTodayOnly])
+  useEffect(() => {
+    let cancelled = false
+    setPageLoading(true); setPageError('')
+    const timer = window.setTimeout(() => {
+      getEnquiriesPage({ data: { query, status: statusFilter === 'All' ? '' : statusFilter, from: dateFrom, to: dateTo, dueTodayOnly, page } })
+        .then(result => { if (!cancelled) setPageResult(result) })
+        .catch(cause => { if (!cancelled) setPageError(cause instanceof Error ? cause.message : 'Could not load leads') })
+        .finally(() => { if (!cancelled) setPageLoading(false) })
+    }, 200)
+    return () => { cancelled = true; window.clearTimeout(timer) }
+  }, [query, statusFilter, dateFrom, dateTo, dueTodayOnly, page, revision, enquiries])
+  const visibleEnquiries = pageLoading || pageError ? [] : pageResult.items
+  const refreshPage = async () => { await onReload(); setRevision(n => n + 1) }
+
   async function downloadExcel() {
     try {
       const result = await exportEnquiries({ data: { query, status: statusFilter === 'All' ? '' : statusFilter, from: dateFrom, to: dateTo } })
@@ -747,7 +757,7 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
       link.download = result.filename
       link.click()
       URL.revokeObjectURL(url)
-      onNotice(`${enquiries.length} leads exported to Excel.`)
+      onNotice('Filtered leads exported to Excel (up to 5,000 rows).')
     } catch { onNotice('Could not export leads to Excel.') }
   }
 
@@ -760,7 +770,7 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
   ] as const
 
   const boardStatuses: EnquiryStatus[] = ['New', 'Contacted', 'Follow-up', 'Documents Pending', 'Applied', 'Converted', 'Closed']
-  const selectedBoardLead = enquiries.find((item) => item.id === selectedBoardLeadId)
+  const selectedBoardLead = visibleEnquiries.find((item) => item.id === selectedBoardLeadId)
 
   return (
     <section>
@@ -802,6 +812,8 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
         })}
       </div>
 
+      {pageError && <p role="alert" className="text-red-700">{pageError}</p>}
+      <div className="mb-4 flex items-center gap-3"><button type="button" disabled={pageLoading || pageResult.page <= 1} onClick={() => setPage(pageResult.page - 1)}>Previous</button><span>{pageLoading ? 'Loading...' : `Page ${pageResult.page} of ${Math.max(1, Math.ceil(pageResult.total / 50))}`}</span><button type="button" disabled={pageLoading || pageResult.page * 50 >= pageResult.total} onClick={() => setPage(pageResult.page + 1)}>Next</button></div>
       {/* QUICK 1-TAP STATUS PILLS (IMPROVEMENT A) */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <span className="text-xs font-bold uppercase tracking-wider text-forest-900/50 mr-1">Quick Filters:</span>
@@ -823,7 +835,7 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm font-bold text-forest-900/65">
-          Showing {visibleEnquiries.length} leads{dueTodayOnly ? ' (due today)' : ''}
+          Showing {visibleEnquiries.length} of {pageResult.total} leads{dueTodayOnly ? ' (due today)' : ''}
         </p>
         <div role="group" aria-label="Lead display mode" className="inline-flex rounded-full bg-white p-1 ring-1 ring-forest-900/10">
           <button type="button" aria-pressed={viewMode === 'list'} onClick={() => setViewMode('list')} className={'rounded-full px-4 py-2 text-xs font-bold ' + (viewMode === 'list' ? 'bg-forest-900 text-white' : 'text-forest-900/65')}>List</button>
@@ -844,7 +856,7 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
      {viewMode === 'list' ? (
         <div className="grid gap-4">
           {visibleEnquiries.map((item) => (
-            <EnquiryCard key={item.id} item={item} onReload={onReload} onNotice={onNotice} canDelete={canDelete} canManageComments={canManageComments} />
+            <EnquiryCard key={item.id} item={item} onReload={refreshPage} onNotice={onNotice} canDelete={canDelete} canManageComments={canManageComments} />
           ))}
           {visibleEnquiries.length === 0 && <p className="rounded-2xl bg-white p-8 text-center text-forest-900/60">No enquiries match these filters.</p>}
         </div>
@@ -866,7 +878,7 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
                           <span className="block truncate text-sm font-extrabold text-forest-900">{item.name}</span>
                           <span className="mt-1 block truncate text-xs text-forest-900/60">{item.interest || 'General counselling'}{item.country ? ' · ' + item.country : ''}</span>
                           <span className="mt-2 block truncate font-mono text-[10px] text-forest-900/55">{item.phone}</span>
-                          {item.nextFollowUpAt && <span className="mt-2 block rounded-lg bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-900">Follow-up {formatFollowUpLabel(item.nextFollowUpAt)}</span>}
+                          {item.nextFollowUpAt && item.nextFollowUpAt.slice(0, 16) < currentIstDateTimeMinute() && !['Converted', 'Closed'].includes(item.status) && <span className="rounded-full bg-red-100 px-2 py-1 text-xs font-bold text-red-700">Overdue</span>}{item.nextFollowUpAt && <span className="mt-2 block rounded-lg bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-900">Follow-up {formatFollowUpLabel(item.nextFollowUpAt)}</span>}
                           {item.assignedTo && <span className="mt-2 block truncate text-[10px] text-forest-900/50">Assigned: {item.assignedTo}</span>}
                         </button>
                       ))}
@@ -883,7 +895,7 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
                 <div><p className="font-mono text-[10px] font-bold uppercase tracking-widest text-coral-600">Selected lead</p><h3 className="mt-1 text-lg font-extrabold text-forest-900">{selectedBoardLead.name}</h3></div>
                 <button type="button" onClick={() => setSelectedBoardLeadId(null)} className="rounded-full bg-white px-4 py-2 text-xs font-bold text-forest-900 ring-1 ring-forest-900/10">Close details</button>
               </div>
-              <EnquiryCard key={selectedBoardLead.id} item={selectedBoardLead} onReload={onReload} onNotice={onNotice} canDelete={canDelete} canManageComments={canManageComments} />
+              <EnquiryCard key={selectedBoardLead.id} item={selectedBoardLead} onReload={refreshPage} onNotice={onNotice} canDelete={canDelete} canManageComments={canManageComments} />
             </section>
           ) : <p className="rounded-2xl bg-white p-6 text-center text-sm text-forest-900/55">Choose a lead card to update its stage, owner or follow-up.</p>}
         </div>
@@ -914,14 +926,29 @@ function DemoRequestsPanel({ enquiries, totalCount, onReload, onNotice, canDelet
 }
 
 function ReviewQueuePanel({ enquiries, drafts, onOpenEnquiries, onOpenDraft }: { enquiries: Enquiry[]; drafts: AdminPost[]; onOpenEnquiries: () => void; onOpenDraft: (post: AdminPost) => void }) {
+  const [queue, setQueue] = useState<'new' | 'overdue'>('new')
+  const [page, setPage] = useState(1)
+  const [result, setResult] = useState<{items: Enquiry[]; total: number; page: number}>({items: [], total: 0, page: 1})
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true); setError('')
+    getEnquiriesPage({data:{status:queue === 'new' ? 'New' : '', overdueOnly:queue === 'overdue', page}})
+      .then(value => { if (!cancelled) setResult(value) })
+      .catch(cause => { if (!cancelled) setError(cause instanceof Error ? cause.message : 'Could not load queue') })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [queue, page, enquiries])
   return (
     <section>
       <div className="mb-6"><p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">Needs attention</p><h2 className="mt-2 text-3xl font-extrabold">Review queue</h2><p className="mt-1 text-sm text-forest-900/60">A read-only overview of new enquiries and unpublished content, with links to the existing editing screens.</p></div>
+      <div className="mb-4 flex flex-wrap gap-4"><button type="button" onClick={() => { setQueue('new'); setPage(1) }}>New leads</button><button type="button" onClick={() => { setQueue('overdue'); setPage(1) }}>Overdue follow-ups</button><button type="button" disabled={loading || result.page <= 1} onClick={() => setPage(result.page - 1)}>Previous</button><span>{loading ? 'Loading...' : `Page ${result.page} / ${Math.max(1, Math.ceil(result.total / 50))}`}</span><button type="button" disabled={loading || result.page * 50 >= result.total} onClick={() => setPage(result.page + 1)}>Next</button></div>{error && <p role="alert">{error}</p>}
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="rounded-3xl bg-white p-5 ring-1 ring-forest-900/10">
-          <div className="mb-4 flex items-center justify-between gap-3"><h3 className="text-lg font-extrabold">New enquiries</h3><span className="rounded-full bg-coral-50 px-3 py-1 text-xs font-bold text-coral-700">{enquiries.length}</span></div>
-   <div className="grid gap-3">{enquiries.slice(0, 10).map((item) => <div key={item.id} className="rounded-2xl bg-cream p-4"><p className="font-bold">{item.name}</p><p className="mt-1 text-sm text-forest-900/60">{item.interest || 'General counselling'}{item.country ? ' · ' + item.country : ''}</p><p className="mt-1 text-xs text-forest-900/50">{formatIstDateTime(item.createdAt)}</p></div>)}{enquiries.length === 0 && <p className="text-sm text-forest-900/55">No new enquiries are waiting.</p>}</div>
-          {enquiries.length > 0 && <button type="button" onClick={onOpenEnquiries} className="mt-4 rounded-full bg-forest-900 px-4 py-2 text-sm font-bold text-white">Review new enquiries</button>}
+          <div className="mb-4 flex items-center justify-between gap-3"><h3 className="text-lg font-extrabold">{queue === 'new' ? 'New enquiries' : 'Overdue follow-ups'}</h3><span className="rounded-full bg-coral-50 px-3 py-1 text-xs font-bold text-coral-700">{result.total}</span></div>
+   <div className="grid gap-3">{(loading || error ? [] : result.items).map((item) => <div key={item.id} className="rounded-2xl bg-cream p-4"><p className="font-bold">{item.name}</p><p className="mt-1 text-sm text-forest-900/60">{item.interest || 'General counselling'}{item.country ? ' · ' + item.country : ''}</p><p className="mt-1 text-xs text-forest-900/50">{formatIstDateTime(item.createdAt)}</p></div>)}{!loading && !error && result.total === 0 && <p className="text-sm text-forest-900/55">No new enquiries are waiting.</p>}</div>
+          {result.total > 0 && <button type="button" onClick={onOpenEnquiries} className="mt-4 rounded-full bg-forest-900 px-4 py-2 text-sm font-bold text-white">Review new enquiries</button>}
         </section>
         <section className="rounded-3xl bg-white p-5 ring-1 ring-forest-900/10">
           <div className="mb-4 flex items-center justify-between gap-3"><h3 className="text-lg font-extrabold">Unpublished content</h3><span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">{drafts.length}</span></div>
@@ -1070,6 +1097,7 @@ function EnquiryCard({ item, onReload, onNotice, canDelete, canManageComments }:
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-xl font-extrabold">{item.name}</h3>
             <span className="rounded-full bg-coral-50 px-3 py-1 text-xs font-bold text-coral-700">{item.status}</span>
+            {item.nextFollowUpAt && item.nextFollowUpAt.slice(0, 16) < currentIstDateTimeMinute() && !['Converted', 'Closed'].includes(item.status) && <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700">Overdue</span>}
             {item.nextFollowUpAt && <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">Follow-up {formatFollowUpLabel(item.nextFollowUpAt)}</span>}
           </div>
           <p className="mt-1 text-sm text-forest-900/60">{formatIstDateTime(item.createdAt)} · {item.source || 'website'}{item.assignedTo && <> · Assigned to {item.assignedTo}</>}</p>
@@ -1187,8 +1215,9 @@ function EnquiryCard({ item, onReload, onNotice, canDelete, canManageComments }:
   )
 }
 
-function BatchPanel({ items, selected, onSelect, onReload, onNotice }: { items: CoachingBatch[]; selected: CoachingBatch | null; onSelect: (item: CoachingBatch | null) => void; onReload: () => Promise<void>; onNotice: (message: string) => void }) {
+function BatchPanel({ items, selected, onSelect, onReload, onNotice, onDirtyChange }: { onDirtyChange: (dirty: boolean) => void; items: CoachingBatch[]; selected: CoachingBatch | null; onSelect: (item: CoachingBatch | null) => void; onReload: () => Promise<void>; onNotice: (message: string) => void }) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  useEffect(() => { onDirtyChange(hasUnsavedChanges) }, [hasUnsavedChanges, onDirtyChange])
   function selectBatch(item: CoachingBatch | null) {
     if (item && selected && item.id !== selected.id && hasUnsavedChanges && !window.confirm('You have unsaved changes in this batch. Switch anyway and discard them?')) return
     setHasUnsavedChanges(false)
@@ -1274,8 +1303,17 @@ function PostEditor({ item, onReload, onNotice, onClose }: { item: AdminPost; on
   )
 }
 
-function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
+function CashflowAdminPanel({ onNotice, onDirtyChange }: { onDirtyChange: (dirty: boolean) => void; onNotice: (msg: string) => void }) {
   const [data, setData] = useState<CountryCashflow[]>(() => defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country)))
+  const [savedJson, setSavedJson] = useState(() => JSON.stringify(data))
+  const dirty = JSON.stringify(data) !== savedJson
+  useEffect(() => { onDirtyChange(dirty) }, [dirty, onDirtyChange])
+  useEffect(() => {
+    if (!dirty) return
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [dirty])
   const [selectedSlug, setSelectedSlug] = useState('canada')
   const [busy, setBusy] = useState(false)
 
@@ -1284,7 +1322,7 @@ function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
 
   useEffect(() => {
     void getAdminCashflow()
-      .then((saved) => setData(saved))
+      .then((saved) => { setData(saved); setSavedJson(JSON.stringify(saved)) })
       .catch(() => onNoticeRef.current('Could not load cashflow from database. Showing defaults.'))
   }, [])
 
@@ -1308,6 +1346,7 @@ function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
     try {
       setBusy(true)
       await saveCashflow({ data: { cashflowData: data } })
+      setSavedJson(JSON.stringify(data))
       onNotice('Budget & Cashflow saved to database and is live on the website.')
     } catch (error) {
       onNotice(error instanceof Error ? error.message : 'Could not save budget data.')
@@ -1322,6 +1361,7 @@ function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
     try {
       setBusy(true)
       await saveCashflow({ data: { cashflowData: currentDefaults } })
+      setSavedJson(JSON.stringify(currentDefaults))
       onNotice('Reset to official 2026/2027 embassy defaults and saved to database.')
     } catch {
       onNotice('Reset locally, but database sync failed.')

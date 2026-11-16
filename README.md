@@ -145,3 +145,7 @@ Recommended release flow:
 Visa fees and requirements can depend on visa stream, applicant location, nationality, family members, exemptions and additional charges. Treat published amounts as guidance, verify them against official government sources, and retain the source links and review date.
 
 The eligibility checklist uses site-defined profile factors. It must always be presented as preliminary guidance and must not be described as a government eligibility decision or a guarantee of visa approval.
+
+### Public form rate limiting
+
+Set `SESSION_SECRET` to a private random value of at least 32 characters in each deployed environment. Public submissions deliberately fail closed when it is missing or too short; do not bypass rate limiting to fix configuration errors. Keep this secret out of the repository.

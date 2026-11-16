@@ -15,7 +15,7 @@ try {
     if (server.exitCode !== null) throw new Error(output)
     await new Promise(resolve => setTimeout(resolve,100))
   }
-  const cases = [ ['/',200], ['/countries',200], ['/coaching',200], ['/contact',200], ['/admin',200], ['/sitemap.xml',200], ['/robots.txt',200], ['/attendance/invalid-link',200], ['/attendance/photo/1',404], ['/attendance/photo/1?view=mirror',404], ['/api/cron/attendance-cleanup',503] ]
+  const cases = [ ['/',200], ['/countries',200], ['/countries/canada',200], ['/study-plan/canada',200], ['/visas',200], ['/eligibility',200], ['/certificates',200], ['/success-stories',200], ['/updates',200], ['/coaching',200], ['/contact',200], ['/admin',200], ['/sitemap.xml',200], ['/robots.txt',200], ['/attendance/invalid-link',200], ['/attendance/photo/1',404], ['/attendance/photo/1?view=mirror',404], ['/api/cron/attendance-cleanup',503], ['/api/cron/policy-watch',503] ]
   for (const [path,status] of cases) {
     const response = await fetch(`http://127.0.0.1:${port}${path}`, { signal: AbortSignal.timeout(20000) })
     const body = await response.text()

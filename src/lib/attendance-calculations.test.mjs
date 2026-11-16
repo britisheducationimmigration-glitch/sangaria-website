@@ -77,3 +77,10 @@ test('short shifts cannot automatically earn half-day pay', () => {
   short.outFlags.push('ADMIN_REVIEW_APPROVED')
   assert.equal(buildEmployeeCycleSummaries([employee], [short], '2026-11', '2026-12-01')[0].payableDays, 0.5)
 })
+
+test('automatic checkout remains a finalization blocker until approved', () => {
+  const entry = { ...log('2026-11-02'), outFlags: ['AUTO_CHECKOUT_10PM'] }
+  assert.equal(buildEmployeeCycleSummaries([employee], [entry], '2026-11', '2026-12-01')[0].reviewRequiredCount, 1)
+  entry.outFlags.push('ADMIN_REVIEW_APPROVED')
+  assert.equal(buildEmployeeCycleSummaries([employee], [entry], '2026-11', '2026-12-01')[0].reviewRequiredCount, 0)
+})

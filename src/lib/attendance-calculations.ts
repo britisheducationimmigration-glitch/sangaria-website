@@ -40,6 +40,12 @@ export function calculateWorkMinutes(checkIn: string | Date, checkOut: string | 
   return Math.max(0, Math.round((end - start - deducted) / 60_000))
 }
 
+/** Use the same rounding as net time, so gross = work + breaks. */
+export function calculateMergedBreakMinutes(checkIn: string | Date, checkOut: string | Date, breaks: AttendanceBreakRecord[] = []) {
+  const gross = Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 60_000)
+  return Number.isFinite(gross) && gross > 0 ? Math.max(0, gross - calculateWorkMinutes(checkIn, checkOut, breaks)) : 0
+}
+
 export function resolveEmployeePolicy(employee: EmployeeRecord, history: EmployeePolicyHistory[], date: string): EmployeeRecord {
   const employeeHistory = history.filter(p => p.employeeId === employee.id).sort((a, b) => a.effectiveDate.localeCompare(b.effectiveDate))
   const record = employeeHistory.filter(p => p.effectiveDate <= date).at(-1) ?? employeeHistory[0]
@@ -88,7 +94,7 @@ export function buildEmployeeCycleSummaries(employees: EmployeeRecord[], logs: A
       earnedSalary: Math.round(earnedSalary), lateCount: empLogs.filter(l => l.isLate).length,
       flaggedCount: empLogs.filter(l => l.inFlags.length || l.outFlags.length).length,
       missedCheckOutCount: empLogs.filter(l => l.checkInAt && !l.checkOutAt && l.workDate < todayIst).length,
-      reviewRequiredCount: empLogs.filter(l => l.status === 'Review Required' || (l.status === 'Half Day' && !l.outFlags.includes('ADMIN_REVIEW_APPROVED') && ((resolveEmployeePolicy(employee, policies, l.workDate).minimumHalfDayMinutes ?? 0) <= 0 || l.workMinutes < (resolveEmployeePolicy(employee, policies, l.workDate).minimumHalfDayMinutes ?? 0)))).length,
+      reviewRequiredCount: empLogs.filter(l => l.status === 'Review Required' || (l.outFlags.includes('AUTO_CHECKOUT_10PM') && !l.outFlags.includes('ADMIN_REVIEW_APPROVED')) || (l.status === 'Half Day' && !l.outFlags.includes('ADMIN_REVIEW_APPROVED') && ((resolveEmployeePolicy(employee, policies, l.workDate).minimumHalfDayMinutes ?? 0) <= 0 || l.workMinutes < (resolveEmployeePolicy(employee, policies, l.workDate).minimumHalfDayMinutes ?? 0)))).length,
       totalWorkMinutes: completeLogs.reduce((sum, l) => sum + (l.workMinutes || 0), 0), offDayWorkMinutes,
     }
   })

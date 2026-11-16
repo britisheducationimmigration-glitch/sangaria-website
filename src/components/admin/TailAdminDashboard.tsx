@@ -21,38 +21,20 @@ export function TailAdminDashboard({
 
   const monthlyCounts = useMemo(() => {
     const months: Array<{ key: string; label: string; count: number }> = []
-    const now = new Date()
+    const now = new Date(Date.now() + 330 * 60_000)
     for (let offset = 5; offset >= 0; offset -= 1) {
       const dt = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - offset, 1))
       const key = dt.toISOString().slice(0, 7)
       const label = dt.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' })
       months.push({ key, label, count: 0 })
     }
-    for (const item of enquiries) {
-      const m = item.createdAt.slice(0, 7)
-      const hit = months.find((entry) => entry.key === m)
-      if (hit) hit.count += 1
-    }
+    for (const month of months) month.count = stats.byMonth[month.key] ?? 0
     return months
-  }, [enquiries])
+  }, [stats.byMonth])
 
   const maxMonthly = Math.max(1, ...monthlyCounts.map((m) => m.count))
 
-  const countryBreakdown = useMemo(() => {
-    const map = new Map<string, number>()
-    for (const item of enquiries) {
-      const key = item.country.trim() || 'Not decided'
-      map.set(key, (map.get(key) ?? 0) + 1)
-    }
-    return Array.from(map.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([country, count]) => ({
-        country,
-        count,
-        pct: enquiries.length ? Math.round((count / enquiries.length) * 100) : 0,
-      }))
-  }, [enquiries])
+  const countryBreakdown = stats.topCountries.map(item => ({ ...item, pct: stats.total ? Math.round(item.count / stats.total * 100) : 0 }))
 
   const breakdownRows = useMemo(() => {
     const sourceObj = breakdownMode === 'stage' ? stats.byStatus : stats.bySource

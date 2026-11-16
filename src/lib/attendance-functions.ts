@@ -20,6 +20,7 @@ import {
   readEmployeePolicies,
   resolveEmployeePolicy,
   calculateWorkMinutes,
+  calculateMergedBreakMinutes,
   classifyShift,
   readAttendanceSettings,
   todayIstDate,
@@ -107,10 +108,11 @@ export const getEmployeePortalData = createServerFn({ method: 'GET' })
     const currentMonth = currentIstMonth()
     const [settings, todayRows, cycleLogRows] = await Promise.all([
       readAttendanceSettings(),
-      queryRows(`SELECT ${LOG_COLS} FROM attendance_logs l JOIN employees e ON e.id = l.employee_id WHERE l.employee_id = ? AND (l.work_date = ? OR (l.check_in_at >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 24 HOUR) AND l.check_out_at IS NULL)) ORDER BY l.work_date DESC LIMIT 1`, [employee.id, today]),
+      queryRows(`SELECT ${LOG_COLS} FROM attendance_logs l JOIN employees e ON e.id = l.employee_id WHERE l.employee_id = ? AND l.work_date = ? ORDER BY l.work_date DESC LIMIT 1`, [employee.id, today]),
       queryRows(`SELECT ${LOG_COLS} FROM attendance_logs l JOIN employees e ON e.id = l.employee_id WHERE l.employee_id = ? ORDER BY l.work_date DESC LIMIT 45`, [employee.id]),
     ])
 
+    const missedRows = await queryRows('SELECT work_date FROM attendance_logs WHERE employee_id = ? AND work_date < ? AND check_in_at IS NOT NULL AND check_out_at IS NULL ORDER BY work_date ASC LIMIT 1', [employee.id, today])
     const logs = cycleLogRows.map((r) => mapAttendanceRow(r))
     const todayLog = todayRows[0] ? mapAttendanceRow(todayRows[0]) : null
     const { startDate, endDate } = getEmployeeCycleRange(currentMonth, employee.cycleStartDay)
@@ -144,6 +146,7 @@ export const getEmployeePortalData = createServerFn({ method: 'GET' })
         requireOfficeWifiIp: settings.requireOfficeWifiIp,
         requireSelfie: settings.requireSelfie,
       },
+      missedPreviousOutDate: missedRows[0] ? String(missedRows[0].work_date) : '',
       todayIst: today,
       todayLog: portalLog(todayLog),
       recentLogs: logs.slice(0, 10).map((log) => portalLog(log)!),
@@ -234,23 +237,20 @@ export const markEmployeeAttendance = createServerFn({ method: 'POST' })
       await execute('UPDATE employees SET bound_device_hash = ? WHERE id = ?', [incomingDeviceHash, employee.id])
     }
 
-    let today = todayIstDate()
+    const today = todayIstDate()
     const now = new Date()
     const existingRows = await queryRows('SELECT id, status, check_in_at, check_out_at, breaks_json FROM attendance_logs WHERE employee_id = ? AND work_date = ? LIMIT 1 FOR UPDATE', [employee.id, today])
-    let existing = existingRows[0]
+    const existing = existingRows[0]
     const openRows = await queryRows('SELECT id, work_date, check_in_at, check_out_at, breaks_json FROM attendance_logs WHERE employee_id = ? AND check_in_at IS NOT NULL AND check_out_at IS NULL ORDER BY work_date DESC LIMIT 1 FOR UPDATE', [employee.id])
     const open = openRows[0]
-    if (data.action === 'in' && open && String(open.work_date) !== today) throw new Error('A previous shift is missing Check Out. Contact admin before starting another shift.')
-    if (data.action !== 'in' && open && String(open.work_date) !== today) {
-      if (now.getTime() - new Date(String(open.check_in_at)).getTime() > 24 * 60 * 60_000) throw new Error('Previous shift needs admin review before further punches.')
-      today = String(open.work_date)
-      existing = open
-    }
+    if (open && String(open.work_date) < today) throw new Error('Previous shift is missing Check Out. Contact Super Admin before further punches.')
     if (employee.joiningDate && today < employee.joiningDate) throw new Error('Attendance is not enabled before your joining date')
     if (employee.leavingDate && today > employee.leavingDate) throw new Error('Your attendance period has ended. Contact admin.')
     await assertCycleUnlocked(queryRows, employee.id, today)
 
     if (data.action === 'in') {
+      const overlap = await queryRows('SELECT id FROM attendance_logs WHERE employee_id = ? AND check_out_at > ? LIMIT 1', [employee.id, now])
+      if (overlap.length) throw new Error('Attendance times overlap another shift for this employee')
       if (existing && ['Leave', 'Paid Leave', 'Unpaid Leave', 'Absent'].includes(String(existing.status))) throw new Error('Admin has marked leave or absence for today. Contact admin to change it before checking in.')
       if (existing?.check_in_at) throw new Error('You have already checked in today.')
       const isLate = (Number(istTimeHHMM(now).slice(0, 2)) * 60 + Number(istTimeHHMM(now).slice(3))) > (Number(employee.expectedInTime.slice(0, 2)) * 60 + Number(employee.expectedInTime.slice(3)) + (employee.lateGraceMinutes ?? 0)) ? 1 : 0
@@ -292,10 +292,7 @@ export const markEmployeeAttendance = createServerFn({ method: 'POST' })
         openBreak.inLng = loc.lng
         openBreak.inDistanceM = loc.distanceM
       }
-      const breakMinutes = breaks.reduce((sum, br) => {
-        if (!br.outAt || !br.inAt) return sum
-        return sum + Math.max(0, Math.round((new Date(br.inAt).getTime() - new Date(br.outAt).getTime()) / 60_000))
-      }, 0)
+      const breakMinutes = calculateMergedBreakMinutes(new Date(String(existing.check_in_at)), now, breaks)
       await execute('UPDATE attendance_logs SET breaks_json = ?, break_minutes = ? WHERE id = ?', [JSON.stringify(breaks), breakMinutes, Number(existing.id)])
     } else {
       if (!existing || !existing.check_in_at) throw new Error('Please mark Check In first before checking out.')
@@ -304,10 +301,7 @@ export const markEmployeeAttendance = createServerFn({ method: 'POST' })
       for (const br of breaks) {
         if (br.outAt && !br.inAt) br.inAt = now.toISOString()
       }
-      const breakMinutes = breaks.reduce((sum, br) => {
-        if (!br.outAt || !br.inAt) return sum
-        return sum + Math.max(0, Math.round((new Date(br.inAt).getTime() - new Date(br.outAt).getTime()) / 60_000))
-      }, 0)
+      const breakMinutes = calculateMergedBreakMinutes(new Date(String(existing.check_in_at)), now, breaks)
         const workMinutes = calculateWorkMinutes(new Date(String(existing.check_in_at)), now, breaks)
       const finalStatus: AttendanceStatus = classifyShift(workMinutes, employee, data.action === 'half_out')
       const finalFlags = finalStatus === 'Review Required' ? [...loc.flags, 'INSUFFICIENT_HOURS_REVIEW_REQUIRED'] : finalStatus === 'Half Day' ? [...loc.flags, 'HALF_DAY_OUT'] : loc.flags
@@ -336,9 +330,13 @@ export const getAdminAttendanceSnapshot = createServerFn({ method: 'GET' })
     return { selectedMonth: /^\d{4}-(?:0[1-9]|1[0-2])$/.test(rawMonth) ? rawMonth : currentIstMonth(), lightweight: Boolean((data as Record<string, unknown>)?.lightweight) }
   })
   .handler(async ({ data }): Promise<AdminAttendanceSnapshot & { currentRequestIp: string }> => {
+    return buildAdminAttendanceSnapshot(data.selectedMonth, data.lightweight)
+  })
+
+async function buildAdminAttendanceSnapshot(selectedMonth: string, lightweight = false): Promise<AdminAttendanceSnapshot & { currentRequestIp: string }> {
     await ensureAttendanceSchema()
     await ensureAttendanceReliabilitySchema()
-    const [year, month] = data.selectedMonth.split('-').map(Number)
+    const [year, month] = selectedMonth.split('-').map(Number)
     const rangeStart = new Date(Date.UTC(year, month - 1, 1)).toISOString().slice(0, 10)
     const rangeEnd = new Date(Date.UTC(year, month + 1, 0)).toISOString().slice(0, 10)
 
@@ -349,7 +347,7 @@ export const getAdminAttendanceSnapshot = createServerFn({ method: 'GET' })
     ])
 
     const logIds = logRows.map((r) => Number(r.id))
-    const historyRows = !data.lightweight && logIds.length
+    const historyRows = !lightweight && logIds.length
       ? await queryRows(`SELECT * FROM attendance_edit_history WHERE attendance_log_id IN (${logIds.map(() => '?').join(',')}) ORDER BY created_at DESC, id DESC`, logIds)
       : []
 
@@ -361,16 +359,17 @@ export const getAdminAttendanceSnapshot = createServerFn({ method: 'GET' })
       historyByLog.set(mapped.attendanceLogId, list)
     }
 
-    const employees = empRows.map(mapEmployeeRow)
+    const currentPolicies = await readEmployeePolicies(undefined, todayIstDate(), todayIstDate())
+    const employees = empRows.map(row => resolveEmployeePolicy(mapEmployeeRow(row), currentPolicies, todayIstDate()))
     const logs = logRows.map((r) => mapAttendanceRow(r, historyByLog.get(Number(r.id)) ?? []))
     const todayIst = todayIstDate()
-    let summaries = buildEmployeeCycleSummaries(employees, logs, data.selectedMonth, todayIst, await readEmployeePolicies(undefined, rangeStart, rangeEnd))
-    summaries = await applyFinalizedSummaries(summaries, data.selectedMonth)
+    let summaries = buildEmployeeCycleSummaries(employees, logs, selectedMonth, todayIst, await readEmployeePolicies(undefined, rangeStart, rangeEnd))
+    summaries = await applyFinalizedSummaries(summaries, selectedMonth)
     const headers = readHeadersFromRequest()
     const currentRequestIp = (headers.get('x-real-ip') || (headers.get('x-forwarded-for') ?? '').split(',')[0] || '').trim()
 
-    return { settings, employees, logs, summaries, selectedMonth: data.selectedMonth, todayIst, currentRequestIp }
-  })
+    return { settings, employees, logs, summaries, selectedMonth: selectedMonth, todayIst, currentRequestIp }
+}
 
 export const getAttendanceRecordHistory = createServerFn({ method: 'GET' })
   .middleware([superAdminMiddleware])
@@ -412,7 +411,11 @@ export const saveEmployee = createServerFn({ method: 'POST' })
     const policyReason = stringValue(input.policyReason, 500)
     const lateGraceMinutes = Math.max(0, Math.min(240, Math.round(numberValue(input.lateGraceMinutes, 0))))
     const weeklyOffDays = Array.isArray(input.weeklyOffDays) ? [...new Set(input.weeklyOffDays.map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n <= 6))] : [0]
-    const holidayDates = Array.isArray(input.holidayDates) ? input.holidayDates.map(String).filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date)) : []
+    const holidayDates = Array.isArray(input.holidayDates) ? input.holidayDates.map(value => String(value).trim()) : []
+    for (const date of holidayDates) {
+      const parsed = new Date(date + 'T00:00:00Z')
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date) throw new Error('Invalid holiday date: ' + date)
+    }
     for (const date of [effectiveDate, joiningDate, leavingDate].filter(Boolean)) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(new Date(date + 'T00:00:00Z').getTime()) || new Date(date + 'T00:00:00Z').toISOString().slice(0, 10) !== date) throw new Error('Valid effective/joining/leaving date is required')
     }
@@ -438,8 +441,11 @@ export const saveEmployee = createServerFn({ method: 'POST' })
       if (!policies.length) {
         await execute('INSERT INTO employee_policy_history (employee_id, effective_date, policy_json) VALUES (?, ?, ?)', [data.id, '1900-01-01', JSON.stringify(payrollPolicy(mapEmployeeRow(previous[0])))])
       }
+      const currentHistory = policies.map(row => ({ employeeId: Number(row.employee_id), effectiveDate: String(row.effective_date), policy: JSON.parse(String(row.policy_json)) }))
+      if (!currentHistory.length) currentHistory.push({ employeeId: data.id, effectiveDate: '1900-01-01', policy: payrollPolicy(mapEmployeeRow(previous[0])) })
+      const currentPolicy = resolveEmployeePolicy(mapEmployeeRow(previous[0]), [...currentHistory.filter(p => p.effectiveDate !== data.effectiveDate), { employeeId: data.id, effectiveDate: data.effectiveDate, policy: afterPolicy }], todayIstDate())
       const common = [data.name, data.designation, data.phone, data.email]
-      const tail = [data.cycleStartDay, data.monthlySalary, data.expectedInTime, data.expectedOutTime, data.officeOnly ? 1 : 0, data.active ? 1 : 0, data.id]
+      const tail = [currentPolicy.cycleStartDay, currentPolicy.monthlySalary, currentPolicy.expectedInTime, currentPolicy.expectedOutTime, data.officeOnly ? 1 : 0, data.active ? 1 : 0, data.id]
       if (data.clearPin) {
         await execute(`UPDATE employees SET name = ?, designation = ?, phone = ?, email = ?, pin_hash = '', cycle_start_day = ?, monthly_salary = ?, expected_in_time = ?, expected_out_time = ?, office_only = ?, active = ? WHERE id = ?`, [...common, ...tail])
       } else if (data.pin) {
@@ -448,7 +454,7 @@ export const saveEmployee = createServerFn({ method: 'POST' })
         await execute(`UPDATE employees SET name = ?, designation = ?, phone = ?, email = ?, cycle_start_day = ?, monthly_salary = ?, expected_in_time = ?, expected_out_time = ?, office_only = ?, active = ? WHERE id = ?`, [...common, ...tail])
       }
       await execute('INSERT INTO employee_policy_history (employee_id, effective_date, policy_json) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE policy_json = VALUES(policy_json)', [data.id, data.effectiveDate, JSON.stringify({ cycleStartDay: data.cycleStartDay, monthlySalary: data.monthlySalary, expectedInTime: data.expectedInTime, expectedOutTime: data.expectedOutTime, joiningDate: data.joiningDate, leavingDate: data.leavingDate, halfDayMinutes: data.halfDayMinutes, minimumHalfDayMinutes: data.minimumHalfDayMinutes, lateGraceMinutes: data.lateGraceMinutes, weeklyOffDays: data.weeklyOffDays, holidayDates: data.holidayDates })])
-      await execute('UPDATE employees SET joining_date = ?, leaving_date = ?, half_day_minutes = ?, minimum_half_day_minutes = ?, late_grace_minutes = ?, weekly_off_days_json = ?, holiday_dates_json = ? WHERE id = ?', [data.joiningDate || '', data.leavingDate || '', data.halfDayMinutes, data.minimumHalfDayMinutes, data.lateGraceMinutes, JSON.stringify(data.weeklyOffDays), JSON.stringify(data.holidayDates), data.id])
+      await execute('UPDATE employees SET joining_date = ?, leaving_date = ?, half_day_minutes = ?, minimum_half_day_minutes = ?, late_grace_minutes = ?, weekly_off_days_json = ?, holiday_dates_json = ? WHERE id = ?', [currentPolicy.joiningDate || '', currentPolicy.leavingDate || '', currentPolicy.halfDayMinutes ?? 300, currentPolicy.minimumHalfDayMinutes ?? 0, currentPolicy.lateGraceMinutes ?? 0, JSON.stringify(currentPolicy.weeklyOffDays), JSON.stringify(currentPolicy.holidayDates), data.id])
       const rows = await queryRows('SELECT * FROM employees WHERE id = ? LIMIT 1', [data.id])
       if (!rows.length) throw new Error('Employee not found')
       return mapEmployeeRow(rows[0])
@@ -540,7 +546,7 @@ export const saveAttendanceSettings = createServerFn({ method: 'POST' })
     const allowedRadiusM = Math.max(30, Math.min(5000, Math.round(numberValue(input.allowedRadiusM, 250))))
     const maxAccuracyM = Math.max(20, Math.min(2000, Math.round(numberValue(input.maxAccuracyM, 200))))
     const blockVpnOrForeignIp = Boolean(input.blockVpnOrForeignIp)
-    const officeWifiIp = stringValue(input.officeWifiIp, 64)
+    const officeWifiIp = stringValue(input.officeWifiIp, 255)
     const requireOfficeWifiIp = Boolean(input.requireOfficeWifiIp)
     const requireSelfie = input.requireSelfie === undefined ? true : Boolean(input.requireSelfie)
 
@@ -581,6 +587,9 @@ export const updateAttendanceRecord = createServerFn({ method: 'POST' })
     if (!['Present', 'Half Day', 'Review Required', 'Leave', 'Paid Leave', 'Unpaid Leave', 'Absent'].includes(status)) throw new Error('Invalid status')
     if (checkInTime && !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(checkInTime)) throw new Error('Check-in time must be HH:MM')
     if (checkOutTime && !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(checkOutTime)) throw new Error('Check-out time must be HH:MM')
+    if (checkOutNextDay) throw new Error('Only same-day IST shifts are allowed')
+    if (['Present', 'Half Day'].includes(status) && !checkInTime) throw new Error('Check-in time is required for a working shift')
+    if (status === 'Half Day' && !checkOutTime) throw new Error('Check-out time is required for a completed Half Day')
     if (checkOutTime && !checkInTime) throw new Error('Check-in time is required when Check-out time is entered')
     if ((mode === 'edit' || ['Leave', 'Paid Leave', 'Unpaid Leave', 'Absent'].includes(status)) && !editNote) throw new Error('Please enter a reason for editing attendance or approving leave/absence')
     if (['Leave', 'Paid Leave', 'Unpaid Leave', 'Absent'].includes(status) && (checkInTime || checkOutTime || absenceStart)) throw new Error('Full-day leave/absence cannot include shift times or an absence interval')
@@ -593,7 +602,6 @@ export const updateAttendanceRecord = createServerFn({ method: 'POST' })
     return attendanceTransaction(async ({ queryRows, execute }) => {
     const checkInDate = data.checkInTime ? new Date(`${data.workDate}T${data.checkInTime}:00+05:30`) : null
     const checkOutDate = data.checkOutTime ? new Date(`${data.workDate}T${data.checkOutTime}:00+05:30`) : null
-    if (checkOutDate && data.checkOutNextDay) checkOutDate.setUTCDate(checkOutDate.getUTCDate() + 1)
     if (checkInDate && Number.isNaN(checkInDate.getTime())) throw new Error('Invalid check-in time')
     if (checkOutDate && Number.isNaN(checkOutDate.getTime())) throw new Error('Invalid check-out time')
     if (checkInDate && checkOutDate && checkOutDate.getTime() <= checkInDate.getTime()) {
@@ -607,12 +615,15 @@ export const updateAttendanceRecord = createServerFn({ method: 'POST' })
     await assertCycleUnlocked(queryRows, data.employeeId, data.workDate)
     const existingRows = await queryRows('SELECT * FROM attendance_logs WHERE employee_id = ? AND work_date = ? LIMIT 1 FOR UPDATE', [data.employeeId, data.workDate])
     const prev = existingRows[0]
+    if (checkInDate && !checkOutDate && data.workDate !== todayIstDate() && !(data.absenceStart && prev?.check_in_at && !prev.check_out_at && data.workDate < todayIstDate())) throw new Error('Check-out time is required outside today; only an absence note on an existing past open shift may stay pending')
     if (data.mode === 'edit' && !prev) throw new Error('Attendance record no longer exists. Refresh and retry.')
     if (checkInDate) {
       const overlap = await queryRows('SELECT id FROM attendance_logs WHERE employee_id = ? AND id <> ? AND check_in_at IS NOT NULL AND (? IS NULL OR check_in_at < ?) AND (check_out_at IS NULL OR check_out_at > ?) LIMIT 1', [data.employeeId, Number(prev?.id ?? 0), checkOutDate, checkOutDate, checkInDate])
       if (overlap.length) throw new Error('Attendance times overlap another shift for this employee')
     }
     const preservedBreaks = parseBreaksJson(prev?.breaks_json)
+    if (['Leave', 'Paid Leave', 'Unpaid Leave', 'Absent'].includes(data.status)) preservedBreaks.length = 0
+    if (checkOutDate) for (const br of preservedBreaks) if (br.outAt && !br.inAt) br.inAt = checkOutDate.toISOString()
     if (data.absenceStart) {
       const start = new Date(data.absenceStart + ':00+05:30'), end = new Date(data.absenceEnd + ':00+05:30')
       const localValue = (date: Date) => new Date(date.getTime() + 19_800_000).toISOString().slice(0, 16)
@@ -622,7 +633,7 @@ export const updateAttendanceRecord = createServerFn({ method: 'POST' })
       preservedBreaks.push({outAt:start.toISOString(),inAt:end.toISOString(),outLat:null,outLng:null,outDistanceM:null,inLat:null,inLng:null,inDistanceM:null,note:'Admin - unapproved absence: ' + data.editNote})
     }
     const workMinutes = checkInDate && checkOutDate ? calculateWorkMinutes(checkInDate, checkOutDate, preservedBreaks) : 0
-    const breakMinutes = checkInDate && checkOutDate ? Math.max(0, Math.round((checkOutDate.getTime() - checkInDate.getTime()) / 60_000) - workMinutes) : 0
+    const breakMinutes = checkInDate && checkOutDate ? calculateMergedBreakMinutes(checkInDate, checkOutDate, preservedBreaks) : 0
     if (data.absenceStart && checkOutDate) {
       const policies = await queryRows('SELECT employee_id, effective_date, policy_json FROM employee_policy_history WHERE employee_id = ?', [data.employeeId])
       const employee = resolveEmployeePolicy(mapEmployeeRow(employees[0]), policies.map(row => ({employeeId:Number(row.employee_id),effectiveDate:String(row.effective_date),policy:JSON.parse(String(row.policy_json))})), data.workDate)
@@ -674,8 +685,8 @@ export const updateAttendanceRecord = createServerFn({ method: 'POST' })
       logId = Number(res.insertId)
     }
 
+    await execute('UPDATE attendance_logs SET breaks_json = ?, break_minutes = ? WHERE id = ?', [JSON.stringify(preservedBreaks), breakMinutes, logId])
     if (data.absenceStart) {
-      await execute('UPDATE attendance_logs SET breaks_json = ?, break_minutes = ? WHERE id = ?', [JSON.stringify(preservedBreaks), breakMinutes, logId])
       summaryText += ` | Unapproved absence (IST): ${data.absenceStart} to ${data.absenceEnd}`
     }
 
@@ -761,7 +772,7 @@ export const exportAttendanceExcel = createServerFn({ method: 'GET' })
             ['Employee', 'Role', 'Cycle Day', 'Cycle Period', 'Cycle Days', 'Sundays', 'Working Days', 'Present', 'Half Day', 'Leave', 'Absent', 'Payable Days', 'Monthly Salary (INR)', 'Per Working Day (INR)', 'Calculated Salary (INR)', 'Late', 'Flags', 'Total Hours', 'Off-day Hours (separate)'],
             ...summaryRows,
           ],
-          widths: [20, 16, 10, 24, 11, 10, 12, 10, 10, 10, 10, 12, 18, 18, 20, 8, 8, 12],
+          widths: [20, 16, 10, 24, 11, 10, 12, 10, 10, 10, 10, 12, 18, 18, 20, 8, 8, 12, 18],
           headerRows: [1],
           filter: `A1:S${Math.max(1, summaryRows.length + 1)}`,
         },
@@ -771,7 +782,7 @@ export const exportAttendanceExcel = createServerFn({ method: 'GET' })
             ['Date', 'Employee', 'Role', 'Status', 'Check In', 'Check Out', 'Worked', 'Punctuality', 'In Distance', 'In Map Link', 'In Network', 'Out Distance', 'Out Map Link', 'Flags', 'Edited By', 'Edit Reason', 'Break Minutes', 'Review', 'Source'],
             ...detailRows,
           ],
-          widths: [13, 20, 16, 12, 12, 12, 12, 12, 12, 34, 24, 12, 34, 24, 26, 30],
+          widths: [13, 20, 16, 12, 12, 12, 12, 12, 12, 34, 24, 12, 34, 24, 26, 30, 16, 16, 18],
           headerRows: [1],
           filter: `A1:S${Math.max(1, detailRows.length + 1)}`,
         },
@@ -839,9 +850,33 @@ export const exportAttendanceCsv = createServerFn({ method: 'GET' })
   .middleware([superAdminMiddleware])
   .validator(reportInput)
   .handler(async ({ data }) => {
-    const snapshot = await getAdminAttendanceSnapshot({ data: { month: data.month } })
+    const snapshot = await buildAdminAttendanceSnapshot(data.month)
     const summaries = snapshot.summaries.filter((summary) => !data.employeeId || summary.employee.id === data.employeeId)
     const rows: unknown[][] = [['Employee', 'Cycle Start', 'Cycle End', 'Present', 'Half Day', 'Leave', 'Absent', 'Missing OUT', 'Payable Days', 'Monthly Salary INR', 'Calculated Salary INR', 'Work Minutes', 'Off-day Work Minutes (separate)']]
     for (const summary of summaries) rows.push([summary.employee.name, summary.cycleStartDate, summary.cycleEndDate, summary.presentDays, summary.halfDays, summary.leaveDays, summary.absentDays, summary.missedCheckOutCount, summary.payableDays, summary.employee.monthlySalary, summary.earnedSalary, summary.totalWorkMinutes, summary.offDayWorkMinutes ?? 0])
-    return { filename: `bei-attendance-salary-${data.month}.csv`, base64: Buffer.from(csvText(rows), 'utf8').toString('base64') }
+    return { filename: `bei-attendance-salary-${data.month}${data.employeeId ? `-emp-${data.employeeId}` : ''}.csv`, base64: Buffer.from(csvText(rows), 'utf8').toString('base64') }
+  })
+
+export const getAttendancePhotoCleanupPreview = createServerFn({ method: 'GET' })
+  .middleware([superAdminMiddleware])
+  .handler(async () => {
+    await ensureAttendanceSchema()
+    const cutoff = new Date(Date.parse(todayIstDate() + 'T00:00:00Z') - 60 * 86_400_000).toISOString().slice(0, 10)
+    const rows = await queryRows('SELECT COUNT(*) AS records, COALESCE(SUM(in_photo_data IS NOT NULL) + SUM(out_photo_data IS NOT NULL), 0) AS photos FROM attendance_logs WHERE work_date < ? AND (in_photo_data IS NOT NULL OR out_photo_data IS NOT NULL)', [cutoff])
+    return { cutoff, records: Number(rows[0]?.records ?? 0), photos: Number(rows[0]?.photos ?? 0) }
+  })
+
+export const cleanOldAttendancePhotos = createServerFn({ method: 'POST' })
+  .middleware([superAdminMiddleware])
+  .validator((raw: unknown) => {
+    const data = (raw ?? {}) as Record<string, unknown>
+    const cutoff = stringValue(data.cutoff, 10)
+    const latest = new Date(Date.parse(todayIstDate() + 'T00:00:00Z') - 60 * 86_400_000).toISOString().slice(0, 10)
+    if (data.confirmed !== true || !/^\d{4}-\d{2}-\d{2}$/.test(cutoff) || cutoff > latest) throw new Error('Confirm the photo cleanup preview first')
+    return { cutoff }
+  })
+  .handler(async ({ data }) => {
+    await ensureAttendanceSchema()
+    const result = await execute('UPDATE attendance_logs SET in_photo_data = NULL, out_photo_data = NULL WHERE work_date < ? AND (in_photo_data IS NOT NULL OR out_photo_data IS NOT NULL) LIMIT 2000', [data.cutoff])
+    return { cleared: result.affectedRows }
   })

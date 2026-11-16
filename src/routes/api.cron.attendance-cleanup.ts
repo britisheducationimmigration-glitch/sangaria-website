@@ -1,3 +1,4 @@
+import { validCronAuthorization } from '@/lib/cron-secret.server'
 import { createFileRoute } from '@tanstack/react-router'
 import { ensureAttendanceSchema, autoCloseOpenCheckIns } from '@/lib/attendance.server'
 import { execute } from '@/lib/db.server'
@@ -8,7 +9,7 @@ export const Route = createFileRoute('/api/cron/attendance-cleanup')({
       GET: async ({ request }) => {
         const secret = process.env.CRON_SECRET
         if (!secret) return Response.json({ ok: false, error: 'Cleanup is not configured.' }, { status: 503 })
-        if (request.headers.get('authorization') !== `Bearer ${secret}`) return new Response('Unauthorized', { status: 401 })
+        if (!validCronAuthorization(request.headers.get('authorization'), secret)) return new Response('Unauthorized', { status: 401 })
         await ensureAttendanceSchema()
         await autoCloseOpenCheckIns()
         const result = await execute(`UPDATE attendance_logs SET in_photo_data = NULL, out_photo_data = NULL

@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type FormEvent } from 'react'
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import type { AttendanceEditHistoryRecord, AttendanceStatus, EmployeeRecord } from '@/lib/content-types'
 
 function useModalDialog(onClose: () => void, busy: boolean) {
@@ -112,6 +112,7 @@ export function EmployeeFormModal({
   onClose: () => void
   onSubmit: (e: FormEvent) => void
 }) {
+  const [holidayText, setHolidayText] = useState(() => draft.holidayDates.join('\n'))
   const dialogRef = useModalDialog(onClose, busy)
   const titleId = useId()
   return (
@@ -188,14 +189,14 @@ export function EmployeeFormModal({
           <div className="grid grid-cols-2 gap-3">
             <label className="text-xs font-semibold">Joining date<input type="date" value={draft.joiningDate} onChange={(e) => onChange({ ...draft, joiningDate: e.target.value })} className="field mt-1" /></label>
             <label className="text-xs font-semibold">Last working date<input type="date" min={draft.joiningDate || undefined} value={draft.leavingDate} onChange={(e) => onChange({ ...draft, leavingDate: e.target.value })} className="field mt-1" /></label>
-            <label className="text-xs font-semibold">Minimum half-day (minutes)<input type="number" min={0} max={draft.halfDayMinutes} value={draft.minimumHalfDayMinutes} onChange={(e) => onChange({ ...draft, minimumHalfDayMinutes: Number(e.target.value) })} className="field mt-1" /><span className="mt-1 block font-normal text-[#667085]">0: short shifts need admin review.</span></label>
+            <label className="text-xs font-semibold">Minimum half-day (minutes)<input type="number" min={0} max={draft.halfDayMinutes} value={draft.minimumHalfDayMinutes} onChange={(e) => onChange({ ...draft, minimumHalfDayMinutes: Number(e.target.value) })} className="field mt-1" /><span className="mt-1 block font-normal text-[#667085]">0: all half-day punches require admin approval and earn INR 0 until approved. Set 180 or 240 to auto-approve eligible half days.</span></label>
             <label className="text-xs font-semibold">Full-day minimum (minutes)<input type="number" min={1} max={1440} value={draft.halfDayMinutes} onChange={(e) => onChange({ ...draft, halfDayMinutes: Number(e.target.value) })} className="field mt-1" /></label>
             <label className="text-xs font-semibold">Late grace (minutes)<input type="number" min={0} max={240} value={draft.lateGraceMinutes} onChange={(e) => onChange({ ...draft, lateGraceMinutes: Number(e.target.value) })} className="field mt-1" /></label>
           </div>
           {draft.id > 0 && <label className="block text-xs font-semibold">Reason for payroll policy change (optional)<input maxLength={500} value={draft.policyReason} onChange={(e) => onChange({ ...draft, policyReason: e.target.value })} className="field mt-1" placeholder="Optional note; change history is recorded automatically" /></label>}
           <label className="block text-xs font-semibold">Policy effective from<input type="date" required value={draft.effectiveDate} onChange={(e) => onChange({ ...draft, effectiveDate: e.target.value })} className="field mt-1" /><span className="mt-1 block font-normal text-[#667085]">Changes apply from this date. For an initial salary entered later, choose the joining date if it should apply from joining. Finalized reports stay locked.</span></label>
           <div className="text-xs font-semibold">Weekly off<div className="mt-2 flex flex-wrap gap-3">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((label, day) => <label key={day} className="flex items-center gap-1"><input type="checkbox" checked={draft.weeklyOffDays.includes(day)} onChange={(e) => onChange({ ...draft, weeklyOffDays: e.target.checked ? [...draft.weeklyOffDays, day].sort() : draft.weeklyOffDays.filter((d) => d !== day) })} />{label}</label>)}</div></div>
-          <label className="block text-xs font-semibold">Paid holidays (one YYYY-MM-DD date per line)<textarea defaultValue={draft.holidayDates.join('\n')} onBlur={(e) => onChange({ ...draft, holidayDates: e.target.value.split(/\s+/).filter(Boolean) })} rows={3} className="field mt-1" placeholder="2026-12-25" /></label>
+          <label className="block text-xs font-semibold">Paid holidays (one YYYY-MM-DD date per line)<textarea value={holidayText} onChange={(e) => { setHolidayText(e.target.value); onChange({ ...draft, holidayDates: e.target.value.split(/\s+/).filter(Boolean) }) }} rows={3} className="field mt-1" placeholder="2026-12-25" /></label>
         </fieldset>
 
         <label className="block text-xs font-semibold text-[#1D2939]">
@@ -286,7 +287,7 @@ export function AttendanceEditModal({
                     employeeName: emp.name,
                     checkInTime: ['Leave', 'Paid Leave', 'Unpaid Leave', 'Absent'].includes(draft.status) ? '' : emp.expectedInTime,
                     checkOutTime: ['Leave', 'Paid Leave', 'Unpaid Leave', 'Absent'].includes(draft.status) ? '' : emp.expectedOutTime,
-                    checkOutNextDay: emp.expectedOutTime <= emp.expectedInTime,
+                    checkOutNextDay: false,
                   })
                 }}
                 className="field mt-1"
@@ -335,10 +336,6 @@ export function AttendanceEditModal({
           </label>
         </div>
 
-        <label className="flex items-center gap-2 text-xs font-semibold text-[#1D2939]">
-          <input type="checkbox" checked={draft.checkOutNextDay ?? false} onChange={(e) => onChange({ ...draft, checkOutNextDay: e.target.checked })} />
-          OUT on following day
-        </label>
 
         <label className="flex items-center gap-2 text-xs font-semibold text-[#1D2939]">
           <input type="checkbox" checked={draft.isLate} onChange={(e) => onChange({ ...draft, isLate: e.target.checked })} />

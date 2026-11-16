@@ -18,6 +18,13 @@ export async function attendanceRuntime(database, { realDb = false } = {}) {
   const cache = new Map()
   const db = {
     getDb: async () => database,
+    jsonArray: value => { try { return Array.isArray(value) ? value : JSON.parse(value || '[]') } catch { return [] } },
+    databaseTransaction: async action => {
+      const connection = await database.getConnection()
+      try { await connection.beginTransaction(); const result = await action(connection); await connection.commit(); return result }
+      catch (error) { await connection.rollback(); throw error }
+      finally { connection.release() }
+    },
     queryRows: async (sql, values = []) => (await database.query(sql, values))[0],
     execute: async (sql, values = []) => (await database.execute(sql, values))[0],
   }
@@ -47,14 +54,16 @@ export async function attendanceRuntime(database, { realDb = false } = {}) {
     if (specifier === '@tanstack/react-start/server-only') return synthetic(specifier, {})
     if (specifier === '@tanstack/react-start') return synthetic(specifier, transport)
     if (specifier === '@tanstack/react-start/server') return synthetic(specifier, { getRequestHeader: name => state.headers.get(name) })
-    if (specifier === '@/data/site') return synthetic(specifier, { site: { latitude: 29.8, longitude: 74.5 } })
+    if (specifier === '@/data/site') return synthetic(specifier, { site: { latitude: 29.8, longitude: 74.5, phones: [], emails: [], trustStats: [] } })
     if (specifier === './db.server' && !realDb) return synthetic('test-db', db)
     if (specifier === 'mysql2/promise') return synthetic(specifier, { default: { createPool: () => database } })
-    if (specifier === '@/data/fixtures') return synthetic(specifier, { approvals: [], coachingSchedule: [], posts: [], testimonials: [] })
+    if (specifier === '@/data/fixtures') return synthetic(specifier, { approvals: [], coachingSchedule: [], posts: [], testimonials: [], faqs: [] })
     if (specifier === '@/data/certificates') return synthetic(specifier, { defaultCertificates: [] })
     if (specifier === './auth.server') return synthetic('test-auth', { getSessionUser: async () => state.signedIn ? { name: 'Test Admin', email: 'admin@example.test' } : null, ensureAdminRecord: async () => true, getAdminRole: async () => state.role, hashPassword: () => 'test-hash' })
+    if (specifier === './public-functions') return synthetic(specifier, { invalidateCoachingCache: () => {}, invalidatePublicContentCache: () => {} })
+    if (specifier === './country-catalog.server') return synthetic(specifier, { discardCountryDraft: () => {}, getAdminCountryCatalog: () => [], getPublicCountryCatalog: () => [], revertCountryToDefault: () => {}, saveCountryDraft: () => {} })
     if (specifier.startsWith('node:')) return synthetic(specifier, await import(specifier))
-    let filename = path.resolve(path.dirname(parent), specifier)
+    let filename = specifier.startsWith('@/') ? path.join(root, 'src', specifier.slice(2)) : path.resolve(path.dirname(parent), specifier)
     if (!path.extname(filename) || filename.endsWith('.server')) filename += '.ts'
     if (cache.has(filename)) return cache.get(filename)
     const source = await fs.readFile(filename, 'utf8')
@@ -68,5 +77,5 @@ export async function attendanceRuntime(database, { realDb = false } = {}) {
   await module.evaluate()
   const server = await load('./attendance.server')
   const databaseModule = await load('./db.server')
-  return { api: module.namespace, server: server.namespace, state, database: databaseModule.namespace }
+  return { api: module.namespace, server: server.namespace, state, database: databaseModule.namespace, loadAdmin: async () => { const admin = await load('./admin-functions'); await admin.link((s, m) => load(s, m.identifier)); await admin.evaluate(); return admin.namespace } }
 }

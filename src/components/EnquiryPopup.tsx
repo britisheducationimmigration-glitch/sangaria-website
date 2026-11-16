@@ -40,6 +40,7 @@ export function EnquiryPopup() {
   const delaySeconds = rootData?.settings.popupDelaySeconds ?? 8
   const [open, setOpen] = useState(false)
   const [interacted, setInteracted] = useState(() => hasInteractedWithPopup())
+  const [sharePromptOpen, setSharePromptOpen] = useState(false)
   const dialogRef = useRef<HTMLDivElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
 
@@ -64,7 +65,7 @@ export function EnquiryPopup() {
   }, [])
 
   useEffect(() => {
-    if (!open || pathname.startsWith('/admin')) return
+    if (!open || sharePromptOpen || pathname.startsWith('/admin')) return
 
     const previouslyFocused = document.activeElement instanceof HTMLElement
       ? document.activeElement
@@ -114,7 +115,7 @@ export function EnquiryPopup() {
       document.body.style.overflow = previousBodyOverflow
       if (previouslyFocused?.isConnected) previouslyFocused.focus()
     }
-  }, [open, close, pathname])
+  }, [open, close, pathname, sharePromptOpen])
 
   if (!open || pathname.startsWith('/admin') || interacted) return null
 
@@ -147,7 +148,7 @@ export function EnquiryPopup() {
         <p id="enquiry-popup-description" className="mt-2 mb-6 text-sm text-forest-100/70">
           Share your details and a counsellor will call within one working day.
         </p>
-        <EnquiryForm source="popup" dark compact onSuccess={handleSuccess} />
+        <EnquiryForm source="popup" dark compact onSuccess={handleSuccess} onSharePromptChange={setSharePromptOpen} />
       </div>
     </div>
   )

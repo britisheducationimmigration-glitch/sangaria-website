@@ -3,7 +3,7 @@ import '@tanstack/react-start/server-only'
 import crypto from 'node:crypto'
 import { site } from '@/data/site'
 import { execute, getDb, queryRows } from './db.server'
-export { getEmployeeCycleRange, countSundaysInRange, buildEmployeeCycleSummaries, calculateWorkMinutes, resolveEmployeePolicy, classifyShift } from './attendance-calculations'
+export { getEmployeeCycleRange, countSundaysInRange, buildEmployeeCycleSummaries, calculateWorkMinutes, calculateMergedBreakMinutes, resolveEmployeePolicy, classifyShift } from './attendance-calculations'
 import type { EmployeePolicyHistory } from './attendance-calculations'
 import type {
    AttendanceBreakRecord,
@@ -302,7 +302,7 @@ export function verifyAttendanceLocation(params: {
   }
 
   if (settings.requireOfficeWifiIp && settings.officeWifiIp.trim()) {
-    if (!net.clientIp || net.clientIp !== settings.officeWifiIp.trim()) {
+    if (!net.clientIp || !settings.officeWifiIp.split(',').map(ip => ip.trim()).filter(Boolean).includes(net.clientIp)) {
       throw new Error('Please connect to the Sangaria Office Wi-Fi to mark attendance.')
     }
   }
@@ -376,7 +376,7 @@ export async function readAttendanceSettings(): Promise<AttendanceSettings> {
       allowedRadiusM: Math.max(30, Math.min(5000, Number(parsed.allowedRadiusM) || defaultAttendanceSettings.allowedRadiusM)),
       maxAccuracyM: Math.max(20, Math.min(2000, Number(parsed.maxAccuracyM) || defaultAttendanceSettings.maxAccuracyM)),
       blockVpnOrForeignIp: parsed.blockVpnOrForeignIp ?? defaultAttendanceSettings.blockVpnOrForeignIp,
-      officeWifiIp: String(parsed.officeWifiIp || '').trim().slice(0, 64),
+      officeWifiIp: String(parsed.officeWifiIp || '').trim().slice(0, 255),
       requireOfficeWifiIp: Boolean(parsed.requireOfficeWifiIp),
       requireSelfie: parsed.requireSelfie ?? defaultAttendanceSettings.requireSelfie,
     }

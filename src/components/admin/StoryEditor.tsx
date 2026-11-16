@@ -84,6 +84,7 @@ export function StoryEditor({ item, onReload, onNotice, onClose }: {
   function handleSelectCountry(presetKey: string) {
     setSelectedPreset(presetKey)
     if (presetKey === 'CUSTOM') {
+      if (Object.values(countryPresets).some(preset => preset.name === form.country)) setForm(current => ({ ...current, country: '', flag: '', visa: '' }))
       setError('')
       return
     }
