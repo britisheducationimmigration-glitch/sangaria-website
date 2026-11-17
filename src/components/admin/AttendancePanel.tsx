@@ -307,7 +307,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
   const calendarLogs = logs.filter((l) => l.workDate.startsWith(month) && (!filterEmpId || l.employeeId === filterEmpId) && (!reviewOnly || requiresReview(l)))
   const calendarStart = new Date(month + '-01T00:00:00Z')
   const calendarDays = new Date(Date.UTC(calendarStart.getUTCFullYear(), calendarStart.getUTCMonth() + 1, 0)).getUTCDate()
-  const selectedEmployee = employees.find((employee) => employee.id === filterEmpId) ?? employees.find(employee => employee.active) ?? employees[0]
+  const selectedEmployee = employees.find((employee) => employee.id === filterEmpId && employee.active) ?? employees.find(employee => employee.active) ?? employees[0]
 
   return (
     <section className="space-y-6">
@@ -358,7 +358,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
               {filterDate && <button type="button" onClick={() => setFilterDate('')} className="rounded-lg border border-[#E4E7EC] px-2.5 py-1.5 text-xs font-semibold text-[#667085]">All Dates</button>}
               <select value={filterEmpId} onChange={(e) => setFilterEmpId(Number(e.currentTarget.value))} aria-label="Filter employee" className="min-h-10 rounded-xl border border-[#E4E7EC] px-3 text-xs font-semibold">
                 <option value={0}>All Employees</option>
-                {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+                {employees.map((e) => <option key={e.id} value={e.id}>{e.name}{!e.active ? ' (Archived)' : ''}</option>)}
               </select>
             </div>
             <div className="flex flex-wrap gap-2">

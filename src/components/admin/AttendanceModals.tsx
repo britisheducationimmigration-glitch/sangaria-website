@@ -294,7 +294,7 @@ export function AttendanceEditModal({
               >
                 {employees.map((emp) => (
                   <option key={emp.id} value={emp.id}>
-                    {emp.name}
+                    {emp.name}{!emp.active ? ' (Archived)' : ''}
                   </option>
                 ))}
               </select>
