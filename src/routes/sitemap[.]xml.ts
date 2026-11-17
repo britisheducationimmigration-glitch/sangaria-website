@@ -1,3 +1,4 @@
+import { dateOnly } from '@/lib/date-only'
 import { createFileRoute } from '@tanstack/react-router'
 import { countries, posts as fixturePosts } from '@/data/fixtures'
 import { queryRows } from '@/lib/db.server'
@@ -23,14 +24,6 @@ function escapeXml(value: string) {
 function validSlug(value: unknown) {
   const slug = String(value ?? '')
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ? slug : ''
-}
-
-function dateOnly(value: unknown) {
-  if (value instanceof Date) return value.toISOString().slice(0, 10)
-  const raw = String(value ?? '')
-  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10)
-  const parsed = new Date(raw)
-  return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString().slice(0, 10)
 }
 
 export const Route = createFileRoute('/sitemap.xml')({

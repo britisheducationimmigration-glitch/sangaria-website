@@ -1,3 +1,4 @@
+import { dateOnly } from '@/lib/date-only'
 import { createMiddleware, createServerFn } from '@tanstack/react-start'
 import { databaseTransaction, execute, jsonArray, queryRows } from './db.server'
 import type { AdminCertificate, AdminPost, AdminRole, AdminSnapshot, AdminStory, CoachingBatch, Enquiry, EnquiryActivity, EnquiryStatus } from './content-types'
@@ -35,14 +36,6 @@ type Capability = 'enquiries' | 'content' | 'settings' | 'users'
 function assertCapability(role: AdminRole, capability: Capability) {
   const allowed = role === 'super_admin' || (role === 'content_editor' && capability === 'content') || (role === 'enquiry_manager' && capability === 'enquiries')
   if (!allowed) throw new Error('You do not have permission for this section')
-}
-
-function dateOnly(value: unknown) {
-  if (value instanceof Date) return value.toISOString().slice(0, 10)
-  const text = String(value ?? '')
-  if (/^\d{4}-\d{2}-\d{2}/.test(text)) return text.slice(0, 10)
-  const parsed = new Date(text)
-  return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString().slice(0, 10)
 }
 
 function mapActivity(row: Record<string, unknown>): EnquiryActivity {

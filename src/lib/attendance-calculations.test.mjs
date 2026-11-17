@@ -84,3 +84,11 @@ test('automatic checkout remains a finalization blocker until approved', () => {
   entry.outFlags.push('ADMIN_REVIEW_APPROVED')
   assert.equal(buildEmployeeCycleSummaries([employee], [entry], '2026-11', '2026-12-01')[0].reviewRequiredCount, 0)
 })
+
+test('half-day review uses the policy effective on the work date', () => {
+  for (const [minimum, minutes, approved, expected] of [[0,240,false,1],[240,239,false,1],[240,240,false,0],[0,60,true,0]]) {
+    const entry = { ...log('2026-11-02','Half Day'), workMinutes:minutes, outFlags:approved ? ['ADMIN_REVIEW_APPROVED'] : [] }
+    const policies = [{employeeId:1,effectiveDate:'2026-01-01',policy:{minimumHalfDayMinutes:minimum}},{employeeId:1,effectiveDate:'2026-12-01',policy:{minimumHalfDayMinutes:600}}]
+    assert.equal(buildEmployeeCycleSummaries([employee],[entry],'2026-11','2026-12-01',policies)[0].reviewRequiredCount,expected)
+  }
+})

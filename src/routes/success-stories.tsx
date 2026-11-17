@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { ApprovalCard, TestimonialCard } from '@/components/Cards'
 import { GoogleReviewCta } from '@/components/GoogleReviewCta'
 import { Eyebrow, PageHero } from '@/components/Section'
-import { cn, img } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 import { getPublicContent } from '@/lib/public-functions'
 
 import { createPageSeo } from '@/lib/seo'
@@ -64,7 +64,7 @@ function SuccessPage() {
       </section>
 
       <section className="relative overflow-hidden">
-        <img src={img('/img/family.webp', 1600, 640)} alt="Family travelling abroad" loading="lazy" className="h-[28rem] w-full object-cover" />
+        <img src="/img/family.webp" alt="Family travelling abroad" loading="lazy" className="h-[28rem] w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-r from-forest-950/90 via-forest-950/50 to-transparent" />
         <div className="absolute inset-0 mx-auto flex max-w-7xl items-center px-6">
           <p className="max-w-lg font-display text-4xl font-extrabold text-white md:text-5xl">

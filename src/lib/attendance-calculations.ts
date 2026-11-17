@@ -94,7 +94,12 @@ export function buildEmployeeCycleSummaries(employees: EmployeeRecord[], logs: A
       earnedSalary: Math.round(earnedSalary), lateCount: empLogs.filter(l => l.isLate).length,
       flaggedCount: empLogs.filter(l => l.inFlags.length || l.outFlags.length).length,
       missedCheckOutCount: empLogs.filter(l => l.checkInAt && !l.checkOutAt && l.workDate < todayIst).length,
-      reviewRequiredCount: empLogs.filter(l => l.status === 'Review Required' || (l.outFlags.includes('AUTO_CHECKOUT_10PM') && !l.outFlags.includes('ADMIN_REVIEW_APPROVED')) || (l.status === 'Half Day' && !l.outFlags.includes('ADMIN_REVIEW_APPROVED') && ((resolveEmployeePolicy(employee, policies, l.workDate).minimumHalfDayMinutes ?? 0) <= 0 || l.workMinutes < (resolveEmployeePolicy(employee, policies, l.workDate).minimumHalfDayMinutes ?? 0)))).length,
+      reviewRequiredCount: empLogs.filter(l => {
+        if (l.status === 'Review Required' || (l.outFlags.includes('AUTO_CHECKOUT_10PM') && !l.outFlags.includes('ADMIN_REVIEW_APPROVED'))) return true
+        if (l.status !== 'Half Day' || l.outFlags.includes('ADMIN_REVIEW_APPROVED')) return false
+        const minimum = resolveEmployeePolicy(employee, policies, l.workDate).minimumHalfDayMinutes ?? 0
+        return minimum <= 0 || l.workMinutes < minimum
+      }).length,
       totalWorkMinutes: completeLogs.reduce((sum, l) => sum + (l.workMinutes || 0), 0), offDayWorkMinutes,
     }
   })

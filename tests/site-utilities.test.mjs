@@ -1,3 +1,4 @@
+import { dateOnly } from '../src/lib/date-only.ts'
 import { validCronAuthorization } from '../src/lib/cron-secret.server.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -31,4 +32,10 @@ test('cron authorization fails closed for absent, wrong and unequal-length value
   assert.equal(validCronAuthorization('Bearer secret', 'secret'), true)
   for (const value of [null, '', 'secret', 'Bearer secrex', 'Bearer secret-extra']) assert.equal(validCronAuthorization(value, 'secret'), false)
   assert.equal(validCronAuthorization('Bearer ', ''), false)
+})
+
+// Preserve database date-prefix behavior, including invalid/non-date inputs.
+
+test('shared date-only conversion preserves existing content and sitemap semantics',()=>{
+  for(const [value, expected] of [[new Date('2026-11-17T23:30:00Z'),'2026-11-17'],['2026-11-17','2026-11-17'],['2026-11-17T00:30:00+05:30','2026-11-17'],['invalid',''],[null,''],[undefined,'']]) assert.equal(dateOnly(value),expected)
 })

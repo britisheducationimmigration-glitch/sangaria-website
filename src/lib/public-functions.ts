@@ -1,3 +1,4 @@
+import { dateOnly } from '@/lib/date-only'
 import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeader } from '@tanstack/react-start/server'
 import { checkRateLimit } from './rate-limit.server'
@@ -69,14 +70,6 @@ export const submitEnquiry = createServerFn({ method: 'POST' })
     )
     return { ok: true, id: Number(result.insertId) }
   })
-
-function dateOnly(value: unknown) {
-  if (value instanceof Date) return value.toISOString().slice(0, 10)
-  const text = String(value ?? '')
-  if (/^\d{4}-\d{2}-\d{2}/.test(text)) return text.slice(0, 10)
-  const parsed = new Date(text)
-  return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString().slice(0, 10)
-}
 
 const legacyReviewedPosts: Record<string, { title: string; excerpt: string; body: string[] }> = {
   'canada-study-permit-cap-2027': {

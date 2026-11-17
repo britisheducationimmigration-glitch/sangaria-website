@@ -10,7 +10,6 @@ import { ServiceIcon } from '@/components/ServiceIcon'
 import { visaServices } from '@/data/fixtures'
 import { getPublicCashflow, getPublicCountryCatalogue, getPublicContent } from '@/lib/public-functions'
 import { site } from '@/data/site'
-import { img } from '@/lib/utils'
 import { GoogleReviewCta } from '@/components/GoogleReviewCta'
 import { createPageSeo } from '@/lib/seo'
 
@@ -343,7 +342,7 @@ function Home() {
 
             <div className="relative mt-8 w-full overflow-hidden rounded-2xl border border-white/15 shadow-2xl">
               <img
-                src={img('/img/hero.webp', 640, 720)}
+                src="/img/hero.webp"
                 alt="Student holding passport and university acceptance letter"
                 width={640}
                 height={720}
@@ -557,7 +556,7 @@ function Home() {
         <section id="coaching-m" className="scroll-mt-36 lg:scroll-mt-44 px-5 py-20 border-b border-forest-900/10 bg-white">
           <div className="relative overflow-hidden rounded-3xl shadow-lg mb-8">
             <img
-              src={img('/img/coaching.webp', 640, 420)}
+              src="/img/coaching.webp"
               alt="IELTS and PTE coaching classroom"
               width={640}
               height={420}
@@ -881,7 +880,7 @@ function Home() {
             <div className="relative z-10 mx-auto w-full max-w-md lg:max-w-none">
               <div className="absolute -inset-4 rotate-3 rounded-[2.5rem] bg-coral-500/90" />
               <img
-                src={img('/img/hero.webp', 720, 860)}
+                src="/img/hero.webp"
                 alt="Student holding passport and university acceptance letter at the airport"
                 width={720}
                 height={860}
@@ -1100,7 +1099,7 @@ function Home() {
         <section id="coaching-desktop" className="scroll-mt-36 lg:scroll-mt-44 mx-auto grid max-w-7xl items-center gap-14 px-6 py-24 lg:grid-cols-2">
           <div className="relative">
             <img
-              src={img('/img/coaching.webp', 760, 560)}
+              src="/img/coaching.webp"
               alt="IELTS and PTE coaching classroom"
               width={760}
               height={560}
