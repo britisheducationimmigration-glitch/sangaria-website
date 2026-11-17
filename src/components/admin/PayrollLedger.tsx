@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { site } from '@/data/site'
 import { exportEmployeeRangeReport, getEmployeeRangeReport, recordSalaryPayment, reverseSalaryPayment } from '@/lib/attendance-functions'
 import type { EmployeeRecord, EmployeeCycleSummary } from '@/lib/content-types'
 
@@ -30,7 +31,9 @@ export function PayrollLedger({employees,cycles,month,today,onNotice}:{employees
   }
   async function reverse(id:number){const reason=window.prompt('Reason for reversing this recorded payment? The original entry is retained.');if(!reason?.trim())return;setBusy(true);try{await reverseSalaryPayment({data:{id,reason}});setRevision(n=>n+1);onNotice('Payment reversed; history retained.')}catch(cause){setError(cause instanceof Error?cause.message:'Reversal failed')}finally{setBusy(false)}}
   async function download(){setBusy(true);try{const file=await exportEmployeeRangeReport({data:{employeeId,from,to}}),bytes=Uint8Array.from(atob(file.base64),c=>c.charCodeAt(0)),url=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));const link=document.createElement('a');link.href=url;link.download=file.filename;link.click();URL.revokeObjectURL(url)}catch(cause){setError(cause instanceof Error?cause.message:'Export failed')}finally{setBusy(false)}}
-  return <section className="space-y-4 rounded-2xl border border-[#E4E7EC] bg-white p-5">
+ const selectedEmployee = employees.find(e=>e.id===employeeId)
+  const slipPayments = result ? result.payments.filter(p=>!p.voided&&p.from<=to&&p.to>=from).slice(0,8) : []
+  return <section id="salary-slip-document" className="space-y-4 rounded-2xl border border-[#E4E7EC] bg-white p-5">
     <div><h3 className="text-xl font-bold">Employee salary overview</h3><p className="mt-1 text-sm text-[#667085]">Choose an employee to view their balance through today. Open a section below only when needed.</p></div>
     <div className="flex flex-wrap items-end gap-3"><label className="text-xs font-semibold">Employee<select aria-label="Statement employee" value={employeeId} disabled={busy} onChange={e=>{
       if ((amount || reference || note) && !window.confirm('Discard unsaved payment details before switching employees?')) return
@@ -41,7 +44,7 @@ export function PayrollLedger({employees,cycles,month,today,onNotice}:{employees
     {loading&&<p role="status">Loading attendance and payments...</p>}{error&&<p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
     {result&&result.employee.id===employeeId&&<>
       <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4 sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3"><div><h4 className="text-lg font-bold">{result.employee.name}</h4><p className="mt-1 text-xs text-slate-600">Balance through {today} · Since {result.baseline}</p></div><button type="button" disabled={busy||loading} onClick={()=>setRevision(n=>n+1)} className={button+' bg-white'}>Refresh balance</button></div>
+       <div className="flex flex-wrap items-center justify-between gap-3"><div><h4 className="text-lg font-bold">{result.employee.name}</h4><p className="mt-1 text-xs text-slate-600">Balance through {today} · Since {result.baseline}</p></div><div className="flex flex-wrap gap-2"><button type="button" disabled={busy||loading||!reportCurrent} onClick={()=>window.print()} className={button+' bg-white'}>Print / Save Salary Slip</button><button type="button" disabled={busy||loading} onClick={()=>setRevision(n=>n+1)} className={button+' bg-white'}>Refresh balance</button></div></div>
         <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">{([
           ['Earned',result.throughToday.earned,'text-slate-900'],
           ['Paid',result.throughToday.paid,'text-emerald-700'],
@@ -75,6 +78,65 @@ export function PayrollLedger({employees,cycles,month,today,onNotice}:{employees
       <div><h4 className="font-bold">Payment history ({result.payments.length})</h4><div className="mt-3 space-y-2">{result.payments.map(p=><article key={p.id} className="rounded-xl border p-3 text-sm"><div className="flex flex-wrap justify-between gap-2"><strong>{money(p.amount)} · {p.paidOn} · {p.method}{p.voided?' · Reversed':''}</strong>{!p.voided&&<button type="button" disabled={busy} onClick={()=>void reverse(p.id)} className="text-red-700 underline">Reverse entry</button>}</div><p className="mt-1">For {p.from} – {p.to} · {p.reference||'No reference'}</p><p className="break-words">{p.note}</p><p className="text-xs text-slate-500">Recorded by {p.recordedBy}{p.voided?' · '+p.voidReason:''}</p></article>)}{!result.payments.length&&<p className="text-sm text-slate-500">No salary payment records yet.</p>}</div></div>
       </div></details>
 
+    {reportCurrent&&<div className="salary-slip-print-only" aria-hidden="true">
+      <header className="salary-slip-header">
+        <div>
+          <p className="salary-slip-eyebrow">{site.name} · PAYROLL STATEMENT</p>
+          <h1>Employee Salary Slip</h1>
+          <p className="salary-slip-sub">{site.address}</p>
+        </div>
+        <div className="salary-slip-meta">
+          <p><strong>Period:</strong> {from} to {to}</p>
+          <p><strong>Generated:</strong> {today}</p>
+          <p><strong>Status:</strong> {result.report.missingOut+result.report.reviewRequired>0?'Provisional (pending review)':result.report.partialFinalized?'Partial finalized estimate':'Calculated'}</p>
+        </div>
+      </header>
+
+      <section className="salary-slip-grid">
+        <div><span>Employee</span><strong>{result.employee.name}</strong></div>
+        <div><span>Role / Designation</span><strong>{selectedEmployee?.designation||'Staff'}</strong></div>
+        <div><span>Monthly Base Salary</span><strong>{selectedEmployee&&selectedEmployee.monthlySalary>0?money(selectedEmployee.monthlySalary):'Not set'}</strong></div>
+        <div><span>Cycle / Shift</span><strong>Day {selectedEmployee?.cycleStartDay??1} · {selectedEmployee?.expectedInTime??'09:30'}–{selectedEmployee?.expectedOutTime??'19:30'}</strong></div>
+      </section>
+
+      <section className="salary-slip-boxes">
+        <div><span>Payable Days</span><strong>{result.report.payableDays}</strong></div>
+        <div><span>Net Worked Hours</span><strong>{Math.floor(result.report.workMinutes/60)}h {result.report.workMinutes%60}m</strong></div>
+        <div><span>Period Earned</span><strong>{money(result.report.earned)}</strong></div>
+        <div><span>Allocated Paid (Period)</span><strong>{money(result.allocatedPaid)}</strong></div>
+      </section>
+
+      <section className="salary-slip-balance">
+        <h2>Ledger Balance Through {today} <small>(Since {result.baseline})</small></h2>
+        <div className="salary-slip-boxes">
+          <div><span>Till-Date Earned</span><strong>{money(result.throughToday.earned)}</strong></div>
+          <div><span>Till-Date Paid</span><strong>{money(result.throughToday.paid)}</strong></div>
+          <div><span>Net Pending</span><strong>{money(result.throughToday.pending)}</strong></div>
+          <div><span>Advance / Overpaid</span><strong>{money(result.throughToday.advance)}</strong></div>
+        </div>
+      </section>
+
+      <section className="salary-slip-payments">
+        <h2>Payments Overlapping Period ({slipPayments.length})</h2>
+        {slipPayments.length>0 ? (
+          <table>
+            <thead><tr><th>Paid On</th><th>For Period</th><th>Method / Ref</th><th>Note</th><th>Amount</th></tr></thead>
+            <tbody>
+              {slipPayments.map(p=><tr key={p.id}><td>{p.paidOn}</td><td>{p.from} – {p.to}</td><td>{p.method}{p.reference?` (${p.reference})`:''}</td><td>{p.note}</td><td>{money(p.amount)}</td></tr>)}
+            </tbody>
+          </table>
+        ) : <p className="salary-slip-empty">No active payments recorded for this period.</p>}
+        {result.overlappingPayments>0&&<p className="salary-slip-warn">Note: {result.overlappingPayments} payment(s) cover periods partly outside {from} – {to} and are not automatically apportioned.</p>}
+      </section>
+
+      <footer className="salary-slip-footer">
+        <p>Generated from saved attendance and salary ledger records. Missing/unreviewed shifts earn ₹0 until approved. Reversed entries are excluded from paid totals.</p>
+        <div className="salary-slip-signs">
+          <div><span>Employee Signature</span></div>
+          <div><span>Authorized Signatory (Super Admin)</span></div>
+        </div>
+      </footer>
+    </div>}
     </>}
   </section>
 }

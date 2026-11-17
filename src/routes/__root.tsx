@@ -5,7 +5,7 @@ import { SiteFooter } from '@/components/SiteFooter'
 import { SiteHeader } from '@/components/SiteHeader'
 import { WhatsAppButton } from '@/components/WhatsAppButton'
 import { EnquiryPopup } from '@/components/EnquiryPopup'
-import { getPublicContent, getPublicCountryCatalogue } from '@/lib/public-functions'
+import { getPublicCountryCatalogue, getPublicSettings } from '@/lib/public-functions'
 import { countries as fixtureCountries, getCurrentCountry } from '@/data/fixtures'
 import { defaultSiteSettings } from '@/lib/site-settings'
 import appCss from '../styles.css?url'
@@ -67,10 +67,10 @@ function schemaOpeningHours(label: string) {
 }
 
 export const Route = createRootRoute({
-  loader: async () => {
+ loader: async () => {
     try {
-      const [content, countryPages] = await Promise.all([getPublicContent(), getPublicCountryCatalogue()])
-      return { settings: content.settings, countries: countryPages.map((entry) => entry.country) }
+      const [settings, countryPages] = await Promise.all([getPublicSettings(), getPublicCountryCatalogue()])
+      return { settings, countries: countryPages.map((entry) => entry.country) }
     } catch {
       return { settings: defaultSiteSettings, countries: fixtureCountries.map(getCurrentCountry) }
     }
@@ -163,48 +163,7 @@ function RootDocument({ children }: { children: ReactNode }) {
     }
   }, [isPortal])
 
- useEffect(() => {
-    if (isPortal || window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) return
-    const main = document.querySelector('main')
-    if (!main) return
-
-    const sections = Array.from(main.querySelectorAll<HTMLElement>('section'))
-    if (!sections.length) return
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (!entry.isIntersecting) continue
-        const section = entry.target as HTMLElement
-        section.classList.add('is-scroll-visible')
-        observer.unobserve(section)
-      }
-    }, { threshold: 0.01 })
-
-    sections.forEach((section) => {
-      section.classList.add('scroll-reveal')
-      const rect = section.getBoundingClientRect()
-      const alreadyVisible = section.getClientRects().length > 0 && rect.top < window.innerHeight && rect.bottom > 0
-      if (alreadyVisible) {
-        section.classList.add('is-scroll-visible')
-      } else {
-        observer.observe(section)
-      }
-      section.querySelectorAll<HTMLElement>('.grid > article, .grid > a').forEach((item, index) => {
-        item.classList.add('scroll-reveal-item')
-        item.style.setProperty('--scroll-reveal-order', String(Math.min(index, 5)))
-      })
-    })
-
-    return () => {
-      observer.disconnect()
-      sections.forEach((section) => {
-        section.classList.remove('scroll-reveal', 'is-scroll-visible')
-        section.querySelectorAll<HTMLElement>('.scroll-reveal-item').forEach((item) => {
-          item.classList.remove('scroll-reveal-item')
-          item.style.removeProperty('--scroll-reveal-order')
-        })
-      })
-    }
-  }, [isAdmin, pathname])
+ 
 
   return (
     <html lang="en">

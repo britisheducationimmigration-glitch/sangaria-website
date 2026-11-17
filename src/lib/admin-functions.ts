@@ -4,8 +4,8 @@ import { databaseTransaction, execute, jsonArray, queryRows } from './db.server'
 import type { AdminCertificate, AdminPost, AdminRole, AdminSnapshot, AdminStory, CoachingBatch, Enquiry, EnquiryActivity, EnquiryStatus } from './content-types'
 import { Buffer } from 'node:buffer'
 import { asFaqList, asTrustStatList, readSiteSettings } from './site-settings'
-import { defaultCashflowData, mergeNewCashflowDestinations, type CountryCashflow } from '@/data/cashflow'
-import { applyScheduledCashflowPolicy, policyWatchItems, type PolicyNotice } from '@/data/policy-watch'
+import { parseCashflowJson, type CountryCashflow } from '@/data/cashflow'
+import { policyWatchItems, type PolicyNotice } from '@/data/policy-watch'
 import { readPolicyWatchState, scanOfficialPolicySources, mutatePolicyWatchState } from './policy-watch.server'
 import { isValidBatchStartDate } from '@/lib/batch-dates'
 import { getSupportedVideoEmbedUrl } from './video'
@@ -89,7 +89,7 @@ export const getAdminSnapshot = createServerFn({ method: 'GET' })
 
     // Streamlined query execution targeting only role-accessible data
     const [enquiryRows, postRows, storyRows, settingsRows, userRows, statRows, batchRows, statusRows, sourceRows, certificateRows] = await Promise.all([
-      !canSeeEnquiries ? Promise.resolve([]) : queryRows(`SELECT id, name, phone, email, city, interest, country, message, source, summary, status, notes, assigned_to, DATE_FORMAT(next_follow_up_at, '%Y-%m-%dT%H:%i') AS next_follow_up_local, next_follow_up_at, created_at, updated_at FROM enquiries ORDER BY created_at DESC LIMIT 150`),
+      !canSeeEnquiries ? Promise.resolve([]) : queryRows(`SELECT id, name, phone, email, city, interest, country, message, source, summary, status, notes, assigned_to, DATE_FORMAT(next_follow_up_at, '%Y-%m-%dT%H:%i') AS next_follow_up_local, next_follow_up_at, created_at, updated_at FROM enquiries ORDER BY created_at DESC LIMIT 6`),
       !canSeeContent ? Promise.resolve([]) : queryRows('SELECT id, slug, title, category, publish_date, excerpt, read_mins, body_json, published FROM content_posts ORDER BY publish_date DESC, id DESC LIMIT 100'),
       !canSeeContent ? Promise.resolve([]) : queryRows('SELECT id, kind, name, city, country, visa, quote, rating, initials, flag, story_date, note, photo_data IS NOT NULL AS has_photo, video_url, media_alt, media_consent, media_version, homepage_featured, published FROM success_stories ORDER BY story_date DESC, id DESC LIMIT 100'),
       !isSuperAdmin ? Promise.resolve([]) : queryRows('SELECT popup_enabled, popup_delay_seconds, whatsapp_enabled, approvals_marquee_enabled, public_settings_json FROM site_settings WHERE id = 1 LIMIT 1'),
@@ -101,24 +101,6 @@ export const getAdminSnapshot = createServerFn({ method: 'GET' })
       !canSeeContent ? Promise.resolve([]) : queryRows('SELECT id, collection, title, issuer, category, credential_date, alt_text, image_path, image_data IS NOT NULL AS has_database_image, image_version, homepage_featured, published, sort_order FROM certificate_items WHERE collection = \'certificates\' ORDER BY sort_order ASC, id ASC'),
     ])
 
-    const activityRows = enquiryRows.length
-      ? await queryRows(
-          `SELECT id, enquiry_id, author_name, author_email, body, edited_by, created_at, updated_at
-           FROM enquiry_activities
-           WHERE enquiry_id IN (${enquiryRows.map(() => '?').join(',')})
-           ORDER BY created_at ASC, id ASC`,
-          enquiryRows.map((row) => Number(row.id)),
-        )
-      : []
-
-    const activitiesByEnquiry = new Map<number, EnquiryActivity[]>()
-    for (const row of activityRows) {
-      const activity = mapActivity(row)
-      const existing = activitiesByEnquiry.get(activity.enquiryId) ?? []
-      existing.push(activity)
-      activitiesByEnquiry.set(activity.enquiryId, existing)
-    }
-
     const [monthRows, countryRows] = canSeeEnquiries ? await Promise.all([
       queryRows(`SELECT DATE_FORMAT(DATE_ADD(created_at, INTERVAL 330 MINUTE), '%Y-%m') AS month, COUNT(*) AS count FROM enquiries WHERE created_at >= DATE_SUB(DATE_FORMAT(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 330 MINUTE), '%Y-%m-01') - INTERVAL 5 MONTH, INTERVAL 330 MINUTE) GROUP BY month`),
       queryRows(`SELECT COALESCE(NULLIF(TRIM(country), ''), 'Not decided') AS country, COUNT(*) AS count FROM enquiries GROUP BY COALESCE(NULLIF(TRIM(country), ''), 'Not decided') ORDER BY count DESC, country ASC LIMIT 5`),
@@ -129,7 +111,7 @@ export const getAdminSnapshot = createServerFn({ method: 'GET' })
 
     return {
       user: { name: context.user.name, email: context.user.email, role: context.role },
-      enquiries: enquiryRows.map((row) => mapEnquiry(row, activitiesByEnquiry.get(Number(row.id)) ?? [])),
+     enquiries: enquiryRows.map((row) => mapEnquiry(row)),
       posts: postRows.map(mapAdminPost),
       stories: storyRows.map(mapAdminStory),
       settings: readSiteSettings(settingsRows[0]),
@@ -779,6 +761,23 @@ export const updateSettings = createServerFn({ method: 'POST' }).middleware([adm
   return { ok: true }
 })
 
+async function mutatePublicSiteSettings<T>(
+  mutate: (current: ReturnType<typeof readSiteSettings>) => {
+    next: Pick<ReturnType<typeof readSiteSettings>, 'phones' | 'emails' | 'officeHours' | 'faqs' | 'trustStats'>
+    result: T
+  },
+): Promise<T> {
+  const output = await databaseTransaction(async (connection) => {
+    const [rows] = await connection.query('SELECT public_settings_json FROM site_settings WHERE id = 1 FOR UPDATE')
+    const current = readSiteSettings((rows as Array<Record<string, unknown>>)[0])
+    const { next, result } = mutate(current)
+    await connection.execute('UPDATE site_settings SET public_settings_json = ? WHERE id = 1', [JSON.stringify(next)])
+    return result
+  })
+  invalidatePublicContentCache()
+  return output
+}
+
 export const saveContactDetails = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
   const input = (data ?? {}) as Record<string, unknown>
   const phones = Array.isArray(input.phones) ? input.phones.map((item) => stringValue(item, 24)).filter(Boolean).slice(0, 3) : []
@@ -790,12 +789,10 @@ export const saveContactDetails = createServerFn({ method: 'POST' }).middleware(
   return { phones, emails, officeHours }
 }).handler(async ({ data, context }) => {
   assertCapability(context.role, 'settings')
-  const rows = await queryRows('SELECT public_settings_json FROM site_settings WHERE id = 1 LIMIT 1')
-  const current = readSiteSettings(rows[0])
-  const publicSettings = { phones: data.phones, emails: data.emails, officeHours: data.officeHours, faqs: current.faqs, trustStats: current.trustStats }
-  await execute('UPDATE site_settings SET public_settings_json = ? WHERE id = 1', [JSON.stringify(publicSettings)])
-  invalidatePublicContentCache()
-  return { phones: data.phones, emails: data.emails, officeHours: data.officeHours }
+  return mutatePublicSiteSettings((current) => ({
+    next: { phones: data.phones, emails: data.emails, officeHours: data.officeHours, faqs: current.faqs, trustStats: current.trustStats },
+    result: { phones: data.phones, emails: data.emails, officeHours: data.officeHours },
+  }))
 })
 
 export const saveTrustStat = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
@@ -809,26 +806,26 @@ export const saveTrustStat = createServerFn({ method: 'POST' }).middleware([admi
   return { action: action as 'save' | 'remove', index, trustStat }
 }).handler(async ({ data, context }) => {
   assertCapability(context.role, 'settings')
-  const rows = await queryRows('SELECT public_settings_json FROM site_settings WHERE id = 1 LIMIT 1')
-  const current = readSiteSettings(rows[0])
-  const trustStats = [...current.trustStats]
-  if (data.action === 'save') {
-    if (data.index > trustStats.length) throw new Error('The trust numbers changed. Reload settings and try again.')
-    if (data.index === trustStats.length) {
-      if (trustStats.length >= 6) throw new Error('You can show up to six homepage trust numbers.')
-      trustStats.push(data.trustStat)
+  return mutatePublicSiteSettings((current) => {
+    const trustStats = [...current.trustStats]
+    if (data.action === 'save') {
+      if (data.index > trustStats.length) throw new Error('The trust numbers changed. Reload settings and try again.')
+      if (data.index === trustStats.length) {
+        if (trustStats.length >= 6) throw new Error('You can show up to six homepage trust numbers.')
+        trustStats.push(data.trustStat)
+      } else {
+        trustStats[data.index] = data.trustStat
+      }
     } else {
-      trustStats[data.index] = data.trustStat
+      if (data.index >= trustStats.length) throw new Error('This trust number is no longer available. Reload settings and try again.')
+      if (trustStats.length <= 1) throw new Error('Keep at least one homepage trust number.')
+      trustStats.splice(data.index, 1)
     }
-  } else {
-    if (data.index >= trustStats.length) throw new Error('This trust number is no longer available. Reload settings and try again.')
-    if (trustStats.length <= 1) throw new Error('Keep at least one homepage trust number.')
-    trustStats.splice(data.index, 1)
-  }
-  const publicSettings = { phones: current.phones, emails: current.emails, officeHours: current.officeHours, faqs: current.faqs, trustStats }
-  await execute('UPDATE site_settings SET public_settings_json = ? WHERE id = 1', [JSON.stringify(publicSettings)])
-  invalidatePublicContentCache()
-  return { trustStats }
+    return {
+      next: { phones: current.phones, emails: current.emails, officeHours: current.officeHours, faqs: current.faqs, trustStats },
+      result: { trustStats },
+    }
+  })
 })
 
 export const saveFaq = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
@@ -842,22 +839,22 @@ export const saveFaq = createServerFn({ method: 'POST' }).middleware([adminMiddl
   return { action: action as 'save' | 'remove', index, faq }
 }).handler(async ({ data, context }) => {
   assertCapability(context.role, 'settings')
-  const rows = await queryRows('SELECT public_settings_json FROM site_settings WHERE id = 1 LIMIT 1')
-  const current = readSiteSettings(rows[0])
-  const faqs = [...current.faqs]
-  if (data.action === 'save') {
-    if (data.index > faqs.length) throw new Error('This FAQ list changed. Reload the settings and try again.')
-    if (data.index === faqs.length) faqs.push(data.faq)
-    else faqs[data.index] = data.faq
-  } else {
-    if (data.index >= faqs.length) throw new Error('This FAQ is no longer available. Reload the settings and try again.')
-    if (faqs.length <= 1) throw new Error('Keep at least one homepage FAQ.')
-    faqs.splice(data.index, 1)
-  }
-  const publicSettings = { phones: current.phones, emails: current.emails, officeHours: current.officeHours, faqs, trustStats: current.trustStats }
-  await execute('UPDATE site_settings SET public_settings_json = ? WHERE id = 1', [JSON.stringify(publicSettings)])
-  invalidatePublicContentCache()
-  return { faqs }
+  return mutatePublicSiteSettings((current) => {
+    const faqs = [...current.faqs]
+    if (data.action === 'save') {
+      if (data.index > faqs.length) throw new Error('This FAQ list changed. Reload the settings and try again.')
+      if (data.index === faqs.length) faqs.push(data.faq)
+      else faqs[data.index] = data.faq
+    } else {
+      if (data.index >= faqs.length) throw new Error('This FAQ is no longer available. Reload the settings and try again.')
+      if (faqs.length <= 1) throw new Error('Keep at least one homepage FAQ.')
+      faqs.splice(data.index, 1)
+    }
+    return {
+      next: { phones: current.phones, emails: current.emails, officeHours: current.officeHours, faqs, trustStats: current.trustStats },
+      result: { faqs },
+    }
+  })
 })
 
 export const saveCashflow = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
@@ -891,14 +888,7 @@ export const saveCashflow = createServerFn({ method: 'POST' }).middleware([admin
 export const getAdminCashflow = createServerFn({ method: 'GET' }).middleware([adminMiddleware]).handler(async ({ context }): Promise<CountryCashflow[]> => {
   if (context.role !== 'super_admin') throw new Error('Only a super admin can view cashflow settings')
   const rows = await queryRows('SELECT cashflow_json FROM site_settings WHERE id = 1 LIMIT 1')
-  const raw = rows[0]?.cashflow_json
-  if (typeof raw !== 'string' || !raw.trim()) return defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country))
-  try {
-    const parsed = JSON.parse(raw) as unknown
-    return (Array.isArray(parsed) && parsed.length > 0 ? mergeNewCashflowDestinations(parsed as CountryCashflow[]) : defaultCashflowData).map((country) => applyScheduledCashflowPolicy(country))
-  } catch {
-    return defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country))
-  }
+  return parseCashflowJson(rows[0]?.cashflow_json)
 })
 
 export const saveAdminUser = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
@@ -952,7 +942,7 @@ export const getEnquiriesPage = createServerFn({ method: 'GET' }).middleware([ad
       const parsed = new Date(date + 'T00:00:00Z')
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date) throw new Error('Invalid enquiry date')
     }
-    return { query: stringValue(input.query, 120), status: stringValue(input.status, 24), from, to, dueTodayOnly: Boolean(input.dueTodayOnly), overdueOnly: Boolean(input.overdueOnly), page: Math.max(1, Math.min(100000, Math.floor(numberValue(input.page, 1)))) }
+   return { query: stringValue(input.query, 120), status: stringValue(input.status, 24), source: stringValue(input.source, 160), from, to, dueTodayOnly: Boolean(input.dueTodayOnly), overdueOnly: Boolean(input.overdueOnly), page: Math.max(1, Math.min(100000, Math.floor(numberValue(input.page, 1)))) }
   })
   .handler(async ({ data, context }) => {
     assertCapability(context.role, 'enquiries')
@@ -963,6 +953,7 @@ export const getEnquiriesPage = createServerFn({ method: 'GET' }).middleware([ad
       for (let n = 0; n < 5; n++) values.push('%' + term + '%')
     }
     if (data.status) { clauses.push('status = ?'); values.push(data.status) }
+    if (data.source) { clauses.push('source = ?'); values.push(data.source) }
     if (data.from) { clauses.push('created_at >= DATE_SUB(?, INTERVAL 330 MINUTE)'); values.push(data.from + ' 00:00:00') }
     if (data.to) { clauses.push('created_at < DATE_SUB(DATE_ADD(?, INTERVAL 1 DAY), INTERVAL 330 MINUTE)'); values.push(data.to + ' 00:00:00') }
     if (data.dueTodayOnly) clauses.push("DATE(next_follow_up_at) = DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 330 MINUTE)) AND status NOT IN ('Converted', 'Closed')")

@@ -128,12 +128,7 @@ function AdminPage() {
     )
   }
 
-  const filtered = snapshot.enquiries.filter((item) => {
-    const haystack = `${item.name} ${item.phone} ${item.email} ${item.city} ${item.country} ${item.interest} ${item.status} ${item.assignedTo} ${item.source} ${item.summary}`.toLowerCase()
-    const created = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(item.createdAt))
-    return haystack.includes(query.toLowerCase()) && (statusFilter === 'All' || item.status === statusFilter) && (!dateFrom || created >= dateFrom) && (!dateTo || created <= dateTo)
-  })
-  const newLeadQueue = snapshot.enquiries.filter((item) => item.status === 'New')
+ 
   const draftQueue = snapshot.posts.filter((item) => !item.published)
   const policyWatchCount = policyWatchItems.filter((item) => getPolicyWatchStatus(item) !== 'Effective').length
 
@@ -148,7 +143,7 @@ function AdminPage() {
             { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
             { id: 'enquiries', label: 'Enquiries', icon: Inbox, count: snapshot.enquiryStats.total },
             { id: 'demo', label: 'Demo Requests', icon: GraduationCap, count: snapshot.enquiryStats.demoRequests },
-            { id: 'review', label: 'Review Queue', icon: Sparkles, count: newLeadQueue.length + draftQueue.length },
+            { id: 'review', label: 'Review Queue', icon: Sparkles, count: snapshot.enquiryStats.newCount + draftQueue.length },
             { id: 'reports', label: 'Reports', icon: BarChart3 },
             { id: 'attendance', label: 'Attendance', icon: CalendarCheck2, badge: 'NEW' },
           ],
@@ -192,9 +187,9 @@ function AdminPage() {
             group: 'MENU',
             items: [
               { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-              { id: 'enquiries', label: 'Enquiries', icon: Inbox, count: snapshot.enquiries.length },
+            { id: 'enquiries', label: 'Enquiries', icon: Inbox, count: snapshot.enquiryStats.total },
               { id: 'demo', label: 'Demo Requests', icon: GraduationCap, count: snapshot.enquiryStats.demoRequests },
-              { id: 'review', label: 'Review Queue', icon: Sparkles, count: newLeadQueue.length },
+              { id: 'review', label: 'Review Queue', icon: Sparkles, count: snapshot.enquiryStats.newCount },
               { id: 'reports', label: 'Reports', icon: BarChart3 },
             ],
           },
@@ -367,10 +362,10 @@ function AdminPage() {
               canOpenAttendance={snapshot.user.role === 'super_admin'}
             />
           )}
-          {tab === 'enquiries' && <EnquiriesPanel enquiries={filtered} stats={snapshot.enquiryStats} query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter} dateFrom={dateFrom} setDateFrom={setDateFrom} dateTo={dateTo} setDateTo={setDateTo} onReload={reload} onNotice={showNotice} canDelete={snapshot.user.role === 'super_admin'} canManageComments={snapshot.user.role === 'super_admin'} />}
+          {tab === 'enquiries' && <EnquiriesPanel stats={snapshot.enquiryStats} query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter} dateFrom={dateFrom} setDateFrom={setDateFrom} dateTo={dateTo} setDateTo={setDateTo} onReload={reload} onNotice={showNotice} canDelete={snapshot.user.role === 'super_admin'} canManageComments={snapshot.user.role === 'super_admin'} />}
           {tab === 'attendance' && snapshot.user.role === 'super_admin' && <AttendancePanel onNotice={showNotice} />}
-          {tab === 'demo' && <DemoRequestsPanel enquiries={snapshot.enquiries.filter((item) => item.source === 'coaching')} totalCount={snapshot.enquiryStats.demoRequests} onReload={reload} onNotice={showNotice} canDelete={snapshot.user.role === 'super_admin'} canManageComments={snapshot.user.role === 'super_admin'} />}
-          {tab === 'review' && <ReviewQueuePanel enquiries={newLeadQueue} drafts={draftQueue} onOpenEnquiries={() => { setQuery(''); setStatusFilter('New'); selectTab('enquiries') }} onOpenDraft={(post) => { setSelectedPost(post); selectTab('news') }} />}
+          {tab === 'demo' && <DemoRequestsPanel totalCount={snapshot.enquiryStats.demoRequests} onReload={reload} onNotice={showNotice} canDelete={snapshot.user.role === 'super_admin'} canManageComments={snapshot.user.role === 'super_admin'} />}
+          {tab === 'review' && <ReviewQueuePanel drafts={draftQueue} onOpenEnquiries={() => { setQuery(''); setStatusFilter('New'); selectTab('enquiries') }} onOpenDraft={(post) => { setSelectedPost(post); selectTab('news') }} />}
           {tab === 'reports' && <ReportsPanel stats={snapshot.enquiryStats} />}
           {tab === 'policy' && <PolicyWatchPanel />}
           {tab === 'countries' && <CountryPanel />}
@@ -718,7 +713,7 @@ function formatFollowUpLabel(value: string) {
   })
 }
 
-function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setStatusFilter, dateFrom, setDateFrom, dateTo, setDateTo, onReload, onNotice, canDelete, canManageComments }: { enquiries: Enquiry[]; stats: AdminSnapshot['enquiryStats']; query: string; setQuery: (value: string) => void; statusFilter: EnquiryStatus | 'All'; setStatusFilter: (value: EnquiryStatus | 'All') => void; dateFrom: string; setDateFrom: (value: string) => void; dateTo: string; setDateTo: (value: string) => void; onReload: () => Promise<void>; onNotice: (message: string) => void; canDelete: boolean; canManageComments: boolean }) {
+function EnquiriesPanel({ stats, query, setQuery, statusFilter, setStatusFilter, dateFrom, setDateFrom, dateTo, setDateTo, onReload, onNotice, canDelete, canManageComments }: { stats: AdminSnapshot['enquiryStats']; query: string; setQuery: (value: string) => void; statusFilter: EnquiryStatus | 'All'; setStatusFilter: (value: EnquiryStatus | 'All') => void; dateFrom: string; setDateFrom: (value: string) => void; dateTo: string; setDateTo: (value: string) => void; onReload: () => Promise<void>; onNotice: (message: string) => void; canDelete: boolean; canManageComments: boolean }) {
   const [viewMode, setViewMode] = useState<'list' | 'board'>('list')
   const [selectedBoardLeadId, setSelectedBoardLeadId] = useState<number | null>(null)
   const [dueTodayOnly, setDueTodayOnly] = useState(false)
@@ -738,7 +733,7 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
         .finally(() => { if (!cancelled) setPageLoading(false) })
     }, 200)
     return () => { cancelled = true; window.clearTimeout(timer) }
-  }, [query, statusFilter, dateFrom, dateTo, dueTodayOnly, page, revision, enquiries])
+  }, [query, statusFilter, dateFrom, dateTo, dueTodayOnly, page, revision])
   const visibleEnquiries = pageLoading || pageError ? [] : pageResult.items
   const refreshPage = async () => { await onReload(); setRevision(n => n + 1) }
 
@@ -899,28 +894,46 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
   )
 }
 
-function DemoRequestsPanel({ enquiries, totalCount, onReload, onNotice, canDelete, canManageComments }: { enquiries: Enquiry[]; totalCount: number; onReload: () => Promise<void>; onNotice: (message: string) => void; canDelete: boolean; canManageComments: boolean }) {
+function DemoRequestsPanel({ totalCount, onReload, onNotice, canDelete, canManageComments }: { totalCount: number; onReload: () => Promise<void>; onNotice: (message: string) => void; canDelete: boolean; canManageComments: boolean }) {
   const [dueOnly, setDueOnly] = useState(false)
-  const nowIst = currentIstDateTimeMinute()
-  const dueRequests = enquiries.filter((item) => item.nextFollowUpAt && item.nextFollowUpAt.slice(0, 16) <= nowIst && !['Converted', 'Closed'].includes(item.status))
-  const visible = dueOnly ? dueRequests : enquiries
+  const [page, setPage] = useState(1)
+  const [result, setResult] = useState<{ items: Enquiry[]; total: number; page: number }>({ items: [], total: 0, page: 1 })
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [revision, setRevision] = useState(0)
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true); setError('')
+    getEnquiriesPage({ data: { source: 'coaching', overdueOnly: dueOnly, page } })
+      .then(value => { if (!cancelled) setResult(value) })
+      .catch(cause => { if (!cancelled) setError(cause instanceof Error ? cause.message : 'Could not load demo requests') })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [dueOnly, page, revision])
+  const refreshPage = async () => { await onReload(); setRevision(n => n + 1) }
+  const visible = loading || error ? [] : result.items
   return (
     <section>
       <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div><p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">IELTS & PTE</p><h2 className="mt-2 text-3xl font-extrabold">Free demo requests</h2><p className="mt-1 text-sm text-forest-900/60">Preferred dates are requests. Confirm the available slot with the student and schedule the next follow-up on the lead.</p></div>
-        <button type="button" aria-pressed={dueOnly} onClick={() => setDueOnly((value) => !value)} className="w-fit rounded-full bg-amber-100 px-4 py-2 text-sm font-bold text-amber-900">{dueOnly ? 'Show all requests' : `Follow-ups due (${dueRequests.length})`}</button>
+        <button type="button" aria-pressed={dueOnly} onClick={() => { setDueOnly((value) => !value); setPage(1) }} className="w-fit rounded-full bg-amber-100 px-4 py-2 text-sm font-bold text-amber-900">{dueOnly ? 'Show all requests' : 'Follow-ups overdue'}</button>
       </div>
       <div className="mb-5 grid gap-3 sm:grid-cols-2">
         <div className="rounded-2xl bg-white p-4 ring-1 ring-forest-900/10"><p className="text-xs font-bold uppercase tracking-wider text-forest-900/55">Total demo requests</p><p className="mt-2 text-3xl font-extrabold">{totalCount}</p></div>
-        <div className="rounded-2xl bg-amber-100 p-4 text-amber-900"><p className="text-xs font-bold uppercase tracking-wider opacity-70">Follow-ups due</p><p className="mt-2 text-3xl font-extrabold">{dueRequests.length}</p></div>
+        <div className="rounded-2xl bg-amber-100 p-4 text-amber-900"><p className="text-xs font-bold uppercase tracking-wider opacity-70">{dueOnly ? 'Overdue demo requests' : 'Showing'}</p><p className="mt-2 text-3xl font-extrabold">{result.total}</p></div>
       </div>
-      <div className="grid gap-4">{visible.map((item) => <EnquiryCard key={item.id} item={item} onReload={onReload} onNotice={onNotice} canDelete={canDelete} canManageComments={canManageComments} />)}{visible.length === 0 && <p className="rounded-2xl bg-white p-8 text-center text-forest-900/60">{dueOnly ? 'No demo follow-ups are due right now.' : 'No demo requests have been received yet.'}</p>}</div>
-      {totalCount > enquiries.length && <p className="mt-4 text-xs text-forest-900/55">Showing the latest {enquiries.length} requests in the lead list.</p>}
+      {error && <p role="alert" className="mb-4 text-sm font-semibold text-red-700">{error}</p>}
+      <div className="mb-4 flex items-center gap-3 text-xs font-semibold">
+        <button type="button" disabled={loading || result.page <= 1} onClick={() => setPage(result.page - 1)} className="rounded-lg border border-[#E4E7EC] bg-white px-3 py-1.5 disabled:opacity-40">Previous</button>
+        <span>{loading ? 'Loading...' : `Page ${result.page} of ${Math.max(1, Math.ceil(result.total / 50))}`}</span>
+        <button type="button" disabled={loading || result.page * 50 >= result.total} onClick={() => setPage(result.page + 1)} className="rounded-lg border border-[#E4E7EC] bg-white px-3 py-1.5 disabled:opacity-40">Next</button>
+      </div>
+      <div className="grid gap-4">{visible.map((item) => <EnquiryCard key={item.id} item={item} onReload={refreshPage} onNotice={onNotice} canDelete={canDelete} canManageComments={canManageComments} />)}{!loading && visible.length === 0 && <p className="rounded-2xl bg-white p-8 text-center text-forest-900/60">{dueOnly ? 'No overdue demo follow-ups right now.' : 'No demo requests have been received yet.'}</p>}</div>
     </section>
   )
 }
 
-function ReviewQueuePanel({ enquiries, drafts, onOpenEnquiries, onOpenDraft }: { enquiries: Enquiry[]; drafts: AdminPost[]; onOpenEnquiries: () => void; onOpenDraft: (post: AdminPost) => void }) {
+function ReviewQueuePanel({ drafts, onOpenEnquiries, onOpenDraft }: { drafts: AdminPost[]; onOpenEnquiries: () => void; onOpenDraft: (post: AdminPost) => void }) {
   const [queue, setQueue] = useState<'new' | 'overdue'>('new')
   const [page, setPage] = useState(1)
   const [result, setResult] = useState<{items: Enquiry[]; total: number; page: number}>({items: [], total: 0, page: 1})
@@ -934,7 +947,7 @@ function ReviewQueuePanel({ enquiries, drafts, onOpenEnquiries, onOpenDraft }: {
       .catch(cause => { if (!cancelled) setError(cause instanceof Error ? cause.message : 'Could not load queue') })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [queue, page, enquiries])
+  }, [queue, page])
   return (
     <section>
       <div className="mb-6"><p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">Needs attention</p><h2 className="mt-2 text-3xl font-extrabold">Review queue</h2><p className="mt-1 text-sm text-forest-900/60">A read-only overview of new enquiries and unpublished content, with links to the existing editing screens.</p></div>

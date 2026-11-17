@@ -4,23 +4,22 @@ import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronDown, ClipboardCheck
 import { CountryFlag } from '@/components/CountryFlag'
 import { GyanDhanLoanSection } from '@/components/GyanDhanLoanSection'
 import { Eyebrow } from '@/components/Section'
-import { getPublicCashflow, getPublicContent, getPublicCountryPage } from '@/lib/public-functions'
+import { getPublicCashflow, getPublicCountryPage } from '@/lib/public-functions'
 import { site } from '@/data/site'
 import { createPageSeo } from '@/lib/seo'
+import { Route as RootRoute } from './__root'
 
 export const Route = createFileRoute('/study-plan/$slug')({
   loader: async ({ params }) => {
-    const [content, cashflowData, publicContent] = await Promise.all([
+    const [content, cashflowData] = await Promise.all([
       getPublicCountryPage({ data: { slug: params.slug } }),
       getPublicCashflow(),
-      getPublicContent(),
     ])
     if (!content?.country.studyPlan) throw notFound()
     return {
       country: content.country,
       guidance: content.guidance,
       cashflow: cashflowData.find((item) => item.slug === params.slug) ?? null,
-      settings: publicContent.settings,
     }
   },
   head: ({ loaderData }) => {
@@ -101,9 +100,9 @@ function MobilePlanSection({ title, hint, children, defaultOpen = false }: { tit
     </details>
   )
 }
-
 function StudyPlanPage() {
-  const { country, guidance, cashflow, settings } = Route.useLoaderData()
+  const { country, guidance, cashflow } = Route.useLoaderData()
+  const { settings } = RootRoute.useLoaderData()
   const plan = country.studyPlan!
   const guide = country.studyGuide
   const storageKey = `study-plan-checklist:${country.slug}`

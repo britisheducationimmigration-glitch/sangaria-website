@@ -3,22 +3,33 @@ import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeader } from '@tanstack/react-start/server'
 import { checkRateLimit } from './rate-limit.server'
 import { execute, jsonArray, queryRows } from './db.server'
-import type { PublicContent, PublicCoachingContent, PublicCertificate } from './content-types'
+import type { PublicContent, PublicCoachingContent, PublicCertificate, SiteSettings } from './content-types'
 import { getSupportedVideoEmbedUrl } from './video'
 import { defaultCertificates } from '@/data/certificates'
 import { readSiteSettings } from './site-settings'
 import { approvals as fixtureApprovals, coachingSchedule as fixtureCoachingSchedule, posts as fixturePosts, testimonials as fixtureTestimonials } from '@/data/fixtures'
-import { defaultCashflowData, mergeNewCashflowDestinations, type CountryCashflow } from '@/data/cashflow'
+import { parseCashflowJson, type CountryCashflow } from '@/data/cashflow'
 import { isBatchExpired } from '@/lib/batch-dates'
-import { applyScheduledCashflowPolicy, isPolicyNoticeVisible } from '@/data/policy-watch'
+import { isPolicyNoticeVisible } from '@/data/policy-watch'
 import { readPolicyWatchState } from './policy-watch.server'
 import { getPublicCountryBySlug, getPublicCountryCatalog } from './country-catalog.server'
 
 let publicContentCache: { expiresAt: number; data: PublicContent } | null = null
+let publicSettingsCache: { expiresAt: number; data: SiteSettings } | null = null
 
 export function invalidatePublicContentCache() {
   publicContentCache = null
+  publicSettingsCache = null
 }
+
+export const getPublicSettings = createServerFn({ method: 'GET' }).handler(async (): Promise<SiteSettings> => {
+  if (publicSettingsCache && publicSettingsCache.expiresAt > Date.now()) return publicSettingsCache.data
+  if (publicContentCache && publicContentCache.expiresAt > Date.now()) return publicContentCache.data.settings
+  const settingsRows = await queryRows('SELECT popup_enabled, popup_delay_seconds, whatsapp_enabled, approvals_marquee_enabled, public_settings_json FROM site_settings WHERE id = 1 LIMIT 1')
+  const data = readSiteSettings(settingsRows[0])
+  publicSettingsCache = { data, expiresAt: Date.now() + 8_000 }
+  return data
+})
 
 function stringValue(value: unknown, max = 5000) {
   return typeof value === 'string' ? value.trim().slice(0, max) : ''
@@ -212,22 +223,16 @@ export const getPublicContent = createServerFn({ method: 'GET' }).handler(async 
         published: item.published,
         sortOrder: item.sortOrder,
       }))
-  const data = { posts, approvals, testimonials, certificates, settings: readSiteSettings(settingsRows[0]) }
-  publicContentCache = { data, expiresAt: Date.now() + 8_000 }
+const data = { posts, approvals, testimonials, certificates, settings: readSiteSettings(settingsRows[0]) }
+  const expiresAt = Date.now() + 8_000
+  publicContentCache = { data, expiresAt }
+  publicSettingsCache = { data: data.settings, expiresAt }
   return data
 })
 
 export const getPublicCashflow = createServerFn({ method: 'GET' }).handler(async (): Promise<CountryCashflow[]> => {
   const rows = await queryRows('SELECT cashflow_json FROM site_settings WHERE id = 1 LIMIT 1')
-  const raw = rows[0]?.cashflow_json
-  if (typeof raw !== 'string' || !raw.trim()) return defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country))
-
-  try {
-    const parsed = JSON.parse(raw) as unknown
-    return (Array.isArray(parsed) && parsed.length > 0 ? mergeNewCashflowDestinations(parsed as CountryCashflow[]) : defaultCashflowData).map((country) => applyScheduledCashflowPolicy(country))
-  } catch {
-    return defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country))
-  }
+  return parseCashflowJson(rows[0]?.cashflow_json)
 })
 
 let coachingCache: { expiresAt: number; data: PublicCoachingContent } | null = null

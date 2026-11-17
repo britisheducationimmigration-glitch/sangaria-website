@@ -105,17 +105,16 @@ export const getEmployeePortalData = createServerFn({ method: 'GET' })
     const employee = resolveEmployeePolicy(mapEmployeeRow(empRows[0]), policies, todayIstDate())
     if (!employee.active) throw new Error('This employee attendance link has been deactivated. Contact admin.')
 
-    const today = todayIstDate()
+   const today = todayIstDate()
     const currentMonth = currentIstMonth()
-    const [settings, todayRows, cycleLogRows] = await Promise.all([
+    const [settings, cycleLogRows, missedRows] = await Promise.all([
       readAttendanceSettings(),
-      queryRows(`SELECT ${LOG_COLS} FROM attendance_logs l JOIN employees e ON e.id = l.employee_id WHERE l.employee_id = ? AND l.work_date = ? ORDER BY l.work_date DESC LIMIT 1`, [employee.id, today]),
-      queryRows(`SELECT ${LOG_COLS} FROM attendance_logs l JOIN employees e ON e.id = l.employee_id WHERE l.employee_id = ? ORDER BY l.work_date DESC LIMIT 45`, [employee.id]),
+      queryRows(`SELECT ${LOG_COLS} FROM attendance_logs l JOIN employees e ON e.id = l.employee_id WHERE l.employee_id = ? AND l.work_date <= ? ORDER BY l.work_date DESC LIMIT 45`, [employee.id, today]),
+      queryRows('SELECT work_date FROM attendance_logs WHERE employee_id = ? AND work_date < ? AND check_in_at IS NOT NULL AND check_out_at IS NULL ORDER BY work_date ASC LIMIT 1', [employee.id, today]),
     ])
 
-    const missedRows = await queryRows('SELECT work_date FROM attendance_logs WHERE employee_id = ? AND work_date < ? AND check_in_at IS NOT NULL AND check_out_at IS NULL ORDER BY work_date ASC LIMIT 1', [employee.id, today])
     const logs = cycleLogRows.map((r) => mapAttendanceRow(r))
-    const todayLog = todayRows[0] ? mapAttendanceRow(todayRows[0]) : null
+    const todayLog = logs.find((l) => l.workDate === today) ?? null
     const { startDate, endDate } = getEmployeeCycleRange(currentMonth, employee.cycleStartDay)
     const activeCycle = today >= startDate && today <= endDate
       ? { startDate, endDate }
@@ -342,10 +341,15 @@ async function buildAdminAttendanceSnapshot(selectedMonth: string, lightweight =
     const rangeStart = new Date(Date.UTC(year, month - 1, 1) - 6 * 86_400_000).toISOString().slice(0, 10)
     const rangeEnd = new Date(Date.UTC(year, month + 1, 0)).toISOString().slice(0, 10)
 
-    const [settings, empRows, logRows] = await Promise.all([
+   const todayIst = todayIstDate()
+    const policyStart = rangeStart < todayIst ? rangeStart : todayIst
+    const policyEnd = rangeEnd > todayIst ? rangeEnd : todayIst
+
+    const [settings, empRows, logRows, policies] = await Promise.all([
       readAttendanceSettings(),
       queryRows('SELECT * FROM employees ORDER BY active DESC, name ASC'),
       queryRows(`SELECT ${LOG_COLS} FROM attendance_logs l JOIN employees e ON e.id = l.employee_id WHERE l.work_date >= ? AND l.work_date <= ? ORDER BY l.work_date DESC, e.name ASC`, [rangeStart, rangeEnd]),
+      readEmployeePolicies(undefined, policyStart, policyEnd),
     ])
 
     const logIds = logRows.map((r) => Number(r.id))
@@ -361,11 +365,9 @@ async function buildAdminAttendanceSnapshot(selectedMonth: string, lightweight =
       historyByLog.set(mapped.attendanceLogId, list)
     }
 
-    const currentPolicies = await readEmployeePolicies(undefined, todayIstDate(), todayIstDate())
-    const employees = empRows.map(row => resolveEmployeePolicy(mapEmployeeRow(row), currentPolicies, todayIstDate()))
+    const employees = empRows.map(row => resolveEmployeePolicy(mapEmployeeRow(row), policies, todayIst))
     const logs = logRows.map((r) => mapAttendanceRow(r, historyByLog.get(Number(r.id)) ?? []))
-    const todayIst = todayIstDate()
-    let summaries = buildEmployeeCycleSummaries(employees, logs, selectedMonth, todayIst, await readEmployeePolicies(undefined, rangeStart, rangeEnd))
+    let summaries = buildEmployeeCycleSummaries(employees, logs, selectedMonth, todayIst, policies)
     summaries = await applyFinalizedSummaries(summaries, selectedMonth)
     const headers = readHeadersFromRequest()
     const currentRequestIp = (headers.get('x-real-ip') || (headers.get('x-forwarded-for') ?? '').split(',')[0] || '').trim()
@@ -728,15 +730,22 @@ export const exportAttendanceExcel = createServerFn({ method: 'GET' })
         : queryRows(`SELECT ${LOG_COLS} FROM attendance_logs l JOIN employees e ON e.id = l.employee_id WHERE l.work_date >= ? AND l.work_date <= ? ORDER BY e.name ASC, l.work_date ASC`, [rangeStart, rangeEnd]),
     ])
 
-    const employees = empRows.map(mapEmployeeRow)
+   const employees = empRows.map(mapEmployeeRow)
     let logs = logRows.map((r) => mapAttendanceRow(r))
-    const frozenRows = await queryRows('SELECT employee_id, snapshot_json FROM attendance_cycle_snapshots WHERE selected_month = ?', [data.selectedMonth])
+    const [frozenRows, policies] = await Promise.all([
+      data.employeeId > 0
+        ? queryRows('SELECT employee_id, snapshot_json FROM attendance_cycle_snapshots WHERE selected_month = ? AND employee_id = ?', [data.selectedMonth, data.employeeId])
+        : queryRows('SELECT employee_id, snapshot_json FROM attendance_cycle_snapshots WHERE selected_month = ?', [data.selectedMonth]),
+      readEmployeePolicies(data.employeeId || undefined),
+    ])
+    const frozenByEmp = new Map<number, EmployeeCycleSummary>()
     for (const frozen of frozenRows) {
       const saved = parseSnapshot(frozen.snapshot_json)
+      frozenByEmp.set(Number(frozen.employee_id), saved.summary)
       logs = logs.filter((log) => log.employeeId !== Number(frozen.employee_id) || log.workDate < saved.summary.cycleStartDate || log.workDate > saved.summary.cycleEndDate).concat(saved.logs)
     }
-    let summaries = buildEmployeeCycleSummaries(employees, logs, data.selectedMonth, todayIstDate(), await readEmployeePolicies())
-    summaries = await applyFinalizedSummaries(summaries, data.selectedMonth)
+    const summaries = buildEmployeeCycleSummaries(employees, logs, data.selectedMonth, todayIstDate(), policies)
+      .map((summary) => frozenByEmp.has(summary.employee.id) ? { ...frozenByEmp.get(summary.employee.id)!, finalized: true } : summary)
     const formatIst = (iso: string) => (iso ? new Date(iso).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '')
     const mapUrl = (lat: number | null, lng: number | null) => (lat !== null && lng !== null ? `https://maps.google.com/?q=${lat},${lng}` : '')
     const fmtHrs = (mins: number) => `${Math.floor(mins / 60)}h ${mins % 60}m`
@@ -853,7 +862,7 @@ export const exportAttendanceCsv = createServerFn({ method: 'GET' })
   .middleware([superAdminMiddleware])
   .validator(reportInput)
   .handler(async ({ data }) => {
-    const snapshot = await buildAdminAttendanceSnapshot(data.month)
+    const snapshot = await buildAdminAttendanceSnapshot(data.month, true)
     const summaries = snapshot.summaries.filter((summary) => !data.employeeId || summary.employee.id === data.employeeId)
     const rows: unknown[][] = [['Employee', 'Cycle Start', 'Cycle End', 'Present', 'Half Day', 'Leave', 'Absent', 'Missing OUT', 'Payable Days', 'Monthly Salary INR', 'Calculated Salary INR', 'Work Minutes', 'Off-day Work Minutes (separate)']]
     for (const summary of summaries) rows.push([summary.employee.name, summary.cycleStartDate, summary.cycleEndDate, summary.presentDays, summary.halfDays, summary.leaveDays, summary.absentDays, summary.missedCheckOutCount, summary.payableDays, summary.employee.monthlySalary, summary.earnedSalary, summary.totalWorkMinutes, summary.offDayWorkMinutes ?? 0])

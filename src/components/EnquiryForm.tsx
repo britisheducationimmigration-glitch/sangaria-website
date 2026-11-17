@@ -187,9 +187,8 @@ const cleanPhoneDigits = phone.replace(/\D/g, '').replace(/^0+/, '')
 
   const labelCls = cn('label', dark && '!text-forest-100/70')
 
-  return (
-    <form name="enquiry" method="POST" data-netlify="true" netlify-honeypot="bot-field" onSubmit={onSubmit} className="grid gap-4">
-      <input type="hidden" name="form-name" value="enquiry" />
+  rreturn (
+    <form onSubmit={onSubmit} className="grid gap-4">
       <input type="hidden" name="source" value={source} />
       <input type="hidden" name="summary" value={summary ?? ''} />
       <p className="hidden">

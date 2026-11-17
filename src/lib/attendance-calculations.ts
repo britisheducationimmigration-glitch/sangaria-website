@@ -46,31 +46,48 @@ export function calculateMergedBreakMinutes(checkIn: string | Date, checkOut: st
   return Number.isFinite(gross) && gross > 0 ? Math.max(0, gross - calculateWorkMinutes(checkIn, checkOut, breaks)) : 0
 }
 
-export function resolveEmployeePolicy(employee: EmployeeRecord, history: EmployeePolicyHistory[], date: string): EmployeeRecord {
-  const employeeHistory = history.filter(p => p.employeeId === employee.id).sort((a, b) => a.effectiveDate.localeCompare(b.effectiveDate))
-  const record = employeeHistory.filter(p => p.effectiveDate <= date).at(-1) ?? employeeHistory[0]
-  return record ? { ...employee, ...record.policy, id: employee.id } : employee
+function resolveFromSorted(employee: EmployeeRecord, sortedHistory: EmployeePolicyHistory[], date: string): EmployeeRecord {
+  if (!sortedHistory.length) return employee
+  let matched = sortedHistory[0]
+  for (const entry of sortedHistory) {
+    if (entry.effectiveDate <= date) matched = entry
+    else break
+  }
+  return { ...employee, ...matched.policy, id: employee.id }
 }
 
-export function buildEmployeeCycleSummaries(employees: EmployeeRecord[], logs: AttendanceLogRecord[], selectedMonth: string, todayIst: string, policies: EmployeePolicyHistory[] = [], window?: { start: string; end: string }): EmployeeCycleSummary[] {
+export function resolveEmployeePolicy(employee: EmployeeRecord, history: EmployeePolicyHistory[], date: string): EmployeeRecord {
+  const sorted = history.filter(p => p.employeeId === employee.id).sort((a, b) => a.effectiveDate.localeCompare(b.effectiveDate))
+  return resolveFromSorted(employee, sorted, date)
+}
+
+export function buildEmployeeCycleSummaries(
+  employees: EmployeeRecord[],
+  logs: AttendanceLogRecord[],
+  selectedMonth: string,
+  todayIst: string,
+  policies: EmployeePolicyHistory[] = [],
+  window?: { start: string; end: string },
+  dayBreakdown?: Map<string, { payableDays: number; earned: number }>,
+): EmployeeCycleSummary[] {
   return employees.map(current => {
+    const empPolicies = policies.filter(p => p.employeeId === current.id).sort((a, b) => a.effectiveDate.localeCompare(b.effectiveDate))
     // Cycle selection uses the policy effective at the beginning of the selected month.
-    const employee = resolveEmployeePolicy(current, policies, `${selectedMonth}-01`)
+    const employee = resolveFromSorted(current, empPolicies, `${selectedMonth}-01`)
     const { startDate, endDate, totalDays } = getEmployeeCycleRange(selectedMonth, employee.cycleStartDay)
     const empLogs = logs.filter(l => l.employeeId === employee.id && l.workDate >= startDate && l.workDate <= endDate && (!window || (l.workDate >= window.start && l.workDate <= window.end)))
     const byDate = new Map(empLogs.map(l => [l.workDate, l]))
     let workingDays = 0, payableDays = 0, earnedSalary = 0, absentDays = 0, offDayWorkMinutes = 0
     const eligible = (date: string, policy: EmployeeRecord) => (!policy.joiningDate || date >= policy.joiningDate) && (!policy.leavingDate || date <= policy.leavingDate)
     const isWorkDay = (date: string, policy: EmployeeRecord) => !(policy.weeklyOffDays ?? [0]).includes(new Date(`${date}T00:00:00Z`).getUTCDay()) && !(policy.holidayDates ?? []).includes(date)
-    const scheduled = new Map<string, number>()
+    const scheduled = new Map<string, EmployeeRecord>()
     for (let cursor = Date.parse(`${startDate}T00:00:00Z`); cursor <= Date.parse(`${endDate}T00:00:00Z`); cursor += 86_400_000) {
       const date = new Date(cursor).toISOString().slice(0, 10)
-      const policy = resolveEmployeePolicy(employee, policies, date)
-      if (isWorkDay(date, policy)) { workingDays++; scheduled.set(date, policy.monthlySalary) }
+      const policy = resolveFromSorted(employee, empPolicies, date)
+      if (isWorkDay(date, policy)) { workingDays++; scheduled.set(date, policy) }
     }
-    for (const [date, salary] of scheduled) {
+    for (const [date, policy] of scheduled) {
       if (window && (date < window.start || date > window.end)) continue
-      const policy = resolveEmployeePolicy(employee, policies, date)
       if (!eligible(date, policy) || date > todayIst) continue
       const log = byDate.get(date)
       // Today's unmarked shift is pending, not an absence. Missing punches are review-only.
@@ -80,11 +97,14 @@ export function buildEmployeeCycleSummaries(employees: EmployeeRecord[], logs: A
       const approved = log.outFlags.includes('ADMIN_REVIEW_APPROVED')
       const halfEligible = approved || ((policy.minimumHalfDayMinutes ?? 0) > 0 && log.workMinutes >= policy.minimumHalfDayMinutes!)
       const fraction = log.status === 'Paid Leave' ? 1 : complete ? log.status === 'Half Day' && halfEligible ? 0.5 : log.status === 'Present' ? 1 : 0 : 0
+      const dayEarned = workingDays ? policy.monthlySalary * fraction / workingDays : 0
       payableDays += fraction
-      earnedSalary += workingDays ? salary * fraction / workingDays : 0
+      earnedSalary += dayEarned
+      if (dayBreakdown) dayBreakdown.set(date, { payableDays: fraction, earned: Math.round(dayEarned) })
     }
     for (const log of empLogs) if (!scheduled.has(log.workDate)) offDayWorkMinutes += log.workMinutes || 0
-    const completeLogs = empLogs.filter(l => l.workDate <= todayIst && l.checkInAt && l.checkOutAt && (!l.outFlags.includes('AUTO_CHECKOUT_10PM') || l.outFlags.includes('ADMIN_REVIEW_APPROVED')) && eligible(l.workDate, resolveEmployeePolicy(employee, policies, l.workDate)))
+    const policyOn = (date: string) => scheduled.get(date) ?? resolveFromSorted(employee, empPolicies, date)
+    const completeLogs = empLogs.filter(l => l.workDate <= todayIst && l.checkInAt && l.checkOutAt && (!l.outFlags.includes('AUTO_CHECKOUT_10PM') || l.outFlags.includes('ADMIN_REVIEW_APPROVED')) && eligible(l.workDate, policyOn(l.workDate)))
     return {
       employee, cycleStartDate: startDate, cycleEndDate: endDate, totalDays,
       sundaysCount: countSundaysInRange(startDate, endDate), workingDays,
@@ -98,7 +118,7 @@ export function buildEmployeeCycleSummaries(employees: EmployeeRecord[], logs: A
       reviewRequiredCount: empLogs.filter(l => {
         if (l.status === 'Review Required' || (l.outFlags.includes('AUTO_CHECKOUT_10PM') && !l.outFlags.includes('ADMIN_REVIEW_APPROVED'))) return true
         if (l.status !== 'Half Day' || l.outFlags.includes('ADMIN_REVIEW_APPROVED')) return false
-        const minimum = resolveEmployeePolicy(employee, policies, l.workDate).minimumHalfDayMinutes ?? 0
+        const minimum = policyOn(l.workDate).minimumHalfDayMinutes ?? 0
         return minimum <= 0 || l.workMinutes < minimum
       }).length,
       totalWorkMinutes: completeLogs.reduce((sum, l) => sum + (l.workMinutes || 0), 0), offDayWorkMinutes,

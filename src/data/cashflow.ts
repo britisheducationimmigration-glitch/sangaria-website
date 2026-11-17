@@ -1,3 +1,4 @@
+import { applyScheduledCashflowPolicy } from './policy-watch'
 export interface CashflowStage {
   stageNumber: number
   title: string
@@ -347,4 +348,17 @@ export function mergeNewCashflowDestinations(savedData: CountryCashflow[]): Coun
     (country) => newlySupportedCashflowSlugs.has(country.slug) && !savedSlugs.has(country.slug),
   )
   return [...savedData, ...missingDestinations]
+}
+
+export function parseCashflowJson(raw: unknown): CountryCashflow[] {
+  if (typeof raw !== 'string' || !raw.trim()) {
+    return defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country))
+  }
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    return (Array.isArray(parsed) && parsed.length > 0 ? mergeNewCashflowDestinations(parsed as CountryCashflow[]) : defaultCashflowData)
+      .map((country) => applyScheduledCashflowPolicy(country))
+  } catch {
+    return defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country))
+  }
 }

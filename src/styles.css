@@ -115,9 +115,7 @@ span, li, td, th, div {
   background-image: radial-gradient(rgb(18 73 123 / 0.12) 1px, transparent 1px);
   background-size: 18px 18px;
 }
-.ticket-edge {
-  background-image: radial-gradient(circle at 0 50%, transparent 9px, currentColor 9.5px);
-}
+
 .field {
   width: 100%;
   border-radius: 0.75rem;
@@ -163,10 +161,6 @@ select.field option {
   [class*='grid'],
   [class*='flex'] {
     min-width: 0;
-  }
-
-  .overflow-hidden-mobile {
-    overflow: hidden;
   }
 }
 
@@ -341,7 +335,8 @@ main .scroll-reveal:focus-within .scroll-reveal-item {
 }
 
 
-.study-plan-print-only { display: none; }
+.study-plan-print-only,
+.salary-slip-print-only { display: none; }
 
 .study-plan-mobile-summary::-webkit-details-marker { display: none; }
 .study-plan-mobile-disclosure[open] > .study-plan-mobile-summary svg { transform: rotate(180deg); }
@@ -585,12 +580,157 @@ main .scroll-reveal:focus-within .scroll-reveal-item {
     overflow-wrap: anywhere !important;
   }
   .study-plan-print-contact strong { color: #17364f !important; }
-  .study-plan-print-only * {
+ .study-plan-print-only * {
     box-shadow: none !important;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
+  body:has(#salary-slip-document) .tailadmin-shell > aside,
+  body:has(#salary-slip-document) .tailadmin-shell > div > header,
+  body:has(#salary-slip-document) .tailadmin-shell > div > div > :not(:has(#salary-slip-document)),
+  body:has(#salary-slip-document) section:has(> #salary-slip-document) > :not(#salary-slip-document) {
+    display: none !important;
+  }
+  body:has(#salary-slip-document) .tailadmin-shell,
+  body:has(#salary-slip-document) .tailadmin-shell > div,
+  body:has(#salary-slip-document) .tailadmin-shell > div > div {
+    display: block !important;
+    min-height: 0 !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+  #salary-slip-document {
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+  }
+  #salary-slip-document > :not(.salary-slip-print-only) {
+    display: none !important;
+  }
+  #salary-slip-document .salary-slip-print-only {
+    display: block !important;
+    color: #123752 !important;
+    font: 9pt/1.35 Arial, sans-serif !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .salary-slip-header {
+    display: flex !important;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    border-bottom: 1.5px solid #123752;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+  }
+  .salary-slip-eyebrow {
+    font-size: 7.5pt;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #c4515d !important;
+  }
+  .salary-slip-header h1 {
+    font-size: 17pt;
+    font-weight: 800;
+    color: #123752 !important;
+    margin: 2px 0;
+  }
+  .salary-slip-sub,
+  .salary-slip-meta p {
+    font-size: 8pt;
+    color: #475569 !important;
+  }
+  .salary-slip-meta { text-align: right; shrink: 0; }
+  .salary-slip-grid,
+  .salary-slip-boxes {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .salary-slip-grid {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 8px;
+    background: #f8fafc !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .salary-slip-boxes > div {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 7px 8px;
+  }
+  .salary-slip-grid span,
+  .salary-slip-boxes span {
+    display: block;
+    font-size: 7pt;
+    text-transform: uppercase;
+    color: #64748b !important;
+  }
+  .salary-slip-grid strong,
+  .salary-slip-boxes strong {
+    display: block;
+    margin-top: 2px;
+    font-size: 9.5pt;
+    color: #123752 !important;
+  }
+  .salary-slip-balance h2,
+  .salary-slip-payments h2 {
+    font-size: 10pt;
+    font-weight: 700;
+    color: #123752 !important;
+    margin: 10px 0 6px;
+  }
+  .salary-slip-balance h2 small { font-weight: 400; color: #64748b !important; }
+  .salary-slip-payments table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8pt;
+  }
+  .salary-slip-payments th {
+    background: #123752 !important;
+    color: #ffffff !important;
+    text-align: left;
+    padding: 5px 6px;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .salary-slip-payments td {
+    border-bottom: 1px solid #e2e8f0;
+    padding: 5px 6px;
+    vertical-align: top;
+  }
+  .salary-slip-empty { font-size: 8pt; color: #64748b !important; padding: 4px 0; }
+  .salary-slip-warn { font-size: 7.5pt; color: #92400e !important; margin-top: 6px; }
+  .salary-slip-footer {
+    margin-top: 14px;
+    border-top: 1px solid #cbd5e1;
+    padding-top: 8px;
+    font-size: 7.5pt;
+    color: #64748b !important;
+  }
+  .salary-slip-signs {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 36px;
+    margin-top: 28px;
+  }
+  .salary-slip-signs div {
+    border-top: 1px solid #64748b;
+    padding-top: 4px;
+    text-align: center;
+    font-size: 8pt;
+    font-weight: 700;
+    color: #123752 !important;
+  }
 }
+/* Scoped TailAdmin Dashboard theme for /admin only */
 /* Scoped TailAdmin Dashboard theme for /admin only */
 .tailadmin-shell {
   --font-ui: 'Outfit', 'Figtree', ui-sans-serif, system-ui, sans-serif;
