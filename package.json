@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "test:attendance": "node --test src/lib/attendance-calculations.test.mjs",
     "test:attendance:server": "node --experimental-vm-modules --test tests/attendance-boundaries.test.mjs tests/admin-boundaries.test.mjs",
-    "test:attendance:mysql": "node --experimental-vm-modules --test tests/attendance-mysql.test.mjs",
+    "test:attendance:mysql": "node --experimental-vm-modules --test --test-concurrency=1 tests/attendance-mysql.test.mjs tests/admin-mysql.test.mjs",
     "test:http": "node tests/http-smoke.mjs",
     "audit:source": "node scripts/audit-source.mjs",
     "test:database:migration": "node --experimental-vm-modules --test tests/db-migration.test.mjs",

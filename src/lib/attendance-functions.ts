@@ -249,9 +249,10 @@ export const markEmployeeAttendance = createServerFn({ method: 'POST' })
     await assertCycleUnlocked(queryRows, employee.id, today)
 
     if (data.action === 'in') {
+      if (existing && ['Leave', 'Paid Leave', 'Unpaid Leave', 'Absent'].includes(String(existing.status))) throw new Error('Admin has marked leave or absence for today. Contact admin to change it before checking in.')
       const overlap = await queryRows('SELECT id FROM attendance_logs WHERE employee_id = ? AND check_out_at > ? LIMIT 1', [employee.id, now])
       if (overlap.length) throw new Error('Attendance times overlap another shift for this employee')
-      if (existing && ['Leave', 'Paid Leave', 'Unpaid Leave', 'Absent'].includes(String(existing.status))) throw new Error('Admin has marked leave or absence for today. Contact admin to change it before checking in.')
+
       if (existing?.check_in_at) throw new Error('You have already checked in today.')
       const isLate = (Number(istTimeHHMM(now).slice(0, 2)) * 60 + Number(istTimeHHMM(now).slice(3))) > (Number(employee.expectedInTime.slice(0, 2)) * 60 + Number(employee.expectedInTime.slice(3)) + (employee.lateGraceMinutes ?? 0)) ? 1 : 0
       if (existing) {
