@@ -183,7 +183,7 @@ export const markEmployeeAttendance = createServerFn({ method: 'POST' })
     if (photoBase64 && (photoBase64.length > 500_000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(photoBase64))) {
       throw new Error('Selfie image is invalid or too large.')
     }
-    return { token, action: action as EmployeeMarkAction, pin, note, deviceKey, photoBase64, lat, lng, accuracyM }
+    return { token, action: action as EmployeeMarkAction, pin, note, deviceKey, photoBase64, lat, lng, accuracyM, basicFaceCheck: input.basicFaceCheck === true }
   })
   .handler(async ({ data }) => {
     await ensureAttendanceSchema()
@@ -218,6 +218,7 @@ export const markEmployeeAttendance = createServerFn({ method: 'POST' })
     if (settings.requireSelfie && needsSelfie && !data.photoBase64) {
       throw new Error('Live camera selfie is required to mark attendance.')
     }
+    if (settings.requireSelfie && needsSelfie && !data.basicFaceCheck) throw new Error('Complete the face and blink check before marking attendance.')
     if (data.photoBase64) {
       photoBuffer = Buffer.from(data.photoBase64, 'base64')
       const isWebp = photoBuffer.length > 12 && photoBuffer.toString('ascii', 0, 4) === 'RIFF' && photoBuffer.toString('ascii', 8, 12) === 'WEBP'
@@ -916,6 +917,16 @@ async function buildEmployeeRangeReport(data: ReturnType<typeof rangeReportInput
   const logRows=await queryRows(`SELECT ${LOG_COLS} FROM attendance_logs l JOIN employees e ON e.id=l.employee_id WHERE l.employee_id=? AND l.work_date<=? ORDER BY l.work_date`,[employee.id,todayIstDate()])
   const logs=logRows.map(row=>mapAttendanceRow(row))
   const snapshots=await queryRows('SELECT cycle_start_date, cycle_end_date, snapshot_json FROM attendance_cycle_snapshots WHERE employee_id=?',[employee.id])
+  const slipRows = await queryRows("SELECT slip_number, cycle_start_date, cycle_end_date, snapshot_json, created_at FROM salary_slips WHERE employee_id = ? AND status = 'issued'", [employee.id])
+  // A slip is the audited source for its adjustments. Voiding it removes those
+  // adjustments; actual salary payments remain independent cash records.
+  const adjustments = slipRows.map(row => {
+    const saved = JSON.parse(String(row.snapshot_json)) as SalarySlipSnapshot
+    const issuedOn = saved.adjustmentDate || new Date(String(row.created_at)).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
+    const start = String(row.cycle_start_date), end = String(row.cycle_end_date)
+    const date = issuedOn < start ? start : issuedOn > end ? end : issuedOn
+    return { slipNumber: String(row.slip_number), date, amount: Math.round((saved.netPay - saved.earnedSalary) * 100) / 100 }
+  }).filter(item => item.amount !== 0)
   const calculate=(from:string,to:string,includeDays:boolean) => {
     const report=buildPayrollRange(employee,logs,policies,from,to,todayIstDate(),includeDays)
     let partialFinalized=false
@@ -929,7 +940,9 @@ async function buildEmployeeRangeReport(data: ReturnType<typeof rangeReportInput
         report.earned+=stored.earnedSalary-live.earnedSalary
       } else partialFinalized=true
     }
-    return {...report,partialFinalized}
+    const appliedAdjustments = adjustments.filter(item => item.date >= from && item.date <= to)
+    const adjustmentTotal = appliedAdjustments.reduce((sum, item) => sum + Math.round(item.amount * 100), 0) / 100
+    return {...report,earned:Math.round((report.earned + adjustmentTotal) * 100) / 100,attendanceEarned:report.earned,adjustmentTotal,adjustments:appliedAdjustments,partialFinalized}
   }
   const report=calculate(data.from,data.to,true)
   const baseline=[employee.joiningDate,logs[0]?.workDate,data.from].filter(Boolean).sort()[0]!
@@ -980,7 +993,8 @@ export const exportEmployeeRangeReport = createServerFn({method:'GET'}).middlewa
   return {filename:`bei-attendance-emp-${data.employeeId}-${data.from}-to-${data.to}.xlsx`,base64:createLeadsWorkbook([
     {name:'Salary Summary',rows:[['Employee',value.employee.name],['From',data.from],['To',data.to],['Earned INR',value.report.earned],['Payable days',value.report.payableDays],['Net work minutes',value.report.workMinutes],['Payments fully allocated to range INR',value.allocatedPaid],['Range pending INR',value.overlappingPayments?'Review overlapping payment periods':value.rangePending],['Partially overlapping payments (not apportioned)',value.overlappingPayments],['Till-date earned INR',value.throughToday.earned],['Till-date paid INR',value.throughToday.paid],['Till-date pending INR',value.throughToday.pending],['Advance / overpaid INR',value.throughToday.advance],['Ledger baseline',value.baseline],['Missing OUT',value.report.missingOut],['Review required',value.report.reviewRequired],['Partial finalized cycle estimate',value.report.partialFinalized?'Yes':'No'],['Note','Day estimates are rounded; range total is calculated per full payroll-cycle denominator. No overtime pay.']],widths:[48,85]},
     {name:'Daily Attendance',rows:[['Date','Status','IN IST','OUT IST','Net minutes','Break/absence minutes','Payable days','Estimated earned INR','Note'],...value.report.days.map(d=>[d.date,d.status,time(d.checkIn),time(d.checkOut),d.workMinutes,d.deductedMinutes,d.payableDays,d.earned,d.note])],headerRows:[1],widths:[14,28,25,25,16,24,16,24,50]},
-    {name:'Payments',rows:[['ID','Paid on','Amount INR','Period from','Period to','Method','Reference','Note','Recorded by','Reversed','Reversal reason'],...value.payments.map(p=>[p.id,p.paidOn,p.amount,p.from,p.to,p.method,p.reference,p.note,p.recordedBy,p.voided?'Yes':'No',p.voidReason])],headerRows:[1],widths:[10,14,18,14,14,20,30,45,35,12,45]}
+    {name:'Payments',rows:[['ID','Paid on','Amount INR','Period from','Period to','Method','Reference','Note','Recorded by','Reversed','Reversal reason'],...value.payments.map(p=>[p.id,p.paidOn,p.amount,p.from,p.to,p.method,p.reference,p.note,p.recordedBy,p.voided?'Yes':'No',p.voidReason])],headerRows:[1],widths:[10,14,18,14,14,20,30,45,35,12,45]},
+    {name:'Slip Adjustments',rows:[['Slip','Effective date','Net adjustment INR'],...value.report.adjustments.map(item=>[item.slipNumber,item.date,item.amount])],headerRows:[1],widths:[32,18,24]}
   ])}
 })
 function twoDigitsToWords(n: number): string {
@@ -1053,6 +1067,12 @@ export const listSalarySlips = createServerFn({ method: 'GET' })
     return rows.map(mapSalarySlipRow)
   })
 
+function salarySlipAmount(value: unknown, label: string): number {
+  const amount = Number(value ?? 0)
+  if (!Number.isFinite(amount) || amount < 0 || amount > 10_000_000 || Math.abs(amount * 100 - Math.round(amount * 100)) > 0.00001) throw new Error(`Enter a valid ${label} with up to two decimals`)
+  return Math.round(amount * 100) / 100
+}
+
 export const issueSalarySlip = createServerFn({ method: 'POST' })
   .middleware([superAdminMiddleware])
   .validator((raw: unknown) => {
@@ -1060,19 +1080,19 @@ export const issueSalarySlip = createServerFn({ method: 'POST' })
     const employeeId = Math.floor(numberValue(input.employeeId, 0))
     const month = stringValue(input.month, 7)
     const allowanceLabel = stringValue(input.allowanceLabel, 80) || 'Bonus / Allowance'
-    const allowanceAmount = Math.max(0, Math.min(10_000_000, Number(input.allowanceAmount ?? 0) || 0))
+    const allowanceAmount = salarySlipAmount(input.allowanceAmount, 'allowance')
     const deductionLabel = stringValue(input.deductionLabel, 80) || 'Advance / Other Deduction'
-    const deductionAmount = Math.max(0, Math.min(10_000_000, Number(input.deductionAmount ?? 0) || 0))
+    const deductionAmount = salarySlipAmount(input.deductionAmount, 'deduction')
    const hasCustomPaid = input.paidAmount !== undefined && input.paidAmount !== null && input.paidAmount !== ''
     const rawPaid = hasCustomPaid ? Number(input.paidAmount) : null
-    if (rawPaid !== null && (!Number.isFinite(rawPaid) || rawPaid < 0 || rawPaid > 10_000_000)) throw new Error('Enter a valid paid amount')
+    if (rawPaid !== null) salarySlipAmount(rawPaid, 'paid amount')
     const paidAmountOverride = rawPaid !== null ? Math.round(rawPaid * 100) / 100 : null
     const paymentMethod = stringValue(input.paymentMethod, 30)
     const paymentRef = stringValue(input.paymentRef, 190)
-    const paidOn = stringValue(input.paidOn, 10)
+    const paidOn = input.paidOn ? validPayrollDate(input.paidOn) : ''
     const notes = stringValue(input.notes, 500)
     if (employeeId <= 0 || !/^\d{4}-(?:0[1-9]|1[0-2])$/.test(month)) throw new Error('Select a valid employee and salary month')
-    if (paidOn && !/^\d{4}-\d{2}-\d{2}$/.test(paidOn)) throw new Error('Enter a valid payment date (YYYY-MM-DD)')
+    if (paidOn && paidOn > todayIstDate()) throw new Error('Payment date must not be in the future')
     if (paymentMethod && !['Cash', 'Bank transfer', 'UPI', 'Cheque', 'Other'].includes(paymentMethod)) throw new Error('Invalid payment method')
     return { employeeId, month, allowanceLabel, allowanceAmount, deductionLabel, deductionAmount, paidAmountOverride, paymentMethod, paymentRef, paidOn, notes }
   })
@@ -1111,15 +1131,20 @@ export const issueSalarySlip = createServerFn({ method: 'POST' })
       }
 
       const [paymentRows, settingsRows, priorRows] = await Promise.all([
-        queryRows('SELECT amount_paise, paid_on, method, reference_text FROM salary_payments WHERE employee_id = ? AND voided_at IS NULL AND period_from >= ? AND period_to <= ? ORDER BY paid_on DESC, id DESC', [employee.id, summary.cycleStartDate, summary.cycleEndDate]),
+        queryRows('SELECT amount_paise, paid_on, method, reference_text, period_from, period_to FROM salary_payments WHERE employee_id = ? AND voided_at IS NULL AND period_from <= ? AND period_to >= ? ORDER BY paid_on DESC, id DESC', [employee.id, summary.cycleEndDate, summary.cycleStartDate]),
         queryRows('SELECT public_settings_json FROM site_settings WHERE id = 1 LIMIT 1'),
         queryRows('SELECT COUNT(*) AS cnt FROM salary_slips WHERE employee_id = ? AND selected_month = ?', [employee.id, data.month]),
       ])
 
       const siteSettings = readSiteSettings(settingsRows[0])
+      if (paymentRows.some(row => String(row.period_from) < summary.cycleStartDate || String(row.period_to) > summary.cycleEndDate)) throw new Error('A payment period overlaps this salary cycle. Correct its allocation in payment history before issuing the slip.')
       const supportEmail = siteSettings.emails.find((e) => e.toLowerCase().startsWith('support@')) ?? siteSettings.emails[1] ?? siteSettings.emails[0] ?? ''
       const ledgerPaidAmount = paymentRows.reduce((sum, row) => sum + Number(row.amount_paise), 0) / 100
       const paidAmount = data.paidAmountOverride ?? ledgerPaidAmount
+      const additionalPaidPaise = Math.round(paidAmount * 100) - Math.round(ledgerPaidAmount * 100)
+      if (additionalPaidPaise < 0) throw new Error('Paid total cannot be lower than recorded cycle payments. Reverse an incorrect payment in payment history first.')
+      if (additionalPaidPaise > 0 && !data.paymentMethod) throw new Error('Select a payment method to record the additional salary paid')
+      if (additionalPaidPaise > 0 && summary.cycleStartDate > today) throw new Error('Cannot record payment for a future salary cycle')
       const latestPayment = paymentRows[0]
       const paidLeaveDays = cycleLogs.filter((l) => l.status === 'Paid Leave').length
       const grossEarnings = Math.round((summary.earnedSalary + data.allowanceAmount) * 100) / 100
@@ -1128,8 +1153,12 @@ export const issueSalarySlip = createServerFn({ method: 'POST' })
       const netPayPaise = Math.round(netPay * 100)
       const seq = Number(priorRows[0]?.cnt ?? 0) + 1
       const slipNumber = `BEI-${data.month.replace('-', '')}-E${String(employee.id).padStart(3, '0')}-${String(seq).padStart(2, '0')}`
+      if (additionalPaidPaise > 0) {
+        await execute('INSERT INTO salary_payments (employee_id, request_key, amount_paise, paid_on, period_from, period_to, method, reference_text, note, recorded_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [employee.id, `slip-${slipNumber}`, additionalPaidPaise, data.paidOn || today, summary.cycleStartDate, summary.cycleEndDate < today ? summary.cycleEndDate : today, data.paymentMethod, data.paymentRef, `Additional salary payment recorded with ${slipNumber}. ${data.notes}`.trim().slice(0, 500), context.user.email])
+      }
 
       const snapshot: SalarySlipSnapshot = {
+        adjustmentDate: today,
         companyName: site.name,
         companyAddress: site.address,
         companyPhone: siteSettings.phones[0] ? (siteSettings.phones[0].startsWith('+') ? siteSettings.phones[0] : `+91 ${siteSettings.phones[0]}`) : '',
@@ -1167,7 +1196,7 @@ export const issueSalarySlip = createServerFn({ method: 'POST' })
         paidAmount,
         paymentMethod: data.paymentMethod || (latestPayment ? String(latestPayment.method) : ''),
         paymentRef: data.paymentRef || (latestPayment ? String(latestPayment.reference_text) : ''),
-        paidOn: data.paidOn || (latestPayment ? String(latestPayment.paid_on) : ''),
+        paidOn: data.paidOn || (additionalPaidPaise > 0 ? today : latestPayment ? String(latestPayment.paid_on) : ''),
         notes: data.notes,
       }
 

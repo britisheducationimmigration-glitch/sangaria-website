@@ -1,4 +1,28 @@
 import { attendanceDateWindow } from '../src/lib/attendance-date-filters.ts'
+import { faceTurnScore, advanceBlink } from '../src/lib/face-challenge.ts'
+
+test('blink requires open then both closed then reopened eyes', () => {
+  assert.equal(advanceBlink(0,0.8,0.8),0)
+  assert.equal(advanceBlink(0,0.1,0.1),1)
+  assert.equal(advanceBlink(1,0.1,0.1),1)
+  assert.equal(advanceBlink(1,0.8,0.1),1)
+  assert.equal(advanceBlink(1,0.8,0.8),2)
+  assert.equal(advanceBlink(2,0.8,0.8),2)
+  assert.equal(advanceBlink(2,0.1,0.1),3)
+  assert.equal(advanceBlink(2,NaN,0.1),0)
+})
+
+test('basic face check rejects absent, multiple, tiny and invalid faces', () => {
+  const face = Array.from({length:264},()=>({x:0.5,y:0.5,z:0}))
+  face[33].x=0.35;face[263].x=0.65
+  assert.equal(faceTurnScore([]),null)
+  assert.equal(faceTurnScore([face,face]),null)
+  assert.equal(faceTurnScore([face]),0)
+  face[1].x=0.58;assert.ok(faceTurnScore([face])>0.20)
+  face[1].x=0.42;assert.ok(faceTurnScore([face])< -0.20)
+  face[1].x=NaN;assert.equal(faceTurnScore([face]),null)
+  face[263].x=0.36;assert.equal(faceTurnScore([face]),null)
+})
 import { dateOnly } from '../src/lib/date-only.ts'
 import { validCronAuthorization } from '../src/lib/cron-secret.server.ts'
 import test from 'node:test'

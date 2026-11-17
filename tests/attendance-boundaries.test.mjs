@@ -54,3 +54,20 @@ test('daytime shift validation rejects empty completed shifts and next-day OUT',
     await assert.rejects(api.updateAttendanceRecord({data:{mode:'create',employeeId:1,workDate:'2026-11-16',status:'Present',...change}}), /required|same-day/)
   }
 })
+
+test('payslip dates and money fail validation before any database access', async () => {
+  const data = {employeeId:1,month:'2026-11'}
+  for (const paidOn of ['2026-02-30','2026-13-01','not-a-date','2026-11-17']) {
+    await assert.rejects(api.issueSalarySlip({data:{...data,paidOn}}), /date|future/)
+  }
+  for (const field of ['allowanceAmount','deductionAmount','paidAmount']) {
+    for (const amount of [-1,NaN,Infinity,10_000_001,1.001]) {
+      await assert.rejects(api.issueSalarySlip({data:{...data,[field]:amount}}), /valid/)
+    }
+  }
+  state.role = 'enquiry_manager'
+  await assert.rejects(api.issueSalarySlip({data}), /Forbidden/)
+  await assert.rejects(api.listSalarySlips({data:{employeeId:1}}), /Forbidden/)
+  await assert.rejects(api.voidSalarySlip({data:{id:1,reason:'Test'}}), /Forbidden/)
+  state.role = 'super_admin'
+})

@@ -119,7 +119,7 @@ export function PayrollLedger({employees,cycles,month,today,onNotice}:{employees
           ['Pending',result.throughToday.pending,'text-amber-800'],
           ['Advance / overpaid',result.throughToday.advance,'text-blue-700'],
         ] as const).map(([label,value,tone])=><div key={label} className="min-w-0 rounded-xl border border-slate-200 bg-white p-3 sm:p-4"><p className="text-xs font-medium text-slate-600">{label}</p><p className={'mt-2 break-words text-xl font-bold tabular-nums sm:text-2xl '+tone}>{money(value)}</p></div>)}</div>
-        <p className="mt-3 text-xs leading-relaxed text-slate-600">Based on saved attendance and entered payment records. Past unrecorded payments are not included.</p>
+        <p className="mt-3 text-xs leading-relaxed text-slate-600">Based on saved attendance, issued-slip bonus/deductions and recorded payments. Past unrecorded payments are not included. Do not deduct an advance again if it is already recorded as a payment.</p>
         {result.throughToday.missingOut+result.throughToday.reviewRequired>0&&<p role="status" className="mt-2 rounded-lg bg-amber-100 p-3 text-sm text-amber-900">{result.throughToday.missingOut+result.throughToday.reviewRequired} unresolved shifts: balance is provisional until attendance is corrected.</p>}
       </div>
 
@@ -128,14 +128,15 @@ export function PayrollLedger({employees,cycles,month,today,onNotice}:{employees
         <div className="space-y-4 border-t border-[#E4E7EC] p-4">
           <form onSubmit={generateSlip} className="space-y-3 rounded-xl bg-slate-50 p-4">
             <h4 className="text-sm font-bold text-slate-900">Generate &amp; save monthly salary slip</h4>
-            <p className="text-xs text-slate-600">Freezes the selected month&apos;s attendance, earnings, deductions and payment reference in Admin so you can print or re-issue anytime.</p>
+            <p className="text-xs text-slate-600">Saves a payslip snapshot. Bonus and deductions update the salary balance on the issue date within this cycle. Voiding a slip removes its adjustments; recorded payments remain in payment history.</p>
+            <p className="text-xs text-slate-600">Paid total means all salary already paid for this cycle. Any increase is recorded once in payment history; leave blank to use existing payments. This does not transfer money.</p>
             <div className="grid gap-3 sm:grid-cols-3">
               <label className="text-xs font-semibold">Salary month<input type="month" required value={slipMonth} onChange={e=>setSlipMonth(e.target.value)} disabled={busy} className={'mt-1 block w-full '+field}/></label>
               <label className="text-xs font-semibold">Allowance / bonus label<input value={allowanceLabel} maxLength={80} onChange={e=>setAllowanceLabel(e.target.value)} disabled={busy} className={'mt-1 block w-full '+field}/></label>
               <label className="text-xs font-semibold">Allowance / bonus INR<input type="number" min="0" step="0.01" value={allowanceAmount} onChange={e=>setAllowanceAmount(e.target.value)} disabled={busy} placeholder="0" className={'mt-1 block w-full '+field}/></label>
               <label className="text-xs font-semibold">Deduction label<input value={deductionLabel} maxLength={80} onChange={e=>setDeductionLabel(e.target.value)} disabled={busy} className={'mt-1 block w-full '+field}/></label>
               <label className="text-xs font-semibold">Deduction INR<input type="number" min="0" step="0.01" value={deductionAmount} onChange={e=>setDeductionAmount(e.target.value)} disabled={busy} placeholder="0" className={'mt-1 block w-full '+field}/></label>
-              <label className="text-xs font-semibold">Paid amount INR (optional)<input type="number" min="0" step="0.01" value={slipPaidAmount} onChange={e=>setSlipPaidAmount(e.target.value)} disabled={busy} placeholder="Auto from cycle payments" className={'mt-1 block w-full '+field}/></label>
+              <label className="text-xs font-semibold">Total already paid in cycle INR (optional)<input type="number" min="0" step="0.01" value={slipPaidAmount} onChange={e=>setSlipPaidAmount(e.target.value)} disabled={busy} placeholder="Auto from cycle payments" className={'mt-1 block w-full '+field}/></label>
               <label className="text-xs font-semibold">Payment mode (optional)<select value={slipMethod} onChange={e=>setSlipMethod(e.target.value)} disabled={busy} className={'mt-1 block w-full '+field}><option value="">Auto from cycle payment</option>{['Bank transfer','UPI','Cash','Cheque','Other'].map(m=><option key={m}>{m}</option>)}</select></label>
               <label className="text-xs font-semibold">UTR / Ref No. (optional)<input value={slipRef} maxLength={190} onChange={e=>setSlipRef(e.target.value)} disabled={busy} placeholder="Auto if left blank" className={'mt-1 block w-full '+field}/></label>
               <label className="text-xs font-semibold">Payment date (optional)<input type="date" max={today} value={slipPaidOn} onChange={e=>setSlipPaidOn(e.target.value)} disabled={busy} className={'mt-1 block w-full '+field}/></label>
