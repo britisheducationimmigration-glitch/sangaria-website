@@ -39,3 +39,14 @@ test('cron authorization fails closed for absent, wrong and unequal-length value
 test('shared date-only conversion preserves existing content and sitemap semantics',()=>{
   for(const [value, expected] of [[new Date('2026-11-17T23:30:00Z'),'2026-11-17'],['2026-11-17','2026-11-17'],['2026-11-17T00:30:00+05:30','2026-11-17'],['invalid',''],[null,''],[undefined,'']]) assert.equal(dateOnly(value),expected)
 })
+import { attendanceFlagLabel, attendanceNeedsReview, isAttendanceLocationFlag } from '../src/lib/attendance-flags.ts'
+test('admin approval is informational and does not fabricate a location warning',()=>{
+  assert.equal(isAttendanceLocationFlag('ADMIN_REVIEW_APPROVED'),false)
+  assert.equal(isAttendanceLocationFlag('HALF_DAY_OUT'),false)
+  for(const flag of ['LOW_OR_MOCK_ACCURACY','FOREIGN_IP_US','VPN_OR_IP_MISMATCH_800KM','OUT_OF_OFFICE_400M']) assert.equal(isAttendanceLocationFlag(flag),true)
+  const log={status:'Present',workDate:'2026-11-17',checkInAt:'2026-11-17T04:00Z',checkOutAt:'2026-11-17T12:00Z',inFlags:[],outFlags:['AUTO_CHECKOUT_10PM','ADMIN_REVIEW_APPROVED']}
+  assert.equal(attendanceNeedsReview(log,'2026-11-17'),false)
+  assert.equal(attendanceNeedsReview({...log,inFlags:['FOREIGN_IP_US']},'2026-11-17'),true)
+  assert.equal(attendanceNeedsReview({...log,checkOutAt:''},'2026-11-18'),true)
+  assert.equal(attendanceFlagLabel('ADMIN_REVIEW_APPROVED'),'Reviewed by admin')
+})

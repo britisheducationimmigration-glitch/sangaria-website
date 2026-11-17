@@ -1,3 +1,4 @@
+import { Logo } from '@/components/Logo'
 import { getEnquiriesPage } from '@/lib/admin-functions'
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
@@ -235,13 +236,7 @@ function AdminPage() {
       >
         <div className="flex h-[76px] shrink-0 items-center justify-between border-b border-[#E4E7EC] px-6">
           <div className="flex items-center gap-3">
-            <span className="grid size-9 place-items-center rounded-xl bg-[#465FFF] text-sm font-bold text-white shadow-xs">
-              BEI
-            </span>
-            <div>
-              <p className="text-base font-bold leading-none text-[#1D2939]">British Education</p>
-              <p className="mt-1 text-[11px] font-medium text-[#667085]">Admin Workspace</p>
-            </div>
+            <div><Logo /><p className="mt-1 text-[11px] font-medium text-[#667085]">Admin Workspace</p></div>
           </div>
           <button
             type="button"

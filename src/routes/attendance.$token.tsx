@@ -1,3 +1,4 @@
+import { Logo } from '@/components/Logo'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { CalendarDays, Camera, CheckCircle2, ChevronDown, Clock, Lock, MapPin, RefreshCw, ShieldAlert } from 'lucide-react'
@@ -57,7 +58,7 @@ function EmployeeAttendancePage() {
       <div className="grid min-h-screen place-items-center bg-[#F9FAFB] px-5 py-12">
         <div className="w-full max-w-md rounded-2xl border border-[#E4E7EC] bg-white p-6 text-center shadow-sm">
           <ShieldAlert className="mx-auto size-12 text-[#F04438]" />
-          <h1 className="mt-4 text-xl font-bold text-[#1D2939]">Attendance Link Unavailable</h1>
+          <Logo className="mb-4 justify-center" /><h1 className="mt-4 text-xl font-bold text-[#1D2939]">Attendance Link Unavailable</h1>
           <p className="mt-2 text-sm text-[#667085]">{res.errorMessage}</p>
         </div>
       </div>
@@ -256,7 +257,7 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
         <header className="rounded-2xl border border-[#E4E7EC] bg-white p-5 shadow-xs">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#465FFF]">British Education &amp; Immigration</p>
+              <Logo className="mb-4" />
               <h1 className="mt-1 text-2xl font-bold text-[#1D2939]">{employee.name}</h1>
               {employee.designation && <p className="text-xs text-[#667085]">{employee.designation}</p>}
             </div>
