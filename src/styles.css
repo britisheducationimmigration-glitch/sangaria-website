@@ -618,7 +618,7 @@ main .scroll-reveal:focus-within .scroll-reveal-item {
     break-inside: avoid;
     page-break-inside: avoid;
   }
-  .salary-slip-header {
+ .salary-slip-header {
     display: flex !important;
     justify-content: space-between;
     align-items: flex-start;
@@ -626,6 +626,18 @@ main .scroll-reveal:focus-within .scroll-reveal-item {
     border-bottom: 1.5px solid #123752;
     padding-bottom: 8px;
     margin-bottom: 10px;
+  }
+  .salary-slip-brand {
+    display: flex !important;
+    align-items: center;
+    gap: 10px;
+  }
+  .salary-slip-logo {
+    width: 46px;
+    height: 46px;
+    object-fit: contain;
+    flex-shrink: 0;
+    border-radius: 6px;
   }
   .salary-slip-eyebrow {
     font-size: 7.5pt;
@@ -635,23 +647,45 @@ main .scroll-reveal:focus-within .scroll-reveal-item {
     color: #c4515d !important;
   }
   .salary-slip-header h1 {
-    font-size: 17pt;
+    font-size: 16pt;
     font-weight: 800;
     color: #123752 !important;
     margin: 2px 0;
   }
   .salary-slip-sub,
   .salary-slip-meta p {
-    font-size: 8pt;
+    font-size: 7.8pt;
     color: #475569 !important;
   }
-  .salary-slip-meta { text-align: right; shrink: 0; }
+  .salary-slip-meta { text-align: right; flex-shrink: 0; }
+  .salary-slip-void-banner {
+    background: #fee2e2 !important;
+    color: #991b1b !important;
+    border: 1px solid #fca5a5;
+    border-radius: 4px;
+    padding: 5px 8px;
+    font-size: 8pt;
+    font-weight: 700;
+    margin-bottom: 8px;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
   .salary-slip-grid,
   .salary-slip-boxes {
     display: grid !important;
     grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    gap: 8px;
-    margin-bottom: 10px;
+    gap: 7px;
+    margin-bottom: 9px;
+  }
+  .salary-slip-attendance {
+    display: grid !important;
+    grid-template-columns: repeat(8, minmax(0, 1fr)) !important;
+    gap: 6px;
+    margin-bottom: 9px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 6px 8px;
+    background: #ffffff !important;
   }
   .salary-slip-grid {
     border: 1px solid #cbd5e1;
@@ -667,18 +701,99 @@ main .scroll-reveal:focus-within .scroll-reveal-item {
     padding: 7px 8px;
   }
   .salary-slip-grid span,
+  .salary-slip-attendance span,
   .salary-slip-boxes span {
     display: block;
-    font-size: 7pt;
+    font-size: 6.5pt;
     text-transform: uppercase;
     color: #64748b !important;
   }
   .salary-slip-grid strong,
+  .salary-slip-attendance strong,
   .salary-slip-boxes strong {
     display: block;
     margin-top: 2px;
-    font-size: 9.5pt;
+    font-size: 9pt;
     color: #123752 !important;
+  }
+  .salary-slip-split {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px;
+    margin-bottom: 9px;
+    align-items: start;
+  }
+  .salary-slip-split table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid #cbd5e1;
+    font-size: 8pt;
+  }
+  .salary-slip-split th {
+    background: #123752 !important;
+    color: #ffffff !important;
+    padding: 5px 7px;
+    text-align: left;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .salary-slip-split tfoot th {
+    background: #f1f5f9 !important;
+    color: #123752 !important;
+    border-top: 1.5px solid #123752;
+  }
+  .salary-slip-split td {
+    padding: 5px 7px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .salary-slip-split .num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .salary-slip-netbox {
+    display: flex !important;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    border: 1.5px solid #123752;
+    border-radius: 6px;
+    padding: 9px 12px;
+    background: #f8fafc !important;
+    margin-bottom: 8px;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .salary-slip-netbox > div:first-child span {
+    display: block;
+    font-size: 7.5pt;
+    text-transform: uppercase;
+    color: #475569 !important;
+    font-weight: 700;
+  }
+  .salary-slip-netbox > div:first-child strong {
+    display: block;
+    font-size: 15pt;
+    font-weight: 800;
+    color: #123752 !important;
+    margin-top: 2px;
+  }
+  .salary-slip-words {
+    font-size: 8pt;
+    font-style: italic;
+    color: #334155 !important;
+    margin-top: 3px;
+  }
+  .salary-slip-settlement {
+    font-size: 7.8pt;
+    text-align: right;
+    color: #334155 !important;
+    line-height: 1.45;
+  }
+  .salary-slip-note {
+    font-size: 8pt;
+    color: #334155 !important;
+    margin-bottom: 8px;
   }
   .salary-slip-balance h2,
   .salary-slip-payments h2 {
@@ -709,7 +824,7 @@ main .scroll-reveal:focus-within .scroll-reveal-item {
   .salary-slip-empty { font-size: 8pt; color: #64748b !important; padding: 4px 0; }
   .salary-slip-warn { font-size: 7.5pt; color: #92400e !important; margin-top: 6px; }
   .salary-slip-footer {
-    margin-top: 14px;
+    margin-top: 12px;
     border-top: 1px solid #cbd5e1;
     padding-top: 8px;
     font-size: 7.5pt;
@@ -730,7 +845,7 @@ main .scroll-reveal:focus-within .scroll-reveal-item {
     color: #123752 !important;
   }
 }
-/* Scoped TailAdmin Dashboard theme for /admin only */
+
 /* Scoped TailAdmin Dashboard theme for /admin only */
 .tailadmin-shell {
   --font-ui: 'Outfit', 'Figtree', ui-sans-serif, system-ui, sans-serif;

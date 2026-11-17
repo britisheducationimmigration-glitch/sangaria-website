@@ -288,3 +288,63 @@ export type AdminAttendanceSnapshot = {
   selectedMonth: string
   todayIst: string
 }
+
+export type SalarySlipSnapshot = {
+  companyName: string
+  companyAddress: string
+  companyPhone: string
+  companyEmail: string
+  employeeCode: string
+  employeeName: string
+  designation: string
+  employeeEmail: string
+  employeePhone: string
+  joiningDate: string
+  cycleStartDay: number
+  shiftTime: string
+  monthLabel: string
+  cycleStartDate: string
+  cycleEndDate: string
+  totalDays: number
+  workingDays: number
+  weeklyOffsAndHolidays: number
+  presentDays: number
+  halfDays: number
+  paidLeaveDays: number
+  unpaidAndAbsentDays: number
+  payableDays: number
+  totalWorkMinutes: number
+  monthlyBaseSalary: number
+  earnedSalary: number
+  allowanceLabel: string
+  allowanceAmount: number
+  grossEarnings: number
+  deductionLabel: string
+  deductionAmount: number
+  totalDeductions: number
+  netPay: number
+  netPayWords: string
+  paidAmount: number
+  paymentMethod: string
+  paymentRef: string
+  paidOn: string
+  notes: string
+}
+
+export type SalarySlipRecord = {
+  id: number
+  slipNumber: string
+  employeeId: number
+  employeeName: string
+  selectedMonth: string
+  cycleStartDate: string
+  cycleEndDate: string
+  netPay: number
+  status: 'issued' | 'voided'
+  issuedBy: string
+  issuedAt: string
+  voidedBy: string
+  voidReason: string
+  voidedAt: string
+  snapshot: SalarySlipSnapshot
+}

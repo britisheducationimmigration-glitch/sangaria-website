@@ -28,6 +28,8 @@ import {
   verifyAttendanceLocation,
   verifyEmployeePin,
 } from './attendance.server'
+import { site } from '@/data/site'
+import { readSiteSettings } from './site-settings'
 import type {
   AdminAttendanceSnapshot,
   AttendanceBreakRecord,
@@ -37,6 +39,8 @@ import type {
   AttendanceStatus,
   EmployeeRecord,
   EmployeeCycleSummary,
+  SalarySlipRecord,
+  SalarySlipSnapshot,
 } from './content-types'
 
 const LOG_COLS = `
@@ -536,6 +540,7 @@ export const permanentlyDeleteEmployee = createServerFn({ method: 'POST' })
       await execute('DELETE FROM employee_policy_audit WHERE employee_id = ?', [data.id])
       await execute('DELETE FROM employee_policy_history WHERE employee_id = ?', [data.id])
       await execute('DELETE FROM salary_payments WHERE employee_id = ?', [data.id])
+      await execute('DELETE FROM salary_slips WHERE employee_id = ?', [data.id])
       await execute('DELETE FROM employees WHERE id = ?', [data.id])
       return { ok: true }
     })
@@ -978,3 +983,213 @@ export const exportEmployeeRangeReport = createServerFn({method:'GET'}).middlewa
     {name:'Payments',rows:[['ID','Paid on','Amount INR','Period from','Period to','Method','Reference','Note','Recorded by','Reversed','Reversal reason'],...value.payments.map(p=>[p.id,p.paidOn,p.amount,p.from,p.to,p.method,p.reference,p.note,p.recordedBy,p.voided?'Yes':'No',p.voidReason])],headerRows:[1],widths:[10,14,18,14,14,20,30,45,35,12,45]}
   ])}
 })
+function twoDigitsToWords(n: number): string {
+  const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen']
+  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
+  if (n < 20) return ones[n]
+  return `${tens[Math.floor(n / 10)]}${n % 10 ? ' ' + ones[n % 10] : ''}`
+}
+
+function integerToIndianWords(n: number): string {
+  if (n === 0) return 'Zero'
+  const parts: string[] = []
+  const crore = Math.floor(n / 10_000_000)
+  if (crore) { parts.push(`${integerToIndianWords(crore)} Crore`); n %= 10_000_000 }
+  const lakh = Math.floor(n / 100_000)
+  if (lakh) { parts.push(`${twoDigitsToWords(lakh)} Lakh`); n %= 100_000 }
+  const thousand = Math.floor(n / 1_000)
+  if (thousand) { parts.push(`${twoDigitsToWords(thousand)} Thousand`); n %= 1_000 }
+  const hundred = Math.floor(n / 100)
+  if (hundred) { parts.push(`${twoDigitsToWords(hundred)} Hundred`); n %= 100 }
+  if (n > 0) parts.push(twoDigitsToWords(n))
+  return parts.join(' ')
+}
+
+function amountInWordsInr(amount: number): string {
+  const totalPaise = Math.max(0, Math.round(amount * 100))
+  const rupees = Math.floor(totalPaise / 100)
+  const paise = totalPaise % 100
+  return paise > 0
+    ? `Indian Rupees ${integerToIndianWords(rupees)} and ${twoDigitsToWords(paise)} Paise Only`
+    : `Indian Rupees ${integerToIndianWords(rupees)} Only`
+}
+
+function formatSlipMonthLabel(month: string): string {
+  const [y, m] = month.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+}
+
+function mapSalarySlipRow(row: Record<string, unknown>): SalarySlipRecord {
+  return {
+    id: Number(row.id),
+    slipNumber: String(row.slip_number),
+    employeeId: Number(row.employee_id),
+    employeeName: String(row.employee_name ?? ''),
+    selectedMonth: String(row.selected_month),
+    cycleStartDate: String(row.cycle_start_date),
+    cycleEndDate: String(row.cycle_end_date),
+    netPay: Number(row.net_pay_paise) / 100,
+    status: String(row.status) === 'voided' ? 'voided' : 'issued',
+    issuedBy: String(row.issued_by),
+    issuedAt: new Date(String(row.created_at)).toISOString(),
+    voidedBy: String(row.voided_by ?? ''),
+    voidReason: String(row.void_reason ?? ''),
+    voidedAt: row.voided_at ? new Date(String(row.voided_at)).toISOString() : '',
+    snapshot: JSON.parse(String(row.snapshot_json)) as SalarySlipSnapshot,
+  }
+}
+
+export const listSalarySlips = createServerFn({ method: 'GET' })
+  .middleware([superAdminMiddleware])
+  .validator((raw: unknown) => ({
+    employeeId: Math.max(0, Math.floor(numberValue((raw as Record<string, unknown>)?.employeeId, 0))),
+  }))
+  .handler(async ({ data }): Promise<SalarySlipRecord[]> => {
+    await ensureAttendanceSchema()
+    await ensureAttendanceReliabilitySchema()
+    const rows = data.employeeId > 0
+      ? await queryRows('SELECT s.*, e.name AS employee_name FROM salary_slips s JOIN employees e ON e.id = s.employee_id WHERE s.employee_id = ? ORDER BY s.selected_month DESC, s.id DESC', [data.employeeId])
+      : await queryRows('SELECT s.*, e.name AS employee_name FROM salary_slips s JOIN employees e ON e.id = s.employee_id ORDER BY s.selected_month DESC, s.id DESC LIMIT 200')
+    return rows.map(mapSalarySlipRow)
+  })
+
+export const issueSalarySlip = createServerFn({ method: 'POST' })
+  .middleware([superAdminMiddleware])
+  .validator((raw: unknown) => {
+    const input = (raw ?? {}) as Record<string, unknown>
+    const employeeId = Math.floor(numberValue(input.employeeId, 0))
+    const month = stringValue(input.month, 7)
+    const allowanceLabel = stringValue(input.allowanceLabel, 80) || 'Bonus / Allowance'
+    const allowanceAmount = Math.max(0, Math.min(10_000_000, Number(input.allowanceAmount ?? 0) || 0))
+    const deductionLabel = stringValue(input.deductionLabel, 80) || 'Advance / Other Deduction'
+    const deductionAmount = Math.max(0, Math.min(10_000_000, Number(input.deductionAmount ?? 0) || 0))
+    const paymentMethod = stringValue(input.paymentMethod, 30)
+    const paymentRef = stringValue(input.paymentRef, 190)
+    const paidOn = stringValue(input.paidOn, 10)
+    const notes = stringValue(input.notes, 500)
+    if (employeeId <= 0 || !/^\d{4}-(?:0[1-9]|1[0-2])$/.test(month)) throw new Error('Select a valid employee and salary month')
+    if (paidOn && !/^\d{4}-\d{2}-\d{2}$/.test(paidOn)) throw new Error('Enter a valid payment date (YYYY-MM-DD)')
+    if (paymentMethod && !['Cash', 'Bank transfer', 'UPI', 'Cheque', 'Other'].includes(paymentMethod)) throw new Error('Invalid payment method')
+    return { employeeId, month, allowanceLabel, allowanceAmount, deductionLabel, deductionAmount, paymentMethod, paymentRef, paidOn, notes }
+  })
+  .handler(async ({ data, context }): Promise<SalarySlipRecord> => {
+    await ensureAttendanceSchema()
+    await ensureAttendanceReliabilitySchema()
+    return attendanceTransaction(async ({ queryRows, execute }) => {
+      const empRows = await queryRows('SELECT * FROM employees WHERE id = ? FOR UPDATE', [data.employeeId])
+      if (!empRows.length) throw new Error('Employee not found')
+      const existingIssued = await queryRows("SELECT id FROM salary_slips WHERE employee_id = ? AND selected_month = ? AND status = 'issued' LIMIT 1", [data.employeeId, data.month])
+      if (existingIssued.length) throw new Error('An official salary slip already exists for this month. Void it first if you need to re-issue.')
+
+      const employee = mapEmployeeRow(empRows[0])
+      const today = todayIstDate()
+      const policyRows = await queryRows('SELECT employee_id, effective_date, policy_json FROM employee_policy_history WHERE employee_id = ? ORDER BY effective_date ASC', [employee.id])
+      const policies = policyRows.map((row) => ({ employeeId: Number(row.employee_id), effectiveDate: String(row.effective_date), policy: JSON.parse(String(row.policy_json)) as Partial<EmployeeRecord> }))
+      const currentEmp = resolveEmployeePolicy(employee, policies, today)
+
+      const frozenRows = await queryRows('SELECT snapshot_json FROM attendance_cycle_snapshots WHERE employee_id = ? AND selected_month = ? LIMIT 1', [employee.id, data.month])
+      let summary: EmployeeCycleSummary
+      let cycleLogs: AttendanceLogRecord[]
+      if (frozenRows.length) {
+        const saved = parseSnapshot(frozenRows[0].snapshot_json)
+        summary = { ...saved.summary, finalized: true }
+        cycleLogs = saved.logs
+      } else {
+        const monthStartPolicy = resolveEmployeePolicy(employee, policies, `${data.month}-01`)
+        const range = getEmployeeCycleRange(data.month, monthStartPolicy.cycleStartDay)
+        const logRows = await queryRows(`SELECT ${LOG_COLS} FROM attendance_logs l JOIN employees e ON e.id = l.employee_id WHERE l.employee_id = ? AND l.work_date BETWEEN ? AND ? ORDER BY l.work_date ASC`, [employee.id, range.startDate, range.endDate])
+        cycleLogs = logRows.map((row) => mapAttendanceRow(row))
+        summary = buildEmployeeCycleSummaries([employee], cycleLogs, data.month, today, policies)[0]
+      }
+
+      if (summary.missedCheckOutCount > 0 || (summary.reviewRequiredCount ?? 0) > 0) {
+        throw new Error('Resolve missing check-outs or pending shift reviews for this cycle before issuing an official salary slip.')
+      }
+
+      const [paymentRows, settingsRows, priorRows] = await Promise.all([
+        queryRows('SELECT amount_paise, paid_on, method, reference_text FROM salary_payments WHERE employee_id = ? AND voided_at IS NULL AND period_from >= ? AND period_to <= ? ORDER BY paid_on DESC, id DESC', [employee.id, summary.cycleStartDate, summary.cycleEndDate]),
+        queryRows('SELECT public_settings_json FROM site_settings WHERE id = 1 LIMIT 1'),
+        queryRows('SELECT COUNT(*) AS cnt FROM salary_slips WHERE employee_id = ? AND selected_month = ?', [employee.id, data.month]),
+      ])
+
+      const siteSettings = readSiteSettings(settingsRows[0])
+      const paidAmount = paymentRows.reduce((sum, row) => sum + Number(row.amount_paise), 0) / 100
+      const latestPayment = paymentRows[0]
+      const paidLeaveDays = cycleLogs.filter((l) => l.status === 'Paid Leave').length
+      const grossEarnings = Math.round((summary.earnedSalary + data.allowanceAmount) * 100) / 100
+      const totalDeductions = Math.round(data.deductionAmount * 100) / 100
+      const netPay = Math.max(0, Math.round((grossEarnings - totalDeductions) * 100) / 100)
+      const netPayPaise = Math.round(netPay * 100)
+      const seq = Number(priorRows[0]?.cnt ?? 0) + 1
+      const slipNumber = `BEI-${data.month.replace('-', '')}-E${String(employee.id).padStart(3, '0')}-${String(seq).padStart(2, '0')}`
+
+      const snapshot: SalarySlipSnapshot = {
+        companyName: site.name,
+        companyAddress: site.address,
+        companyPhone: siteSettings.phones[0] ? (siteSettings.phones[0].startsWith('+') ? siteSettings.phones[0] : `+91 ${siteSettings.phones[0]}`) : '',
+        companyEmail: siteSettings.emails[0] ?? '',
+        employeeCode: `BEI-EMP-${String(employee.id).padStart(3, '0')}`,
+        employeeName: currentEmp.name,
+        designation: currentEmp.designation || 'Staff',
+        employeeEmail: currentEmp.email,
+        employeePhone: currentEmp.phone,
+        joiningDate: currentEmp.joiningDate || '',
+        cycleStartDay: summary.employee.cycleStartDay,
+        shiftTime: `${summary.employee.expectedInTime}–${summary.employee.expectedOutTime}`,
+        monthLabel: formatSlipMonthLabel(data.month),
+        cycleStartDate: summary.cycleStartDate,
+        cycleEndDate: summary.cycleEndDate,
+        totalDays: summary.totalDays,
+        workingDays: summary.workingDays,
+        weeklyOffsAndHolidays: Math.max(0, summary.totalDays - summary.workingDays),
+        presentDays: summary.presentDays,
+        halfDays: summary.halfDays,
+        paidLeaveDays,
+        unpaidAndAbsentDays: summary.absentDays,
+        payableDays: summary.payableDays,
+        totalWorkMinutes: summary.totalWorkMinutes,
+        monthlyBaseSalary: summary.employee.monthlySalary,
+        earnedSalary: summary.earnedSalary,
+        allowanceLabel: data.allowanceLabel,
+        allowanceAmount: Math.round(data.allowanceAmount * 100) / 100,
+        grossEarnings,
+        deductionLabel: data.deductionLabel,
+        deductionAmount: totalDeductions,
+        totalDeductions,
+        netPay,
+        netPayWords: amountInWordsInr(netPay),
+        paidAmount,
+        paymentMethod: data.paymentMethod || (latestPayment ? String(latestPayment.method) : ''),
+        paymentRef: data.paymentRef || (latestPayment ? String(latestPayment.reference_text) : ''),
+        paidOn: data.paidOn || (latestPayment ? String(latestPayment.paid_on) : ''),
+        notes: data.notes,
+      }
+
+      const result = await execute(
+        'INSERT INTO salary_slips (slip_number, employee_id, selected_month, cycle_start_date, cycle_end_date, net_pay_paise, status, snapshot_json, issued_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [slipNumber, employee.id, data.month, summary.cycleStartDate, summary.cycleEndDate, netPayPaise, 'issued', JSON.stringify(snapshot), context.user.email],
+      )
+      const inserted = await queryRows('SELECT s.*, e.name AS employee_name FROM salary_slips s JOIN employees e ON e.id = s.employee_id WHERE s.id = ? LIMIT 1', [Number(result.insertId)])
+      return mapSalarySlipRow(inserted[0])
+    })
+  })
+
+export const voidSalarySlip = createServerFn({ method: 'POST' })
+  .middleware([superAdminMiddleware])
+  .validator((raw: unknown) => {
+    const input = (raw ?? {}) as Record<string, unknown>
+    const id = Math.floor(numberValue(input.id, 0))
+    const reason = stringValue(input.reason, 500)
+    if (id <= 0 || !reason) throw new Error('Salary slip ID and void reason are required')
+    return { id, reason }
+  })
+  .handler(async ({ data, context }) => {
+    await ensureAttendanceReliabilitySchema()
+    return attendanceTransaction(async ({ queryRows, execute }) => {
+      const slips = await queryRows('SELECT employee_id FROM salary_slips WHERE id = ? LIMIT 1', [data.id])
+      if (!slips.length) throw new Error('Salary slip not found')
+      await queryRows('SELECT id FROM employees WHERE id = ? FOR UPDATE', [Number(slips[0].employee_id)])
+      await execute("UPDATE salary_slips SET status = 'voided', voided_by = ?, void_reason = ?, voided_at = UTC_TIMESTAMP() WHERE id = ? AND status = 'issued'", [context.user.email, data.reason, data.id])
+      return { ok: true }
+    })
+  })

@@ -24,12 +24,22 @@ export async function ensureAttendanceReliabilitySchema() {
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       INDEX log_event (log_id, created_at)
     )`)
-    await execute(`CREATE TABLE IF NOT EXISTS attendance_cycle_snapshots (
+   await execute(`CREATE TABLE IF NOT EXISTS attendance_cycle_snapshots (
       id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, employee_id BIGINT UNSIGNED NOT NULL,
       selected_month VARCHAR(7) NOT NULL, cycle_start_date VARCHAR(10) NOT NULL,
       cycle_end_date VARCHAR(10) NOT NULL, snapshot_json LONGTEXT NOT NULL,
       finalized_by VARCHAR(190) NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       UNIQUE KEY employee_month (employee_id, selected_month)
+    )`)
+    await execute(`CREATE TABLE IF NOT EXISTS salary_slips (
+      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, slip_number VARCHAR(64) NOT NULL UNIQUE,
+      employee_id BIGINT UNSIGNED NOT NULL, selected_month VARCHAR(7) NOT NULL,
+      cycle_start_date VARCHAR(10) NOT NULL, cycle_end_date VARCHAR(10) NOT NULL,
+      net_pay_paise BIGINT UNSIGNED NOT NULL, status VARCHAR(16) NOT NULL DEFAULT 'issued',
+      snapshot_json LONGTEXT NOT NULL, issued_by VARCHAR(190) NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      voided_by VARCHAR(190) NOT NULL DEFAULT '', void_reason VARCHAR(500) NOT NULL DEFAULT '',
+      voided_at TIMESTAMP NULL, INDEX employee_slips (employee_id, selected_month, created_at)
     )`)
   })().catch((error) => { schema = undefined; throw error })
   await schema
