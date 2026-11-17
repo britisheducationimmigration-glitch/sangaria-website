@@ -1,5 +1,6 @@
+import { SavedAbsences } from './SavedAbsences'
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
-import type { AttendanceEditHistoryRecord, AttendanceStatus, EmployeeRecord } from '@/lib/content-types'
+import type { AttendanceBreakRecord, AttendanceEditHistoryRecord, AttendanceStatus, EmployeeRecord } from '@/lib/content-types'
 
 function useModalDialog(onClose: () => void, busy: boolean) {
   const ref = useRef<HTMLDivElement>(null)
@@ -58,6 +59,7 @@ export type LogDraft = {
   checkInTime: string
   checkOutTime: string
   checkOutNextDay?: boolean
+  savedBreaks?: AttendanceBreakRecord[]
   absenceStart?: string
   absenceEnd?: string
   isLate: boolean
@@ -342,8 +344,9 @@ export function AttendanceEditModal({
           Mark as Late arrival
         </label>
 
+        <SavedAbsences breaks={draft.savedBreaks ?? []} />
         {!['Leave', 'Paid Leave', 'Unpaid Leave', 'Absent'].includes(draft.status) && <fieldset className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
-          <legend className="px-1 text-xs font-bold">Record unapproved absence</legend>
+          <legend className="px-1 text-xs font-bold">Add unapproved absence</legend>
           <p className="text-xs text-[#667085]">After the employee returns, record when they left and returned. This time is excluded from working hours; overlapping breaks are deducted once. Completed shifts are reclassified using the employee's hour rules.</p>
           <label className="block text-xs font-semibold">Left office (IST)<input type="datetime-local" value={draft.absenceStart ?? ''} onChange={e => onChange({...draft,absenceStart:e.target.value})} className="field mt-1" /></label>
           <label className="block text-xs font-semibold">Returned (IST)<input type="datetime-local" value={draft.absenceEnd ?? ''} onChange={e => onChange({...draft,absenceEnd:e.target.value})} className="field mt-1" /></label>

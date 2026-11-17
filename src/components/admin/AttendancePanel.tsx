@@ -1,3 +1,4 @@
+import { SavedAbsences } from './SavedAbsences'
 import { attendanceFlagLabel, attendanceNeedsReview, isAttendanceLocationFlag } from '@/lib/attendance-flags'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { CalendarDays, Check, Copy, Download, ExternalLink, History, MapPin, Pencil, Plus, RefreshCw, Smartphone, Trash2, Users } from 'lucide-react'
@@ -181,10 +182,11 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
     if (!logDraft) return
     setBusy(true)
     try {
-      await updateAttendanceRecord({ data: logDraft })
+      const saved = await updateAttendanceRecord({ data: logDraft })
+      setSnapshot(current => current ? { ...current, logs: [...current.logs.filter(log => log.id !== saved.id), saved] } : current)
       setLogDraft(null)
       await load(month)
-      onNotice('Attendance record saved with audit history.')
+      onNotice(logDraft.absenceStart ? `Unapproved absence recorded. Net working time: ${fmtHours(saved.workMinutes)}. Status: ${saved.status}. Overlapping intervals are deducted once.` : 'Attendance record saved with audit history.')
     } catch (cause) {
       onNotice(cause instanceof Error ? cause.message : 'Could not save record.')
     } finally {
@@ -289,6 +291,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
       isLate: log.isLate,
       editNote: '',
       editHistory: log.editHistory,
+      savedBreaks: log.breaks,
     })
     void getAttendanceRecordHistory({ data: { employeeId: log.employeeId, workDate: log.workDate } })
       .then(editHistory => setLogDraft(current => current?.employeeId === log.employeeId && current.workDate === log.workDate ? { ...current, editHistory } : current))
@@ -392,18 +395,20 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
               <tbody className="divide-y divide-[#E4E7EC]">
                 {visibleLogs.map((log) => {
                   const flags = [...new Set([...log.inFlags, ...log.outFlags])]
+                  const hasAbsence = log.breaks.some(interval => interval.note.startsWith('Admin - unapproved absence: '))
                   return (
                     <tr key={log.id} className="hover:bg-[#F9FAFB]">
                       <td className="px-4 py-3">
                         <p className="font-bold text-[#1D2939]">{log.employeeName}</p>
                         <p className="text-[#667085]">{log.workDate} · {fmtHours(log.workMinutes)}</p>
+                        <SavedAbsences breaks={log.breaks} /><p className="mt-1 text-[11px] text-[#667085]">Net work: {fmtHours(log.workMinutes)}{log.breakMinutes > 0 ? ` · Break/absence deducted: ${fmtHours(log.breakMinutes)}` : ''}</p>
                       </td>
                      <td className="px-4 py-3">
                         <p className="font-semibold text-[#1D2939]">In: {fmtIstTime(log.checkInAt)} {log.isLate && <span className="ml-1 rounded bg-[#FFFAEB] px-1.5 py-0.5 text-[11px] text-[#F79009]">Late</span>}</p>
                         <p className="text-[#667085]">Out: {fmtIstTime(log.checkOutAt)}</p>
-                        {log.breaks.length > 0 && (
+                        {log.breaks.some(interval => !interval.note.startsWith('Admin - unapproved absence: ')) && (
                           <div className="mt-1.5 space-y-1">
-                            {log.breaks.map((br, idx) => (
+                            {log.breaks.filter(interval => !interval.note.startsWith('Admin - unapproved absence: ')).map((br, idx) => (
                               <div key={idx} className={`rounded-lg px-2 py-1 text-[11px] ${br.inAt ? 'bg-[#ECF3FF] text-[#465FFF]' : 'bg-[#FFFAEB] font-semibold text-[#F79009]'}`}>
                                 <span>
                                   {br.inAt
@@ -424,7 +429,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                               </div>
                             ))}
                             {log.breakMinutes > 0 && (
-                              <p className="text-[11px] font-semibold text-[#667085]">Total Break: {fmtHours(log.breakMinutes)}</p>
+                              <p className="text-[11px] font-semibold text-[#667085]">Total break/absence deduction: {fmtHours(log.breakMinutes)}</p>
                             )}
                           </div>
                         )}
@@ -460,7 +465,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                         ) : <span className="text-[#98A2B3]">—</span>}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${log.checkInAt && !log.checkOutAt ? 'bg-[#FFFAEB] text-[#F79009]' : log.status === 'Present' ? 'bg-[#ECFDF3] text-[#12B76A]' : log.status === 'Half Day' ? 'bg-[#FFFAEB] text-[#F79009]' : 'bg-[#FEF3F2] text-[#F04438]'}`}>{displayStatus(log)}</span>
+                        <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${log.checkInAt && !log.checkOutAt ? 'bg-[#FFFAEB] text-[#F79009]' : log.status === 'Present' ? 'bg-[#ECFDF3] text-[#12B76A]' : log.status === 'Half Day' ? 'bg-[#FFFAEB] text-[#F79009]' : 'bg-[#FEF3F2] text-[#F04438]'}`}>{displayStatus(log)}</span>{hasAbsence && <span className="ml-1 inline-block rounded-full bg-amber-100 px-2 py-1 text-[11px] font-semibold text-amber-900">Unapproved absence</span>}
                         {flags.length > 0 && <div className="mt-2 flex max-w-sm flex-wrap gap-1">{flags.map(flag => <span key={flag} className={`rounded-md px-2 py-1 text-[11px] font-medium ${flag === 'ADMIN_REVIEW_APPROVED' ? 'bg-emerald-50 text-emerald-700' : flag === 'HALF_DAY_OUT' ? 'bg-slate-100 text-slate-700' : 'bg-amber-50 text-amber-800'}`}>{attendanceFlagLabel(flag)}</span>)}</div>}
                         {log.editedBy && <p className="mt-0.5 text-[11px] text-[#667085]">By {log.editedBy} · {log.editNote}</p>}
                       </td>
