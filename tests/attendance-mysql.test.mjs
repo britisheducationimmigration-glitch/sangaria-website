@@ -293,6 +293,39 @@ test('actual MySQL schema, punches, concurrency, corrections and frozen reports'
     state.now='2026-11-16T04:00:00Z'
   })
 
+  await t.test('payslip adjustments, manual paid totals and void/reissue reconcile with the ledger', async () => {
+    state.now='2026-11-16T12:30:00Z'
+    const emp=await save({name:'Slip reconciliation test',monthlySalary:25000,joiningDate:'2026-11-01'})
+    await api.updateAttendanceRecord({data:{employeeId:emp.id,mode:'create',workDate:'2026-11-02',status:'Present',checkInTime:'09:00',checkOutTime:'18:00',editNote:'Payslip fixture'}})
+    const range={employeeId:emp.id,from:'2026-11-01',to:'2026-11-16'}
+    await api.recordSalaryPayment({data:{...range,amount:100,paidOn:'2026-11-15',method:'Cash',reference:'existing',note:'Previously paid',requestKey:'payslip-existing-payment-0001'}})
+    const input={employeeId:emp.id,month:'2026-11',allowanceAmount:500,deductionAmount:100,paidAmount:600,paymentMethod:'UPI',paidOn:'2026-11-16',paymentRef:'slip-ref'}
+    await assert.rejects(api.issueSalarySlip({data:{...input,paidAmount:50}}),/lower than recorded/)
+    await assert.rejects(api.issueSalarySlip({data:{...input,paymentMethod:''}}),/payment method/)
+    const first=await api.issueSalarySlip({data:input})
+    assert.equal(first.netPay,1400);assert.equal(first.snapshot.paidAmount,600)
+    const after=await api.getEmployeeRangeReport({data:range})
+    assert.equal(after.report.earned,1400);assert.equal(after.report.adjustmentTotal,400)
+    assert.equal(after.throughToday.earned,1400);assert.equal(after.throughToday.paid,600);assert.equal(after.throughToday.pending,800)
+    assert.equal(after.payments.length,2);assert.equal(after.payments.find(p=>p.reference==='slip-ref').amount,500)
+    const earlier=await api.getEmployeeRangeReport({data:{...range,to:'2026-11-15'}})
+    assert.equal(earlier.report.adjustmentTotal,0);assert.equal(earlier.report.earned,1000)
+    await assert.rejects(api.issueSalarySlip({data:input}),/already exists/)
+    assert.equal((await api.getEmployeeRangeReport({data:range})).payments.length,2)
+    const workbook=await api.exportEmployeeRangeReport({data:range})
+    assert.ok([...workbookEntries(workbook.base64).values()].some(text=>text.includes('Slip Adjustments')))
+    await api.voidSalarySlip({data:{id:first.id,reason:'Correcting payslip, payment was actually made'}})
+    const voided=await api.getEmployeeRangeReport({data:range})
+    assert.equal(voided.throughToday.earned,1000);assert.equal(voided.throughToday.paid,600);assert.equal(voided.throughToday.pending,400)
+    const reissued=await api.issueSalarySlip({data:{...input,paidAmount:undefined}})
+    assert.equal(reissued.snapshot.paidAmount,600)
+    const final=await api.getEmployeeRangeReport({data:range})
+    assert.equal(final.throughToday.earned,1400);assert.equal(final.throughToday.paid,600);assert.equal(final.payments.length,2)
+    await api.permanentlyDeleteEmployee({data:{id:emp.id,confirmationName:emp.name}})
+    assert.equal((await pool.query('SELECT * FROM salary_slips WHERE employee_id=?',[emp.id]))[0].length,0)
+    state.now='2026-11-16T04:00:00Z'
+  })
+
   await t.test('employee range workbook and salary ledger are isolated, idempotent and reversible',async()=>{
     state.now='2026-11-16T12:30:00Z'
     const emp=await save({name:'Payment ledger test',monthlySalary:25000,joiningDate:'2026-11-01'})
