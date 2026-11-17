@@ -52,12 +52,12 @@ export function resolveEmployeePolicy(employee: EmployeeRecord, history: Employe
   return record ? { ...employee, ...record.policy, id: employee.id } : employee
 }
 
-export function buildEmployeeCycleSummaries(employees: EmployeeRecord[], logs: AttendanceLogRecord[], selectedMonth: string, todayIst: string, policies: EmployeePolicyHistory[] = []): EmployeeCycleSummary[] {
+export function buildEmployeeCycleSummaries(employees: EmployeeRecord[], logs: AttendanceLogRecord[], selectedMonth: string, todayIst: string, policies: EmployeePolicyHistory[] = [], window?: { start: string; end: string }): EmployeeCycleSummary[] {
   return employees.map(current => {
     // Cycle selection uses the policy effective at the beginning of the selected month.
     const employee = resolveEmployeePolicy(current, policies, `${selectedMonth}-01`)
     const { startDate, endDate, totalDays } = getEmployeeCycleRange(selectedMonth, employee.cycleStartDay)
-    const empLogs = logs.filter(l => l.employeeId === employee.id && l.workDate >= startDate && l.workDate <= endDate)
+    const empLogs = logs.filter(l => l.employeeId === employee.id && l.workDate >= startDate && l.workDate <= endDate && (!window || (l.workDate >= window.start && l.workDate <= window.end)))
     const byDate = new Map(empLogs.map(l => [l.workDate, l]))
     let workingDays = 0, payableDays = 0, earnedSalary = 0, absentDays = 0, offDayWorkMinutes = 0
     const eligible = (date: string, policy: EmployeeRecord) => (!policy.joiningDate || date >= policy.joiningDate) && (!policy.leavingDate || date <= policy.leavingDate)
@@ -69,6 +69,7 @@ export function buildEmployeeCycleSummaries(employees: EmployeeRecord[], logs: A
       if (isWorkDay(date, policy)) { workingDays++; scheduled.set(date, policy.monthlySalary) }
     }
     for (const [date, salary] of scheduled) {
+      if (window && (date < window.start || date > window.end)) continue
       const policy = resolveEmployeePolicy(employee, policies, date)
       if (!eligible(date, policy) || date > todayIst) continue
       const log = byDate.get(date)

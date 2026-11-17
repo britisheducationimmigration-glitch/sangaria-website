@@ -1,3 +1,4 @@
+import { attendanceDateWindow } from '../src/lib/attendance-date-filters.ts'
 import { dateOnly } from '../src/lib/date-only.ts'
 import { validCronAuthorization } from '../src/lib/cron-secret.server.ts'
 import test from 'node:test'
@@ -49,4 +50,10 @@ test('admin approval is informational and does not fabricate a location warning'
   assert.equal(attendanceNeedsReview({...log,inFlags:['FOREIGN_IP_US']},'2026-11-17'),true)
   assert.equal(attendanceNeedsReview({...log,checkOutAt:''},'2026-11-18'),true)
   assert.equal(attendanceFlagLabel('ADMIN_REVIEW_APPROVED'),'Reviewed by admin')
+})
+
+test('date presets preserve all-dates and handle IST week/month boundaries',()=>{
+  assert.deepEqual(attendanceDateWindow('all','2026-12-01','2026-12',''),{from:'',to:''})
+  assert.deepEqual(attendanceDateWindow('week','2026-12-01','2026-12',''),{from:'2026-11-30',to:'2026-12-01'})
+  assert.deepEqual(attendanceDateWindow('month','2028-02-29','2028-02',''),{from:'2028-02-01',to:'2028-02-29'})
 })

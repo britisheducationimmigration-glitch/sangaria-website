@@ -1,3 +1,5 @@
+import { PayrollLedger } from './PayrollLedger'
+import { attendanceDateWindow, type AttendancePreset } from '@/lib/attendance-date-filters'
 import { SavedAbsences } from './SavedAbsences'
 import { attendanceFlagLabel, attendanceNeedsReview, isAttendanceLocationFlag } from '@/lib/attendance-flags'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
@@ -6,7 +8,7 @@ import { getAttendancePhotoCleanupPreview, cleanOldAttendancePhotos, deleteEmplo
 import type { AdminAttendanceSnapshot, AttendanceLogRecord, AttendanceSettings, EmployeeRecord } from '@/lib/content-types'
 import { AttendanceEditModal, EmployeeFormModal, type EmployeeDraft, type LogDraft } from './AttendanceModals'
 
-type SubTab = 'logs' | 'monthly' | 'employees'
+type SubTab = 'logs' | 'monthly' | 'employees' | 'payments'
 
 function currentIstMonth() {
   const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit' }).formatToParts(new Date())
@@ -35,6 +37,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [datePreset, setDatePreset] = useState<AttendancePreset>('date')
   const [filterDate, setFilterDate] = useState('')
   const [filterEmpId, setFilterEmpId] = useState(0)
   const [reviewOnly, setReviewOnly] = useState(false)
@@ -60,7 +63,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
       if (!background) setSettingsDraft(next.settings)
       setLastUpdated(new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }))
       if (lastLoadedMonthRef.current !== targetMonth) {
-        setFilterDate(next.todayIst.startsWith(targetMonth) ? next.todayIst : `${targetMonth}-01`)
+        setFilterDate(previous => datePreset === 'date' && previous.startsWith(targetMonth) ? previous : next.todayIst.startsWith(targetMonth) ? next.todayIst : `${targetMonth}-01`)
         lastLoadedMonthRef.current = targetMonth
       }
     } catch (cause) {
@@ -79,13 +82,13 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
   useEffect(() => {
     try {
       const saved = window.sessionStorage.getItem('bei-attendance-subtab')
-      if (saved === 'logs' || saved === 'monthly' || saved === 'employees') setSubTab(saved)
+      if (saved === 'logs' || saved === 'monthly' || saved === 'employees' || saved === 'payments') setSubTab(saved)
     } catch { /* Browser storage is optional. */ }
   }, [])
 
   useEffect(() => {
     const refresh = async () => {
-      if (document.visibilityState !== 'visible' || busy || empDraft || logDraft || subTab === 'employees' || refreshInFlight.current) return
+      if (document.visibilityState !== 'visible' || busy || empDraft || logDraft || (subTab === 'employees' || subTab === 'payments') || refreshInFlight.current) return
       refreshInFlight.current = true
       try { await load(month, true) } finally { refreshInFlight.current = false }
     }
@@ -307,8 +310,9 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
   const todayLogs = logs.filter((l) => l.workDate === todayIst)
   const displayStatus = (log: AttendanceLogRecord) => log.checkInAt && !log.checkOutAt ? log.workDate < todayIst ? 'Missing OUT' : 'In Progress' : log.status
   const requiresReview = (log: AttendanceLogRecord) => attendanceNeedsReview(log, todayIst)
-  const visibleLogs = logs.filter((l) => (!filterDate || l.workDate === filterDate) && (!filterEmpId || l.employeeId === filterEmpId) && (!reviewOnly || requiresReview(l)))
-  const calendarLogs = logs.filter((l) => l.workDate.startsWith(month) && (!filterEmpId || l.employeeId === filterEmpId) && (!reviewOnly || requiresReview(l)))
+  const dateWindow = attendanceDateWindow(datePreset,todayIst,month,filterDate)
+  const visibleLogs = logs.filter((l) => (!dateWindow.from || l.workDate >= dateWindow.from) && (!dateWindow.to || l.workDate <= dateWindow.to) && (!filterEmpId || l.employeeId === filterEmpId) && (!reviewOnly || requiresReview(l)))
+  const calendarLogs = visibleLogs.filter((l) => l.workDate.startsWith(month) && (!filterEmpId || l.employeeId === filterEmpId) && (!reviewOnly || requiresReview(l)))
   const calendarStart = new Date(month + '-01T00:00:00Z')
   const calendarDays = new Date(Date.UTC(calendarStart.getUTCFullYear(), calendarStart.getUTCMonth() + 1, 0)).getUTCDate()
   const selectedEmployee = employees.find((employee) => employee.id === filterEmpId && employee.active) ?? employees.find(employee => employee.active) ?? employees[0]
@@ -322,7 +326,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
           <p className="mt-1 text-sm text-[#667085]">GPS and camera evidence, browser registration, correction history and employee payroll cycles.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <input type="month" value={month} onChange={(e) => { if (e.currentTarget.value) { setMonth(e.currentTarget.value); setFilterDate('') } }} aria-label="Select month" className="min-h-10 rounded-xl border border-[#E4E7EC] bg-white px-3 text-sm font-semibold text-[#1D2939]" />
+          <input type="month" value={month} onChange={(e) => { if (e.currentTarget.value) { setMonth(e.currentTarget.value); setFilterDate(''); setDatePreset('month') } }} aria-label="Select month" className="min-h-10 rounded-xl border border-[#E4E7EC] bg-white px-3 text-sm font-semibold text-[#1D2939]" />
           <button type="button" disabled={busy} onClick={() => void downloadExcel(0)} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#465FFF] px-4 py-2 text-sm font-semibold text-white hover:opacity-95 disabled:opacity-50">
             <Download className="size-4" /> Export Excel
           </button>
@@ -346,6 +350,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
         {([
           ['logs', 'Daily Logs, Selfie & History', MapPin],
           ['monthly', 'Monthly Cycle & Salary', CalendarDays],
+          ['payments', 'Employee Statement & Payments', Download],
           ['employees', 'Employees & Office GPS', Users],
         ] as const).map(([id, label, Icon]) => (
           <button key={id} type="button" onClick={() => { setSubTab(id); try { window.sessionStorage.setItem('bei-attendance-subtab', id) } catch { /* Optional UI state. */ } }} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition ${subTab === id ? 'bg-[#ECF3FF] text-[#465FFF]' : 'bg-white text-[#667085] border border-[#E4E7EC] hover:bg-[#F9FAFB]'}`}>
@@ -354,19 +359,20 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
         ))}
       </div>
 
+      {subTab === 'payments' && <PayrollLedger key={month} employees={employees} cycles={summaries} month={month} today={todayIst} onNotice={onNotice} />}
       {subTab === 'logs' && (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#E4E7EC] bg-white p-4">
             <div className="flex flex-wrap items-center gap-2">
-              <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.currentTarget.value)} aria-label="Filter date" className="min-h-10 rounded-xl border border-[#E4E7EC] px-3 text-xs font-semibold" />
-              {filterDate && <button type="button" onClick={() => setFilterDate('')} className="rounded-lg border border-[#E4E7EC] px-2.5 py-1.5 text-xs font-semibold text-[#667085]">All Dates</button>}
+              <input type="date" value={filterDate} onChange={(e) => { setFilterDate(e.currentTarget.value); setDatePreset('date'); if(e.currentTarget.value) setMonth(e.currentTarget.value.slice(0,7)) }} aria-label="Filter date" className="min-h-10 rounded-xl border border-[#E4E7EC] px-3 text-xs font-semibold" />
+              {([['today','Today'],['week','This Week'],['month','This Month'],['all','All Dates']] as const).map(([preset,label])=><button type="button" key={preset} aria-pressed={datePreset===preset} onClick={()=>{setDatePreset(preset);setFilterDate('');if(preset!=='all')setMonth(todayIst.slice(0,7))}} className={`min-h-10 rounded-xl border px-3 py-2 text-xs font-semibold ${datePreset===preset?'border-[#465FFF] bg-[#ECF3FF] text-[#465FFF]':'border-[#E4E7EC] text-[#667085]'}`}>{label}</button>)}
               <select value={filterEmpId} onChange={(e) => setFilterEmpId(Number(e.currentTarget.value))} aria-label="Filter employee" className="min-h-10 rounded-xl border border-[#E4E7EC] px-3 text-xs font-semibold">
                 <option value={0}>All Employees</option>
                 {employees.map((e) => <option key={e.id} value={e.id}>{e.name}{!e.active ? ' (Archived)' : ''}</option>)}
               </select>
             </div>
             <div className="flex flex-wrap gap-2">
-              <label className="flex items-center gap-2 rounded-lg border border-[#E4E7EC] px-3 py-2 text-xs font-semibold"><input type="checkbox" checked={reviewOnly} onChange={(e) => { setReviewOnly(e.target.checked); if (e.target.checked) setFilterDate('') }} />Needs correction</label>
+              <label className="flex items-center gap-2 rounded-lg border border-[#E4E7EC] px-3 py-2 text-xs font-semibold"><input type="checkbox" checked={reviewOnly} onChange={(e) => { setReviewOnly(e.target.checked); if (e.target.checked) { setFilterDate(''); setDatePreset('all') } }} />Needs correction</label>
               {(['table', 'calendar', 'timeline'] as const).map((view) => <button type="button" key={view} aria-pressed={logView === view} onClick={() => setLogView(view)} className={`rounded-lg border px-3 py-2 text-xs font-semibold capitalize ${logView === view ? 'border-[#465FFF] bg-[#ECF3FF] text-[#465FFF]' : 'border-[#E4E7EC]'}`}>{view}</button>)}
             </div>
             {employees.length > 0 && (
@@ -380,6 +386,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
             )}
           </div>
 
+          <p className="text-xs text-[#667085]">{datePreset==='all'?'All dates in the loaded payroll report period. Change report month for older records.':`Showing ${dateWindow.from || '-'} to ${dateWindow.to || '-'} (IST; week starts Monday).`} Export any employee/date range from Employee Statement &amp; Payments.</p>
           {logView === 'table' && <div className="overflow-x-auto rounded-2xl border border-[#E4E7EC] bg-white">
             <table className="w-full min-w-[820px] text-left text-xs">
               <thead className="border-b border-[#E4E7EC] bg-[#F9FAFB] text-[11px] uppercase text-[#667085]">

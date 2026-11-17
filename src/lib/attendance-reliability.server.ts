@@ -5,6 +5,15 @@ import { execute, getDb } from './db.server'
 let schema: Promise<void> | undefined
 export async function ensureAttendanceReliabilitySchema() {
   schema ??= (async () => {
+    await execute(`CREATE TABLE IF NOT EXISTS salary_payments (
+      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, employee_id BIGINT UNSIGNED NOT NULL,
+      request_key VARCHAR(64) NOT NULL UNIQUE, amount_paise BIGINT UNSIGNED NOT NULL,
+      paid_on VARCHAR(10) NOT NULL, period_from VARCHAR(10) NOT NULL, period_to VARCHAR(10) NOT NULL,
+      method VARCHAR(30) NOT NULL, reference_text VARCHAR(190) NOT NULL, note VARCHAR(500) NOT NULL,
+      recorded_by VARCHAR(190) NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      voided_by VARCHAR(190) NOT NULL DEFAULT '', void_reason VARCHAR(500) NOT NULL DEFAULT '',
+      voided_at TIMESTAMP NULL, INDEX employee_payments (employee_id, paid_on)
+    )`)
     await execute(`CREATE TABLE IF NOT EXISTS attendance_original_punches (
       log_id BIGINT UNSIGNED PRIMARY KEY, snapshot_json LONGTEXT NOT NULL,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP

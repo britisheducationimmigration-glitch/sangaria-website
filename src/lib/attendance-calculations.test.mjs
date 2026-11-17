@@ -1,3 +1,4 @@
+import { buildPayrollRange } from './payroll-range.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { getEmployeeCycleRange, calculateWorkMinutes, buildEmployeeCycleSummaries, classifyShift } from './attendance-calculations.ts'
@@ -91,4 +92,17 @@ test('half-day review uses the policy effective on the work date', () => {
     const policies = [{employeeId:1,effectiveDate:'2026-01-01',policy:{minimumHalfDayMinutes:minimum}},{employeeId:1,effectiveDate:'2026-12-01',policy:{minimumHalfDayMinutes:600}}]
     assert.equal(buildEmployeeCycleSummaries([employee],[entry],'2026-11','2026-12-01',policies)[0].reviewRequiredCount,expected)
   }
+})
+
+test('custom salary range retains full-cycle denominator and covers cross-month days',()=>{
+  const emp={...employee,cycleStartDay:5,monthlySalary:26000,joiningDate:'2026-01-01'}
+  const entries=[log('2026-11-05'),log('2026-12-01')]
+  const range=buildPayrollRange(emp,entries,[],'2026-11-05','2026-12-04','2026-12-05')
+  assert.equal(range.earned,2000);assert.equal(range.payableDays,2);assert.equal(range.days.length,30)
+  assert.equal(buildPayrollRange(emp,entries,[],'2026-12-01','2026-12-01','2026-12-05').earned,1000)
+  assert.equal(buildPayrollRange(emp,[{...log('2026-12-01'),checkOutAt:''}],[],'2026-12-01','2026-12-01','2026-12-05').earned,0)
+})
+test('range report blocks gaps introduced by a payroll cycle change',()=>{
+  const policies=[{employeeId:1,effectiveDate:'2026-01-01',policy:{cycleStartDay:1}},{employeeId:1,effectiveDate:'2026-12-01',policy:{cycleStartDay:5}}]
+  assert.throws(()=>buildPayrollRange(employee,[],policies,'2026-11-01','2026-12-31','2027-01-01'),/uncovered/)
 })

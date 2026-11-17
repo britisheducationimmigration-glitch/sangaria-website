@@ -293,4 +293,26 @@ test('actual MySQL schema, punches, concurrency, corrections and frozen reports'
     state.now='2026-11-16T04:00:00Z'
   })
 
+  await t.test('employee range workbook and salary ledger are isolated, idempotent and reversible',async()=>{
+    state.now='2026-11-16T12:30:00Z'
+    const emp=await save({name:'Payment ledger test',monthlySalary:25000,joiningDate:'2026-11-01'})
+    await api.updateAttendanceRecord({data:{employeeId:emp.id,mode:'create',workDate:'2026-11-02',status:'Present',checkInTime:'09:00',checkOutTime:'18:00',editNote:'Salary report fixture'}})
+    const range={employeeId:emp.id,from:'2026-11-01',to:'2026-11-16'}
+    const before=await api.getEmployeeRangeReport({data:range});assert.equal(before.report.earned,1000);assert.equal(before.report.days.length,16)
+    const payment={...range,amount:300.50,paidOn:'2026-11-16',method:'UPI',reference:'test-reference',note:'Salary already paid',requestKey:'test-ledger-request-0001'}
+    const [first,second]=await Promise.all([api.recordSalaryPayment({data:payment}),api.recordSalaryPayment({data:payment})]);assert.equal(first.id,second.id)
+    await assert.rejects(api.recordSalaryPayment({data:{...payment,amount:301}}),/request changed/)
+    await assert.rejects(api.recordSalaryPayment({data:{...payment,requestKey:'test-ledger-request-0002',amount:0}}),/positive/)
+    const after=await api.getEmployeeRangeReport({data:range});assert.equal(after.throughToday.paid,300.50);assert.equal(after.throughToday.pending,699.50);assert.equal(after.payments.length,1)
+    const oneDay=await api.getEmployeeRangeReport({data:{...range,from:'2026-11-02',to:'2026-11-02'}});assert.equal(oneDay.allocatedPaid,0);assert.equal(oneDay.overlappingPayments,1)
+    const workbook=await api.exportEmployeeRangeReport({data:range});assert.ok(workbook.filename.includes('2026-11-01-to-2026-11-16'));const files=workbookEntries(workbook.base64);assert.ok([...files.values()].some(text=>text.includes('Salary Summary')))
+    state.role='enquiry_manager';await assert.rejects(api.getEmployeeRangeReport({data:range}),/Forbidden/);await assert.rejects(api.recordSalaryPayment({data:payment}),/Forbidden/);await assert.rejects(api.reverseSalaryPayment({data:{id:first.id,reason:'Wrong'}}),/Forbidden/);state.role='super_admin'
+    await api.reverseSalaryPayment({data:{id:first.id,reason:'Incorrect amount; retain original evidence'}})
+    const reversed=await api.getEmployeeRangeReport({data:range});assert.equal(reversed.throughToday.paid,0);assert.equal(reversed.throughToday.pending,1000);assert.equal(reversed.payments[0].voided,true)
+    await api.recordSalaryPayment({data:{...payment,amount:1200,requestKey:'test-ledger-request-0003'}})
+    const advance=await api.getEmployeeRangeReport({data:range});assert.equal(advance.throughToday.pending,0);assert.equal(advance.throughToday.advance,200)
+    await api.permanentlyDeleteEmployee({data:{id:emp.id,confirmationName:emp.name}});assert.equal((await pool.query('SELECT * FROM salary_payments WHERE employee_id=?',[emp.id]))[0].length,0)
+    state.now='2026-11-16T04:00:00Z'
+  })
+
 })

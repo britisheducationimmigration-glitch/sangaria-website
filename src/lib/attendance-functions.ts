@@ -1,3 +1,4 @@
+import { buildPayrollRange } from './payroll-range'
 import { Buffer } from 'node:buffer'
 import { createMiddleware, createServerFn } from '@tanstack/react-start'
 import { getRequestHeader } from '@tanstack/react-start/server'
@@ -338,7 +339,7 @@ async function buildAdminAttendanceSnapshot(selectedMonth: string, lightweight =
     await ensureAttendanceSchema()
     await ensureAttendanceReliabilitySchema()
     const [year, month] = selectedMonth.split('-').map(Number)
-    const rangeStart = new Date(Date.UTC(year, month - 1, 1)).toISOString().slice(0, 10)
+    const rangeStart = new Date(Date.UTC(year, month - 1, 1) - 6 * 86_400_000).toISOString().slice(0, 10)
     const rangeEnd = new Date(Date.UTC(year, month + 1, 0)).toISOString().slice(0, 10)
 
     const [settings, empRows, logRows] = await Promise.all([
@@ -532,6 +533,7 @@ export const permanentlyDeleteEmployee = createServerFn({ method: 'POST' })
       await execute('DELETE FROM attendance_cycle_snapshots WHERE employee_id = ?', [data.id])
       await execute('DELETE FROM employee_policy_audit WHERE employee_id = ?', [data.id])
       await execute('DELETE FROM employee_policy_history WHERE employee_id = ?', [data.id])
+      await execute('DELETE FROM salary_payments WHERE employee_id = ?', [data.id])
       await execute('DELETE FROM employees WHERE id = ?', [data.id])
       return { ok: true }
     })
@@ -881,3 +883,89 @@ export const cleanOldAttendancePhotos = createServerFn({ method: 'POST' })
     const result = await execute('UPDATE attendance_logs SET in_photo_data = NULL, out_photo_data = NULL WHERE work_date < ? AND (in_photo_data IS NOT NULL OR out_photo_data IS NOT NULL) LIMIT 2000', [data.cutoff])
     return { cleared: result.affectedRows }
   })
+function validPayrollDate(value: unknown) {
+  const date = stringValue(value, 10), parsed = new Date(date + 'T00:00:00Z')
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0,10) !== date) throw new Error('Valid payroll date is required')
+  return date
+}
+const rangeReportInput = (raw: unknown) => {
+  const input=(raw??{}) as Record<string,unknown>, employeeId=Math.floor(numberValue(input.employeeId)), from=validPayrollDate(input.from), to=validPayrollDate(input.to)
+  if (employeeId<=0 || to<from || to>todayIstDate() || Date.parse(to)-Date.parse(from)>366*86400000) throw new Error('Select one employee and a past/current date range of up to 366 days')
+  return {employeeId,from,to}
+}
+
+async function buildEmployeeRangeReport(data: ReturnType<typeof rangeReportInput>) {
+  await ensureAttendanceSchema(); await ensureAttendanceReliabilitySchema()
+  const employees=await queryRows('SELECT * FROM employees WHERE id = ? LIMIT 1',[data.employeeId])
+  if (!employees.length) throw new Error('Employee not found')
+  const employee=mapEmployeeRow(employees[0]), policies=await readEmployeePolicies(employee.id)
+  const logRows=await queryRows(`SELECT ${LOG_COLS} FROM attendance_logs l JOIN employees e ON e.id=l.employee_id WHERE l.employee_id=? AND l.work_date<=? ORDER BY l.work_date`,[employee.id,todayIstDate()])
+  const logs=logRows.map(row=>mapAttendanceRow(row))
+  const snapshots=await queryRows('SELECT cycle_start_date, cycle_end_date, snapshot_json FROM attendance_cycle_snapshots WHERE employee_id=?',[employee.id])
+  const calculate=(from:string,to:string,includeDays:boolean) => {
+    const report=buildPayrollRange(employee,logs,policies,from,to,todayIstDate(),includeDays)
+    let partialFinalized=false
+    for (const row of snapshots) {
+      const start=String(row.cycle_start_date),end=String(row.cycle_end_date)
+      if (end<from||start>to) continue
+      if (start>=from&&end<=to) {
+        const stored=parseSnapshot(row.snapshot_json).summary
+        const live=report.cycles.find(c=>c.cycleStartDate===start&&c.cycleEndDate===end)
+        if (!live) throw new Error('Finalized cycle conflicts with current payroll boundaries; review the policy before reporting')
+        report.earned+=stored.earnedSalary-live.earnedSalary
+      } else partialFinalized=true
+    }
+    return {...report,partialFinalized}
+  }
+  const report=calculate(data.from,data.to,true)
+  const baseline=[employee.joiningDate,logs[0]?.workDate,data.from].filter(Boolean).sort()[0]!
+  const throughToday=calculate(baseline,todayIstDate(),false)
+  const paymentRows=await queryRows('SELECT * FROM salary_payments WHERE employee_id=? ORDER BY paid_on DESC,id DESC',[employee.id])
+  const payments=paymentRows.map(row=>({id:Number(row.id),amount:Number(row.amount_paise)/100,paidOn:String(row.paid_on),from:String(row.period_from),to:String(row.period_to),method:String(row.method),reference:String(row.reference_text),note:String(row.note),recordedBy:String(row.recorded_by),voided:Boolean(row.voided_at),voidReason:String(row.void_reason)}))
+  const active=payments.filter(p=>!p.voided&&p.paidOn<=todayIstDate())
+  const paid=active.reduce((n,p)=>n+Math.round(p.amount*100),0)/100
+  const allocated=active.filter(p=>p.from>=data.from&&p.to<=data.to).reduce((n,p)=>n+Math.round(p.amount*100),0)/100
+  const overlappingPayments=active.filter(p=>p.from<=data.to&&p.to>=data.from&&!(p.from>=data.from&&p.to<=data.to)).length
+  return {employee:{id:employee.id,name:employee.name},report,baseline,throughToday:{earned:throughToday.earned,paid,pending:Math.max(0,throughToday.earned-paid),advance:Math.max(0,paid-throughToday.earned),missingOut:throughToday.missingOut,reviewRequired:throughToday.reviewRequired},allocatedPaid:allocated,rangePending:Math.max(0,report.earned-allocated),overlappingPayments,payments}
+}
+
+export const getEmployeeRangeReport = createServerFn({method:'GET'}).middleware([superAdminMiddleware]).validator(rangeReportInput).handler(async({data})=>buildEmployeeRangeReport(data))
+
+export const recordSalaryPayment = createServerFn({method:'POST'}).middleware([superAdminMiddleware]).validator((raw:unknown)=>{
+  const input=(raw??{}) as Record<string,unknown>, employeeId=Math.floor(numberValue(input.employeeId)), amount=Number(input.amount), paidOn=validPayrollDate(input.paidOn), from=validPayrollDate(input.from), to=validPayrollDate(input.to)
+  const method=stringValue(input.method,30), reference=stringValue(input.reference,190), note=stringValue(input.note,500), requestKey=stringValue(input.requestKey,64)
+  if(employeeId<=0||!Number.isFinite(amount)||amount<=0||amount>10000000||Math.abs(amount*100-Math.round(amount*100))>0.00001) throw new Error('Enter a positive payment amount with up to two decimals')
+  if(to<from||paidOn>todayIstDate()||to>todayIstDate()) throw new Error('Payment and salary period must not be in the future')
+  if(!['Cash','Bank transfer','UPI','Cheque','Other'].includes(method)||!note||! /^[a-zA-Z0-9-]{16,64}$/.test(requestKey)) throw new Error('Payment method, note and request ID are required')
+  return {employeeId,amountPaise:Math.round(amount*100),paidOn,from,to,method,reference,note,requestKey}
+}).handler(async({data,context})=>{
+  await ensureAttendanceSchema();await ensureAttendanceReliabilitySchema()
+  return attendanceTransaction(async({queryRows,execute})=>{
+    const employees=await queryRows('SELECT id FROM employees WHERE id=? FOR UPDATE',[data.employeeId]);if(!employees.length) throw new Error('Employee not found')
+    const existing=await queryRows('SELECT * FROM salary_payments WHERE request_key=?',[data.requestKey])
+    if(existing.length){const previous=existing[0];if(Number(previous.employee_id)!==data.employeeId||Number(previous.amount_paise)!==data.amountPaise||String(previous.paid_on)!==data.paidOn||String(previous.period_from)!==data.from||String(previous.period_to)!==data.to||String(previous.method)!==data.method||String(previous.reference_text)!==data.reference||String(previous.note)!==data.note) throw new Error('Payment request changed; reload and retry');return {id:Number(previous.id)}}
+    const result=await execute('INSERT INTO salary_payments (employee_id,request_key,amount_paise,paid_on,period_from,period_to,method,reference_text,note,recorded_by) VALUES (?,?,?,?,?,?,?,?,?,?)',[data.employeeId,data.requestKey,data.amountPaise,data.paidOn,data.from,data.to,data.method,data.reference,data.note,context.user.email]);return {id:Number(result.insertId)}
+  })
+})
+
+export const reverseSalaryPayment = createServerFn({method:'POST'}).middleware([superAdminMiddleware]).validator((raw:unknown)=>{
+  const input=(raw??{}) as Record<string,unknown>,id=Math.floor(numberValue(input.id)),reason=stringValue(input.reason,500)
+  if(id<=0||!reason) throw new Error('Payment and reversal reason are required');return {id,reason}
+}).handler(async({data,context})=>{
+  await ensureAttendanceReliabilitySchema()
+  return attendanceTransaction(async({queryRows,execute})=>{
+    const payment=await queryRows('SELECT employee_id FROM salary_payments WHERE id=?',[data.id]);if(!payment.length)throw new Error('Payment not found')
+    await queryRows('SELECT id FROM employees WHERE id=? FOR UPDATE',[Number(payment[0].employee_id)])
+    await execute("UPDATE salary_payments SET voided_by=?,void_reason=?,voided_at=UTC_TIMESTAMP() WHERE id=? AND voided_at IS NULL",[context.user.email,data.reason,data.id]);return {ok:true}
+  })
+})
+
+export const exportEmployeeRangeReport = createServerFn({method:'GET'}).middleware([superAdminMiddleware]).validator(rangeReportInput).handler(async({data})=>{
+  const value=await buildEmployeeRangeReport(data),{createLeadsWorkbook}=await import('./xlsx.server')
+  const time=(iso:string)=>iso?new Date(iso).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}):''
+  return {filename:`bei-attendance-emp-${data.employeeId}-${data.from}-to-${data.to}.xlsx`,base64:createLeadsWorkbook([
+    {name:'Salary Summary',rows:[['Employee',value.employee.name],['From',data.from],['To',data.to],['Earned INR',value.report.earned],['Payable days',value.report.payableDays],['Net work minutes',value.report.workMinutes],['Payments fully allocated to range INR',value.allocatedPaid],['Range pending INR',value.overlappingPayments?'Review overlapping payment periods':value.rangePending],['Partially overlapping payments (not apportioned)',value.overlappingPayments],['Till-date earned INR',value.throughToday.earned],['Till-date paid INR',value.throughToday.paid],['Till-date pending INR',value.throughToday.pending],['Advance / overpaid INR',value.throughToday.advance],['Ledger baseline',value.baseline],['Missing OUT',value.report.missingOut],['Review required',value.report.reviewRequired],['Partial finalized cycle estimate',value.report.partialFinalized?'Yes':'No'],['Note','Day estimates are rounded; range total is calculated per full payroll-cycle denominator. No overtime pay.']],widths:[48,85]},
+    {name:'Daily Attendance',rows:[['Date','Status','IN IST','OUT IST','Net minutes','Break/absence minutes','Payable days','Estimated earned INR','Note'],...value.report.days.map(d=>[d.date,d.status,time(d.checkIn),time(d.checkOut),d.workMinutes,d.deductedMinutes,d.payableDays,d.earned,d.note])],headerRows:[1],widths:[14,28,25,25,16,24,16,24,50]},
+    {name:'Payments',rows:[['ID','Paid on','Amount INR','Period from','Period to','Method','Reference','Note','Recorded by','Reversed','Reversal reason'],...value.payments.map(p=>[p.id,p.paidOn,p.amount,p.from,p.to,p.method,p.reference,p.note,p.recordedBy,p.voided?'Yes':'No',p.voidReason])],headerRows:[1],widths:[10,14,18,14,14,20,30,45,35,12,45]}
+  ])}
+})
