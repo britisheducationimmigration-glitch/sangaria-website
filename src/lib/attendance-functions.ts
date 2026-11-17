@@ -1130,12 +1130,13 @@ export const issueSalarySlip = createServerFn({ method: 'POST' })
       }
 
       const [paymentRows, settingsRows, priorRows] = await Promise.all([
-        queryRows('SELECT amount_paise, paid_on, method, reference_text FROM salary_payments WHERE employee_id = ? AND voided_at IS NULL AND period_from >= ? AND period_to <= ? ORDER BY paid_on DESC, id DESC', [employee.id, summary.cycleStartDate, summary.cycleEndDate]),
+        queryRows('SELECT amount_paise, paid_on, method, reference_text, period_from, period_to FROM salary_payments WHERE employee_id = ? AND voided_at IS NULL AND period_from <= ? AND period_to >= ? ORDER BY paid_on DESC, id DESC', [employee.id, summary.cycleEndDate, summary.cycleStartDate]),
         queryRows('SELECT public_settings_json FROM site_settings WHERE id = 1 LIMIT 1'),
         queryRows('SELECT COUNT(*) AS cnt FROM salary_slips WHERE employee_id = ? AND selected_month = ?', [employee.id, data.month]),
       ])
 
       const siteSettings = readSiteSettings(settingsRows[0])
+      if (paymentRows.some(row => String(row.period_from) < summary.cycleStartDate || String(row.period_to) > summary.cycleEndDate)) throw new Error('A payment period overlaps this salary cycle. Correct its allocation in payment history before issuing the slip.')
       const supportEmail = siteSettings.emails.find((e) => e.toLowerCase().startsWith('support@')) ?? siteSettings.emails[1] ?? siteSettings.emails[0] ?? ''
       const ledgerPaidAmount = paymentRows.reduce((sum, row) => sum + Number(row.amount_paise), 0) / 100
       const paidAmount = data.paidAmountOverride ?? ledgerPaidAmount

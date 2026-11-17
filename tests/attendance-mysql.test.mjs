@@ -321,6 +321,9 @@ test('actual MySQL schema, punches, concurrency, corrections and frozen reports'
     assert.equal(reissued.snapshot.paidAmount,600)
     const final=await api.getEmployeeRangeReport({data:range})
     assert.equal(final.throughToday.earned,1400);assert.equal(final.throughToday.paid,600);assert.equal(final.payments.length,2)
+    await api.voidSalarySlip({data:{id:reissued.id,reason:'Testing payment allocation guard'}})
+    await api.recordSalaryPayment({data:{...range,from:'2026-10-31',amount:10,paidOn:'2026-11-16',method:'Cash',reference:'overlap',note:'Allocation test',requestKey:'payslip-overlapping-payment-0001'}})
+    await assert.rejects(api.issueSalarySlip({data:input}),/overlaps this salary cycle/)
     await api.permanentlyDeleteEmployee({data:{id:emp.id,confirmationName:emp.name}})
     assert.equal((await pool.query('SELECT * FROM salary_slips WHERE employee_id=?',[emp.id]))[0].length,0)
     state.now='2026-11-16T04:00:00Z'

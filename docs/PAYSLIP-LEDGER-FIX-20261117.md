@@ -9,6 +9,7 @@ Changes are based on main `25dcf5c` and prepared on `preview/admin-theme-attenda
 - The optional paid field is the **total already paid for that cycle**, not a new payment amount. If 100 is already recorded and 600 is entered, only an additional 500 is saved to payment history. Leave it blank to derive the total from existing active payments.
 - Additional payment and payslip save share the same employee lock and database transaction. Duplicate issuance is rejected. A failed save rolls back both. A method is required for an additional payment; date defaults to today if omitted. Payment period ends at today for a current cycle. Future-cycle manual payments are rejected.
 - A lower paid total is rejected; correct an incorrect recorded payment through its existing reversal flow. Voiding a payslip does not reverse money actually paid. The UI explains this and warns against deducting an already recorded advance again.
+- Payments straddling cycle boundaries block issuance until their allocation is corrected, so a manual total cannot silently duplicate an overlapping payment.
 - Impossible dates, future payment dates, negative/nonfinite/oversized amounts and amounts with more than two decimal places are rejected server-side. Valid leap dates use the existing date helper.
 
 ## Historical data
