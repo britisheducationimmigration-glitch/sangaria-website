@@ -46,7 +46,7 @@ test('actual MySQL schema, punches, concurrency, corrections and frozen reports'
     await assert.rejects(punch('out'), /Check In/)
     await api.saveAttendanceSettings({data:{...settings,requireSelfie:true}})
     await assert.rejects(punch('in'), /selfie/)
-    await assert.rejects(punch('in',{photoBase64:'aGVsbG8='}), /face and head-turn/)
+    await assert.rejects(punch('in',{photoBase64:'aGVsbG8='}), /face and blink/)
     await api.saveAttendanceSettings({data:settings})
     const [rows] = await pool.query('SELECT bound_device_hash FROM employees WHERE id=?',[employee.id])
     assert.equal(rows[0].bound_device_hash,'')

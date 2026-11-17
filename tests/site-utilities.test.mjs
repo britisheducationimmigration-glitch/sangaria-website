@@ -1,5 +1,16 @@
 import { attendanceDateWindow } from '../src/lib/attendance-date-filters.ts'
-import { faceTurnScore } from '../src/lib/face-challenge.ts'
+import { faceTurnScore, advanceBlink } from '../src/lib/face-challenge.ts'
+
+test('blink requires open then both closed then reopened eyes', () => {
+  assert.equal(advanceBlink(0,0.8,0.8),0)
+  assert.equal(advanceBlink(0,0.1,0.1),1)
+  assert.equal(advanceBlink(1,0.1,0.1),1)
+  assert.equal(advanceBlink(1,0.8,0.1),1)
+  assert.equal(advanceBlink(1,0.8,0.8),2)
+  assert.equal(advanceBlink(2,0.8,0.8),2)
+  assert.equal(advanceBlink(2,0.1,0.1),3)
+  assert.equal(advanceBlink(2,NaN,0.1),0)
+})
 
 test('basic face check rejects absent, multiple, tiny and invalid faces', () => {
   const face = Array.from({length:264},()=>({x:0.5,y:0.5,z:0}))

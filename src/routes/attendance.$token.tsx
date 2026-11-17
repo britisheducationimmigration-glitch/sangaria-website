@@ -1,5 +1,5 @@
 import { Logo } from '@/components/Logo'
-import { checkFaceTurn } from '@/lib/face-challenge'
+import { checkFaceBlink } from '@/lib/face-challenge'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { CalendarDays, Camera, CheckCircle2, ChevronDown, Clock, Lock, MapPin, RefreshCw, ShieldAlert } from 'lucide-react'
@@ -183,7 +183,7 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
     if (!video || !streamRef.current || video.videoWidth < 100) {
       throw new Error('Front camera is not ready. Tap Restart Camera and look into the frame.')
     }
-    await checkFaceTurn(video, setStepLabel)
+    await checkFaceBlink(video, setStepLabel)
    const canvas = document.createElement('canvas')
     const scale = Math.min(1, 360 / Math.max(video.videoWidth, video.videoHeight))
     const w = Math.max(160, Math.round(video.videoWidth * scale))

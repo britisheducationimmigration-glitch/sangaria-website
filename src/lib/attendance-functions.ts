@@ -218,7 +218,7 @@ export const markEmployeeAttendance = createServerFn({ method: 'POST' })
     if (settings.requireSelfie && needsSelfie && !data.photoBase64) {
       throw new Error('Live camera selfie is required to mark attendance.')
     }
-    if (settings.requireSelfie && needsSelfie && !data.basicFaceCheck) throw new Error('Complete the face and head-turn check before marking attendance.')
+    if (settings.requireSelfie && needsSelfie && !data.basicFaceCheck) throw new Error('Complete the face and blink check before marking attendance.')
     if (data.photoBase64) {
       photoBuffer = Buffer.from(data.photoBase64, 'base64')
       const isWebp = photoBuffer.length > 12 && photoBuffer.toString('ascii', 0, 4) === 'RIFF' && photoBuffer.toString('ascii', 8, 12) === 'WEBP'
