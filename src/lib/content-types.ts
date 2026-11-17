@@ -145,6 +145,8 @@ export type AdminSnapshot = {
     newLast7Days: number
     demoRequests: number
     byStatus: Record<string, number>
+    byMonth: Record<string, number>
+    topCountries: Array<{ country: string; count: number }>
     bySource: Record<string, number>
   }
 }
@@ -154,4 +156,195 @@ export type AdminUser = {
   email: string
   name: string
   role: AdminRole
+}
+export type AttendanceStatus = 'Present' | 'Half Day' | 'Review Required' | 'Leave' | 'Paid Leave' | 'Unpaid Leave' | 'Absent'
+
+export type EmployeeRecord = {
+  id: number
+  name: string
+  designation: string
+  phone: string
+  email: string
+  accessToken: string
+  hasPin: boolean
+  deviceBound: boolean
+  cycleStartDay: number
+  monthlySalary: number
+  joiningDate?: string
+  leavingDate?: string
+  halfDayMinutes?: number
+  minimumHalfDayMinutes?: number
+  lateGraceMinutes?: number
+  weeklyOffDays?: number[]
+  holidayDates?: string[]
+  expectedInTime: string
+  expectedOutTime: string
+  officeOnly: boolean
+  active: boolean
+  createdAt: string
+}
+
+export type AttendanceEditHistoryRecord = {
+  id: number
+  attendanceLogId: number
+  employeeId: number
+  workDate: string
+  editorName: string
+  editorEmail: string
+  action: 'create' | 'edit'
+  before?: Record<string, string | number | boolean | null> | null
+  after?: Record<string, string | number | boolean | null> | null
+  changesSummary: string
+  reason: string
+  createdAt: string
+}
+export type AttendanceBreakRecord = {
+  outAt: string
+  inAt: string
+  outLat: number | null
+  outLng: number | null
+  outDistanceM: number | null
+  inLat: number | null
+  inLng: number | null
+  inDistanceM: number | null
+  note: string
+}
+export type AttendanceLogRecord = {
+  id: number
+  employeeId: number
+  employeeName: string
+  designation: string
+  workDate: string
+  checkInAt: string
+  checkOutAt: string
+  inLat: number | null
+  inLng: number | null
+  inAccuracyM: number | null
+  inDistanceM: number | null
+  inIp: string
+  inIpCity: string
+  inIpCountry: string
+  inFlags: string[]
+  outLat: number | null
+  outLng: number | null
+  outAccuracyM: number | null
+  outDistanceM: number | null
+  outIp: string
+  outIpCity: string
+  outIpCountry: string
+  outFlags: string[]
+   inPhotoSrc: string
+  outPhotoSrc: string
+  status: AttendanceStatus
+  workMinutes: number
+  breakMinutes: number
+  breaks: AttendanceBreakRecord[]
+  isLate: boolean
+  editedBy: string
+  editNote: string
+  updatedAt: string
+  editHistory: AttendanceEditHistoryRecord[]
+}
+
+export type AttendanceSettings = {
+  officeName: string
+  officeLat: number
+  officeLng: number
+  allowedRadiusM: number
+  maxAccuracyM: number
+  blockVpnOrForeignIp: boolean
+  officeWifiIp: string
+  requireOfficeWifiIp: boolean
+  requireSelfie: boolean
+}
+
+export type EmployeeCycleSummary = {
+  employee: EmployeeRecord
+  cycleStartDate: string
+  cycleEndDate: string
+  totalDays: number
+  sundaysCount: number
+  workingDays: number
+  presentDays: number
+  halfDays: number
+  leaveDays: number
+  absentDays: number
+  payableDays: number
+  perDaySalary: number
+  earnedSalary: number
+  lateCount: number
+  flaggedCount: number
+  missedCheckOutCount: number
+  reviewRequiredCount?: number
+  finalized?: boolean
+  offDayWorkMinutes?: number
+  totalWorkMinutes: number
+}
+export type AdminAttendanceSnapshot = {
+  settings: AttendanceSettings
+  employees: EmployeeRecord[]
+  logs: AttendanceLogRecord[]
+  summaries: EmployeeCycleSummary[]
+  selectedMonth: string
+  todayIst: string
+}
+
+export type SalarySlipSnapshot = {
+  companyName: string
+  companyAddress: string
+  companyPhone: string
+  companyEmail: string
+  employeeCode: string
+  employeeName: string
+  designation: string
+  employeeEmail: string
+  employeePhone: string
+  joiningDate: string
+  cycleStartDay: number
+  shiftTime: string
+  monthLabel: string
+  cycleStartDate: string
+  cycleEndDate: string
+  totalDays: number
+  workingDays: number
+  weeklyOffsAndHolidays: number
+  presentDays: number
+  halfDays: number
+  paidLeaveDays: number
+  unpaidAndAbsentDays: number
+  payableDays: number
+  totalWorkMinutes: number
+  monthlyBaseSalary: number
+  earnedSalary: number
+  allowanceLabel: string
+  allowanceAmount: number
+  grossEarnings: number
+  deductionLabel: string
+  deductionAmount: number
+  totalDeductions: number
+  netPay: number
+  netPayWords: string
+  paidAmount: number
+  paymentMethod: string
+  paymentRef: string
+  paidOn: string
+  notes: string
+}
+
+export type SalarySlipRecord = {
+  id: number
+  slipNumber: string
+  employeeId: number
+  employeeName: string
+  selectedMonth: string
+  cycleStartDate: string
+  cycleEndDate: string
+  netPay: number
+  status: 'issued' | 'voided'
+  issuedBy: string
+  issuedAt: string
+  voidedBy: string
+  voidReason: string
+  voidedAt: string
+  snapshot: SalarySlipSnapshot
 }

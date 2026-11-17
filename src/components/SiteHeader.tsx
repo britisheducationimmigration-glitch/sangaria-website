@@ -39,7 +39,7 @@ export function SiteHeader({ settings }: { settings: SiteSettings }) {
             <span>📍 Sangaria, Hanumangarh · {settings.officeHours}</span>
             <span className="flex gap-5">
               {settings.phones.map((p) => (
-                <a key={p} href={`tel:${p.startsWith('+') ? p : '+91' + p}`} className="hover:text-coral-400">
+                <a key={p} href={`tel:${(p.startsWith('+') ? p : '+91' + p).replace(/[^\d+]/g, '')}`} className="hover:text-coral-400">
                   {p.startsWith('+') ? p : '+91 ' + p}
                 </a>
               ))}
@@ -65,7 +65,7 @@ export function SiteHeader({ settings }: { settings: SiteSettings }) {
             </nav>
             <div className="flex items-center gap-2">
               <a
-                href={`tel:${settings.phones[0].startsWith('+') ? settings.phones[0] : '+91' + settings.phones[0]}`}
+                href={`tel:${(settings.phones[0].startsWith('+') ? settings.phones[0] : '+91' + settings.phones[0]).replace(/[^\d+]/g, '')}`}
                 className="group grid size-10 shrink-0 place-items-center rounded-full border border-forest-900/15 text-forest-900 transition-colors hover:border-coral-500 hover:bg-coral-500 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500 active:bg-coral-600 sm:size-11"
                 aria-label="Call us"
               >

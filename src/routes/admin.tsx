@@ -1,9 +1,36 @@
+import { Logo } from '@/components/Logo'
+import { getEnquiriesPage } from '@/lib/admin-functions'
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { Phone, MessageCircle } from 'lucide-react'
+import {
+  BarChart3,
+  BookOpen,
+  CalendarCheck2,
+  Coins,
+  FileText,
+  Globe,
+  GraduationCap,
+  Inbox,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  MessageCircle,
+  Newspaper,
+  Phone,
+  Search,
+  Settings,
+  ShieldAlert,
+  Sparkles,
+  Trophy,
+  UserCog,
+  Users,
+  X,
+} from 'lucide-react'
 import { getAdminCashflow, getAdminSnapshot, addEnquiryActivity, deleteAdminUser, deleteBatch, deleteEnquiry, deleteEnquiryActivity, deletePost, exportEnquiries, saveAdminUser, saveBatch, saveCashflow, savePost, updateEnquiry, updateEnquiryActivity, updateSettings, saveFaq, saveTrustStat, saveContactDetails } from '@/lib/admin-functions'
+import { AttendancePanel } from '@/components/admin/AttendancePanel'
 import { CertificatePanel } from '@/components/admin/CertificatePanel'
 import { StoryEditor } from '@/components/admin/StoryEditor'
+import { TailAdminDashboard } from '@/components/admin/TailAdminDashboard'
 import type { AdminPost, AdminRole, AdminSnapshot, AdminStory, AdminUser, CoachingBatch, Enquiry, EnquiryStatus } from '@/lib/content-types'
 import { defaultCashflowData, CountryCashflow } from '@/data/cashflow'
 import { formatBatchStartDate, getBatchDateStatus, isValidBatchStartDate } from '@/lib/batch-dates'
@@ -13,11 +40,14 @@ import { StudyPlanPanel } from '@/components/admin/StudyPlanPanel'
 import { applyScheduledCashflowPolicy, getPolicyWatchStatus, policyWatchItems } from '@/data/policy-watch'
 
 export const Route = createFileRoute('/admin')({
-  head: () => ({ meta: [{ title: 'Admin · British Education and Immigration' }, { name: 'robots', content: 'noindex,nofollow,noarchive' }] }),
+  head: () => ({
+    meta: [{ title: 'Admin · British Education and Immigration' }, { name: 'robots', content: 'noindex,nofollow,noarchive' }],
+    links: [{ rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap' }],
+  }),
   component: AdminPage,
 })
 
-type Tab = 'enquiries' | 'news' | 'stories' | 'certificates' | 'batches' | 'budget' | 'settings' | 'users' | 'demo' | 'review' | 'reports' | 'policy' | 'countries' | 'studyPlans'
+type Tab = 'dashboard' | 'enquiries' | 'attendance' | 'news' | 'stories' | 'certificates' | 'batches' | 'budget' | 'settings' | 'users' | 'demo' | 'review' | 'reports' | 'policy' | 'countries' | 'studyPlans'
 
 const roleLabels: Record<AdminRole, string> = { super_admin: 'Super Admin', content_editor: 'Content Editor', enquiry_manager: 'Enquiry Manager' }
 
@@ -26,8 +56,10 @@ const blankStory: Omit<AdminStory, 'id'> = { kind: 'testimonial', name: '', city
 
 function AdminPage() {
   const [snapshot, setSnapshot] = useState<AdminSnapshot | null>(null)
+  const [checkingSession, setCheckingSession] = useState(true)
   const [error, setError] = useState('')
-  const [tab, setTab] = useState<Tab>('enquiries')
+  const [tab, setTab] = useState<Tab>('dashboard')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<EnquiryStatus | 'All'>('All')
   const [dateFrom, setDateFrom] = useState('')
@@ -37,6 +69,8 @@ function AdminPage() {
   const [selectedBatch, setSelectedBatch] = useState<CoachingBatch | null>(null)
   const [notice, setNotice] = useState('')
   const [showChangePass, setShowChangePass] = useState(false)
+  const [batchDirty, setBatchDirty] = useState(false)
+  const [cashflowDirty, setCashflowDirty] = useState(false)
   const [settingsDirty, setSettingsDirty] = useState(false)
   const [studyPlanDirty, setStudyPlanDirty] = useState(false)
 
@@ -46,33 +80,120 @@ function AdminPage() {
       setSnapshot(await getAdminSnapshot())
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Admin access is not configured yet.')
+    } finally {
+      setCheckingSession(false)
     }
   }
 
   useEffect(() => { void reload() }, [])
-  useEffect(() => { if (snapshot?.user.role === 'content_editor' && tab === 'enquiries') setTab('news') }, [snapshot?.user.role, tab])
+  useEffect(() => {
+    const role = snapshot?.user.role
+    if (!role) return
+    const allowed: Tab[] = role === 'super_admin'
+      ? ['dashboard', 'enquiries', 'attendance', 'news', 'stories', 'certificates', 'batches', 'budget', 'settings', 'users', 'demo', 'review', 'reports', 'policy', 'countries', 'studyPlans']
+      : role === 'content_editor'
+        ? ['review', 'news', 'stories', 'certificates', 'batches']
+        : ['dashboard', 'enquiries', 'demo', 'review', 'reports']
+    let selected: Tab = role === 'content_editor' ? 'news' : 'dashboard'
+    try {
+      const saved = window.sessionStorage.getItem('bei-admin-tab:' + role) as Tab | null
+      if (saved && allowed.includes(saved)) selected = saved
+    } catch { /* Storage can be disabled; navigation still works. */ }
+    setTab(selected)
+  }, [snapshot?.user.role])
+
+  useEffect(() => {
+    if (!sidebarOpen) return
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setSidebarOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [sidebarOpen])
+
+  if (!snapshot && checkingSession) {
+    return <section className="grid min-h-screen place-items-center bg-cream px-6 py-16"><p role="status" className="text-sm font-semibold">Checking admin session…</p></section>
+  }
 
   if (!snapshot) {
     return (
       <section className="grid min-h-screen place-items-center bg-cream px-6 py-16">
-        <AdminAuthCard onLoginSuccess={reload} />
+        <div className="w-full max-w-md space-y-4">
+          {error && error !== 'Unauthorized' && (
+            <p role="alert" className="rounded-2xl bg-red-100 px-4 py-3 text-center text-xs font-bold text-red-900">
+              {error}
+            </p>
+          )}
+          <AdminAuthCard onLoginSuccess={reload} />
+        </div>
       </section>
     )
   }
 
-  const filtered = snapshot.enquiries.filter((item) => {
-    const haystack = `${item.name} ${item.phone} ${item.email} ${item.city} ${item.country} ${item.interest} ${item.status} ${item.assignedTo} ${item.source} ${item.summary}`.toLowerCase()
-    const created = item.createdAt.slice(0, 10)
-    return haystack.includes(query.toLowerCase()) && (statusFilter === 'All' || item.status === statusFilter) && (!dateFrom || created >= dateFrom) && (!dateTo || created <= dateTo)
-  })
-  const newLeadQueue = snapshot.enquiries.filter((item) => item.status === 'New')
+ 
   const draftQueue = snapshot.posts.filter((item) => !item.published)
   const policyWatchCount = policyWatchItems.filter((item) => getPolicyWatchStatus(item) !== 'Effective').length
-  const tabs: Array<[Tab, string]> = snapshot.user.role === 'super_admin'
-    ? [['enquiries', `Enquiries (${snapshot.enquiryStats.total})`], ['demo', `Demo requests (${snapshot.enquiryStats.demoRequests})`], ['review', `Review queue (${newLeadQueue.length + draftQueue.length})`], ['reports', 'Reports'], ['policy', `Policy watch (${policyWatchCount})`], ['countries', 'Countries'], ['studyPlans', 'Study Plans'], ['news', 'News & Updates'], ['stories', 'Success Stories'], ['certificates', 'Certificates'], ['batches', 'Coaching batches'], ['budget', '💰 Cashflow Budget'], ['settings', 'Site settings'], ['users', 'Users & roles']]
+
+  type NavItem = { id: Tab; label: string; icon: typeof LayoutDashboard; count?: number; badge?: string }
+  type NavGroup = { group: string; items: NavItem[] }
+
+  const navGroups: NavGroup[] = snapshot.user.role === 'super_admin'
+    ? [
+        {
+          group: 'MENU',
+          items: [
+            { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+            { id: 'enquiries', label: 'Enquiries', icon: Inbox, count: snapshot.enquiryStats.total },
+            { id: 'demo', label: 'Demo Requests', icon: GraduationCap, count: snapshot.enquiryStats.demoRequests },
+            { id: 'review', label: 'Review Queue', icon: Sparkles, count: snapshot.enquiryStats.newCount + draftQueue.length },
+            { id: 'reports', label: 'Reports', icon: BarChart3 },
+            { id: 'attendance', label: 'Attendance', icon: CalendarCheck2, badge: 'NEW' },
+          ],
+        },
+        {
+          group: 'WEBSITE CONTENT',
+          items: [
+            { id: 'countries', label: 'Countries', icon: Globe },
+            { id: 'studyPlans', label: 'Study Plans', icon: BookOpen },
+            { id: 'policy', label: 'Policy Watch', icon: ShieldAlert, count: policyWatchCount },
+            { id: 'news', label: 'News & Updates', icon: Newspaper },
+            { id: 'stories', label: 'Success Stories', icon: Trophy },
+            { id: 'certificates', label: 'Certificates', icon: FileText },
+            { id: 'batches', label: 'Coaching Batches', icon: Users },
+            { id: 'budget', label: 'Cashflow Budget', icon: Coins },
+          ],
+        },
+        {
+          group: 'SYSTEM',
+          items: [
+            { id: 'settings', label: 'Site Settings', icon: Settings },
+            { id: 'users', label: 'Users & Roles', icon: UserCog },
+          ],
+        },
+      ]
     : snapshot.user.role === 'content_editor'
-      ? [['review', `Review queue (${draftQueue.length})`], ['news', 'News & Updates'], ['stories', 'Success Stories'], ['certificates', 'Certificates'], ['batches', 'Coaching batches']]
-      : [['enquiries', `Enquiries (${snapshot.enquiries.length})`], ['demo', `Demo requests (${snapshot.enquiryStats.demoRequests})`], ['review', `Review queue (${newLeadQueue.length})`], ['reports', 'Reports']]
+      ? [
+          {
+            group: 'CONTENT',
+            items: [
+              { id: 'review', label: 'Review Queue', icon: Sparkles, count: draftQueue.length },
+              { id: 'news', label: 'News & Updates', icon: Newspaper },
+              { id: 'stories', label: 'Success Stories', icon: Trophy },
+              { id: 'certificates', label: 'Certificates', icon: FileText },
+              { id: 'batches', label: 'Coaching Batches', icon: Users },
+            ],
+          },
+        ]
+      : [
+          {
+            group: 'MENU',
+            items: [
+              { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+            { id: 'enquiries', label: 'Enquiries', icon: Inbox, count: snapshot.enquiryStats.total },
+              { id: 'demo', label: 'Demo Requests', icon: GraduationCap, count: snapshot.enquiryStats.demoRequests },
+              { id: 'review', label: 'Review Queue', icon: Sparkles, count: snapshot.enquiryStats.newCount },
+              { id: 'reports', label: 'Reports', icon: BarChart3 },
+            ],
+          },
+        ]
 
   function showNotice(message: string) {
     setNotice(message)
@@ -80,74 +201,184 @@ function AdminPage() {
   }
 
   function selectTab(value: Tab) {
+    if ((batchDirty || cashflowDirty) && !window.confirm('You have unsaved changes. Leave this section and discard them?')) return
+    setBatchDirty(false); setCashflowDirty(false)
     if (settingsDirty && value !== 'settings' && !window.confirm('You have unsaved changes in Site settings. Leave this section and discard them?')) return
     if (studyPlanDirty && value !== 'studyPlans' && !window.confirm('You have unsaved Study Plan changes. Leave this section and discard them?')) return
     if (value !== 'settings') setSettingsDirty(false)
     if (value !== 'studyPlans') setStudyPlanDirty(false)
     setTab(value)
+    try { window.sessionStorage.setItem('bei-admin-tab:' + snapshot!.user.role, value) } catch { /* Optional browser state only. */ }
+    setSidebarOpen(false)
   }
 
   return (
-    <div className="min-h-screen bg-cream text-forest-900">
-      <header className="border-b border-forest-900/10 bg-white">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-8 sm:py-5">
-          <div className="min-w-0">
-            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-coral-600">Owner dashboard</p>
-            <h1 className="mt-1 text-xl font-extrabold leading-tight text-forest-900 sm:text-2xl">British Education &amp; Immigration</h1>
+    <div className="tailadmin-shell flex min-h-screen bg-[#F9FAFB] text-[#1D2939]">
+      {/* Mobile Sidebar Backdrop */}
+      {sidebarOpen && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs lg:hidden"
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Left Sidebar (TailAdmin 290px) */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-[290px] flex-col border-r border-[#E4E7EC] bg-white transition-transform duration-200 lg:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="flex h-[76px] shrink-0 items-center justify-between border-b border-[#E4E7EC] px-6">
+          <div className="flex items-center gap-3">
+            <div><Logo /><p className="mt-1 text-[11px] font-medium text-[#667085]">Admin Workspace</p></div>
           </div>
-          <div className="grid gap-3 rounded-2xl border border-forest-900/10 bg-cream p-3 sm:flex sm:flex-col sm:items-end sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0">
-            <div className="min-w-0 text-left text-xs text-forest-900/70 sm:text-right">
-              <p className="font-semibold text-forest-900">{snapshot.user.name}</p>
-              <p className="break-all">{snapshot.user.email}</p>
-              <p className="font-bold text-coral-600">{roleLabels[snapshot.user.role]}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
-              <button type="button" onClick={() => setShowChangePass(true)} className="min-h-11 rounded-xl border border-forest-900/15 bg-white px-3 text-xs font-bold text-forest-900 transition hover:bg-forest-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500 sm:px-4 sm:text-sm">Change password</button>
-              <a href="/admin/oauth/logout" className="inline-flex min-h-11 items-center justify-center rounded-xl bg-coral-500 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-coral-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500">Log out</a>
-            </div>
-          </div>
-        </div>
-      </header>
-      <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
-        <div className="mb-8">
-          <label htmlFor="admin-section-select" className="mb-2 block text-xs font-bold uppercase tracking-wide text-forest-900/60 sm:hidden">Admin section</label>
-          <select
-            id="admin-section-select"
-            value={tab}
-            onChange={(event) => selectTab(event.currentTarget.value as Tab)}
-            className="min-h-12 w-full rounded-xl border border-forest-900/15 bg-white px-4 text-sm font-bold text-forest-900 shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500 sm:hidden"
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Close sidebar"
+            className="rounded-lg p-1.5 text-[#667085] hover:bg-[#F9FAFB] lg:hidden"
           >
-            {tabs.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
-          <nav className="hidden gap-2 overflow-x-auto overscroll-x-contain pb-2 sm:flex lg:flex-wrap lg:overflow-visible" aria-label="Admin sections">
-            {tabs.map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => selectTab(value)}
-                className={`min-h-11 shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold transition ${tab === value ? 'bg-forest-900 text-white shadow-sm' : 'bg-white ring-1 ring-forest-900/10 hover:bg-forest-50'}`}
-              >
-                {label}
-              </button>
-            ))}
-          </nav>
+            <X className="size-5" />
+          </button>
         </div>
-        {notice && <p className="mb-5 rounded-xl bg-emerald-100 px-4 py-3 text-sm font-bold text-emerald-900">{notice}</p>}
-        {tab === 'enquiries' && <EnquiriesPanel enquiries={filtered} stats={snapshot.enquiryStats} query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter} dateFrom={dateFrom} setDateFrom={setDateFrom} dateTo={dateTo} setDateTo={setDateTo} onReload={reload} onNotice={showNotice} canDelete={snapshot.user.role === 'super_admin'} canManageComments={snapshot.user.role === 'super_admin'} />}
-        {tab === 'demo' && <DemoRequestsPanel enquiries={snapshot.enquiries.filter((item) => item.source === 'coaching')} totalCount={snapshot.enquiryStats.demoRequests} onReload={reload} onNotice={showNotice} canDelete={snapshot.user.role === 'super_admin'} canManageComments={snapshot.user.role === 'super_admin'} />}
-        {tab === 'review' && <ReviewQueuePanel enquiries={newLeadQueue} drafts={draftQueue} onOpenEnquiries={() => { setQuery(''); setStatusFilter('New'); setTab('enquiries') }} onOpenDraft={(post) => { setSelectedPost(post); setTab('news') }} />}
-        {tab === 'reports' && <ReportsPanel stats={snapshot.enquiryStats} />}
-        {tab === 'policy' && <PolicyWatchPanel />}
-        {tab === 'countries' && <CountryPanel />}
-        {tab === 'studyPlans' && <StudyPlanPanel onDirtyChange={setStudyPlanDirty} />}
-        {tab === 'news' && <ContentPanel type="news" items={snapshot.posts} selected={selectedPost} onSelect={(item) => setSelectedPost(item as AdminPost | null)} onReload={reload} onNotice={showNotice} />}
-        {tab === 'stories' && <ContentPanel type="stories" items={snapshot.stories} selected={selectedStory} onSelect={(item) => setSelectedStory(item as AdminStory | null)} onReload={reload} onNotice={showNotice} />}
-        {tab === 'certificates' && <CertificatePanel items={snapshot.certificates} onReload={reload} onNotice={showNotice} />}
-        {tab === 'batches' && <BatchPanel items={snapshot.batches} selected={selectedBatch} onSelect={setSelectedBatch} onReload={reload} onNotice={showNotice} />}
-        {tab === 'budget' && <CashflowAdminPanel onNotice={showNotice} />}
-        {tab === 'settings' && <SettingsPanel settings={snapshot.settings} onReload={reload} onNotice={showNotice} onDirtyChange={setSettingsDirty} />}
-        {tab === 'users' && <UsersPanel users={snapshot.users} currentEmail={snapshot.user.email} onReload={reload} onNotice={showNotice} />}
-        {showChangePass && <ChangePasswordModal onClose={() => setShowChangePass(false)} onNotice={showNotice} />}
+
+        <nav className="flex-1 space-y-6 overflow-y-auto px-4 py-5" aria-label="Admin sidebar">
+          {navGroups.map((grp) => (
+            <div key={grp.group}>
+              <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-[#98A2B3]">
+                {grp.group}
+              </p>
+              <ul className="space-y-1">
+                {grp.items.map((item) => {
+                  const Icon = item.icon
+                  const active = tab === item.id
+                  return (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        onClick={() => selectTab(item.id)}
+                        className={`flex min-h-[42px] w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm font-medium transition ${
+                          active
+                            ? 'bg-[#ECF3FF] font-semibold text-[#465FFF]'
+                            : 'text-[#667085] hover:bg-[#F9FAFB] hover:text-[#1D2939]'
+                        }`}
+                      >
+                        <span className="flex min-w-0 items-center gap-3">
+                          <Icon className="size-[18px] shrink-0" />
+                          <span className="truncate">{item.label}</span>
+                        </span>
+                        {item.badge ? (
+                          <span className="rounded-full bg-[#ECFDF3] px-2 py-0.5 text-[10px] font-bold text-[#12B76A]">
+                            {item.badge}
+                          </span>
+                        ) : item.count !== undefined ? (
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                              active ? 'bg-white text-[#465FFF]' : 'bg-[#F2F4F7] text-[#667085]'
+                            }`}
+                          >
+                            {item.count}
+                          </span>
+                        ) : null}
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          ))}
+        </nav>
+
+        <div className="border-t border-[#E4E7EC] p-4">
+          <div className="rounded-xl bg-[#F9FAFB] p-3 text-xs">
+            <p className="font-semibold text-[#1D2939]">{snapshot.user.name}</p>
+            <p className="truncate text-[#667085]">{snapshot.user.email}</p>
+            <p className="mt-1 font-semibold text-[#465FFF]">{roleLabels[snapshot.user.role]}</p>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content Region */}
+      <div className="flex min-w-0 flex-1 flex-col lg:pl-[290px]">
+        <header className="sticky top-0 z-30 flex h-[76px] items-center justify-between gap-3 border-b border-[#E4E7EC] bg-white px-4 sm:px-6">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open navigation menu"
+              className="grid size-10 shrink-0 place-items-center rounded-xl border border-[#E4E7EC] text-[#1D2939] hover:bg-[#F9FAFB] lg:hidden"
+            >
+              <Menu className="size-5" />
+            </button>
+            {snapshot.user.role !== 'content_editor' && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  selectTab('enquiries')
+                }}
+                className="relative hidden max-w-sm flex-1 sm:block"
+              >
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#98A2B3]" />
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search leads by name, phone, country…"
+                  className="h-10 w-full rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] pl-9 pr-3 text-sm text-[#1D2939] outline-none focus:border-[#465FFF] focus:bg-white"
+                />
+              </form>
+            )}
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowChangePass(true)}
+              className="min-h-10 rounded-xl border border-[#E4E7EC] bg-white px-3 text-xs font-semibold text-[#1D2939] hover:bg-[#F9FAFB] sm:px-4"
+            >
+              Change password
+            </button>
+            <a
+              href="/admin/oauth/logout"
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-[#465FFF] px-3.5 text-xs font-semibold text-white shadow-xs hover:opacity-95 sm:px-4"
+            >
+              <LogOut className="size-3.5" />
+              <span>Log out</span>
+            </a>
+          </div>
+        </header>
+
+        <div className="mx-auto w-full max-w-7xl flex-1 p-4 sm:p-6">
+          {notice && (
+            <p role="status" className="mb-5 rounded-xl border border-[#12B76A]/25 bg-[#ECFDF3] px-4 py-3 text-sm font-semibold text-[#12B76A]">
+              {notice}
+            </p>
+          )}
+          {tab === 'dashboard' && snapshot.user.role !== 'content_editor' && (
+            <TailAdminDashboard
+              snapshot={snapshot}
+              onOpenEnquiries={() => selectTab('enquiries')}
+              onOpenAttendance={() => selectTab('attendance')}
+              canOpenAttendance={snapshot.user.role === 'super_admin'}
+            />
+          )}
+          {tab === 'enquiries' && <EnquiriesPanel stats={snapshot.enquiryStats} query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter} dateFrom={dateFrom} setDateFrom={setDateFrom} dateTo={dateTo} setDateTo={setDateTo} onReload={reload} onNotice={showNotice} canDelete={snapshot.user.role === 'super_admin'} canManageComments={snapshot.user.role === 'super_admin'} />}
+          {tab === 'attendance' && snapshot.user.role === 'super_admin' && <AttendancePanel onNotice={showNotice} />}
+          {tab === 'demo' && <DemoRequestsPanel totalCount={snapshot.enquiryStats.demoRequests} onReload={reload} onNotice={showNotice} canDelete={snapshot.user.role === 'super_admin'} canManageComments={snapshot.user.role === 'super_admin'} />}
+          {tab === 'review' && <ReviewQueuePanel drafts={draftQueue} onOpenEnquiries={() => { setQuery(''); setStatusFilter('New'); selectTab('enquiries') }} onOpenDraft={(post) => { setSelectedPost(post); selectTab('news') }} />}
+          {tab === 'reports' && <ReportsPanel stats={snapshot.enquiryStats} />}
+          {tab === 'policy' && <PolicyWatchPanel />}
+          {tab === 'countries' && <CountryPanel />}
+          {tab === 'studyPlans' && <StudyPlanPanel onDirtyChange={setStudyPlanDirty} />}
+          {tab === 'news' && <ContentPanel type="news" items={snapshot.posts} selected={selectedPost} onSelect={(item) => setSelectedPost(item as AdminPost | null)} onReload={reload} onNotice={showNotice} />}
+          {tab === 'stories' && <ContentPanel type="stories" items={snapshot.stories} selected={selectedStory} onSelect={(item) => setSelectedStory(item as AdminStory | null)} onReload={reload} onNotice={showNotice} />}
+          {tab === 'certificates' && <CertificatePanel items={snapshot.certificates} onReload={reload} onNotice={showNotice} />}
+          {tab === 'batches' && <BatchPanel onDirtyChange={setBatchDirty} items={snapshot.batches} selected={selectedBatch} onSelect={setSelectedBatch} onReload={reload} onNotice={showNotice} />}
+          {tab === 'budget' && <CashflowAdminPanel onDirtyChange={setCashflowDirty} onNotice={showNotice} />}
+          {tab === 'settings' && <SettingsPanel settings={snapshot.settings} onReload={reload} onNotice={showNotice} onDirtyChange={setSettingsDirty} />}
+          {tab === 'users' && <UsersPanel users={snapshot.users} currentEmail={snapshot.user.email} onReload={reload} onNotice={showNotice} />}
+          {showChangePass && <ChangePasswordModal onClose={() => setShowChangePass(false)} onNotice={showNotice} />}
+        </div>
       </div>
     </div>
   )
@@ -436,6 +667,35 @@ function ChangePasswordModal({ onClose, onNotice }: { onClose: () => void; onNot
     </div>
   )
 }
+function formatIstDateTime(value: string) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  })
+}
+
+function currentIstDateTimeMinute() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(new Date())
+  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? '00'
+  const hour = get('hour') === '24' ? '00' : get('hour')
+  return `${get('year')}-${get('month')}-${get('day')}T${hour}:${get('minute')}`
+}
 function formatFollowUpLabel(value: string) {
   if (!value) return ''
   const [datePart, timePart] = value.slice(0, 16).split('T')
@@ -453,25 +713,30 @@ function formatFollowUpLabel(value: string) {
   })
 }
 
-function isDueTodayInIndia(nextFollowUpAt: string, status: EnquiryStatus) {
-  if (!nextFollowUpAt || ['Converted', 'Closed'].includes(status)) return false
-  const todayIst = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Kolkata',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date())
-  return nextFollowUpAt.slice(0, 10) === todayIst
-}
-
-function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setStatusFilter, dateFrom, setDateFrom, dateTo, setDateTo, onReload, onNotice, canDelete, canManageComments }: { enquiries: Enquiry[]; stats: AdminSnapshot['enquiryStats']; query: string; setQuery: (value: string) => void; statusFilter: EnquiryStatus | 'All'; setStatusFilter: (value: EnquiryStatus | 'All') => void; dateFrom: string; setDateFrom: (value: string) => void; dateTo: string; setDateTo: (value: string) => void; onReload: () => Promise<void>; onNotice: (message: string) => void; canDelete: boolean; canManageComments: boolean }) {
+function EnquiriesPanel({ stats, query, setQuery, statusFilter, setStatusFilter, dateFrom, setDateFrom, dateTo, setDateTo, onReload, onNotice, canDelete, canManageComments }: { stats: AdminSnapshot['enquiryStats']; query: string; setQuery: (value: string) => void; statusFilter: EnquiryStatus | 'All'; setStatusFilter: (value: EnquiryStatus | 'All') => void; dateFrom: string; setDateFrom: (value: string) => void; dateTo: string; setDateTo: (value: string) => void; onReload: () => Promise<void>; onNotice: (message: string) => void; canDelete: boolean; canManageComments: boolean }) {
   const [viewMode, setViewMode] = useState<'list' | 'board'>('list')
   const [selectedBoardLeadId, setSelectedBoardLeadId] = useState<number | null>(null)
   const [dueTodayOnly, setDueTodayOnly] = useState(false)
-  const visibleEnquiries = dueTodayOnly
-    ? enquiries.filter((item) => isDueTodayInIndia(item.nextFollowUpAt, item.status))
-    : enquiries
-  
+  const [page, setPage] = useState(1)
+  const [pageResult, setPageResult] = useState<{ items: Enquiry[]; total: number; page: number }>({ items: [], total: 0, page: 1 })
+  const [pageError, setPageError] = useState('')
+  const [pageLoading, setPageLoading] = useState(true)
+  const [revision, setRevision] = useState(0)
+  useEffect(() => { setPage(1) }, [query, statusFilter, dateFrom, dateTo, dueTodayOnly])
+  useEffect(() => {
+    let cancelled = false
+    setPageLoading(true); setPageError('')
+    const timer = window.setTimeout(() => {
+      getEnquiriesPage({ data: { query, status: statusFilter === 'All' ? '' : statusFilter, from: dateFrom, to: dateTo, dueTodayOnly, page } })
+        .then(result => { if (!cancelled) setPageResult(result) })
+        .catch(cause => { if (!cancelled) setPageError(cause instanceof Error ? cause.message : 'Could not load leads') })
+        .finally(() => { if (!cancelled) setPageLoading(false) })
+    }, 200)
+    return () => { cancelled = true; window.clearTimeout(timer) }
+  }, [query, statusFilter, dateFrom, dateTo, dueTodayOnly, page, revision])
+  const visibleEnquiries = pageLoading || pageError ? [] : pageResult.items
+  const refreshPage = async () => { await onReload(); setRevision(n => n + 1) }
+
   async function downloadExcel() {
     try {
       const result = await exportEnquiries({ data: { query, status: statusFilter === 'All' ? '' : statusFilter, from: dateFrom, to: dateTo } })
@@ -482,7 +747,7 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
       link.download = result.filename
       link.click()
       URL.revokeObjectURL(url)
-      onNotice(`${enquiries.length} leads exported to Excel.`)
+      onNotice('Filtered leads exported to Excel (up to 5,000 rows).')
     } catch { onNotice('Could not export leads to Excel.') }
   }
 
@@ -495,7 +760,7 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
   ] as const
 
   const boardStatuses: EnquiryStatus[] = ['New', 'Contacted', 'Follow-up', 'Documents Pending', 'Applied', 'Converted', 'Closed']
-  const selectedBoardLead = enquiries.find((item) => item.id === selectedBoardLeadId)
+  const selectedBoardLead = visibleEnquiries.find((item) => item.id === selectedBoardLeadId)
 
   return (
     <section>
@@ -537,6 +802,8 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
         })}
       </div>
 
+      {pageError && <p role="alert" className="text-red-700">{pageError}</p>}
+      <div className="mb-4 flex items-center gap-3"><button type="button" disabled={pageLoading || pageResult.page <= 1} onClick={() => setPage(pageResult.page - 1)}>Previous</button><span>{pageLoading ? 'Loading...' : `Page ${pageResult.page} of ${Math.max(1, Math.ceil(pageResult.total / 50))}`}</span><button type="button" disabled={pageLoading || pageResult.page * 50 >= pageResult.total} onClick={() => setPage(pageResult.page + 1)}>Next</button></div>
       {/* QUICK 1-TAP STATUS PILLS (IMPROVEMENT A) */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <span className="text-xs font-bold uppercase tracking-wider text-forest-900/50 mr-1">Quick Filters:</span>
@@ -558,7 +825,7 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm font-bold text-forest-900/65">
-          Showing {visibleEnquiries.length} leads{dueTodayOnly ? ' (due today)' : ''}
+          Showing {visibleEnquiries.length} of {pageResult.total} leads{dueTodayOnly ? ' (due today)' : ''}
         </p>
         <div role="group" aria-label="Lead display mode" className="inline-flex rounded-full bg-white p-1 ring-1 ring-forest-900/10">
           <button type="button" aria-pressed={viewMode === 'list'} onClick={() => setViewMode('list')} className={'rounded-full px-4 py-2 text-xs font-bold ' + (viewMode === 'list' ? 'bg-forest-900 text-white' : 'text-forest-900/65')}>List</button>
@@ -579,7 +846,7 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
      {viewMode === 'list' ? (
         <div className="grid gap-4">
           {visibleEnquiries.map((item) => (
-            <EnquiryCard key={item.id} item={item} onReload={onReload} onNotice={onNotice} canDelete={canDelete} canManageComments={canManageComments} />
+            <EnquiryCard key={item.id} item={item} onReload={refreshPage} onNotice={onNotice} canDelete={canDelete} canManageComments={canManageComments} />
           ))}
           {visibleEnquiries.length === 0 && <p className="rounded-2xl bg-white p-8 text-center text-forest-900/60">No enquiries match these filters.</p>}
         </div>
@@ -601,7 +868,7 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
                           <span className="block truncate text-sm font-extrabold text-forest-900">{item.name}</span>
                           <span className="mt-1 block truncate text-xs text-forest-900/60">{item.interest || 'General counselling'}{item.country ? ' · ' + item.country : ''}</span>
                           <span className="mt-2 block truncate font-mono text-[10px] text-forest-900/55">{item.phone}</span>
-                          {item.nextFollowUpAt && <span className="mt-2 block rounded-lg bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-900">Follow-up {formatFollowUpLabel(item.nextFollowUpAt)}</span>}
+                          {item.nextFollowUpAt && item.nextFollowUpAt.slice(0, 16) < currentIstDateTimeMinute() && !['Converted', 'Closed'].includes(item.status) && <span className="rounded-full bg-red-100 px-2 py-1 text-xs font-bold text-red-700">Overdue</span>}{item.nextFollowUpAt && <span className="mt-2 block rounded-lg bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-900">Follow-up {formatFollowUpLabel(item.nextFollowUpAt)}</span>}
                           {item.assignedTo && <span className="mt-2 block truncate text-[10px] text-forest-900/50">Assigned: {item.assignedTo}</span>}
                         </button>
                       ))}
@@ -618,7 +885,7 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
                 <div><p className="font-mono text-[10px] font-bold uppercase tracking-widest text-coral-600">Selected lead</p><h3 className="mt-1 text-lg font-extrabold text-forest-900">{selectedBoardLead.name}</h3></div>
                 <button type="button" onClick={() => setSelectedBoardLeadId(null)} className="rounded-full bg-white px-4 py-2 text-xs font-bold text-forest-900 ring-1 ring-forest-900/10">Close details</button>
               </div>
-              <EnquiryCard key={selectedBoardLead.id} item={selectedBoardLead} onReload={onReload} onNotice={onNotice} canDelete={canDelete} canManageComments={canManageComments} />
+              <EnquiryCard key={selectedBoardLead.id} item={selectedBoardLead} onReload={refreshPage} onNotice={onNotice} canDelete={canDelete} canManageComments={canManageComments} />
             </section>
           ) : <p className="rounded-2xl bg-white p-6 text-center text-sm text-forest-900/55">Choose a lead card to update its stage, owner or follow-up.</p>}
         </div>
@@ -627,35 +894,69 @@ function EnquiriesPanel({ enquiries, stats, query, setQuery, statusFilter, setSt
   )
 }
 
-function DemoRequestsPanel({ enquiries, totalCount, onReload, onNotice, canDelete, canManageComments }: { enquiries: Enquiry[]; totalCount: number; onReload: () => Promise<void>; onNotice: (message: string) => void; canDelete: boolean; canManageComments: boolean }) {
+function DemoRequestsPanel({ totalCount, onReload, onNotice, canDelete, canManageComments }: { totalCount: number; onReload: () => Promise<void>; onNotice: (message: string) => void; canDelete: boolean; canManageComments: boolean }) {
   const [dueOnly, setDueOnly] = useState(false)
-  const dueRequests = enquiries.filter((item) => item.nextFollowUpAt && new Date(item.nextFollowUpAt).getTime() <= Date.now() && !['Converted', 'Closed'].includes(item.status))
-  const visible = dueOnly ? dueRequests : enquiries
+  const [page, setPage] = useState(1)
+  const [result, setResult] = useState<{ items: Enquiry[]; total: number; page: number }>({ items: [], total: 0, page: 1 })
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [revision, setRevision] = useState(0)
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true); setError('')
+    getEnquiriesPage({ data: { source: 'coaching', overdueOnly: dueOnly, page } })
+      .then(value => { if (!cancelled) setResult(value) })
+      .catch(cause => { if (!cancelled) setError(cause instanceof Error ? cause.message : 'Could not load demo requests') })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [dueOnly, page, revision])
+  const refreshPage = async () => { await onReload(); setRevision(n => n + 1) }
+  const visible = loading || error ? [] : result.items
   return (
     <section>
       <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div><p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">IELTS & PTE</p><h2 className="mt-2 text-3xl font-extrabold">Free demo requests</h2><p className="mt-1 text-sm text-forest-900/60">Preferred dates are requests. Confirm the available slot with the student and schedule the next follow-up on the lead.</p></div>
-        <button type="button" aria-pressed={dueOnly} onClick={() => setDueOnly((value) => !value)} className="w-fit rounded-full bg-amber-100 px-4 py-2 text-sm font-bold text-amber-900">{dueOnly ? 'Show all requests' : `Follow-ups due (${dueRequests.length})`}</button>
+        <button type="button" aria-pressed={dueOnly} onClick={() => { setDueOnly((value) => !value); setPage(1) }} className="w-fit rounded-full bg-amber-100 px-4 py-2 text-sm font-bold text-amber-900">{dueOnly ? 'Show all requests' : 'Follow-ups overdue'}</button>
       </div>
       <div className="mb-5 grid gap-3 sm:grid-cols-2">
         <div className="rounded-2xl bg-white p-4 ring-1 ring-forest-900/10"><p className="text-xs font-bold uppercase tracking-wider text-forest-900/55">Total demo requests</p><p className="mt-2 text-3xl font-extrabold">{totalCount}</p></div>
-        <div className="rounded-2xl bg-amber-100 p-4 text-amber-900"><p className="text-xs font-bold uppercase tracking-wider opacity-70">Follow-ups due</p><p className="mt-2 text-3xl font-extrabold">{dueRequests.length}</p></div>
+        <div className="rounded-2xl bg-amber-100 p-4 text-amber-900"><p className="text-xs font-bold uppercase tracking-wider opacity-70">{dueOnly ? 'Overdue demo requests' : 'Showing'}</p><p className="mt-2 text-3xl font-extrabold">{result.total}</p></div>
       </div>
-      <div className="grid gap-4">{visible.map((item) => <EnquiryCard key={item.id} item={item} onReload={onReload} onNotice={onNotice} canDelete={canDelete} canManageComments={canManageComments} />)}{visible.length === 0 && <p className="rounded-2xl bg-white p-8 text-center text-forest-900/60">{dueOnly ? 'No demo follow-ups are due right now.' : 'No demo requests have been received yet.'}</p>}</div>
-      {totalCount > enquiries.length && <p className="mt-4 text-xs text-forest-900/55">Showing the latest {enquiries.length} requests in the lead list.</p>}
+      {error && <p role="alert" className="mb-4 text-sm font-semibold text-red-700">{error}</p>}
+      <div className="mb-4 flex items-center gap-3 text-xs font-semibold">
+        <button type="button" disabled={loading || result.page <= 1} onClick={() => setPage(result.page - 1)} className="rounded-lg border border-[#E4E7EC] bg-white px-3 py-1.5 disabled:opacity-40">Previous</button>
+        <span>{loading ? 'Loading...' : `Page ${result.page} of ${Math.max(1, Math.ceil(result.total / 50))}`}</span>
+        <button type="button" disabled={loading || result.page * 50 >= result.total} onClick={() => setPage(result.page + 1)} className="rounded-lg border border-[#E4E7EC] bg-white px-3 py-1.5 disabled:opacity-40">Next</button>
+      </div>
+      <div className="grid gap-4">{visible.map((item) => <EnquiryCard key={item.id} item={item} onReload={refreshPage} onNotice={onNotice} canDelete={canDelete} canManageComments={canManageComments} />)}{!loading && visible.length === 0 && <p className="rounded-2xl bg-white p-8 text-center text-forest-900/60">{dueOnly ? 'No overdue demo follow-ups right now.' : 'No demo requests have been received yet.'}</p>}</div>
     </section>
   )
 }
 
-function ReviewQueuePanel({ enquiries, drafts, onOpenEnquiries, onOpenDraft }: { enquiries: Enquiry[]; drafts: AdminPost[]; onOpenEnquiries: () => void; onOpenDraft: (post: AdminPost) => void }) {
+function ReviewQueuePanel({ drafts, onOpenEnquiries, onOpenDraft }: { drafts: AdminPost[]; onOpenEnquiries: () => void; onOpenDraft: (post: AdminPost) => void }) {
+  const [queue, setQueue] = useState<'new' | 'overdue'>('new')
+  const [page, setPage] = useState(1)
+  const [result, setResult] = useState<{items: Enquiry[]; total: number; page: number}>({items: [], total: 0, page: 1})
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true); setError('')
+    getEnquiriesPage({data:{status:queue === 'new' ? 'New' : '', overdueOnly:queue === 'overdue', page}})
+      .then(value => { if (!cancelled) setResult(value) })
+      .catch(cause => { if (!cancelled) setError(cause instanceof Error ? cause.message : 'Could not load queue') })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [queue, page])
   return (
     <section>
       <div className="mb-6"><p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">Needs attention</p><h2 className="mt-2 text-3xl font-extrabold">Review queue</h2><p className="mt-1 text-sm text-forest-900/60">A read-only overview of new enquiries and unpublished content, with links to the existing editing screens.</p></div>
+      <div className="mb-4 flex flex-wrap gap-4"><button type="button" onClick={() => { setQueue('new'); setPage(1) }}>New leads</button><button type="button" onClick={() => { setQueue('overdue'); setPage(1) }}>Overdue follow-ups</button><button type="button" disabled={loading || result.page <= 1} onClick={() => setPage(result.page - 1)}>Previous</button><span>{loading ? 'Loading...' : `Page ${result.page} / ${Math.max(1, Math.ceil(result.total / 50))}`}</span><button type="button" disabled={loading || result.page * 50 >= result.total} onClick={() => setPage(result.page + 1)}>Next</button></div>{error && <p role="alert">{error}</p>}
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="rounded-3xl bg-white p-5 ring-1 ring-forest-900/10">
-          <div className="mb-4 flex items-center justify-between gap-3"><h3 className="text-lg font-extrabold">New enquiries</h3><span className="rounded-full bg-coral-50 px-3 py-1 text-xs font-bold text-coral-700">{enquiries.length}</span></div>
-          <div className="grid gap-3">{enquiries.slice(0, 10).map((item) => <div key={item.id} className="rounded-2xl bg-cream p-4"><p className="font-bold">{item.name}</p><p className="mt-1 text-sm text-forest-900/60">{item.interest || 'General counselling'}{item.country ? ' · ' + item.country : ''}</p><p className="mt-1 text-xs text-forest-900/50">{new Date(item.createdAt).toLocaleString()}</p></div>)}{enquiries.length === 0 && <p className="text-sm text-forest-900/55">No new enquiries are waiting.</p>}</div>
-          {enquiries.length > 0 && <button type="button" onClick={onOpenEnquiries} className="mt-4 rounded-full bg-forest-900 px-4 py-2 text-sm font-bold text-white">Review new enquiries</button>}
+          <div className="mb-4 flex items-center justify-between gap-3"><h3 className="text-lg font-extrabold">{queue === 'new' ? 'New enquiries' : 'Overdue follow-ups'}</h3><span className="rounded-full bg-coral-50 px-3 py-1 text-xs font-bold text-coral-700">{result.total}</span></div>
+   <div className="grid gap-3">{(loading || error ? [] : result.items).map((item) => <div key={item.id} className="rounded-2xl bg-cream p-4"><p className="font-bold">{item.name}</p><p className="mt-1 text-sm text-forest-900/60">{item.interest || 'General counselling'}{item.country ? ' · ' + item.country : ''}</p><p className="mt-1 text-xs text-forest-900/50">{formatIstDateTime(item.createdAt)}</p></div>)}{!loading && !error && result.total === 0 && <p className="text-sm text-forest-900/55">No new enquiries are waiting.</p>}</div>
+          {result.total > 0 && <button type="button" onClick={onOpenEnquiries} className="mt-4 rounded-full bg-forest-900 px-4 py-2 text-sm font-bold text-white">Review new enquiries</button>}
         </section>
         <section className="rounded-3xl bg-white p-5 ring-1 ring-forest-900/10">
           <div className="mb-4 flex items-center justify-between gap-3"><h3 className="text-lg font-extrabold">Unpublished content</h3><span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">{drafts.length}</span></div>
@@ -804,9 +1105,10 @@ function EnquiryCard({ item, onReload, onNotice, canDelete, canManageComments }:
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-xl font-extrabold">{item.name}</h3>
             <span className="rounded-full bg-coral-50 px-3 py-1 text-xs font-bold text-coral-700">{item.status}</span>
+            {item.nextFollowUpAt && item.nextFollowUpAt.slice(0, 16) < currentIstDateTimeMinute() && !['Converted', 'Closed'].includes(item.status) && <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700">Overdue</span>}
             {item.nextFollowUpAt && <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">Follow-up {formatFollowUpLabel(item.nextFollowUpAt)}</span>}
           </div>
-          <p className="mt-1 text-sm text-forest-900/60">{new Date(item.createdAt).toLocaleString()} · {item.source || 'website'}{item.assignedTo && <> · Assigned to {item.assignedTo}</>}</p>
+          <p className="mt-1 text-sm text-forest-900/60">{formatIstDateTime(item.createdAt)} · {item.source || 'website'}{item.assignedTo && <> · Assigned to {item.assignedTo}</>}</p>
           
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <span className="font-bold text-sm text-forest-900">{item.phone}</span>
@@ -921,8 +1223,9 @@ function EnquiryCard({ item, onReload, onNotice, canDelete, canManageComments }:
   )
 }
 
-function BatchPanel({ items, selected, onSelect, onReload, onNotice }: { items: CoachingBatch[]; selected: CoachingBatch | null; onSelect: (item: CoachingBatch | null) => void; onReload: () => Promise<void>; onNotice: (message: string) => void }) {
+function BatchPanel({ items, selected, onSelect, onReload, onNotice, onDirtyChange }: { onDirtyChange: (dirty: boolean) => void; items: CoachingBatch[]; selected: CoachingBatch | null; onSelect: (item: CoachingBatch | null) => void; onReload: () => Promise<void>; onNotice: (message: string) => void }) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  useEffect(() => { onDirtyChange(hasUnsavedChanges) }, [hasUnsavedChanges, onDirtyChange])
   function selectBatch(item: CoachingBatch | null) {
     if (item && selected && item.id !== selected.id && hasUnsavedChanges && !window.confirm('You have unsaved changes in this batch. Switch anyway and discard them?')) return
     setHasUnsavedChanges(false)
@@ -955,7 +1258,7 @@ function BatchEditor({ item, onReload, onNotice, onClose, onDirtyChange }: { ite
   function update<K extends keyof CoachingBatch>(key: K, value: CoachingBatch[K]) { setForm((current) => ({ ...current, [key]: value })); onDirtyChange(true) }
   async function submit(event: FormEvent) { event.preventDefault(); setBusy(true); try { await saveBatch({ data: form }); onDirtyChange(false); await onReload(); onNotice('Coaching batch saved.'); onClose(true) } catch (cause) { onNotice(cause instanceof Error ? cause.message : 'Could not save batch.') } finally { setBusy(false) } }
   async function remove() { if (!form.id || !window.confirm('Delete this coaching batch?')) return; setBusy(true); try { await deleteBatch({ data: { id: form.id } }); onDirtyChange(false); await onReload(); onNotice('Coaching batch deleted.'); onClose(true) } catch { onNotice('Could not delete batch.') } finally { setBusy(false) } }
-  return <form onSubmit={submit} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-forest-900/10"><div className="mb-5 flex items-start justify-between gap-4"><div><p className="font-mono text-[10px] uppercase tracking-[0.18em] text-coral-600">Public schedule</p><h3 className="text-xl font-extrabold">Batch editor</h3><p className="mt-1 text-xs leading-relaxed text-forest-900/55">These details appear in the Upcoming batches section on the public IELTS & PTE page.</p></div><button type="button" onClick={onClose} className="text-sm font-bold text-forest-900/50">Close</button></div><div className="grid gap-4"><EditorField label="Program / language" hint="Example: IELTS, PTE, German A1, French B2"><input className="field" value={form.program} onChange={(e) => update('program', e.target.value)} placeholder="IELTS / PTE / German…" required /></EditorField><EditorField label="Batch name" hint="Example: German A1 Evening Batch or IELTS Weekend Batch"><input className="field" value={form.batch} onChange={(e) => update('batch', e.target.value)} placeholder="Name visitors will recognise" required /></EditorField><EditorField label="Class timing" hint="Example: Mon–Fri · 6:00–8:00 PM"><input className="field" value={form.time} onChange={(e) => update('time', e.target.value)} placeholder="Days and time" /></EditorField><div className="grid gap-4 sm:grid-cols-2"><EditorField label="Seats left" hint="Use 0 when full"><input className="field" type="number" min="0" value={form.seats} onChange={(e) => update('seats', Number(e.target.value))} /></EditorField><EditorField label="Starts on" hint="Choose the full start date. Expired batches are hidden from the public upcoming list."><input className="field" type="date" required value={isValidBatchStartDate(form.starts) ? form.starts : ''} onChange={(e) => update('starts', e.target.value)} /></EditorField>{form.starts && !isValidBatchStartDate(form.starts) && <p className="text-xs leading-relaxed text-amber-800">Saved start value “{form.starts}” has no full year. Choose its complete date before saving so it can expire automatically.</p>}</div><label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={form.published} onChange={(e) => update('published', e.target.checked)} /> Show this batch on the public coaching page</label><div className="flex flex-wrap gap-2"><button disabled={busy} className="rounded-full bg-forest-900 px-5 py-3 text-sm font-bold text-white">Save batch</button>{form.id > 0 && <button type="button" disabled={busy} onClick={() => void remove()} className="rounded-full border border-red-200 px-5 py-3 text-sm font-bold text-red-700">Delete</button>}</div></div></form>
+  return <form onSubmit={submit} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-forest-900/10"><div className="mb-5 flex items-start justify-between gap-4"><div><p className="font-mono text-[10px] uppercase tracking-[0.18em] text-coral-600">Public schedule</p><h3 className="text-xl font-extrabold">Batch editor</h3><p className="mt-1 text-xs leading-relaxed text-forest-900/55">These details appear in the Upcoming batches section on the public IELTS & PTE page.</p></div><button type="button" onClick={() => onClose()} className="text-sm font-bold text-forest-900/50">Close</button></div><div className="grid gap-4"><EditorField label="Program / language" hint="Example: IELTS, PTE, German A1, French B2"><input className="field" value={form.program} onChange={(e) => update('program', e.target.value)} placeholder="IELTS / PTE / German…" required /></EditorField><EditorField label="Batch name" hint="Example: German A1 Evening Batch or IELTS Weekend Batch"><input className="field" value={form.batch} onChange={(e) => update('batch', e.target.value)} placeholder="Name visitors will recognise" required /></EditorField><EditorField label="Class timing" hint="Example: Mon–Fri · 6:00–8:00 PM"><input className="field" value={form.time} onChange={(e) => update('time', e.target.value)} placeholder="Days and time" /></EditorField><div className="grid gap-4 sm:grid-cols-2"><EditorField label="Seats left" hint="Use 0 when full"><input className="field" type="number" min="0" value={form.seats} onChange={(e) => update('seats', Number(e.target.value))} /></EditorField><EditorField label="Starts on" hint="Choose the full start date. Expired batches are hidden from the public upcoming list."><input className="field" type="date" required value={isValidBatchStartDate(form.starts) ? form.starts : ''} onChange={(e) => update('starts', e.target.value)} /></EditorField>{form.starts && !isValidBatchStartDate(form.starts) && <p className="text-xs leading-relaxed text-amber-800">Saved start value “{form.starts}” has no full year. Choose its complete date before saving so it can expire automatically.</p>}</div><label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={form.published} onChange={(e) => update('published', e.target.checked)} /> Show this batch on the public coaching page</label><div className="flex flex-wrap gap-2"><button disabled={busy} className="rounded-full bg-forest-900 px-5 py-3 text-sm font-bold text-white">Save batch</button>{form.id > 0 && <button type="button" disabled={busy} onClick={() => void remove()} className="rounded-full border border-red-200 px-5 py-3 text-sm font-bold text-red-700">Delete</button>}</div></div></form>
 }
 
 function ContentPanel({ type, items, selected, onSelect, onReload, onNotice }: { type: 'news' | 'stories'; items: AdminPost[] | AdminStory[]; selected: AdminPost | AdminStory | null; onSelect: (item: AdminPost | AdminStory | null) => void; onReload: () => Promise<void>; onNotice: (message: string) => void }) {
@@ -1008,8 +1311,17 @@ function PostEditor({ item, onReload, onNotice, onClose }: { item: AdminPost; on
   )
 }
 
-function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
+function CashflowAdminPanel({ onNotice, onDirtyChange }: { onDirtyChange: (dirty: boolean) => void; onNotice: (msg: string) => void }) {
   const [data, setData] = useState<CountryCashflow[]>(() => defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country)))
+  const [savedJson, setSavedJson] = useState(() => JSON.stringify(data))
+  const dirty = JSON.stringify(data) !== savedJson
+  useEffect(() => { onDirtyChange(dirty) }, [dirty, onDirtyChange])
+  useEffect(() => {
+    if (!dirty) return
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [dirty])
   const [selectedSlug, setSelectedSlug] = useState('canada')
   const [busy, setBusy] = useState(false)
 
@@ -1018,7 +1330,7 @@ function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
 
   useEffect(() => {
     void getAdminCashflow()
-      .then((saved) => setData(saved))
+      .then((saved) => { setData(saved); setSavedJson(JSON.stringify(saved)) })
       .catch(() => onNoticeRef.current('Could not load cashflow from database. Showing defaults.'))
   }, [])
 
@@ -1042,6 +1354,7 @@ function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
     try {
       setBusy(true)
       await saveCashflow({ data: { cashflowData: data } })
+      setSavedJson(JSON.stringify(data))
       onNotice('Budget & Cashflow saved to database and is live on the website.')
     } catch (error) {
       onNotice(error instanceof Error ? error.message : 'Could not save budget data.')
@@ -1056,6 +1369,7 @@ function CashflowAdminPanel({ onNotice }: { onNotice: (msg: string) => void }) {
     try {
       setBusy(true)
       await saveCashflow({ data: { cashflowData: currentDefaults } })
+      setSavedJson(JSON.stringify(currentDefaults))
       onNotice('Reset to official 2026/2027 embassy defaults and saved to database.')
     } catch {
       onNotice('Reset locally, but database sync failed.')

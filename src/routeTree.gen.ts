@@ -10,15 +10,15 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as CertificatesRouteImport } from './routes/certificates'
-import { Route as CertificatesImageRouteImport } from './routes/certificates.image.$id'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as CertificatesRouteImport } from './routes/certificates'
 import { Route as CoachingRouteImport } from './routes/coaching'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as EligibilityRouteImport } from './routes/eligibility'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SuccessStoriesRouteImport } from './routes/success-stories'
-import { Route as SuccessStoriesMediaRouteImport } from './routes/success-stories.media.$id'
 import { Route as VisasRouteImport } from './routes/visas'
+import { Route as AttendanceTokenRouteImport } from './routes/attendance.$token'
 import { Route as CountriesIndexRouteImport } from './routes/countries.index'
 import { Route as CountriesSlugRouteImport } from './routes/countries.$slug'
 import { Route as StudyPlanSlugRouteImport } from './routes/study-plan.$slug'
@@ -27,25 +27,25 @@ import { Route as UpdatesSlugRouteImport } from './routes/updates.$slug'
 import { Route as AdminOauthCallbackRouteImport } from './routes/admin.oauth.callback'
 import { Route as AdminOauthLogoutRouteImport } from './routes/admin.oauth.logout'
 import { Route as AdminOauthStartRouteImport } from './routes/admin.oauth.start'
+import { Route as ApiCronAttendanceCleanupRouteImport } from './routes/api.cron.attendance-cleanup'
+import { Route as ApiCronPolicyWatchRouteImport } from './routes/api.cron.policy-watch'
+import { Route as AttendancePhotoIdRouteImport } from './routes/attendance.photo.$id'
+import { Route as CertificatesImageIdRouteImport } from './routes/certificates.image.$id'
+import { Route as SuccessStoriesMediaIdRouteImport } from './routes/success-stories.media.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CertificatesRoute = CertificatesRouteImport.update({
-  id: '/certificates',
-  path: '/certificates',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CertificatesImageRoute = CertificatesImageRouteImport.update({
-  id: '/certificates/image/$id',
-  path: '/certificates/image/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CertificatesRoute = CertificatesRouteImport.update({
+  id: '/certificates',
+  path: '/certificates',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CoachingRoute = CoachingRouteImport.update({
@@ -63,19 +63,24 @@ const EligibilityRoute = EligibilityRouteImport.update({
   path: '/eligibility',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SuccessStoriesRoute = SuccessStoriesRouteImport.update({
   id: '/success-stories',
   path: '/success-stories',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SuccessStoriesMediaRoute = SuccessStoriesMediaRouteImport.update({
-  id: '/success-stories/media/$id',
-  path: '/success-stories/media/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const VisasRoute = VisasRouteImport.update({
   id: '/visas',
   path: '/visas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AttendanceTokenRoute = AttendanceTokenRouteImport.update({
+  id: '/attendance/$token',
+  path: '/attendance/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CountriesIndexRoute = CountriesIndexRouteImport.update({
@@ -118,18 +123,44 @@ const AdminOauthStartRoute = AdminOauthStartRouteImport.update({
   path: '/oauth/start',
   getParentRoute: () => AdminRoute,
 } as any)
+const ApiCronAttendanceCleanupRoute =
+  ApiCronAttendanceCleanupRouteImport.update({
+    id: '/api/cron/attendance-cleanup',
+    path: '/api/cron/attendance-cleanup',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiCronPolicyWatchRoute = ApiCronPolicyWatchRouteImport.update({
+  id: '/api/cron/policy-watch',
+  path: '/api/cron/policy-watch',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AttendancePhotoIdRoute = AttendancePhotoIdRouteImport.update({
+  id: '/attendance/photo/$id',
+  path: '/attendance/photo/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CertificatesImageIdRoute = CertificatesImageIdRouteImport.update({
+  id: '/image/$id',
+  path: '/image/$id',
+  getParentRoute: () => CertificatesRoute,
+} as any)
+const SuccessStoriesMediaIdRoute = SuccessStoriesMediaIdRouteImport.update({
+  id: '/media/$id',
+  path: '/media/$id',
+  getParentRoute: () => SuccessStoriesRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/certificates': typeof CertificatesRouteWithChildren
   '/coaching': typeof CoachingRoute
   '/contact': typeof ContactRoute
-  '/certificates': typeof CertificatesRoute
-  '/certificates/image/$id': typeof CertificatesImageRoute
   '/eligibility': typeof EligibilityRoute
-  '/success-stories': typeof SuccessStoriesRoute
-  '/success-stories/media/$id': typeof SuccessStoriesMediaRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/success-stories': typeof SuccessStoriesRouteWithChildren
   '/visas': typeof VisasRoute
+  '/attendance/$token': typeof AttendanceTokenRoute
   '/countries/$slug': typeof CountriesSlugRoute
   '/study-plan/$slug': typeof StudyPlanSlugRoute
   '/updates/$slug': typeof UpdatesSlugRoute
@@ -138,18 +169,23 @@ export interface FileRoutesByFullPath {
   '/admin/oauth/callback': typeof AdminOauthCallbackRoute
   '/admin/oauth/logout': typeof AdminOauthLogoutRoute
   '/admin/oauth/start': typeof AdminOauthStartRoute
+  '/api/cron/attendance-cleanup': typeof ApiCronAttendanceCleanupRoute
+  '/api/cron/policy-watch': typeof ApiCronPolicyWatchRoute
+  '/attendance/photo/$id': typeof AttendancePhotoIdRoute
+  '/certificates/image/$id': typeof CertificatesImageIdRoute
+  '/success-stories/media/$id': typeof SuccessStoriesMediaIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/certificates': typeof CertificatesRouteWithChildren
   '/coaching': typeof CoachingRoute
   '/contact': typeof ContactRoute
-  '/certificates': typeof CertificatesRoute
-  '/certificates/image/$id': typeof CertificatesImageRoute
   '/eligibility': typeof EligibilityRoute
-  '/success-stories': typeof SuccessStoriesRoute
-  '/success-stories/media/$id': typeof SuccessStoriesMediaRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/success-stories': typeof SuccessStoriesRouteWithChildren
   '/visas': typeof VisasRoute
+  '/attendance/$token': typeof AttendanceTokenRoute
   '/countries/$slug': typeof CountriesSlugRoute
   '/study-plan/$slug': typeof StudyPlanSlugRoute
   '/updates/$slug': typeof UpdatesSlugRoute
@@ -158,19 +194,24 @@ export interface FileRoutesByTo {
   '/admin/oauth/callback': typeof AdminOauthCallbackRoute
   '/admin/oauth/logout': typeof AdminOauthLogoutRoute
   '/admin/oauth/start': typeof AdminOauthStartRoute
+  '/api/cron/attendance-cleanup': typeof ApiCronAttendanceCleanupRoute
+  '/api/cron/policy-watch': typeof ApiCronPolicyWatchRoute
+  '/attendance/photo/$id': typeof AttendancePhotoIdRoute
+  '/certificates/image/$id': typeof CertificatesImageIdRoute
+  '/success-stories/media/$id': typeof SuccessStoriesMediaIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/certificates': typeof CertificatesRouteWithChildren
   '/coaching': typeof CoachingRoute
   '/contact': typeof ContactRoute
-  '/certificates': typeof CertificatesRoute
-  '/certificates/image/$id': typeof CertificatesImageRoute
   '/eligibility': typeof EligibilityRoute
-  '/success-stories': typeof SuccessStoriesRoute
-  '/success-stories/media/$id': typeof SuccessStoriesMediaRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/success-stories': typeof SuccessStoriesRouteWithChildren
   '/visas': typeof VisasRoute
+  '/attendance/$token': typeof AttendanceTokenRoute
   '/countries/$slug': typeof CountriesSlugRoute
   '/study-plan/$slug': typeof StudyPlanSlugRoute
   '/updates/$slug': typeof UpdatesSlugRoute
@@ -179,20 +220,25 @@ export interface FileRoutesById {
   '/admin/oauth/callback': typeof AdminOauthCallbackRoute
   '/admin/oauth/logout': typeof AdminOauthLogoutRoute
   '/admin/oauth/start': typeof AdminOauthStartRoute
+  '/api/cron/attendance-cleanup': typeof ApiCronAttendanceCleanupRoute
+  '/api/cron/policy-watch': typeof ApiCronPolicyWatchRoute
+  '/attendance/photo/$id': typeof AttendancePhotoIdRoute
+  '/certificates/image/$id': typeof CertificatesImageIdRoute
+  '/success-stories/media/$id': typeof SuccessStoriesMediaIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/admin'
+    | '/certificates'
     | '/coaching'
     | '/contact'
-    | '/certificates'
-    | '/certificates/image/$id'
     | '/eligibility'
+    | '/sitemap.xml'
     | '/success-stories'
-    | '/success-stories/media/$id'
     | '/visas'
+    | '/attendance/$token'
     | '/countries/$slug'
     | '/study-plan/$slug'
     | '/updates/$slug'
@@ -201,18 +247,23 @@ export interface FileRouteTypes {
     | '/admin/oauth/callback'
     | '/admin/oauth/logout'
     | '/admin/oauth/start'
+    | '/api/cron/attendance-cleanup'
+    | '/api/cron/policy-watch'
+    | '/attendance/photo/$id'
+    | '/certificates/image/$id'
+    | '/success-stories/media/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/admin'
+    | '/certificates'
     | '/coaching'
     | '/contact'
-    | '/certificates'
-    | '/certificates/image/$id'
     | '/eligibility'
+    | '/sitemap.xml'
     | '/success-stories'
-    | '/success-stories/media/$id'
     | '/visas'
+    | '/attendance/$token'
     | '/countries/$slug'
     | '/study-plan/$slug'
     | '/updates/$slug'
@@ -221,18 +272,23 @@ export interface FileRouteTypes {
     | '/admin/oauth/callback'
     | '/admin/oauth/logout'
     | '/admin/oauth/start'
+    | '/api/cron/attendance-cleanup'
+    | '/api/cron/policy-watch'
+    | '/attendance/photo/$id'
+    | '/certificates/image/$id'
+    | '/success-stories/media/$id'
   id:
     | '__root__'
     | '/'
     | '/admin'
+    | '/certificates'
     | '/coaching'
     | '/contact'
-    | '/certificates'
-    | '/certificates/image/$id'
     | '/eligibility'
+    | '/sitemap.xml'
     | '/success-stories'
-    | '/success-stories/media/$id'
     | '/visas'
+    | '/attendance/$token'
     | '/countries/$slug'
     | '/study-plan/$slug'
     | '/updates/$slug'
@@ -241,24 +297,32 @@ export interface FileRouteTypes {
     | '/admin/oauth/callback'
     | '/admin/oauth/logout'
     | '/admin/oauth/start'
+    | '/api/cron/attendance-cleanup'
+    | '/api/cron/policy-watch'
+    | '/attendance/photo/$id'
+    | '/certificates/image/$id'
+    | '/success-stories/media/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
+  CertificatesRoute: typeof CertificatesRouteWithChildren
   CoachingRoute: typeof CoachingRoute
   ContactRoute: typeof ContactRoute
-  CertificatesRoute: typeof CertificatesRoute
-  CertificatesImageRoute: typeof CertificatesImageRoute
   EligibilityRoute: typeof EligibilityRoute
-  SuccessStoriesRoute: typeof SuccessStoriesRoute
-  SuccessStoriesMediaRoute: typeof SuccessStoriesMediaRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  SuccessStoriesRoute: typeof SuccessStoriesRouteWithChildren
   VisasRoute: typeof VisasRoute
+  AttendanceTokenRoute: typeof AttendanceTokenRoute
   CountriesSlugRoute: typeof CountriesSlugRoute
   StudyPlanSlugRoute: typeof StudyPlanSlugRoute
   UpdatesSlugRoute: typeof UpdatesSlugRoute
   CountriesIndexRoute: typeof CountriesIndexRoute
   UpdatesIndexRoute: typeof UpdatesIndexRoute
+  ApiCronAttendanceCleanupRoute: typeof ApiCronAttendanceCleanupRoute
+  ApiCronPolicyWatchRoute: typeof ApiCronPolicyWatchRoute
+  AttendancePhotoIdRoute: typeof AttendancePhotoIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -277,6 +341,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/certificates': {
+      id: '/certificates'
+      path: '/certificates'
+      fullPath: '/certificates'
+      preLoaderRoute: typeof CertificatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/coaching': {
       id: '/coaching'
       path: '/coaching'
@@ -291,25 +362,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContactRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/certificates': {
-      id: '/certificates'
-      path: '/certificates'
-      fullPath: '/certificates'
-      preLoaderRoute: typeof CertificatesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/certificates/image/$id': {
-      id: '/certificates/image/$id'
-      path: '/certificates/image/$id'
-      fullPath: '/certificates/image/$id'
-      preLoaderRoute: typeof CertificatesImageRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/eligibility': {
       id: '/eligibility'
       path: '/eligibility'
       fullPath: '/eligibility'
       preLoaderRoute: typeof EligibilityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/success-stories': {
@@ -319,18 +383,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SuccessStoriesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/success-stories/media/$id': {
-      id: '/success-stories/media/$id'
-      path: '/success-stories/media/$id'
-      fullPath: '/success-stories/media/$id'
-      preLoaderRoute: typeof SuccessStoriesMediaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/visas': {
       id: '/visas'
       path: '/visas'
       fullPath: '/visas'
       preLoaderRoute: typeof VisasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/attendance/$token': {
+      id: '/attendance/$token'
+      path: '/attendance/$token'
+      fullPath: '/attendance/$token'
+      preLoaderRoute: typeof AttendanceTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/countries/': {
@@ -389,6 +453,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminOauthStartRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/api/cron/attendance-cleanup': {
+      id: '/api/cron/attendance-cleanup'
+      path: '/api/cron/attendance-cleanup'
+      fullPath: '/api/cron/attendance-cleanup'
+      preLoaderRoute: typeof ApiCronAttendanceCleanupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cron/policy-watch': {
+      id: '/api/cron/policy-watch'
+      path: '/api/cron/policy-watch'
+      fullPath: '/api/cron/policy-watch'
+      preLoaderRoute: typeof ApiCronPolicyWatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/attendance/photo/$id': {
+      id: '/attendance/photo/$id'
+      path: '/attendance/photo/$id'
+      fullPath: '/attendance/photo/$id'
+      preLoaderRoute: typeof AttendancePhotoIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/certificates/image/$id': {
+      id: '/certificates/image/$id'
+      path: '/image/$id'
+      fullPath: '/certificates/image/$id'
+      preLoaderRoute: typeof CertificatesImageIdRouteImport
+      parentRoute: typeof CertificatesRoute
+    }
+    '/success-stories/media/$id': {
+      id: '/success-stories/media/$id'
+      path: '/media/$id'
+      fullPath: '/success-stories/media/$id'
+      preLoaderRoute: typeof SuccessStoriesMediaIdRouteImport
+      parentRoute: typeof SuccessStoriesRoute
+    }
   }
 }
 
@@ -406,22 +505,49 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface CertificatesRouteChildren {
+  CertificatesImageIdRoute: typeof CertificatesImageIdRoute
+}
+
+const CertificatesRouteChildren: CertificatesRouteChildren = {
+  CertificatesImageIdRoute: CertificatesImageIdRoute,
+}
+
+const CertificatesRouteWithChildren = CertificatesRoute._addFileChildren(
+  CertificatesRouteChildren,
+)
+
+interface SuccessStoriesRouteChildren {
+  SuccessStoriesMediaIdRoute: typeof SuccessStoriesMediaIdRoute
+}
+
+const SuccessStoriesRouteChildren: SuccessStoriesRouteChildren = {
+  SuccessStoriesMediaIdRoute: SuccessStoriesMediaIdRoute,
+}
+
+const SuccessStoriesRouteWithChildren = SuccessStoriesRoute._addFileChildren(
+  SuccessStoriesRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
+  CertificatesRoute: CertificatesRouteWithChildren,
   CoachingRoute: CoachingRoute,
   ContactRoute: ContactRoute,
-  CertificatesRoute: CertificatesRoute,
-  CertificatesImageRoute: CertificatesImageRoute,
   EligibilityRoute: EligibilityRoute,
-  SuccessStoriesRoute: SuccessStoriesRoute,
-  SuccessStoriesMediaRoute: SuccessStoriesMediaRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
+  SuccessStoriesRoute: SuccessStoriesRouteWithChildren,
   VisasRoute: VisasRoute,
+  AttendanceTokenRoute: AttendanceTokenRoute,
   CountriesSlugRoute: CountriesSlugRoute,
   StudyPlanSlugRoute: StudyPlanSlugRoute,
   UpdatesSlugRoute: UpdatesSlugRoute,
   CountriesIndexRoute: CountriesIndexRoute,
   UpdatesIndexRoute: UpdatesIndexRoute,
+  ApiCronAttendanceCleanupRoute: ApiCronAttendanceCleanupRoute,
+  ApiCronPolicyWatchRoute: ApiCronPolicyWatchRoute,
+  AttendancePhotoIdRoute: AttendancePhotoIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

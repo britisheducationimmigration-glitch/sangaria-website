@@ -7,7 +7,10 @@ import { cn } from '@/lib/utils'
 import { getSupportedVideoEmbedUrl } from '@/lib/video'
 
 export function formatDate(d: string) {
-  return new Date(`${d}T12:00:00Z`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' })
+  if (!d) return ''
+  const parsed = new Date(`${d}T12:00:00Z`)
+  if (Number.isNaN(parsed.getTime())) return d
+  return parsed.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' })
 }
 
 export function ApprovalCard({ a, i = 0 }: { a: Approval; i?: number }) {

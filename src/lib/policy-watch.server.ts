@@ -2,7 +2,7 @@ import '@tanstack/react-start/server-only'
 
 import { createHash } from 'node:crypto'
 import { defaultPolicyWatchState, policyWatchItems, type PolicyNotice, type PolicySourceReview, type PolicyWatchState } from '@/data/policy-watch'
-import { execute, queryRows } from './db.server'
+import { databaseTransaction, queryRows } from './db.server'
 
 function parseWatchState(value: unknown): PolicyWatchState {
   let parsed = value
@@ -46,11 +46,17 @@ export async function readPolicyWatchState(): Promise<PolicyWatchState> {
   return store[currentDeploymentEnvironment()] ?? defaultPolicyWatchState()
 }
 
-export async function writePolicyWatchState(state: PolicyWatchState) {
-  const rows = await queryRows('SELECT policy_watch_json FROM site_settings WHERE id = 1 LIMIT 1')
-  const store = parsePolicyWatchStore(rows[0]?.policy_watch_json)
-  store[currentDeploymentEnvironment()] = state
-  await execute('UPDATE site_settings SET policy_watch_json = ? WHERE id = 1', [JSON.stringify({ version: 1, environments: store })])
+export async function mutatePolicyWatchState<T>(mutate: (state: PolicyWatchState) => T): Promise<T> {
+  return databaseTransaction(async connection => {
+    const [rows] = await connection.query('SELECT policy_watch_json FROM site_settings WHERE id = 1 FOR UPDATE')
+    const store = parsePolicyWatchStore((rows as Array<{ policy_watch_json: unknown }>)[0]?.policy_watch_json)
+    const environment = currentDeploymentEnvironment()
+    const state = store[environment] ?? defaultPolicyWatchState()
+    const result = mutate(state)
+    store[environment] = state
+    await connection.execute('UPDATE site_settings SET policy_watch_json = ? WHERE id = 1', [JSON.stringify({ version: 1, environments: store })])
+    return result
+  })
 }
 
 function destinationSlug(destination: string) {
@@ -105,9 +111,8 @@ function normalizedPageText(html: string) {
 }
 
 export async function scanOfficialPolicySources() {
-  const state = await readPolicyWatchState()
   const checkedAt = new Date().toISOString()
-  const results = await Promise.all(policyWatchItems.map(async (item) => {
+  const fetched = await Promise.all(policyWatchItems.map(async (item) => {
     try {
       const url = new URL(item.sourceUrl)
       if (url.protocol !== 'https:' || !isTrustedOfficialHost(url.hostname)) {
@@ -121,6 +126,15 @@ export async function scanOfficialPolicySources() {
       const text = normalizedPageText(await response.text())
       if (!text) return { id: item.id, status: 'unavailable' as const, detail: 'Empty page' }
       const sourceHash = createHash('sha256').update(text).digest('hex')
+      return { id: item.id, status: 'fetched' as const, sourceHash }
+    } catch (error) {
+      return { id: item.id, status: 'unavailable' as const, detail: error instanceof Error ? error.message.slice(0, 120) : 'Request failed' }
+    }
+  }))
+  const results = await mutatePolicyWatchState(state => fetched.map(result => {
+    if (result.status !== 'fetched') return result
+    const item = policyWatchItems.find(item => item.id === result.id)!
+    const sourceHash = result.sourceHash
       const previous = state.reviews[item.id] ?? {}
       let status: 'baselined' | 'unchanged' | 'changed' | 'already-pending' = 'unchanged'
       if (!previous.sourceHash) {
@@ -155,12 +169,9 @@ export async function scanOfficialPolicySources() {
         state.reviews[item.id] = { ...previous, sourceCheckedAt: checkedAt }
       }
       if (status === 'baselined') state.reviews[item.id] = { ...previous, sourceHash, sourceCheckedAt: checkedAt }
-      return { id: item.id, status }
-    } catch (error) {
-      return { id: item.id, status: 'unavailable' as const, detail: error instanceof Error ? error.message.slice(0, 120) : 'Request failed' }
-    }
+
+    return { id: item.id, status }
   }))
-  await writePolicyWatchState(state)
   return {
     checkedAt,
     checked: results.filter((item) => item.status !== 'unavailable' && item.status !== 'skipped').length,

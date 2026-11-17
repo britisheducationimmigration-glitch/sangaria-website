@@ -1,0 +1,53 @@
+name: Preview checks
+on:
+  push:
+    branches: ['preview/**']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: attendance-ci-root-only
+          MYSQL_ROOT_HOST: '%'
+          MYSQL_DATABASE: attendance_test
+          MYSQL_USER: attendance_test
+          MYSQL_PASSWORD: attendance-ci-test-only
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -u root -pattendance-ci-root-only"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run typecheck
+      - run: pnpm run test:attendance
+      - run: pnpm run test:attendance:server
+      - run: pnpm run test:site
+      - run: pnpm run test:database:migration
+        env:
+          TEST_DATABASE_URL: mysql://attendance_test:attendance-ci-test-only@127.0.0.1:3306/attendance_test
+      - run: pnpm run test:database:backup
+        env:
+          TEST_ADMIN_DATABASE_URL: mysql://root:attendance-ci-root-only@127.0.0.1:3306/attendance_test
+      - run: pnpm run test:attendance:mysql
+        env:
+          TEST_DATABASE_URL: mysql://attendance_test:attendance-ci-test-only@127.0.0.1:3306/attendance_test
+      - run: pnpm run build
+      - run: pnpm run audit:source
+      - uses: actions/upload-artifact@v4
+        with:
+          name: source-audit
+          path: docs/AUDIT-*.csv
+      - run: pnpm run test:http

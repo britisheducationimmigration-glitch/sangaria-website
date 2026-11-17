@@ -7,7 +7,17 @@
     "build": "vite build",
     "start": "node .output/server/index.mjs",
     "typecheck": "tsc --noEmit",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:attendance": "node --test src/lib/attendance-calculations.test.mjs",
+    "test:attendance:server": "node --experimental-vm-modules --test tests/attendance-boundaries.test.mjs tests/admin-boundaries.test.mjs",
+    "test:attendance:mysql": "node --experimental-vm-modules --test --test-concurrency=1 tests/attendance-mysql.test.mjs tests/admin-mysql.test.mjs",
+    "test:http": "node tests/http-smoke.mjs",
+    "audit:source": "node scripts/audit-source.mjs",
+    "test:database:migration": "node --experimental-vm-modules --test tests/db-migration.test.mjs",
+    "test:database:backup": "node --test tests/database-backup.test.mjs",
+    "backup:database": "node scripts/database-backup.mjs backup",
+    "restore:database": "node scripts/database-backup.mjs restore",
+    "test:site": "node --test tests/site-utilities.test.mjs"
   },
   "dependencies": {
     "@tanstack/react-router": "1.170.46",

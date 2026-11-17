@@ -60,7 +60,7 @@ function ContactPage() {
                 <span>
                   <span className="block font-bold">Call us</span>
                   {settings.phones.map((p) => (
-                    <a key={p} href={`tel:${p.startsWith('+') ? p : '+91' + p}`} className="block text-forest-100/75 hover:text-white">
+                    <a key={p} href={`tel:${(p.startsWith('+') ? p : '+91' + p).replace(/[^\d+]/g, '')}`} className="block text-forest-100/75 hover:text-white">
                       {p.startsWith('+') ? p : '+91 ' + p}
                     </a>
                   ))}

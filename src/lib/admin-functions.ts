@@ -1,11 +1,12 @@
+import { dateOnly } from '@/lib/date-only'
 import { createMiddleware, createServerFn } from '@tanstack/react-start'
-import { execute, jsonArray, queryRows } from './db.server'
+import { databaseTransaction, execute, jsonArray, queryRows } from './db.server'
 import type { AdminCertificate, AdminPost, AdminRole, AdminSnapshot, AdminStory, CoachingBatch, Enquiry, EnquiryActivity, EnquiryStatus } from './content-types'
 import { Buffer } from 'node:buffer'
 import { asFaqList, asTrustStatList, readSiteSettings } from './site-settings'
-import { defaultCashflowData, mergeNewCashflowDestinations, type CountryCashflow } from '@/data/cashflow'
-import { applyScheduledCashflowPolicy, policyWatchItems, type PolicyNotice } from '@/data/policy-watch'
-import { readPolicyWatchState, scanOfficialPolicySources, writePolicyWatchState } from './policy-watch.server'
+import { parseCashflowJson, type CountryCashflow } from '@/data/cashflow'
+import { policyWatchItems, type PolicyNotice } from '@/data/policy-watch'
+import { readPolicyWatchState, scanOfficialPolicySources, mutatePolicyWatchState } from './policy-watch.server'
 import { isValidBatchStartDate } from '@/lib/batch-dates'
 import { getSupportedVideoEmbedUrl } from './video'
 import { invalidateCoachingCache, invalidatePublicContentCache } from './public-functions'
@@ -37,20 +38,12 @@ function assertCapability(role: AdminRole, capability: Capability) {
   if (!allowed) throw new Error('You do not have permission for this section')
 }
 
-function dateOnly(value: unknown) {
-  if (value instanceof Date) return value.toISOString().slice(0, 10)
-  const text = String(value ?? '')
-  if (/^\d{4}-\d{2}-\d{2}/.test(text)) return text.slice(0, 10)
-  const parsed = new Date(text)
-  return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString().slice(0, 10)
-}
-
 function mapActivity(row: Record<string, unknown>): EnquiryActivity {
   return { id: Number(row.id), enquiryId: Number(row.enquiry_id), authorName: String(row.author_name), authorEmail: String(row.author_email), body: String(row.body), createdAt: new Date(String(row.created_at)).toISOString(), updatedAt: new Date(String(row.updated_at)).toISOString(), editedBy: String(row.edited_by ?? '') }
 }
 
 function mapEnquiry(row: Record<string, unknown>, activities: EnquiryActivity[] = []): Enquiry {
-  return { id: Number(row.id), name: String(row.name), phone: String(row.phone), email: String(row.email), city: String(row.city), interest: String(row.interest), country: String(row.country), message: String(row.message), source: String(row.source), summary: String(row.summary), status: String(row.status) as EnquiryStatus, notes: String(row.notes), activities, assignedTo: String(row.assigned_to ?? ''), nextFollowUpAt: row.next_follow_up_at ? new Date(String(row.next_follow_up_at)).toISOString() : '', createdAt: new Date(String(row.created_at)).toISOString(), updatedAt: new Date(String(row.updated_at)).toISOString() }
+  return { id: Number(row.id), name: String(row.name), phone: String(row.phone), email: String(row.email), city: String(row.city), interest: String(row.interest), country: String(row.country), message: String(row.message), source: String(row.source), summary: String(row.summary), status: String(row.status) as EnquiryStatus, notes: String(row.notes), activities, assignedTo: String(row.assigned_to ?? ''), nextFollowUpAt: String(row.next_follow_up_local ?? ''), createdAt: new Date(String(row.created_at)).toISOString(), updatedAt: new Date(String(row.updated_at)).toISOString() }
 }
 
 function mapAdminPost(row: Record<string, unknown>): AdminPost {
@@ -96,48 +89,34 @@ export const getAdminSnapshot = createServerFn({ method: 'GET' })
 
     // Streamlined query execution targeting only role-accessible data
     const [enquiryRows, postRows, storyRows, settingsRows, userRows, statRows, batchRows, statusRows, sourceRows, certificateRows] = await Promise.all([
-      !canSeeEnquiries ? Promise.resolve([]) : queryRows('SELECT id, name, phone, email, city, interest, country, message, source, summary, status, notes, assigned_to, next_follow_up_at, created_at, updated_at FROM enquiries ORDER BY created_at DESC LIMIT 150'),
+      !canSeeEnquiries ? Promise.resolve([]) : queryRows(`SELECT id, name, phone, email, city, interest, country, message, source, summary, status, notes, assigned_to, DATE_FORMAT(next_follow_up_at, '%Y-%m-%dT%H:%i') AS next_follow_up_local, next_follow_up_at, created_at, updated_at FROM enquiries ORDER BY created_at DESC LIMIT 6`),
       !canSeeContent ? Promise.resolve([]) : queryRows('SELECT id, slug, title, category, publish_date, excerpt, read_mins, body_json, published FROM content_posts ORDER BY publish_date DESC, id DESC LIMIT 100'),
       !canSeeContent ? Promise.resolve([]) : queryRows('SELECT id, kind, name, city, country, visa, quote, rating, initials, flag, story_date, note, photo_data IS NOT NULL AS has_photo, video_url, media_alt, media_consent, media_version, homepage_featured, published FROM success_stories ORDER BY story_date DESC, id DESC LIMIT 100'),
       !isSuperAdmin ? Promise.resolve([]) : queryRows('SELECT popup_enabled, popup_delay_seconds, whatsapp_enabled, approvals_marquee_enabled, public_settings_json FROM site_settings WHERE id = 1 LIMIT 1'),
       !isSuperAdmin ? Promise.resolve([]) : queryRows('SELECT open_id, email, name, role FROM admin_users ORDER BY email ASC'),
-      !canSeeEnquiries ? Promise.resolve([]) : queryRows(`SELECT COUNT(*) AS total, SUM(status = 'New') AS new_count, SUM(status IN ('Follow-up', 'Documents Pending', 'Applied')) AS follow_ups, SUM(status = 'Converted') AS converted, SUM(created_at >= CURRENT_DATE - INTERVAL 6 DAY) AS new_last_7_days, SUM(source = 'coaching') AS demo_requests, SUM(next_follow_up_at IS NOT NULL AND DATE(next_follow_up_at) = CURRENT_DATE() AND status NOT IN ('Converted', 'Closed')) AS due_today FROM enquiries`),
+      !canSeeEnquiries ? Promise.resolve([]) : queryRows(`SELECT COUNT(*) AS total, SUM(status = 'New') AS new_count, SUM(status IN ('Follow-up', 'Documents Pending', 'Applied')) AS follow_ups, SUM(status = 'Converted') AS converted, SUM(created_at >= DATE_SUB(DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 330 MINUTE)) - INTERVAL 6 DAY, INTERVAL 330 MINUTE)) AS new_last_7_days, SUM(source = 'coaching') AS demo_requests, SUM(next_follow_up_at IS NOT NULL AND DATE(next_follow_up_at) = DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 330 MINUTE)) AND status NOT IN ('Converted', 'Closed')) AS due_today FROM enquiries`),
       !canSeeContent ? Promise.resolve([]) : queryRows('SELECT id, program, batch_name, time_slot, seats, starts, published FROM coaching_batches ORDER BY id ASC'),
       !canSeeEnquiries ? Promise.resolve([]) : queryRows('SELECT status, COUNT(*) AS count FROM enquiries GROUP BY status'),
       !canSeeEnquiries ? Promise.resolve([]) : queryRows('SELECT source, COUNT(*) AS count FROM enquiries GROUP BY source'),
       !canSeeContent ? Promise.resolve([]) : queryRows('SELECT id, collection, title, issuer, category, credential_date, alt_text, image_path, image_data IS NOT NULL AS has_database_image, image_version, homepage_featured, published, sort_order FROM certificate_items WHERE collection = \'certificates\' ORDER BY sort_order ASC, id ASC'),
     ])
 
-    const activityRows = enquiryRows.length
-      ? await queryRows(
-          `SELECT id, enquiry_id, author_name, author_email, body, edited_by, created_at, updated_at
-           FROM enquiry_activities
-           WHERE enquiry_id IN (${enquiryRows.map(() => '?').join(',')})
-           ORDER BY created_at ASC, id ASC`,
-          enquiryRows.map((row) => Number(row.id)),
-        )
-      : []
-
-    const activitiesByEnquiry = new Map<number, EnquiryActivity[]>()
-    for (const row of activityRows) {
-      const activity = mapActivity(row)
-      const existing = activitiesByEnquiry.get(activity.enquiryId) ?? []
-      existing.push(activity)
-      activitiesByEnquiry.set(activity.enquiryId, existing)
-    }
-
+    const [monthRows, countryRows] = canSeeEnquiries ? await Promise.all([
+      queryRows(`SELECT DATE_FORMAT(DATE_ADD(created_at, INTERVAL 330 MINUTE), '%Y-%m') AS month, COUNT(*) AS count FROM enquiries WHERE created_at >= DATE_SUB(DATE_FORMAT(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 330 MINUTE), '%Y-%m-01') - INTERVAL 5 MONTH, INTERVAL 330 MINUTE) GROUP BY month`),
+      queryRows(`SELECT COALESCE(NULLIF(TRIM(country), ''), 'Not decided') AS country, COUNT(*) AS count FROM enquiries GROUP BY COALESCE(NULLIF(TRIM(country), ''), 'Not decided') ORDER BY count DESC, country ASC LIMIT 5`),
+    ]) : [[], []]
     const stats = statRows[0] ?? {}
     const byStatus = Object.fromEntries(statusRows.map((row) => [String(row.status), Number(row.count ?? 0)]))
     const bySource = Object.fromEntries(sourceRows.map((row) => [String(row.source || 'unknown'), Number(row.count ?? 0)]))
 
     return {
       user: { name: context.user.name, email: context.user.email, role: context.role },
-      enquiries: enquiryRows.map((row) => mapEnquiry(row, activitiesByEnquiry.get(Number(row.id)) ?? [])),
+     enquiries: enquiryRows.map((row) => mapEnquiry(row)),
       posts: postRows.map(mapAdminPost),
       stories: storyRows.map(mapAdminStory),
       settings: readSiteSettings(settingsRows[0]),
       users: userRows.map((row) => ({ openId: String(row.open_id || row.id || row.email), email: String(row.email), name: String(row.name || row.email), role: (row.role === 'admin' ? 'super_admin' : String(row.role)) as AdminRole })),
-      enquiryStats: { total: Number(stats.total ?? 0), newCount: Number(stats.new_count ?? 0), followUps: Number(stats.follow_ups ?? 0), dueToday: Number(stats.due_today ?? 0), converted: Number(stats.converted ?? 0), newLast7Days: Number(stats.new_last_7_days ?? 0), demoRequests: Number(stats.demo_requests ?? 0), byStatus, bySource },
+      enquiryStats: { total: Number(stats.total ?? 0), newCount: Number(stats.new_count ?? 0), followUps: Number(stats.follow_ups ?? 0), dueToday: Number(stats.due_today ?? 0), converted: Number(stats.converted ?? 0), newLast7Days: Number(stats.new_last_7_days ?? 0), demoRequests: Number(stats.demo_requests ?? 0), byStatus, bySource, byMonth: Object.fromEntries(monthRows.map(row => [String(row.month), Number(row.count)])), topCountries: countryRows.map(row => ({ country: String(row.country), count: Number(row.count) })) },
       batches: batchRows.map(mapBatch),
       certificates: certificateRows.map(mapCertificate),
     }
@@ -169,7 +148,9 @@ export const savePolicyNotice = createServerFn({ method: 'POST' }).middleware([a
   if (status === 'published') {
     if (!sourceVerified) throw new Error('Check the official source before publishing')
     if (!/^\d{4}-\d{2}-\d{2}$/.test(showFrom) || !/^\d{4}-\d{2}-\d{2}$/.test(expiresOn) || expiresOn <= showFrom) throw new Error('Set a valid start date and a later hide date before publishing')
-    if (!sourceUrl.startsWith('https://') || !sourceLabel) throw new Error('Published notices need an official HTTPS source link')
+    let validSource = false
+    try { const url = new URL(sourceUrl); validSource = url.protocol === 'https:' && Boolean(url.hostname) && !url.username && !url.password } catch { /* invalid URL */ }
+    if (!validSource || !sourceLabel) throw new Error('Published notices need an official HTTPS source link')
   }
   return { id, countrySlug, title, message, showFrom, expiresOn, sourceLabel, sourceUrl, status: status as 'draft' | 'published', sourceVerified }
 }).handler(async ({ data, context }): Promise<PolicyNotice> => {
@@ -178,7 +159,7 @@ export const savePolicyNotice = createServerFn({ method: 'POST' }).middleware([a
     const countryPages = await getPublicCountryCatalog()
     if (!countryPages.some((entry) => entry.country.slug === data.countrySlug)) throw new Error('Choose a published destination')
   }
-  const state = await readPolicyWatchState()
+  return mutatePolicyWatchState(state => {
   const id = data.id || 'notice-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8)
   const previous = state.notices.find((item) => item.id === id)
   const notice: PolicyNotice = {
@@ -194,15 +175,15 @@ export const savePolicyNotice = createServerFn({ method: 'POST' }).middleware([a
   const index = state.notices.findIndex((item) => item.id === id)
   if (index < 0) state.notices.unshift(notice)
   else state.notices[index] = notice
-  await writePolicyWatchState(state)
   return notice
+  })
 })
 
 export const deletePolicyNotice = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => ({
   id: stringValue((data as Record<string, unknown>)?.id, 120),
 })).handler(async ({ data, context }) => {
   if (context.role !== 'super_admin') throw new Error('Only a super admin can remove policy notices')
-  const state = await readPolicyWatchState()
+  return mutatePolicyWatchState(state => {
   state.notices = state.notices.filter((item) => item.id !== data.id)
   for (const review of Object.values(state.reviews)) {
     if (review.pendingDraftId === data.id) {
@@ -210,8 +191,8 @@ export const deletePolicyNotice = createServerFn({ method: 'POST' }).middleware(
       delete review.pendingDraftId
     }
   }
-  await writePolicyWatchState(state)
   return { ok: true }
+  })
 })
 
 export const markPolicySourceReview = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
@@ -222,14 +203,14 @@ export const markPolicySourceReview = createServerFn({ method: 'POST' }).middlew
   return { itemId, action: action as 'checked' | 'guidance-updated' }
 }).handler(async ({ data, context }) => {
   if (context.role !== 'super_admin') throw new Error('Only a super admin can mark policy reviews')
-  const state = await readPolicyWatchState()
+  return mutatePolicyWatchState(state => {
   const previous = state.reviews[data.itemId] ?? {}
   const now = new Date().toISOString()
   state.reviews[data.itemId] = data.action === 'checked'
     ? { ...previous, checkedAt: now, checkedBy: context.user.email, sourceChangePending: false, pendingDraftId: undefined }
     : { ...previous, guidanceUpdatedAt: now, guidanceUpdatedBy: context.user.email }
-  await writePolicyWatchState(state)
   return { ok: true, review: state.reviews[data.itemId] }
+  })
 })
 
 export const scanPolicySourcesNow = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).handler(async ({ context }) => {
@@ -484,8 +465,10 @@ export const deleteEnquiryActivity = createServerFn({ method: 'POST' }).middlewa
 
 export const deleteEnquiry = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => ({ id: numberValue((data as Record<string, unknown>)?.id) })).handler(async ({ data, context }) => {
   if (context.role !== 'super_admin') throw new Error('Only a super admin can delete enquiries')
-  await execute('DELETE FROM enquiry_activities WHERE enquiry_id = ?', [data.id])
-  await execute('DELETE FROM enquiries WHERE id = ?', [data.id])
+  await databaseTransaction(async connection => {
+    await connection.execute('DELETE FROM enquiry_activities WHERE enquiry_id = ?', [data.id])
+    await connection.execute('DELETE FROM enquiries WHERE id = ?', [data.id])
+  })
   return { ok: true }
 })
 
@@ -509,17 +492,17 @@ export const exportEnquiries = createServerFn({ method: 'GET' }).middleware([adm
     for (let index = 0; index < 5; index += 1) values.push(`%${sanitized}%`)
   }
   if (data.status) { clauses.push('status = ?'); values.push(data.status) }
-  if (data.from) { clauses.push('created_at >= ?'); values.push(`${data.from} 00:00:00`) }
-  if (data.to) { clauses.push('created_at < DATE_ADD(?, INTERVAL 1 DAY)'); values.push(`${data.to} 00:00:00`) }
+  if (data.from) { clauses.push('created_at >= DATE_SUB(?, INTERVAL 330 MINUTE)'); values.push(`${data.from} 00:00:00`) }
+  if (data.to) { clauses.push('created_at < DATE_SUB(DATE_ADD(?, INTERVAL 1 DAY), INTERVAL 330 MINUTE)'); values.push(`${data.to} 00:00:00`) }
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : ''
-  const rows = await queryRows(`SELECT id, name, phone, email, city, interest, country, message, source, status, notes, assigned_to, next_follow_up_at, created_at FROM enquiries ${where} ORDER BY created_at DESC LIMIT 5000`, values)
+  const rows = await queryRows(`SELECT id, name, phone, email, city, interest, country, message, source, status, notes, assigned_to, DATE_FORMAT(next_follow_up_at, '%Y-%m-%dT%H:%i') AS next_follow_up_local, next_follow_up_at, created_at FROM enquiries ${where} ORDER BY created_at DESC LIMIT 5000`, values)
   const { createLeadsWorkbook } = await import('./xlsx.server')
   const cleanDate = (value: unknown) => value ? new Date(String(value)).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : ''
-  const leads = rows.map((row) => [Number(row.id), row.name, row.phone, row.email, row.city, row.interest, row.country, row.status, row.assigned_to, cleanDate(row.next_follow_up_at), row.source, row.message, row.notes, cleanDate(row.created_at)])
+  const leads = rows.map((row) => [Number(row.id), row.name, row.phone, row.email, row.city, row.interest, row.country, row.status, row.assigned_to, String(row.next_follow_up_local ?? '').replace('T', ' '), row.source, row.message, row.notes, cleanDate(row.created_at)])
   const statusCounts = new Map<string, number>()
   for (const row of rows) statusCounts.set(String(row.status), (statusCounts.get(String(row.status)) ?? 0) + 1)
   const summary = [['Status', 'Lead count'], ...Array.from(statusCounts.entries()).map(([leadStatus, count]) => [leadStatus, count]), ['Total', rows.length]]
-  const followUps = rows.filter((row) => row.next_follow_up_at).map((row) => [cleanDate(row.next_follow_up_at), row.name, row.phone, row.country, row.interest, row.status, row.assigned_to, row.notes])
+  const followUps = rows.filter((row) => row.next_follow_up_at).map((row) => [String(row.next_follow_up_local ?? '').replace('T', ' '), row.name, row.phone, row.country, row.interest, row.status, row.assigned_to, row.notes])
   const baseName = data.status ? data.status.toLowerCase().replaceAll(' ', '-') : 'all'
   return {
     filename: `bei-leads-${baseName}-${new Date().toISOString().slice(0, 10)}.xlsx`,
@@ -540,6 +523,8 @@ export const savePost = createServerFn({ method: 'POST' }).middleware([adminMidd
   return { id: numberValue(input.id), slug, title, category: stringValue(input.category, 80) || 'Visa News', date: stringValue(input.date, 10) || new Date().toISOString().slice(0, 10), excerpt: stringValue(input.excerpt, 5000), readMins: Math.max(1, Math.min(60, numberValue(input.readMins, 4))), body, published: Boolean(input.published) }
 }).handler(async ({ data, context }) => {
   assertCapability(context.role, 'content')
+  const duplicates = await queryRows('SELECT id FROM content_posts WHERE slug = ? AND id <> ? LIMIT 1', [data.slug, data.id || 0])
+  if (duplicates.length) throw new Error('This URL slug is already used by another article.')
   if (data.id) await execute('UPDATE content_posts SET slug = ?, title = ?, category = ?, publish_date = ?, excerpt = ?, read_mins = ?, body_json = ?, published = ? WHERE id = ?', [data.slug, data.title, data.category, data.date, data.excerpt, data.readMins, JSON.stringify(data.body), data.published ? 1 : 0, data.id])
   else await execute('INSERT INTO content_posts (slug, title, category, publish_date, excerpt, read_mins, body_json, published) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [data.slug, data.title, data.category, data.date, data.excerpt, data.readMins, JSON.stringify(data.body), data.published ? 1 : 0])
   invalidatePublicContentCache()
@@ -717,6 +702,9 @@ export const saveCertificate = createServerFn({ method: 'POST' })
       const jpeg = image[0] === 255 && image[1] === 216 && image[2] === 255
       if ((data.imageMimeType === 'image/webp' && !webp) || (data.imageMimeType === 'image/png' && !png) || (data.imageMimeType === 'image/jpeg' && !jpeg)) throw new Error('The selected file is not a valid image')
     }
+    await databaseTransaction(async connection => {
+    await connection.query('SELECT id FROM site_settings WHERE id = 1 FOR UPDATE')
+    const execute = (sql: string, values: Array<string | number | boolean | Date | Buffer | null> = []) => connection.execute(sql, values)
     if (data.id) {
       if (image) {
         await execute(
@@ -735,9 +723,10 @@ export const saveCertificate = createServerFn({ method: 'POST' })
       )
       await execute(
         'INSERT INTO certificate_items (collection, title, issuer, category, credential_date, alt_text, image_mime_type, image_data, image_version, homepage_featured, published, sort_order) VALUES (\'certificates\', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [data.title, data.issuer, data.category, data.credentialDate, data.altText, data.imageMimeType, image, image ? Date.now() : 0, data.homepageFeatured ? 1 : 0, data.published ? 1 : 0, 0],
+        [data.title, data.issuer, data.category, data.credentialDate, data.altText, data.imageMimeType, image, image ? Date.now() : 0, data.homepageFeatured ? 1 : 0, data.published ? 1 : 0, 1],
       )
     }
+    })
     invalidatePublicContentCache()
     return { ok: true }
   })
@@ -772,6 +761,23 @@ export const updateSettings = createServerFn({ method: 'POST' }).middleware([adm
   return { ok: true }
 })
 
+async function mutatePublicSiteSettings<T>(
+  mutate: (current: ReturnType<typeof readSiteSettings>) => {
+    next: Pick<ReturnType<typeof readSiteSettings>, 'phones' | 'emails' | 'officeHours' | 'faqs' | 'trustStats'>
+    result: T
+  },
+): Promise<T> {
+  const output = await databaseTransaction(async (connection) => {
+    const [rows] = await connection.query('SELECT public_settings_json FROM site_settings WHERE id = 1 FOR UPDATE')
+    const current = readSiteSettings((rows as Array<Record<string, unknown>>)[0])
+    const { next, result } = mutate(current)
+    await connection.execute('UPDATE site_settings SET public_settings_json = ? WHERE id = 1', [JSON.stringify(next)])
+    return result
+  })
+  invalidatePublicContentCache()
+  return output
+}
+
 export const saveContactDetails = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
   const input = (data ?? {}) as Record<string, unknown>
   const phones = Array.isArray(input.phones) ? input.phones.map((item) => stringValue(item, 24)).filter(Boolean).slice(0, 3) : []
@@ -783,12 +789,10 @@ export const saveContactDetails = createServerFn({ method: 'POST' }).middleware(
   return { phones, emails, officeHours }
 }).handler(async ({ data, context }) => {
   assertCapability(context.role, 'settings')
-  const rows = await queryRows('SELECT public_settings_json FROM site_settings WHERE id = 1 LIMIT 1')
-  const current = readSiteSettings(rows[0])
-  const publicSettings = { phones: data.phones, emails: data.emails, officeHours: data.officeHours, faqs: current.faqs, trustStats: current.trustStats }
-  await execute('UPDATE site_settings SET public_settings_json = ? WHERE id = 1', [JSON.stringify(publicSettings)])
-  invalidatePublicContentCache()
-  return { phones: data.phones, emails: data.emails, officeHours: data.officeHours }
+  return mutatePublicSiteSettings((current) => ({
+    next: { phones: data.phones, emails: data.emails, officeHours: data.officeHours, faqs: current.faqs, trustStats: current.trustStats },
+    result: { phones: data.phones, emails: data.emails, officeHours: data.officeHours },
+  }))
 })
 
 export const saveTrustStat = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
@@ -802,26 +806,26 @@ export const saveTrustStat = createServerFn({ method: 'POST' }).middleware([admi
   return { action: action as 'save' | 'remove', index, trustStat }
 }).handler(async ({ data, context }) => {
   assertCapability(context.role, 'settings')
-  const rows = await queryRows('SELECT public_settings_json FROM site_settings WHERE id = 1 LIMIT 1')
-  const current = readSiteSettings(rows[0])
-  const trustStats = [...current.trustStats]
-  if (data.action === 'save') {
-    if (data.index > trustStats.length) throw new Error('The trust numbers changed. Reload settings and try again.')
-    if (data.index === trustStats.length) {
-      if (trustStats.length >= 6) throw new Error('You can show up to six homepage trust numbers.')
-      trustStats.push(data.trustStat)
+  return mutatePublicSiteSettings((current) => {
+    const trustStats = [...current.trustStats]
+    if (data.action === 'save') {
+      if (data.index > trustStats.length) throw new Error('The trust numbers changed. Reload settings and try again.')
+      if (data.index === trustStats.length) {
+        if (trustStats.length >= 6) throw new Error('You can show up to six homepage trust numbers.')
+        trustStats.push(data.trustStat)
+      } else {
+        trustStats[data.index] = data.trustStat
+      }
     } else {
-      trustStats[data.index] = data.trustStat
+      if (data.index >= trustStats.length) throw new Error('This trust number is no longer available. Reload settings and try again.')
+      if (trustStats.length <= 1) throw new Error('Keep at least one homepage trust number.')
+      trustStats.splice(data.index, 1)
     }
-  } else {
-    if (data.index >= trustStats.length) throw new Error('This trust number is no longer available. Reload settings and try again.')
-    if (trustStats.length <= 1) throw new Error('Keep at least one homepage trust number.')
-    trustStats.splice(data.index, 1)
-  }
-  const publicSettings = { phones: current.phones, emails: current.emails, officeHours: current.officeHours, faqs: current.faqs, trustStats }
-  await execute('UPDATE site_settings SET public_settings_json = ? WHERE id = 1', [JSON.stringify(publicSettings)])
-  invalidatePublicContentCache()
-  return { trustStats }
+    return {
+      next: { phones: current.phones, emails: current.emails, officeHours: current.officeHours, faqs: current.faqs, trustStats },
+      result: { trustStats },
+    }
+  })
 })
 
 export const saveFaq = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
@@ -835,27 +839,43 @@ export const saveFaq = createServerFn({ method: 'POST' }).middleware([adminMiddl
   return { action: action as 'save' | 'remove', index, faq }
 }).handler(async ({ data, context }) => {
   assertCapability(context.role, 'settings')
-  const rows = await queryRows('SELECT public_settings_json FROM site_settings WHERE id = 1 LIMIT 1')
-  const current = readSiteSettings(rows[0])
-  const faqs = [...current.faqs]
-  if (data.action === 'save') {
-    if (data.index > faqs.length) throw new Error('This FAQ list changed. Reload the settings and try again.')
-    if (data.index === faqs.length) faqs.push(data.faq)
-    else faqs[data.index] = data.faq
-  } else {
-    if (data.index >= faqs.length) throw new Error('This FAQ is no longer available. Reload the settings and try again.')
-    if (faqs.length <= 1) throw new Error('Keep at least one homepage FAQ.')
-    faqs.splice(data.index, 1)
-  }
-  const publicSettings = { phones: current.phones, emails: current.emails, officeHours: current.officeHours, faqs, trustStats: current.trustStats }
-  await execute('UPDATE site_settings SET public_settings_json = ? WHERE id = 1', [JSON.stringify(publicSettings)])
-  invalidatePublicContentCache()
-  return { faqs }
+  return mutatePublicSiteSettings((current) => {
+    const faqs = [...current.faqs]
+    if (data.action === 'save') {
+      if (data.index > faqs.length) throw new Error('This FAQ list changed. Reload the settings and try again.')
+      if (data.index === faqs.length) faqs.push(data.faq)
+      else faqs[data.index] = data.faq
+    } else {
+      if (data.index >= faqs.length) throw new Error('This FAQ is no longer available. Reload the settings and try again.')
+      if (faqs.length <= 1) throw new Error('Keep at least one homepage FAQ.')
+      faqs.splice(data.index, 1)
+    }
+    return {
+      next: { phones: current.phones, emails: current.emails, officeHours: current.officeHours, faqs, trustStats: current.trustStats },
+      result: { faqs },
+    }
+  })
 })
 
 export const saveCashflow = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
   const input = (data ?? {}) as Record<string, unknown>
   if (!Array.isArray(input.cashflowData) || input.cashflowData.length === 0) throw new Error('Cashflow data is required')
+  const slugs = new Set<string>()
+  for (const raw of input.cashflowData) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Invalid cashflow country')
+    const country = raw as Record<string, unknown>
+    for (const key of ['slug', 'name', 'flag', 'currency', 'headline', 'totalEstimateINR', 'officialRuleNote']) if (typeof country[key] !== 'string' || String(country[key]).length > 5000) throw new Error('Invalid cashflow country field: ' + key)
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(String(country.slug)) || slugs.has(String(country.slug)) || !String(country.name).trim()) throw new Error('Invalid or duplicate cashflow country')
+    slugs.add(String(country.slug))
+    if (!Array.isArray(country.stages) || !country.stages.length || country.stages.length > 30) throw new Error('Cashflow stages are required')
+    const numbers = new Set<number>()
+    for (const stage of country.stages) {
+      if (!stage || typeof stage !== 'object' || !Number.isInteger(stage.stageNumber) || stage.stageNumber < 1 || numbers.has(stage.stageNumber)) throw new Error('Invalid or duplicate stage number')
+      numbers.add(stage.stageNumber)
+      for (const key of ['title', 'timeline', 'inrEstimate', 'officialCost', 'paidTo', 'description', 'refundableInfo']) if (typeof stage[key] !== 'string' || stage[key].length > 5000) throw new Error('Invalid cashflow stage field: ' + key)
+    }
+    if (country.officialSources !== undefined && (!Array.isArray(country.officialSources) || country.officialSources.some(source => !source || typeof source.label !== 'string' || typeof source.url !== 'string'))) throw new Error('Invalid cashflow sources')
+  }
   const cashflowJson = JSON.stringify(input.cashflowData)
   if (cashflowJson.length > 500_000) throw new Error('Cashflow data is too large')
   return { cashflowJson }
@@ -868,14 +888,7 @@ export const saveCashflow = createServerFn({ method: 'POST' }).middleware([admin
 export const getAdminCashflow = createServerFn({ method: 'GET' }).middleware([adminMiddleware]).handler(async ({ context }): Promise<CountryCashflow[]> => {
   if (context.role !== 'super_admin') throw new Error('Only a super admin can view cashflow settings')
   const rows = await queryRows('SELECT cashflow_json FROM site_settings WHERE id = 1 LIMIT 1')
-  const raw = rows[0]?.cashflow_json
-  if (typeof raw !== 'string' || !raw.trim()) return defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country))
-  try {
-    const parsed = JSON.parse(raw) as unknown
-    return (Array.isArray(parsed) && parsed.length > 0 ? mergeNewCashflowDestinations(parsed as CountryCashflow[]) : defaultCashflowData).map((country) => applyScheduledCashflowPolicy(country))
-  } catch {
-    return defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country))
-  }
+  return parseCashflowJson(rows[0]?.cashflow_json)
 })
 
 export const saveAdminUser = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
@@ -888,6 +901,7 @@ export const saveAdminUser = createServerFn({ method: 'POST' }).middleware([admi
   return { email, role, name: stringValue(input.name, 160) || email, password }
 }).handler(async ({ data, context }) => {
   assertCapability(context.role, 'users')
+  if (data.email === context.user.email.toLowerCase() && data.role !== 'super_admin') throw new Error('You cannot downgrade your own active Super Admin account')
   const { hashPassword } = await import('./auth.server')
   const passHash = data.password ? hashPassword(data.password) : null
 
@@ -919,3 +933,36 @@ export const deleteAdminUser = createServerFn({ method: 'POST' }).middleware([ad
   }
   return { ok: true }
 })
+
+export const getEnquiriesPage = createServerFn({ method: 'GET' }).middleware([adminMiddleware])
+  .validator((raw: unknown) => {
+    const input = (raw ?? {}) as Record<string, unknown>
+    const from = stringValue(input.from, 10), to = stringValue(input.to, 10)
+    for (const date of [from, to].filter(Boolean)) {
+      const parsed = new Date(date + 'T00:00:00Z')
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date) throw new Error('Invalid enquiry date')
+    }
+   return { query: stringValue(input.query, 120), status: stringValue(input.status, 24), source: stringValue(input.source, 160), from, to, dueTodayOnly: Boolean(input.dueTodayOnly), overdueOnly: Boolean(input.overdueOnly), page: Math.max(1, Math.min(100000, Math.floor(numberValue(input.page, 1)))) }
+  })
+  .handler(async ({ data, context }) => {
+    assertCapability(context.role, 'enquiries')
+    const clauses: string[] = [], values: unknown[] = []
+    if (data.query) {
+      clauses.push('(name LIKE ? OR phone LIKE ? OR email LIKE ? OR city LIKE ? OR country LIKE ?)')
+      const term = data.query.replace(/[%_\\]/g, '\\$&')
+      for (let n = 0; n < 5; n++) values.push('%' + term + '%')
+    }
+    if (data.status) { clauses.push('status = ?'); values.push(data.status) }
+    if (data.source) { clauses.push('source = ?'); values.push(data.source) }
+    if (data.from) { clauses.push('created_at >= DATE_SUB(?, INTERVAL 330 MINUTE)'); values.push(data.from + ' 00:00:00') }
+    if (data.to) { clauses.push('created_at < DATE_SUB(DATE_ADD(?, INTERVAL 1 DAY), INTERVAL 330 MINUTE)'); values.push(data.to + ' 00:00:00') }
+    if (data.dueTodayOnly) clauses.push("DATE(next_follow_up_at) = DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 330 MINUTE)) AND status NOT IN ('Converted', 'Closed')")
+    if (data.overdueOnly) clauses.push("next_follow_up_at < DATE_ADD(UTC_TIMESTAMP(), INTERVAL 330 MINUTE) AND status NOT IN ('Converted', 'Closed')")
+    const where = clauses.length ? 'WHERE ' + clauses.join(' AND ') : ''
+    const counts = await queryRows('SELECT COUNT(*) AS total FROM enquiries ' + where, values)
+    const total = Number(counts[0]?.total ?? 0), pageSize = 50
+    const page = Math.min(data.page, Math.max(1, Math.ceil(total / pageSize)))
+    const rows = await queryRows(`SELECT *, DATE_FORMAT(next_follow_up_at, '%Y-%m-%dT%H:%i') AS next_follow_up_local FROM enquiries ${where} ORDER BY created_at DESC, id DESC LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`, values)
+    const activities = rows.length ? await queryRows(`SELECT * FROM enquiry_activities WHERE enquiry_id IN (${rows.map(() => '?').join(',')}) ORDER BY created_at ASC, id ASC`, rows.map(row => Number(row.id))) : []
+    return { items: rows.map(row => mapEnquiry(row, activities.filter(a => Number(a.enquiry_id) === Number(row.id)).map(mapActivity))), total, page, pageSize }
+  })

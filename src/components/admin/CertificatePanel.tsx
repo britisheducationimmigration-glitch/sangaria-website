@@ -21,7 +21,7 @@ type Draft = {
 const emptyDraft = (): Draft => ({
   id: 0, title: '', issuer: '', category: 'Partner authorisations', credentialDate: '',
   altText: '', imageSrc: '', imageBase64: '', imageMimeType: '',
-  homepageFeatured: false, published: false, sortOrder: 0,
+  homepageFeatured: false, published: false, sortOrder: 1,
 })
 const inputClass = 'mt-1 min-h-11 w-full rounded-xl border border-forest-900/15 bg-white px-3 py-2 text-sm text-forest-900'
 const labelClass = 'block text-xs font-bold text-forest-900/75'

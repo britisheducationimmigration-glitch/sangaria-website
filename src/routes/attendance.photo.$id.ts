@@ -1,0 +1,58 @@
+import { Buffer } from 'node:buffer'
+import { createFileRoute } from '@tanstack/react-router'
+import { ensureAttendanceSchema } from '@/lib/attendance.server'
+import { ensureAdminRecord, getAdminRole, getSessionUser } from '@/lib/auth.server'
+import { queryRows } from '@/lib/db.server'
+
+export const Route = createFileRoute('/attendance/photo/$id')({
+  server: {
+    handlers: {
+      GET: async ({ request, params }) => {
+        const id = Number(params.id)
+        if (!Number.isSafeInteger(id) || id <= 0) return new Response('Not found', { status: 404 })
+
+        const user = await getSessionUser(request.headers)
+        const isSuperAdmin =
+          user && (await ensureAdminRecord(user)) && (await getAdminRole(user)) === 'super_admin'
+        if (!isSuperAdmin) return new Response('Not found', { status: 404 })
+
+        const url = new URL(request.url)
+        const type = url.searchParams.get('type') === 'out' ? 'out' : 'in'
+        const col = type === 'out' ? 'out_photo_data' : 'in_photo_data'
+
+        try {
+          await ensureAttendanceSchema()
+          const rows = await queryRows(`SELECT ${col} AS photo_blob FROM attendance_logs WHERE id = ? LIMIT 1`, [id])
+          const blob = rows[0]?.photo_blob
+          if (!blob) return new Response('Not found', { status: 404 })
+
+          if (url.searchParams.get('view') === 'mirror') {
+            const src = '/attendance/photo/' + id + '?type=' + type
+            return new Response('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Mirrored attendance selfie</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#101828}img{max-width:95vw;max-height:95vh;object-fit:contain;transform:scaleX(-1)}</style></head><body><img src="' + src + '" alt="Mirrored attendance selfie"></body></html>', {
+              headers: {
+                'Content-Type': 'text/html; charset=utf-8',
+                'Cache-Control': 'private, no-store',
+                'X-Content-Type-Options': 'nosniff',
+                'Content-Security-Policy': "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'none'",
+              },
+            })
+          }
+
+          const bytes = Buffer.isBuffer(blob) ? blob : Buffer.from(blob as Uint8Array)
+          const body = new ArrayBuffer(bytes.byteLength)
+          new Uint8Array(body).set(bytes)
+         const isWebp = bytes.length > 12 && bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP'
+          return new Response(body, {
+            headers: {
+              'Content-Type': isWebp ? 'image/webp' : 'image/jpeg',
+              'Cache-Control': 'private, no-store',
+              'X-Content-Type-Options': 'nosniff',
+            },
+          })
+        } catch {
+          return new Response('Not found', { status: 404 })
+        }
+      },
+    },
+  },
+})

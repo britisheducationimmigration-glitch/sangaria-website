@@ -70,7 +70,7 @@ export function SiteFooter({ settings, countries }: { settings: SiteSettings; co
               {site.address}
             </p>
             {settings.phones.map((p) => (
-              <a key={p} href={`tel:${p.startsWith('+') ? p : '+91' + p}`} className="mt-2 flex min-h-8 items-center gap-3 text-xs transition-colors hover:text-white md:mt-3 md:text-sm">
+              <a key={p} href={`tel:${(p.startsWith('+') ? p : '+91' + p).replace(/[^\d+]/g, '')}`} className="mt-2 flex min-h-8 items-center gap-3 text-xs transition-colors hover:text-white md:mt-3 md:text-sm">
                 <Phone className="size-4 text-coral-400" /> {p.startsWith('+') ? p : '+91 ' + p}
               </a>
             ))}

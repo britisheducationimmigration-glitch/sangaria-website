@@ -43,6 +43,7 @@ export function FamilyCashflowPlanner({ initialData }: { initialData?: CountryCa
       return
     }
 
+    printWindow.opener = null
     const htmlContent = `
       <!DOCTYPE html>
       <html lang="en">
@@ -146,7 +147,7 @@ export function FamilyCashflowPlanner({ initialData }: { initialData?: CountryCa
     msg += `📍 Near Open Book Library, Bhagatpura Road, Sangaria (Raj.)\n`
     msg += `👉 Website: https://britisheducationandimmigration.com`
 
-    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank')
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer')
   }
 
   return (
