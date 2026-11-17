@@ -1,4 +1,5 @@
 import { Logo } from '@/components/Logo'
+import { checkFaceTurn } from '@/lib/face-challenge'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { CalendarDays, Camera, CheckCircle2, ChevronDown, Clock, Lock, MapPin, RefreshCw, ShieldAlert } from 'lucide-react'
@@ -182,6 +183,7 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
     if (!video || !streamRef.current || video.videoWidth < 100) {
       throw new Error('Front camera is not ready. Tap Restart Camera and look into the frame.')
     }
+    await checkFaceTurn(video, setStepLabel)
    const canvas = document.createElement('canvas')
     const scale = Math.min(1, 360 / Math.max(video.videoWidth, video.videoHeight))
     const w = Math.max(160, Math.round(video.videoWidth * scale))
@@ -223,6 +225,7 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
           note: action === 'break_out' ? breakNote : '',
           deviceKey: deviceKey || getOrCreateDeviceKey(),
           photoBase64,
+          basicFaceCheck: ['in', 'out', 'half_out'].includes(action),
           lat: freshGps.lat,
           lng: freshGps.lng,
           accuracyM: freshGps.accuracyM,
@@ -310,6 +313,7 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
             </div>
           )}
 
+          {busy && stepLabel && <p role="status" aria-live="polite" className="rounded-xl bg-blue-50 p-3 text-sm font-semibold">{stepLabel}</p>}
           {statusMsg && (
             <p role="status" className={`rounded-xl p-3 text-xs font-semibold ${statusMsg.tone === 'success' ? 'bg-[#ECFDF3] text-[#12B76A]' : 'bg-[#FEF3F2] text-[#F04438]'}`}>
               {statusMsg.text}

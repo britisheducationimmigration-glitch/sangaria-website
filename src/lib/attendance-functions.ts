@@ -183,7 +183,7 @@ export const markEmployeeAttendance = createServerFn({ method: 'POST' })
     if (photoBase64 && (photoBase64.length > 500_000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(photoBase64))) {
       throw new Error('Selfie image is invalid or too large.')
     }
-    return { token, action: action as EmployeeMarkAction, pin, note, deviceKey, photoBase64, lat, lng, accuracyM }
+    return { token, action: action as EmployeeMarkAction, pin, note, deviceKey, photoBase64, lat, lng, accuracyM, basicFaceCheck: input.basicFaceCheck === true }
   })
   .handler(async ({ data }) => {
     await ensureAttendanceSchema()
@@ -218,6 +218,7 @@ export const markEmployeeAttendance = createServerFn({ method: 'POST' })
     if (settings.requireSelfie && needsSelfie && !data.photoBase64) {
       throw new Error('Live camera selfie is required to mark attendance.')
     }
+    if (settings.requireSelfie && needsSelfie && !data.basicFaceCheck) throw new Error('Complete the face and head-turn check before marking attendance.')
     if (data.photoBase64) {
       photoBuffer = Buffer.from(data.photoBase64, 'base64')
       const isWebp = photoBuffer.length > 12 && photoBuffer.toString('ascii', 0, 4) === 'RIFF' && photoBuffer.toString('ascii', 8, 12) === 'WEBP'
