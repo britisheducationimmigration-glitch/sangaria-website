@@ -1063,6 +1063,10 @@ export const issueSalarySlip = createServerFn({ method: 'POST' })
     const allowanceAmount = Math.max(0, Math.min(10_000_000, Number(input.allowanceAmount ?? 0) || 0))
     const deductionLabel = stringValue(input.deductionLabel, 80) || 'Advance / Other Deduction'
     const deductionAmount = Math.max(0, Math.min(10_000_000, Number(input.deductionAmount ?? 0) || 0))
+   const hasCustomPaid = input.paidAmount !== undefined && input.paidAmount !== null && input.paidAmount !== ''
+    const rawPaid = hasCustomPaid ? Number(input.paidAmount) : null
+    if (rawPaid !== null && (!Number.isFinite(rawPaid) || rawPaid < 0 || rawPaid > 10_000_000)) throw new Error('Enter a valid paid amount')
+    const paidAmountOverride = rawPaid !== null ? Math.round(rawPaid * 100) / 100 : null
     const paymentMethod = stringValue(input.paymentMethod, 30)
     const paymentRef = stringValue(input.paymentRef, 190)
     const paidOn = stringValue(input.paidOn, 10)
@@ -1070,7 +1074,7 @@ export const issueSalarySlip = createServerFn({ method: 'POST' })
     if (employeeId <= 0 || !/^\d{4}-(?:0[1-9]|1[0-2])$/.test(month)) throw new Error('Select a valid employee and salary month')
     if (paidOn && !/^\d{4}-\d{2}-\d{2}$/.test(paidOn)) throw new Error('Enter a valid payment date (YYYY-MM-DD)')
     if (paymentMethod && !['Cash', 'Bank transfer', 'UPI', 'Cheque', 'Other'].includes(paymentMethod)) throw new Error('Invalid payment method')
-    return { employeeId, month, allowanceLabel, allowanceAmount, deductionLabel, deductionAmount, paymentMethod, paymentRef, paidOn, notes }
+    return { employeeId, month, allowanceLabel, allowanceAmount, deductionLabel, deductionAmount, paidAmountOverride, paymentMethod, paymentRef, paidOn, notes }
   })
   .handler(async ({ data, context }): Promise<SalarySlipRecord> => {
     await ensureAttendanceSchema()
@@ -1113,7 +1117,9 @@ export const issueSalarySlip = createServerFn({ method: 'POST' })
       ])
 
       const siteSettings = readSiteSettings(settingsRows[0])
-      const paidAmount = paymentRows.reduce((sum, row) => sum + Number(row.amount_paise), 0) / 100
+      const supportEmail = siteSettings.emails.find((e) => e.toLowerCase().startsWith('support@')) ?? siteSettings.emails[1] ?? siteSettings.emails[0] ?? ''
+      const ledgerPaidAmount = paymentRows.reduce((sum, row) => sum + Number(row.amount_paise), 0) / 100
+      const paidAmount = data.paidAmountOverride ?? ledgerPaidAmount
       const latestPayment = paymentRows[0]
       const paidLeaveDays = cycleLogs.filter((l) => l.status === 'Paid Leave').length
       const grossEarnings = Math.round((summary.earnedSalary + data.allowanceAmount) * 100) / 100
@@ -1127,7 +1133,7 @@ export const issueSalarySlip = createServerFn({ method: 'POST' })
         companyName: site.name,
         companyAddress: site.address,
         companyPhone: siteSettings.phones[0] ? (siteSettings.phones[0].startsWith('+') ? siteSettings.phones[0] : `+91 ${siteSettings.phones[0]}`) : '',
-        companyEmail: siteSettings.emails[0] ?? '',
+        companyEmail: supportEmail,
         employeeCode: `BEI-EMP-${String(employee.id).padStart(3, '0')}`,
         employeeName: currentEmp.name,
         designation: currentEmp.designation || 'Staff',

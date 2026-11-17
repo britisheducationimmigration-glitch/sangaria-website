@@ -17,7 +17,7 @@ export function PayrollLedger({employees,cycles,month,today,onNotice}:{employees
   const [slipMonth,setSlipMonth]=useState(month)
   const [allowanceLabel,setAllowanceLabel]=useState('Bonus / Allowance'),[allowanceAmount,setAllowanceAmount]=useState('')
   const [deductionLabel,setDeductionLabel]=useState('Advance / Other Deduction'),[deductionAmount,setDeductionAmount]=useState('')
-  const [slipMethod,setSlipMethod]=useState(''),[slipRef,setSlipRef]=useState(''),[slipPaidOn,setSlipPaidOn]=useState(''),[slipNotes,setSlipNotes]=useState('')
+  const [slipPaidAmount,setSlipPaidAmount]=useState(''),[slipMethod,setSlipMethod]=useState(''),[slipRef,setSlipRef]=useState(''),[slipPaidOn,setSlipPaidOn]=useState(''),[slipNotes,setSlipNotes]=useState('')
   const [activePrintSlip,setActivePrintSlip]=useState<SalarySlipRecord|null>(null)
   const pendingPrintRef=useRef(false)
   const key=useRef(''),sequence=useRef(0)
@@ -71,10 +71,11 @@ export function PayrollLedger({employees,cycles,month,today,onNotice}:{employees
         data:{
           employeeId,month:slipMonth,allowanceLabel,allowanceAmount:Number(allowanceAmount||0),
           deductionLabel,deductionAmount:Number(deductionAmount||0),
+          paidAmount:slipPaidAmount===''?undefined:Number(slipPaidAmount),
           paymentMethod:slipMethod,paymentRef:slipRef,paidOn:slipPaidOn,notes:slipNotes,
         },
       })
-      setAllowanceAmount('');setDeductionAmount('');setSlipRef('');setSlipPaidOn('');setSlipNotes('')
+      setAllowanceAmount('');setDeductionAmount('');setSlipPaidAmount('');setSlipRef('');setSlipPaidOn('');setSlipNotes('')
       setRevision(n=>n+1)
       onNotice(`Official salary slip issued and saved for ${slipMonth}.`)
     }catch(cause){setError(cause instanceof Error?cause.message:'Could not issue salary slip')}
@@ -103,8 +104,8 @@ export function PayrollLedger({employees,cycles,month,today,onNotice}:{employees
   return <section id="salary-slip-document" className="space-y-4 rounded-2xl border border-[#E4E7EC] bg-white p-5">
     <div><h3 className="text-xl font-bold">Employee salary overview</h3><p className="mt-1 text-sm text-[#667085]">Choose an employee to view their balance, issue month-wise official salary slips, or record payments.</p></div>
     <div className="flex flex-wrap items-end gap-3"><label className="text-xs font-semibold">Employee<select aria-label="Statement employee" value={employeeId} disabled={busy} onChange={e=>{
-      if ((amount || reference || note || allowanceAmount || deductionAmount) && !window.confirm('Discard unsaved payment or slip details before switching employees?')) return
-      setEmployeeId(Number(e.target.value));setAmount('');setReference('');setNote('');setAllowanceAmount('');setDeductionAmount('');setSlipRef('');setSlipNotes('');setActivePrintSlip(null);key.current=''
+     if ((amount || reference || note || allowanceAmount || deductionAmount || slipPaidAmount) && !window.confirm('Discard unsaved payment or slip details before switching employees?')) return
+      setEmployeeId(Number(e.target.value));setAmount('');setReference('');setNote('');setAllowanceAmount('');setDeductionAmount('');setSlipPaidAmount('');setSlipRef('');setSlipPaidOn('');setSlipNotes('');setActivePrintSlip(null);key.current=''
     }} className={'mt-1 block '+field}>{employees.map(e=><option key={e.id} value={e.id}>{e.name}{e.active?'':' (Archived)'}</option>)}</select></label></div>
     {(!from||!to||from>to||to>today)&&<p role="alert" className="text-sm text-amber-800">Choose a valid period through today.</p>}
     {!result&&!loading&&<details open className="rounded-xl border p-4"><summary className="cursor-pointer font-semibold">Choose report dates</summary><div className="mt-3"><div className="flex flex-wrap items-end gap-3"><label className="text-xs font-semibold">From<input type="date" value={from} max={today} disabled={busy} onChange={e=>setFrom(e.target.value)} className={'mt-1 block '+field}/></label><label className="text-xs font-semibold">To<input type="date" value={to} min={from} max={today} disabled={busy} onChange={e=>setTo(e.target.value)} className={'mt-1 block '+field}/></label><button type="button" disabled={busy||!cycles.some(c=>c.employee.id===employeeId)} onClick={()=>{const cycle=cycles.find(c=>c.employee.id===employeeId);if(cycle){setFrom(cycle.cycleStartDate);setTo(cycle.cycleEndDate>today?today:cycle.cycleEndDate)}}} className={button}>Use selected payroll cycle</button><button type="button" disabled={busy||loading||!reportCurrent} onClick={()=>void download()} className={button}>Download employee Excel sheet</button><button type="button" disabled={busy||loading} onClick={()=>setRevision(n=>n+1)} className={button}>Refresh statement</button></div></div></details>}
@@ -134,6 +135,7 @@ export function PayrollLedger({employees,cycles,month,today,onNotice}:{employees
               <label className="text-xs font-semibold">Allowance / bonus INR<input type="number" min="0" step="0.01" value={allowanceAmount} onChange={e=>setAllowanceAmount(e.target.value)} disabled={busy} placeholder="0" className={'mt-1 block w-full '+field}/></label>
               <label className="text-xs font-semibold">Deduction label<input value={deductionLabel} maxLength={80} onChange={e=>setDeductionLabel(e.target.value)} disabled={busy} className={'mt-1 block w-full '+field}/></label>
               <label className="text-xs font-semibold">Deduction INR<input type="number" min="0" step="0.01" value={deductionAmount} onChange={e=>setDeductionAmount(e.target.value)} disabled={busy} placeholder="0" className={'mt-1 block w-full '+field}/></label>
+              <label className="text-xs font-semibold">Paid amount INR (optional)<input type="number" min="0" step="0.01" value={slipPaidAmount} onChange={e=>setSlipPaidAmount(e.target.value)} disabled={busy} placeholder="Auto from cycle payments" className={'mt-1 block w-full '+field}/></label>
               <label className="text-xs font-semibold">Payment mode (optional)<select value={slipMethod} onChange={e=>setSlipMethod(e.target.value)} disabled={busy} className={'mt-1 block w-full '+field}><option value="">Auto from cycle payment</option>{['Bank transfer','UPI','Cash','Cheque','Other'].map(m=><option key={m}>{m}</option>)}</select></label>
               <label className="text-xs font-semibold">UTR / Ref No. (optional)<input value={slipRef} maxLength={190} onChange={e=>setSlipRef(e.target.value)} disabled={busy} placeholder="Auto if left blank" className={'mt-1 block w-full '+field}/></label>
               <label className="text-xs font-semibold">Payment date (optional)<input type="date" max={today} value={slipPaidOn} onChange={e=>setSlipPaidOn(e.target.value)} disabled={busy} className={'mt-1 block w-full '+field}/></label>
@@ -268,7 +270,7 @@ export function PayrollLedger({employees,cycles,month,today,onNotice}:{employees
           {activePrintSlip.snapshot.notes&&<p className="salary-slip-note"><strong>Remarks:</strong> {activePrintSlip.snapshot.notes}</p>}
 
           <footer className="salary-slip-footer">
-            <p>This is a system-generated payslip issued by {activePrintSlip.snapshot.companyName} ({activePrintSlip.issuedBy}) based on verified attendance and payroll ledger records.</p>
+           <p>This is a system-generated payslip issued by {activePrintSlip.snapshot.companyName} (Admin) based on verified attendance and payroll ledger records.</p>
             <div className="salary-slip-signs">
               <div><span>Employee Signature</span></div>
               <div><span>Authorized Signatory &amp; Company Stamp</span></div>
