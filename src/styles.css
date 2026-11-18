@@ -98,11 +98,11 @@ h1, h2, h3, h4 {
 
 p {
   margin: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 span, li, td, th, div {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .bg-grain {
@@ -234,40 +234,6 @@ a.text-forest-900:visited {
 .text-forest-900.hover-contrast-cta:focus-visible,
 .text-forest-900.hover-contrast-cta:active {
   color: #ffffff !important;
-}
-
-
-/* A lightweight one-time reveal; it must never interfere with native scrolling. */
-main .scroll-reveal {
-  opacity: 0;
-  transition: opacity 420ms ease-out;
-}
-
-main .scroll-reveal.is-scroll-visible,
-main .scroll-reveal:focus-within {
-  opacity: 1;
-}
-
-main .scroll-reveal-item {
-  opacity: 0;
-  transform: translateY(10px);
-  transition: opacity 380ms ease-out, transform 380ms ease-out;
-}
-
-main .scroll-reveal.is-scroll-visible .scroll-reveal-item,
-main .scroll-reveal:focus-within .scroll-reveal-item {
-  opacity: 1;
-  transform: translateY(0);
-  transition-delay: calc(var(--scroll-reveal-order, 0) * 45ms);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  main .scroll-reveal,
-  main .scroll-reveal-item {
-    opacity: 1 !important;
-    transform: none !important;
-    transition: none !important;
-  }
 }
 
 /* Give public content more room on large monitors without changing phone/tablet layouts. */

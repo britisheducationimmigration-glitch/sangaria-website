@@ -1,12 +1,22 @@
 import { useState, useEffect } from 'react'
+import { Printer, Share2 } from 'lucide-react'
 import { defaultCashflowData, CountryCashflow } from '@/data/cashflow'
 import { getPublicCashflow } from '@/lib/public-functions'
 import { applyScheduledCashflowPolicy } from '@/data/policy-watch'
 import { useLoaderData } from '@tanstack/react-router'
 
+function escapeHtml(value: string) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
+}
+
 export function FamilyCashflowPlanner({ initialData }: { initialData?: CountryCashflow[] } = {}) {
   const rootData = useLoaderData({ from: '__root__' })
-  const rawPhone = (rootData?.settings.phones[1] || rootData?.settings.phones[0] || '9772570478').trim()
+  const rawPhone = (rootData?.settings.phones?.[1] || rootData?.settings.phones?.[0] || '9772570478').trim()
   const displayPhone = rawPhone.startsWith('+') ? rawPhone : `+91 ${rawPhone}`
   const [data, setData] = useState<CountryCashflow[]>(() =>
     initialData && initialData.length > 0
@@ -35,7 +45,6 @@ export function FamilyCashflowPlanner({ initialData }: { initialData?: CountryCa
 
   const country = data.find((c) => c.slug === selectedSlug) || data[0]
 
-  // 1. Sirf selected country ka budget print hoga, poori website nahi
   const handleDownloadPDF = () => {
     const printWindow = window.open('', '_blank', 'width=850,height=900')
     if (!printWindow) {
@@ -44,12 +53,17 @@ export function FamilyCashflowPlanner({ initialData }: { initialData?: CountryCa
     }
 
     printWindow.opener = null
+    const safeName = escapeHtml(country.name)
+    const safeFlag = escapeHtml(country.flag)
+    const safeTotal = escapeHtml(country.totalEstimateINR)
+    const safeRuleNote = escapeHtml(country.officialRuleNote)
+    const safePhone = escapeHtml(displayPhone)
     const htmlContent = `
       <!DOCTYPE html>
       <html lang="en">
         <head>
           <meta charset="utf-8" />
-          <title>${country.name} Cashflow Budget - British Education Sangaria</title>
+          <title>${safeName} Cashflow Budget - British Education Sangaria</title>
           <style>
             @page { size: A4; margin: 15mm; }
             body { font-family: system-ui, -apple-system, sans-serif; color: #081c15; margin: 0; padding: 20px; font-size: 13px; line-height: 1.4; }
@@ -73,46 +87,46 @@ export function FamilyCashflowPlanner({ initialData }: { initialData?: CountryCa
         <body>
           <div class="header">
             <div>
-              <h1 class="brand-title">British Education & Immigration</h1>
-<div class="brand-sub">Near Open Book Library, Bhagatpura Road, Sangaria (Rajasthan) · Phone: ${displayPhone}</div>
+              <h1 class="brand-title">British Education &amp; Immigration</h1>
+              <div class="brand-sub">Near Open Book Library, Bhagatpura Road, Sangaria (Rajasthan) · Phone: ${safePhone}</div>
             </div>
             <div style="text-align: right; font-size: 11px; color: #666;">
               Official Session 2026/2027<br>
-              Date: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+              Date: ${escapeHtml(new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }))}
             </div>
           </div>
 
-          <div class="country-badge">${country.flag} ${country.name} Study Visa — Family Cashflow Roadmap</div>
-          
+          <div class="country-badge">${safeFlag} ${safeName} Study Visa — Family Cashflow Roadmap</div>
+
           <div class="summary-box">
             <span style="font-size: 10px; font-weight: 700; color: #e11d48; text-transform: uppercase; letter-spacing: 0.05em;">Estimated 1st-year planning total</span>
-            <div class="total-val">${country.totalEstimateINR}</div>
-            <div class="rule-note"><strong>Visa and budget guidance:</strong> ${country.officialRuleNote}</div>
+            <div class="total-val">${safeTotal}</div>
+            <div class="rule-note"><strong>Visa and budget guidance:</strong> ${safeRuleNote}</div>
           </div>
 
           <table>
             <thead>
               <tr>
-                <th style="width: 16%;">Stage & Time</th>
-                <th style="width: 32%;">Expense Title & Detail</th>
+                <th style="width: 16%;">Stage &amp; Time</th>
+                <th style="width: 32%;">Expense Title &amp; Detail</th>
                 <th style="width: 24%;">Approx. Budget Amount (INR / Forex)</th>
-                <th style="width: 28%;">Paid Directly To & Refund</th>
+                <th style="width: 28%;">Paid Directly To &amp; Refund</th>
               </tr>
             </thead>
             <tbody>
               ${country.stages.map((st) => `
                 <tr>
-                  <td><span class="stage-badge">Stage 0${st.stageNumber}</span><br><span style="color:#666; font-size:10px;">${st.timeline}</span></td>
-                  <td><strong>${st.title}</strong><br><span style="color:#555; font-size:10.5px;">${st.description}</span></td>
-                  <td><span class="amount">${st.inrEstimate}</span><br><span style="color:#e11d48; font-size:10px; font-weight:700;">${st.officialCost}</span></td>
-                  <td><strong>${st.paidTo}</strong><br><span class="refund">✓ ${st.refundableInfo}</span></td>
+                  <td><span class="stage-badge">Stage 0${escapeHtml(String(st.stageNumber))}</span><br><span style="color:#666; font-size:10px;">${escapeHtml(st.timeline)}</span></td>
+                  <td><strong>${escapeHtml(st.title)}</strong><br><span style="color:#555; font-size:10.5px;">${escapeHtml(st.description)}</span></td>
+                  <td><span class="amount">${escapeHtml(st.inrEstimate)}</span><br><span style="color:#e11d48; font-size:10px; font-weight:700;">${escapeHtml(st.officialCost)}</span></td>
+                  <td><strong>${escapeHtml(st.paidTo)}</strong><br><span class="refund">✓ ${escapeHtml(st.refundableInfo)}</span></td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
 
           <div class="footer">
-            <p>Transparency Notice: Student pays fees directly to college/embassy accounts. Zero hidden charges. For counselling: ${displayPhone}.</p>
+            <p>Transparency Notice: Student pays fees directly to college/embassy accounts. Zero hidden charges. For counselling: ${safePhone}.</p>
           </div>
           <script>
             window.onload = function() {
@@ -128,7 +142,6 @@ export function FamilyCashflowPlanner({ initialData }: { initialData?: CountryCa
     printWindow.document.close()
   }
 
-  // 2. WhatsApp share - user apne phone se kisi ko bhi share kar sakega aur niche aapka number 9772570478 rahega
   const handleWhatsAppShare = () => {
     let msg = `✈️ *British Education & Immigration, Sangaria*\n`
     msg += `📋 *Family Visa Budget & Cashflow Planner*\n\n`
@@ -145,7 +158,7 @@ export function FamilyCashflowPlanner({ initialData }: { initialData?: CountryCa
     })
     msg += `\n📞 *Office Contact / WhatsApp:* ${displayPhone}\n`
     msg += `📍 Near Open Book Library, Bhagatpura Road, Sangaria (Raj.)\n`
-    msg += `👉 Website: https://britisheducationandimmigration.com`
+    msg += `👉 Website: https://www.britisheducationandimmigration.com`
 
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer')
   }
@@ -167,27 +180,27 @@ export function FamilyCashflowPlanner({ initialData }: { initialData?: CountryCa
         </div>
 
         {/* Action Buttons */}
-        <div className="grid w-full max-w-[15rem] shrink-0 grid-cols-2 gap-2 md:ml-auto md:w-auto">
+        <div className="flex w-full shrink-0 flex-wrap gap-2 md:ml-auto md:w-auto">
           <button
             type="button"
             onClick={handleDownloadPDF}
-            className="flex min-h-10 min-w-0 items-center justify-center gap-1 whitespace-nowrap rounded-full bg-white/10 px-2.5 py-2 text-[11px] font-bold text-white ring-1 ring-white/15 transition hover:bg-white/20 cursor-pointer sm:px-3.5 sm:text-xs"
+            className="flex min-h-10 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-white/10 px-3.5 py-2 text-xs font-bold text-white ring-1 ring-white/15 transition hover:bg-white/20 cursor-pointer md:flex-none"
           >
-            <span>📄</span>
-            <span>Summary</span>
+            <Printer aria-hidden="true" className="size-3.5 shrink-0" />
+            <span>Print / Save PDF</span>
           </button>
           <button
             type="button"
             onClick={handleWhatsAppShare}
-            className="flex min-h-10 min-w-0 items-center justify-center gap-1 whitespace-nowrap rounded-full bg-[#25D366] px-2 py-2 text-[11px] font-bold text-white transition hover:brightness-105 cursor-pointer sm:px-3.5 sm:text-xs"
+            className="flex min-h-10 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-[#25D366] px-3.5 py-2 text-xs font-bold text-white transition hover:brightness-105 cursor-pointer md:flex-none"
           >
-            <span>💬</span>
-            <span>WhatsApp</span>
+            <Share2 aria-hidden="true" className="size-3.5 shrink-0" />
+            <span>Share on WhatsApp</span>
           </button>
         </div>
       </div>
 
-    {/* Country Select Pills */}
+      {/* Country Select Pills */}
       <div className="flex items-center gap-2 overflow-x-auto py-4 scrollbar-none">
         {data.map((c) => {
           const isActive = c.slug === selectedSlug
@@ -224,14 +237,14 @@ export function FamilyCashflowPlanner({ initialData }: { initialData?: CountryCa
         <div className="-mt-2 mb-5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]">
           <span className="font-bold text-coral-300">Official sources:</span>
           {country.officialSources.map((source) => (
-            <a key={source.url} href={source.url} target="_blank" rel="noreferrer" className="text-white/75 underline decoration-white/30 underline-offset-2 hover:text-white">
+            <a key={source.url} href={source.url} target="_blank" rel="noopener noreferrer" className="text-white/75 underline decoration-white/30 underline-offset-2 hover:text-white">
               {source.label}
             </a>
           ))}
         </div>
       ) : null}
 
-      {/* 2x2 Grid for Mobile (matching What We Do & Destinations size) */}
+      {/* 2x2 Grid for Mobile */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
         {country.stages.map((st) => (
           <div

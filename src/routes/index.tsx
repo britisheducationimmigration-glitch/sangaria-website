@@ -58,6 +58,12 @@ const rotatingWords = [
   { text: 'IELTS 7.5+.', icon: '📚' },
 ]
 
+const visaInterestMap: Record<string, string> = {
+  pr: 'PR & Immigration',
+  work: 'Work Permit',
+  tourist: 'Tourist & Visitor Visa',
+}
+
 function HeroRotatingWord() {
   const [wordIndex, setWordIndex] = useState(0)
   const [fade, setFade] = useState(true)
@@ -86,7 +92,7 @@ function HeroRotatingWord() {
       }
     >
       <span className="text-white">{rotatingWords[wordIndex].text}</span>
-      <span className="inline-block text-2xl lg:text-4xl xl:text-5xl animate-bounce">
+      <span className="inline-block text-2xl lg:text-4xl xl:text-5xl">
         {rotatingWords[wordIndex].icon}
       </span>
     </span>
@@ -96,9 +102,9 @@ function HeroRotatingWord() {
 const homeJumpSections = [
   { id: 'services', icon: '✈️', desktopLabel: 'Services', mobileLabel: 'Services' },
   { id: 'destinations', icon: '🌍', desktopLabel: 'Countries', mobileLabel: 'Countries' },
-  { id: 'coaching', icon: '📚', desktopLabel: 'IELTS & PTE', mobileLabel: 'IELTS & PTE' },
   { id: 'approvals', icon: '🎉', desktopLabel: 'Recent Visas', mobileLabel: 'Visas' },
   { id: 'certificates', icon: '🏅', desktopLabel: 'Certificates', mobileLabel: 'Certificates' },
+  { id: 'coaching', icon: '📚', desktopLabel: 'IELTS & PTE', mobileLabel: 'IELTS & PTE' },
   { id: 'reviews', icon: '⭐', desktopLabel: 'Reviews', mobileLabel: 'Reviews' },
 ] as const
 
@@ -160,10 +166,7 @@ function Home() {
 
   const visibleTestimonials = showAllTestimonials ? homepageTestimonials : homepageTestimonials.slice(0, 3)
   const selectedCountryName = countries.find((c) => c.slug === selectedCountry)?.name ?? 'Country'
-  const stickyRaw = (settings.phones[1] || settings.phones[0] || site.whatsapp).trim()
-  const stickyDigits = stickyRaw.replace(/\D/g, '').replace(/^0+/, '')
-  const stickyWaNumber = stickyDigits.length === 10 ? `91${stickyDigits}` : stickyDigits
-  const stickyTelHref = `tel:${stickyRaw.startsWith('+') ? stickyRaw.replace(/[^\d+]/g, '') : `+${stickyWaNumber}`}`
+  const selectedVisaTitle = visaInterestMap[selectedVisa]
 
   return (
     <div className="bg-cream text-forest-900">
@@ -263,14 +266,19 @@ function Home() {
                       <span className="truncate">Explore IELTS &amp; PTE Coaching</span>
                       <ArrowRight aria-hidden="true" className="size-3.5 shrink-0 lg:size-4" />
                     </Link>
-                  ) : selectedCountry ? (
-                    <Link to="/countries/$slug" params={{ slug: selectedCountry }} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-coral-500 px-4 py-3 text-xs font-extrabold text-white shadow-lg transition hover:bg-coral-600 lg:text-sm">
-                      <span className="truncate">Explore {selectedCountryName} Guide</span>
+                  ) : selectedVisaTitle && selectedCountry ? (
+                    <Link to="/contact" search={{ interest: selectedVisaTitle, country: selectedCountryName }} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-coral-500 px-4 py-3 text-xs font-extrabold text-white shadow-lg transition hover:bg-coral-600 lg:text-sm">
+                      <span className="truncate">Enquire: {selectedCountryName} {selectedVisaTitle}</span>
                       <ArrowRight aria-hidden="true" className="size-3.5 shrink-0 lg:size-4" />
                     </Link>
                   ) : selectedVisa !== 'study' ? (
                     <Link to="/visas" hash={selectedVisa} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-coral-500 px-4 py-3 text-xs font-extrabold text-white shadow-lg transition hover:bg-coral-600 lg:text-sm">
-                      <span className="truncate">Explore Visa Services</span>
+                      <span className="truncate">Explore {selectedVisaTitle || 'Visa Services'}</span>
+                      <ArrowRight aria-hidden="true" className="size-3.5 shrink-0 lg:size-4" />
+                    </Link>
+                  ) : selectedCountry ? (
+                    <Link to="/countries/$slug" params={{ slug: selectedCountry }} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-coral-500 px-4 py-3 text-xs font-extrabold text-white shadow-lg transition hover:bg-coral-600 lg:text-sm">
+                      <span className="truncate">Explore {selectedCountryName} Study Guide</span>
                       <ArrowRight aria-hidden="true" className="size-3.5 shrink-0 lg:size-4" />
                     </Link>
                   ) : (
@@ -397,7 +405,7 @@ function Home() {
               ))}
             </div>
             <a href="#enquiry" className="shrink-0 whitespace-nowrap rounded-full bg-coral-500 px-3.5 py-1 text-xs font-bold text-white shadow-md transition hover:bg-coral-600 lg:px-5 lg:py-2">
-              🔴 Free Enquiry
+              Free Enquiry →
             </a>
           </div>
         </div>
@@ -408,7 +416,7 @@ function Home() {
         <section className="overflow-hidden border-b border-forest-900/10 bg-coral-500 py-3.5 text-white lg:py-4">
           <div className="flex w-max animate-marquee gap-8 whitespace-nowrap font-display text-sm font-bold lg:gap-10 lg:text-lg">
             {[...homepageApprovals, ...homepageApprovals].map((a, i) => (
-              <span key={i} className="flex items-center gap-2 lg:gap-3">
+              <span key={`${a.name}-${a.date}-${i}`} className="flex items-center gap-2 lg:gap-3">
                 <CountryFlag
                   flag={a.flag}
                   country={a.country}
@@ -515,6 +523,34 @@ function Home() {
         </div>
       </section>
 
+      {/* RECENT APPROVALS */}
+      {homepageApprovals.length > 0 && (
+        <section id="approvals" className="scroll-mt-36 lg:scroll-mt-44 mx-auto max-w-7xl px-5 py-20 lg:px-6 lg:py-24">
+          <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end lg:mb-12">
+            <div>
+              <Eyebrow>Fresh approvals</Eyebrow>
+              <h2 className="mt-2 text-2xl font-extrabold text-forest-900 lg:mt-4 lg:text-5xl">Visas that landed this month.</h2>
+            </div>
+            <Link to="/success-stories" className="hidden font-bold text-coral-600 hover:underline lg:inline-block">
+              See all success stories →
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 gap-3.5 sm:gap-4 lg:grid-cols-4 lg:gap-6">
+            {homepageApprovals.slice(0, 4).map((a, i) => (
+              <ApprovalCard key={`${a.name}-${a.date}-${i}`} a={a} i={i} />
+            ))}
+          </div>
+          <Link to="/success-stories" className="mt-6 flex min-h-12 w-full items-center justify-center rounded-full border border-forest-900/15 bg-white px-4 py-3 text-sm font-bold text-forest-900 hover-contrast-cta shadow-sm transition hover:bg-forest-900 hover:text-white lg:hidden">
+            See all visa stories →
+          </Link>
+        </section>
+      )}
+
+      {/* CERTIFICATE CAROUSEL */}
+      <Suspense fallback={null}>
+        <CertificateCarousel certificates={certificates} id="certificates" />
+      </Suspense>
+
       {/* VIRTUAL BOARDING PASS */}
       <Suspense fallback={<div className="my-8 h-40 animate-pulse rounded-3xl bg-forest-950/20" />}>
         <BoardingPassGenerator />
@@ -556,7 +592,7 @@ function Home() {
             ))}
           </ul>
           <Link to="/coaching" className="mt-8 block w-full rounded-full bg-forest-900 py-4 text-center text-xs font-bold text-white shadow-md transition hover:bg-forest-700 lg:inline-flex lg:w-auto lg:px-7 lg:text-base">
-            View batches &amp; fees →
+            View batches &amp; timings →
           </Link>
         </div>
       </section>
@@ -587,34 +623,6 @@ function Home() {
         <FamilyCashflowPlanner initialData={cashflow} />
       </Suspense>
 
-      {/* RECENT APPROVALS */}
-      {homepageApprovals.length > 0 && (
-        <section id="approvals" className="scroll-mt-36 lg:scroll-mt-44 mx-auto max-w-7xl px-5 py-20 lg:px-6 lg:py-24">
-          <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end lg:mb-12">
-            <div>
-              <Eyebrow>Fresh approvals</Eyebrow>
-              <h2 className="mt-2 text-2xl font-extrabold text-forest-900 lg:mt-4 lg:text-5xl">Visas that landed this month.</h2>
-            </div>
-            <Link to="/success-stories" className="hidden font-bold text-coral-600 hover:underline lg:inline-block">
-              See all success stories →
-            </Link>
-          </div>
-          <div className="grid grid-cols-2 gap-3.5 sm:gap-4 lg:grid-cols-4 lg:gap-6">
-            {homepageApprovals.slice(0, 4).map((a, i) => (
-              <ApprovalCard key={a.name} a={a} i={i} />
-            ))}
-          </div>
-          <Link to="/success-stories" className="mt-6 flex min-h-12 w-full items-center justify-center rounded-full border border-forest-900/15 bg-white px-4 py-3 text-sm font-bold text-forest-900 hover-contrast-cta shadow-sm transition hover:bg-forest-900 hover:text-white lg:hidden">
-            See all visa stories →
-          </Link>
-        </section>
-      )}
-
-      {/* CERTIFICATE CAROUSEL */}
-      <Suspense fallback={null}>
-        <CertificateCarousel certificates={certificates} id="certificates" />
-      </Suspense>
-
       {/* TESTIMONIALS */}
       {homepageTestimonials.length > 0 && (
         <section id="reviews" className="scroll-mt-36 lg:scroll-mt-44 border-b border-forest-900/10 bg-sand/60 px-5 py-12 lg:border-0 lg:px-6 lg:py-24">
@@ -623,7 +631,7 @@ function Home() {
             <h2 className="mt-2 max-w-2xl text-2xl font-extrabold text-forest-900 lg:mt-4 lg:text-5xl">Real students. Real families. Real visas.</h2>
             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:mt-12 lg:gap-6">
               {visibleTestimonials.map((t, i) => (
-                <div key={t.name} className={!showAllTestimonials && i === 2 ? 'hidden md:block' : ''}>
+                <div key={`${t.name}-${t.city}-${i}`} className={!showAllTestimonials && i === 2 ? 'hidden md:block' : ''}>
                   <TestimonialCard t={t} featured={i === 1} />
                 </div>
               ))}
@@ -635,7 +643,7 @@ function Home() {
                   onClick={() => setShowAllTestimonials((v) => !v)}
                   className={'w-full rounded-full border border-forest-900/15 bg-white py-4 text-xs font-bold text-forest-900 hover-contrast-cta shadow-sm transition hover:bg-forest-900 hover:text-white lg:w-auto lg:px-7 lg:py-3.5 lg:text-base ' + (homepageTestimonials.length <= 3 ? 'md:hidden' : '')}
                 >
-                  {showAllTestimonials ? 'Show Fewer Reviews ↑' : `Show More Reviews (${homepageTestimonials.length - 2}+ More) ↓`}
+                  {showAllTestimonials ? 'Show Fewer Reviews ↑' : `Show All Reviews (${homepageTestimonials.length}) ↓`}
                 </button>
               </div>
             )}
@@ -674,8 +682,8 @@ function Home() {
           <Eyebrow>FAQs</Eyebrow>
           <h2 className="mt-2 text-2xl font-extrabold text-forest-900 lg:mt-4 lg:text-4xl">Questions we hear every day.</h2>
           <div className="mt-6 divide-y divide-forest-900/10 rounded-3xl bg-white ring-1 ring-forest-900/10 shadow-sm lg:mt-8">
-            {settings.faqs.map((f) => (
-              <details key={f.q} className="group p-5 [&_summary::-webkit-details-marker]:hidden lg:p-6">
+            {settings.faqs.map((f, i) => (
+              <details key={`${f.q}-${i}`} className="group p-5 [&_summary::-webkit-details-marker]:hidden lg:p-6">
                 <summary className="flex cursor-pointer items-center justify-between gap-4 font-display text-[15px] font-bold text-forest-900 lg:text-lg">
                   <span>{f.q}</span>
                   <span className="grid size-8 shrink-0 place-items-center rounded-full bg-forest-50 text-coral-600 transition group-open:rotate-45">+</span>
@@ -694,32 +702,6 @@ function Home() {
           <EnquiryForm source="home" dark />
         </div>
       </section>
-
-      {/* MOBILE STICKY BOTTOM CTA BAR */}
-      <div className="fixed right-0 bottom-0 left-0 z-40 flex items-center justify-between gap-3 border-t border-white/15 bg-forest-950/95 px-4 py-3 shadow-2xl backdrop-blur-md sm:hidden">
-        <a
-          href={stickyTelHref}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-white/15 bg-white/10 py-2.5 text-xs font-bold text-white transition hover:bg-white/20 active:scale-95"
-        >
-          <span>📞</span>
-          <span>Call Now</span>
-        </a>
-        <a
-          href={`https://wa.me/${stickyWaNumber}?text=${encodeURIComponent('Hi British Education Sangaria, I want to know more about Study Visas.')}`}
-          target="_blank"
-          rel="noreferrer"
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#25D366] py-2.5 text-xs font-bold text-white shadow-md transition hover:brightness-105 active:scale-95"
-        >
-          <span>💬</span>
-          <span>WhatsApp</span>
-        </a>
-        <a
-          href="#enquiry"
-          className="flex flex-1 items-center justify-center gap-1 rounded-xl bg-coral-500 py-2.5 text-xs font-extrabold text-white shadow-md transition hover:bg-coral-600 active:scale-95"
-        >
-          <span>Free Enquiry ➔</span>
-        </a>
-      </div>
     </div>
   )
 }
