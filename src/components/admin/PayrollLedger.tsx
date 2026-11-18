@@ -1,6 +1,7 @@
+import { ManualSalarySlips } from './ManualSalarySlips'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { site } from '@/data/site'
-import { exportEmployeeRangeReport, getEmployeeRangeReport, issueSalarySlip, listSalarySlips, recordSalaryPayment, reverseSalaryPayment, voidSalarySlip } from '@/lib/attendance-functions'
+import { exportEmployeeRangeReport, getEmployeeRangeReport, recordSalaryPayment, reverseSalaryPayment } from '@/lib/attendance-functions'
 import type { EmployeeRecord, EmployeeCycleSummary, SalarySlipRecord } from '@/lib/content-types'
 
 type Result = Awaited<ReturnType<typeof getEmployeeRangeReport>>
@@ -13,11 +14,6 @@ export function PayrollLedger({employees,cycles,month,today,onNotice}:{employees
   const [from,setFrom]=useState(month+'-01'>today?today:month+'-01'),[to,setTo]=useState(()=>{const [y,m]=month.split('-').map(Number);const end=new Date(Date.UTC(y,m,0)).toISOString().slice(0,10);return end<today?end:today})
   const [result,setResult]=useState<Result|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[loading,setLoading]=useState(false),[revision,setRevision]=useState(0)
   const [amount,setAmount]=useState(''),[paidOn,setPaidOn]=useState(today),[method,setMethod]=useState('Cash'),[reference,setReference]=useState(''),[note,setNote]=useState('')
-  const [slips,setSlips]=useState<SalarySlipRecord[]>([])
-  const [slipMonth,setSlipMonth]=useState(month)
-  const [allowanceLabel,setAllowanceLabel]=useState('Bonus / Allowance'),[allowanceAmount,setAllowanceAmount]=useState('')
-  const [deductionLabel,setDeductionLabel]=useState('Advance / Other Deduction'),[deductionAmount,setDeductionAmount]=useState('')
-  const [slipPaidAmount,setSlipPaidAmount]=useState(''),[slipMethod,setSlipMethod]=useState(''),[slipRef,setSlipRef]=useState(''),[slipPaidOn,setSlipPaidOn]=useState(''),[slipNotes,setSlipNotes]=useState('')
   const [activePrintSlip,setActivePrintSlip]=useState<SalarySlipRecord|null>(null)
   const pendingPrintRef=useRef(false)
   const key=useRef(''),sequence=useRef(0)
@@ -33,13 +29,6 @@ export function PayrollLedger({employees,cycles,month,today,onNotice}:{employees
     pendingPrintRef.current=false
     window.requestAnimationFrame(()=>window.print())
   },[activePrintSlip])
-
-  useEffect(()=>{
-    let cancelled=false
-    if(!employeeId){setSlips([]);return}
-    listSalarySlips({data:{employeeId}}).then(rows=>{if(!cancelled)setSlips(rows)}).catch(()=>{if(!cancelled)setSlips([])})
-    return()=>{cancelled=true}
-  },[employeeId,revision])
 
   useEffect(()=>{
     const request=++sequence.current;setResult(current=>current?.employee.id===employeeId?current:null);setError('')
@@ -62,35 +51,6 @@ export function PayrollLedger({employees,cycles,month,today,onNotice}:{employees
 
   async function reverse(id:number){const reason=window.prompt('Reason for reversing this recorded payment? The original entry is retained.');if(!reason?.trim())return;setBusy(true);try{await reverseSalaryPayment({data:{id,reason}});setRevision(n=>n+1);onNotice('Payment reversed; history retained.')}catch(cause){setError(cause instanceof Error?cause.message:'Reversal failed')}finally{setBusy(false)}}
 
-  async function generateSlip(event:FormEvent){
-    event.preventDefault()
-    if(!employeeId||busy)return
-    setBusy(true);setError('')
-    try{
-      await issueSalarySlip({
-        data:{
-          employeeId,month:slipMonth,allowanceLabel,allowanceAmount:Number(allowanceAmount||0),
-          deductionLabel,deductionAmount:Number(deductionAmount||0),
-          paidAmount:slipPaidAmount===''?undefined:Number(slipPaidAmount),
-          paymentMethod:slipMethod,paymentRef:slipRef,paidOn:slipPaidOn,notes:slipNotes,
-        },
-      })
-      setAllowanceAmount('');setDeductionAmount('');setSlipPaidAmount('');setSlipRef('');setSlipPaidOn('');setSlipNotes('')
-      setRevision(n=>n+1)
-      onNotice(`Official salary slip issued and saved for ${slipMonth}.`)
-    }catch(cause){setError(cause instanceof Error?cause.message:'Could not issue salary slip')}
-    finally{setBusy(false)}
-  }
-
-  async function voidSlip(id:number,slipNumber:string){
-    const reason=window.prompt(`Reason for voiding ${slipNumber}? The voided record remains in history.`)
-    if(!reason?.trim())return
-    setBusy(true);setError('')
-    try{await voidSalarySlip({data:{id,reason}});setRevision(n=>n+1);onNotice(`Salary slip ${slipNumber} voided.`)}
-    catch(cause){setError(cause instanceof Error?cause.message:'Could not void salary slip')}
-    finally{setBusy(false)}
-  }
-
   function printSavedSlip(slip:SalarySlipRecord){
     pendingPrintRef.current=true
     setActivePrintSlip(slip)
@@ -102,10 +62,10 @@ export function PayrollLedger({employees,cycles,month,today,onNotice}:{employees
   const slipPayments=result?result.payments.filter(p=>!p.voided&&p.from<=to&&p.to>=from).slice(0,8):[]
 
   return <section id="salary-slip-document" className="space-y-4 rounded-2xl border border-[#E4E7EC] bg-white p-5">
-    <div><h3 className="text-xl font-bold">Employee salary overview</h3><p className="mt-1 text-sm text-[#667085]">Choose an employee to view their balance, issue month-wise official salary slips, or record payments.</p></div>
+    <div><h3 className="text-xl font-bold">Employee salary overview</h3><p className="mt-1 text-sm text-[#667085]">Choose an employee to view their balance, create monthly salary slips, or record payments.</p></div>
     <div className="flex flex-wrap items-end gap-3"><label className="text-xs font-semibold">Employee<select aria-label="Statement employee" value={employeeId} disabled={busy} onChange={e=>{
-     if ((amount || reference || note || allowanceAmount || deductionAmount || slipPaidAmount) && !window.confirm('Discard unsaved payment or slip details before switching employees?')) return
-      setEmployeeId(Number(e.target.value));setAmount('');setReference('');setNote('');setAllowanceAmount('');setDeductionAmount('');setSlipPaidAmount('');setSlipRef('');setSlipPaidOn('');setSlipNotes('');setActivePrintSlip(null);key.current=''
+     if ((amount || reference || note) && !window.confirm('Discard unsaved payment or slip details before switching employees?')) return
+      setEmployeeId(Number(e.target.value));setAmount('');setReference('');setNote('');setActivePrintSlip(null);key.current=''
     }} className={'mt-1 block '+field}>{employees.map(e=><option key={e.id} value={e.id}>{e.name}{e.active?'':' (Archived)'}</option>)}</select></label></div>
     {(!from||!to||from>to||to>today)&&<p role="alert" className="text-sm text-amber-800">Choose a valid period through today.</p>}
     {!result&&!loading&&<details open className="rounded-xl border p-4"><summary className="cursor-pointer font-semibold">Choose report dates</summary><div className="mt-3"><div className="flex flex-wrap items-end gap-3"><label className="text-xs font-semibold">From<input type="date" value={from} max={today} disabled={busy} onChange={e=>setFrom(e.target.value)} className={'mt-1 block '+field}/></label><label className="text-xs font-semibold">To<input type="date" value={to} min={from} max={today} disabled={busy} onChange={e=>setTo(e.target.value)} className={'mt-1 block '+field}/></label><button type="button" disabled={busy||!cycles.some(c=>c.employee.id===employeeId)} onClick={()=>{const cycle=cycles.find(c=>c.employee.id===employeeId);if(cycle){setFrom(cycle.cycleStartDate);setTo(cycle.cycleEndDate>today?today:cycle.cycleEndDate)}}} className={button}>Use selected payroll cycle</button><button type="button" disabled={busy||loading||!reportCurrent} onClick={()=>void download()} className={button}>Download employee Excel sheet</button><button type="button" disabled={busy||loading} onClick={()=>setRevision(n=>n+1)} className={button}>Refresh statement</button></div></div></details>}
@@ -122,48 +82,6 @@ export function PayrollLedger({employees,cycles,month,today,onNotice}:{employees
         <p className="mt-3 text-xs leading-relaxed text-slate-600">Based on saved attendance, issued-slip bonus/deductions and recorded payments. Past unrecorded payments are not included. Do not deduct an advance again if it is already recorded as a payment.</p>
         {result.throughToday.missingOut+result.throughToday.reviewRequired>0&&<p role="status" className="mt-2 rounded-lg bg-amber-100 p-3 text-sm text-amber-900">{result.throughToday.missingOut+result.throughToday.reviewRequired} unresolved shifts: balance is provisional until attendance is corrected.</p>}
       </div>
-
-      <details key={'slips-'+employeeId} className="rounded-xl border border-[#E4E7EC]">
-        <summary className="cursor-pointer rounded-xl p-4 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#465FFF]">Monthly official salary slips <span className="ml-2 rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600">{slips.filter(s=>s.status==='issued').length} issued</span></summary>
-        <div className="space-y-4 border-t border-[#E4E7EC] p-4">
-          <form onSubmit={generateSlip} className="space-y-3 rounded-xl bg-slate-50 p-4">
-            <h4 className="text-sm font-bold text-slate-900">Generate &amp; save monthly salary slip</h4>
-            <p className="text-xs text-slate-600">Saves a payslip snapshot. Bonus and deductions update the salary balance on the issue date within this cycle. Voiding a slip removes its adjustments; recorded payments remain in payment history.</p>
-            <p className="text-xs text-slate-600">Paid total means all salary already paid for this cycle. Any increase is recorded once in payment history; leave blank to use existing payments. This does not transfer money.</p>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <label className="text-xs font-semibold">Salary month<input type="month" required value={slipMonth} onChange={e=>setSlipMonth(e.target.value)} disabled={busy} className={'mt-1 block w-full '+field}/></label>
-              <label className="text-xs font-semibold">Allowance / bonus label<input value={allowanceLabel} maxLength={80} onChange={e=>setAllowanceLabel(e.target.value)} disabled={busy} className={'mt-1 block w-full '+field}/></label>
-              <label className="text-xs font-semibold">Allowance / bonus INR<input type="number" min="0" step="0.01" value={allowanceAmount} onChange={e=>setAllowanceAmount(e.target.value)} disabled={busy} placeholder="0" className={'mt-1 block w-full '+field}/></label>
-              <label className="text-xs font-semibold">Deduction label<input value={deductionLabel} maxLength={80} onChange={e=>setDeductionLabel(e.target.value)} disabled={busy} className={'mt-1 block w-full '+field}/></label>
-              <label className="text-xs font-semibold">Deduction INR<input type="number" min="0" step="0.01" value={deductionAmount} onChange={e=>setDeductionAmount(e.target.value)} disabled={busy} placeholder="0" className={'mt-1 block w-full '+field}/></label>
-              <label className="text-xs font-semibold">Total already paid in cycle INR (optional)<input type="number" min="0" step="0.01" value={slipPaidAmount} onChange={e=>setSlipPaidAmount(e.target.value)} disabled={busy} placeholder="Auto from cycle payments" className={'mt-1 block w-full '+field}/></label>
-              <label className="text-xs font-semibold">Payment mode (optional)<select value={slipMethod} onChange={e=>setSlipMethod(e.target.value)} disabled={busy} className={'mt-1 block w-full '+field}><option value="">Auto from cycle payment</option>{['Bank transfer','UPI','Cash','Cheque','Other'].map(m=><option key={m}>{m}</option>)}</select></label>
-              <label className="text-xs font-semibold">UTR / Ref No. (optional)<input value={slipRef} maxLength={190} onChange={e=>setSlipRef(e.target.value)} disabled={busy} placeholder="Auto if left blank" className={'mt-1 block w-full '+field}/></label>
-              <label className="text-xs font-semibold">Payment date (optional)<input type="date" max={today} value={slipPaidOn} onChange={e=>setSlipPaidOn(e.target.value)} disabled={busy} className={'mt-1 block w-full '+field}/></label>
-              <label className="text-xs font-semibold">Slip remarks (optional)<input value={slipNotes} maxLength={500} onChange={e=>setSlipNotes(e.target.value)} disabled={busy} placeholder="e.g. Credited via NEFT" className={'mt-1 block w-full '+field}/></label>
-            </div>
-            <button type="submit" disabled={busy} className={button+' bg-[#465FFF] text-white'}>Generate &amp; save monthly slip</button>
-          </form>
-
-          <div className="space-y-2">
-            <h4 className="text-sm font-bold text-slate-900">Saved salary slips ({slips.length})</h4>
-            {slips.map(slip=>(
-              <article key={slip.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#E4E7EC] p-3 text-xs">
-                <div>
-                  <p className="font-bold text-slate-900">{slip.snapshot.monthLabel} · <span className="font-mono text-[#465FFF]">{slip.slipNumber}</span> {slip.status==='voided'&&<span className="ml-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] text-red-700">Voided</span>}</p>
-                  <p className="mt-1 text-slate-600">Cycle: {slip.cycleStartDate} to {slip.cycleEndDate} · Payable: {slip.snapshot.payableDays} days · Net Pay: <strong>{money(slip.netPay)}</strong></p>
-                  <p className="mt-0.5 text-[11px] text-slate-500">Issued by {slip.issuedBy} on {new Date(slip.issuedAt).toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata'})}{slip.status==='voided'?` · Void reason: ${slip.voidReason}`:''}</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button type="button" disabled={busy} onClick={()=>printSavedSlip(slip)} className={button+' !min-h-9 !px-3 !py-1.5 !text-xs bg-white text-[#465FFF]'}>Print / PDF Slip</button>
-                  {slip.status==='issued'&&<button type="button" disabled={busy} onClick={()=>void voidSlip(slip.id,slip.slipNumber)} className="rounded-xl border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">Void</button>}
-                </div>
-              </article>
-            ))}
-            {slips.length===0&&<p className="text-xs text-slate-500">No monthly salary slips issued for this employee yet.</p>}
-          </div>
-        </div>
-      </details>
 
       <details key={'report-'+employeeId} className="group rounded-xl border border-[#E4E7EC]"><summary className="cursor-pointer rounded-xl p-4 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#465FFF]">Attendance &amp; date-range report <span className="ml-2 font-normal text-slate-500">{from} – {to}</span></summary><div className="space-y-4 border-t border-[#E4E7EC] p-4">
         <p className="text-xs text-slate-600">Salary uses the full payroll-cycle working-day denominator. Select up to 366 days.</p>
@@ -190,6 +108,8 @@ export function PayrollLedger({employees,cycles,month,today,onNotice}:{employees
       <div><h4 className="font-bold">Payment history ({result.payments.length})</h4><div className="mt-3 space-y-2">{result.payments.map(p=><article key={p.id} className="rounded-xl border p-3 text-sm"><div className="flex flex-wrap justify-between gap-2"><strong>{money(p.amount)} · {p.paidOn} · {p.method}{p.voided?' · Reversed':''}</strong>{!p.voided&&<button type="button" disabled={busy} onClick={()=>void reverse(p.id)} className="text-red-700 underline">Reverse entry</button>}</div><p className="mt-1">For {p.from} – {p.to} · {p.reference||'No reference'}</p><p className="break-words">{p.note}</p><p className="text-xs text-slate-500">Recorded by {p.recordedBy}{p.voided?' · '+p.voidReason:''}</p></article>)}{!result.payments.length&&<p className="text-sm text-slate-500">No salary payment records yet.</p>}</div></div>
       </div></details>
 
+    </>}
+    {employeeId > 0 && <ManualSalarySlips key={employeeId} employeeId={employeeId} month={month} today={today} onPrint={printSavedSlip} onLedgerChange={()=>setRevision(n=>n+1)} />}
       {activePrintSlip ? (
         <div className="salary-slip-print-only" aria-hidden="true">
           <header className="salary-slip-header">
@@ -203,8 +123,8 @@ export function PayrollLedger({employees,cycles,month,today,onNotice}:{employees
               </div>
             </div>
             <div className="salary-slip-meta">
-              <p><strong>Slip No:</strong> {activePrintSlip.slipNumber}</p>
-              <p><strong>Pay Cycle:</strong> {activePrintSlip.cycleStartDate} to {activePrintSlip.cycleEndDate}</p>
+              <p><strong>Slip No:</strong> {activePrintSlip.snapshot.manual ? `BEI-M-${String(activePrintSlip.id).padStart(5, '0')}` : activePrintSlip.slipNumber}</p>
+              <p><strong>Salary period:</strong> {activePrintSlip.cycleStartDate} to {activePrintSlip.cycleEndDate}</p>
               <p><strong>Issued On:</strong> {new Date(activePrintSlip.issuedAt).toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata'})}</p>
               <p><strong>Status:</strong> {activePrintSlip.status==='voided'?'VOIDED':'ISSUED'}</p>
             </div>
@@ -220,18 +140,18 @@ export function PayrollLedger({employees,cycles,month,today,onNotice}:{employees
             <div><span>Contact Phone</span><strong>{activePrintSlip.snapshot.employeePhone||'—'}</strong></div>
             <div><span>Email</span><strong>{activePrintSlip.snapshot.employeeEmail||'—'}</strong></div>
             <div><span>Monthly Fixed Base</span><strong>{activePrintSlip.snapshot.monthlyBaseSalary>0?money(activePrintSlip.snapshot.monthlyBaseSalary):'Not set'}</strong></div>
-            <div><span>Work Shift / Cycle</span><strong>{activePrintSlip.snapshot.shiftTime} · Day {activePrintSlip.snapshot.cycleStartDay}</strong></div>
+            {!activePrintSlip.snapshot.manual && <div><span>Work shift</span><strong>{activePrintSlip.snapshot.shiftTime}</strong></div>}
           </section>
 
           <section className="salary-slip-attendance">
-            <div><span>Cycle Days</span><strong>{activePrintSlip.snapshot.totalDays}</strong></div>
+            <div><span>Days in period</span><strong>{activePrintSlip.snapshot.totalDays}</strong></div>
             <div><span>Working Days</span><strong>{activePrintSlip.snapshot.workingDays}</strong></div>
-            <div><span>Offs / Holidays</span><strong>{activePrintSlip.snapshot.weeklyOffsAndHolidays}</strong></div>
+            {!activePrintSlip.snapshot.manual && <div><span>Offs / Holidays</span><strong>{activePrintSlip.snapshot.weeklyOffsAndHolidays}</strong></div>}
             <div><span>Present</span><strong>{activePrintSlip.snapshot.presentDays}</strong></div>
             <div><span>Half Day</span><strong>{activePrintSlip.snapshot.halfDays}</strong></div>
             <div><span>Paid Leave</span><strong>{activePrintSlip.snapshot.paidLeaveDays}</strong></div>
             <div><span>Absent / Unpaid</span><strong>{activePrintSlip.snapshot.unpaidAndAbsentDays}</strong></div>
-            <div><span>Payable Days ({Math.floor(activePrintSlip.snapshot.totalWorkMinutes/60)}h {activePrintSlip.snapshot.totalWorkMinutes%60}m)</span><strong>{activePrintSlip.snapshot.payableDays}</strong></div>
+            <div><span>Payable days{!activePrintSlip.snapshot.manual && <> ({Math.floor(activePrintSlip.snapshot.totalWorkMinutes/60)}h {activePrintSlip.snapshot.totalWorkMinutes%60}m)</>}</span><strong>{activePrintSlip.snapshot.payableDays}</strong></div>
           </section>
 
           <section className="salary-slip-split">
@@ -261,7 +181,7 @@ export function PayrollLedger({employees,cycles,month,today,onNotice}:{employees
               <p className="salary-slip-words">{activePrintSlip.snapshot.netPayWords}</p>
             </div>
             <div className="salary-slip-settlement">
-              <p><strong>Paid in Cycle:</strong> {money(activePrintSlip.snapshot.paidAmount)}</p>
+              <p><strong>Paid for period:</strong> {money(activePrintSlip.snapshot.paidAmount)}</p>
               <p><strong>Payment Mode:</strong> {activePrintSlip.snapshot.paymentMethod||'—'}</p>
               <p><strong>Ref / UTR:</strong> {activePrintSlip.snapshot.paymentRef||'—'}</p>
               <p><strong>Payment Date:</strong> {activePrintSlip.snapshot.paidOn||'—'}</p>
@@ -271,14 +191,14 @@ export function PayrollLedger({employees,cycles,month,today,onNotice}:{employees
           {activePrintSlip.snapshot.notes&&<p className="salary-slip-note"><strong>Remarks:</strong> {activePrintSlip.snapshot.notes}</p>}
 
           <footer className="salary-slip-footer">
-           <p>This is a system-generated payslip issued by {activePrintSlip.snapshot.companyName} (Admin) based on verified attendance and payroll ledger records.</p>
+           <p>This is a system-generated payslip issued by {activePrintSlip.snapshot.companyName} (Admin) using the saved salary figures.</p>
             <div className="salary-slip-signs">
               <div><span>Employee Signature</span></div>
               <div><span>Authorized Signatory &amp; Company Stamp</span></div>
             </div>
           </footer>
         </div>
-      ) : reportCurrent && (
+      ) : result && reportCurrent && (
         <div className="salary-slip-print-only" aria-hidden="true">
           <header className="salary-slip-header">
             <div className="salary-slip-brand">
@@ -342,6 +262,5 @@ export function PayrollLedger({employees,cycles,month,today,onNotice}:{employees
           </footer>
         </div>
       )}
-    </>}
   </section>
 }

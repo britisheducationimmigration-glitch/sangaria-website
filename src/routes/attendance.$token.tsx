@@ -11,7 +11,7 @@ type PortalLoaderResult = { ok: true; data: PortalSuccess } | { ok: false; error
 export const Route = createFileRoute('/attendance/$token')({
   loader: async ({ params }): Promise<PortalLoaderResult> => {
     try {
-      return { ok: true, data: await getEmployeePortalData({ data: { token: params.token } }) }
+      return { ok: true, data: await getEmployeePortalData({ data: { token: params.token.split('~').at(-1) } }) }
     } catch (cause) {
       return { ok: false, errorMessage: cause instanceof Error ? cause.message : 'Could not open this attendance link.' }
     }
@@ -65,7 +65,7 @@ function EmployeeAttendancePage() {
       </div>
     )
   }
-  return <EmployeeAttendanceView initial={res.data} token={token} />
+  return <EmployeeAttendanceView initial={res.data} token={token.split('~').at(-1)!} />
 }
 
 function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; token: string }) {

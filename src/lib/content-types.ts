@@ -290,6 +290,7 @@ export type AdminAttendanceSnapshot = {
 }
 
 export type SalarySlipSnapshot = {
+  manual?: boolean
   adjustmentDate?: string
   companyName: string
   companyAddress: string
