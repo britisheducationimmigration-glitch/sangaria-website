@@ -332,8 +332,12 @@ test('actual MySQL schema, punches, concurrency, corrections and frozen reports'
 
   await t.test('manual slips save and edit independently of attendance and payments',async()=>{
     const emp=await save({name:'Manual slip employee',monthlySalary:0})
-    const input={employeeId:emp.id,month:'2026-11',presentDays:20,workingDays:26,earnedSalary:20000,allowanceAmount:500,deductionAmount:100,paidAmount:15000}
+    const input={employeeId:emp.id,requestKey:'6cd02816-e0bd-4eb3-b27f-1188d14b28b0',paymentMethod:'UPI',paymentRef:'manual-test',month:'2026-11',presentDays:20,workingDays:26,earnedSalary:20000,allowanceAmount:500,deductionAmount:100,paidAmount:15000}
     const first=await api.saveManualSalarySlip({data:input})
+    assert.equal(first.snapshot.paymentMethod,'UPI')
+    assert.equal(first.snapshot.paymentRef,'manual-test')
+    assert.equal((await api.saveManualSalarySlip({data:input})).id,first.id)
+    await assert.rejects(api.saveManualSalarySlip({data:{...input,requestKey:undefined}}),/already exists/)
     assert.equal(first.netPay,20400);assert.equal(first.snapshot.presentDays,20);assert.equal(first.snapshot.manual,true)
     const second=await api.saveManualSalarySlip({data:{...input,id:first.id,presentDays:22,earnedSalary:22000}})
     assert.equal(second.id,first.id);assert.equal(second.snapshot.presentDays,22);assert.equal(second.netPay,22400)
