@@ -28,10 +28,10 @@ export function SiteFooter({ settings, countries }: { settings: SiteSettings; co
             <Logo light />
             <p className="mt-5 max-w-xs text-sm leading-relaxed text-forest-100/70">{site.tagline}</p>
             <div className="mt-4 flex gap-3 md:mt-6">
-              <a href={site.instagram} target="_blank" rel="noreferrer" aria-label="Instagram" className="grid size-10 place-items-center rounded-full bg-white/10 hover:bg-coral-500">
+              <a href={site.instagram} target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="grid size-10 place-items-center rounded-full bg-white/10 hover:bg-coral-500">
                 <Instagram className="size-4" />
               </a>
-              <a href={site.facebook} target="_blank" rel="noreferrer" aria-label="Facebook" className="grid size-10 place-items-center rounded-full bg-white/10 hover:bg-coral-500">
+              <a href={site.facebook} target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="grid size-10 place-items-center rounded-full bg-white/10 hover:bg-coral-500">
                 <Facebook className="size-4" />
               </a>
             </div>
@@ -65,10 +65,10 @@ export function SiteFooter({ settings, countries }: { settings: SiteSettings; co
           </div>
           <div className="col-span-2 md:col-span-1">
             <h3 className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-coral-400 md:mb-4">Visit our office</h3>
-            <p className="flex gap-3 text-xs leading-relaxed md:text-sm">
+            <a href={site.mapUrl} target="_blank" rel="noopener noreferrer" className="flex gap-3 text-xs leading-relaxed transition-colors hover:text-white md:text-sm">
               <MapPin className="mt-0.5 size-4 shrink-0 text-coral-400" />
-              {site.address}
-            </p>
+              <span>{site.address}</span>
+            </a>
             {settings.phones.map((p) => (
               <a key={p} href={`tel:${(p.startsWith('+') ? p : '+91' + p).replace(/[^\d+]/g, '')}`} className="mt-2 flex min-h-8 items-center gap-3 text-xs transition-colors hover:text-white md:mt-3 md:text-sm">
                 <Phone className="size-4 text-coral-400" /> {p.startsWith('+') ? p : '+91 ' + p}
@@ -77,9 +77,7 @@ export function SiteFooter({ settings, countries }: { settings: SiteSettings; co
             {settings.emails.map((email) => (
               <a
                 key={email}
-                href={`https://mail.google.com/mail/?view=cm&fs=1&to=${email}`}
-                target="_blank"
-                rel="noreferrer"
+                href={`mailto:${email}`}
                 className="mt-2 flex min-h-8 items-start gap-3 break-all text-xs transition-colors hover:text-white md:mt-3 md:text-sm"
               >
                 <Mail className="mt-0.5 size-4 shrink-0 text-coral-400" /> {email}

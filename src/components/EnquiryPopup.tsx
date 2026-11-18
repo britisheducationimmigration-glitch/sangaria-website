@@ -6,6 +6,16 @@ import { EnquiryForm } from './EnquiryForm'
 const POPUP_DONE_KEY = 'bei-enquiry-popup-submitted'
 const POPUP_DISMISSED_KEY = 'bei-enquiry-popup-dismissed'
 
+function isSuppressedPath(pathname: string): boolean {
+  return (
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/attendance') ||
+    pathname.startsWith('/contact') ||
+    pathname.startsWith('/eligibility') ||
+    pathname.startsWith('/study-plan')
+  )
+}
+
 function hasInteractedWithPopup(): boolean {
   try {
     return (
@@ -37,7 +47,8 @@ export function EnquiryPopup() {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const rootData = useLoaderData({ from: '__root__' })
   const enabled = rootData?.settings.popupEnabled ?? true
-  const delaySeconds = rootData?.settings.popupDelaySeconds ?? 8
+  const delaySeconds = rootData?.settings.popupDelaySeconds ?? 25
+  const suppressed = isSuppressedPath(pathname)
   const [open, setOpen] = useState(false)
   const [interacted, setInteracted] = useState(() => hasInteractedWithPopup())
   const [sharePromptOpen, setSharePromptOpen] = useState(false)
@@ -45,12 +56,12 @@ export function EnquiryPopup() {
   const closeButtonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
-    if (interacted || !enabled || pathname.startsWith('/admin') || open) return
+    if (interacted || !enabled || suppressed || open) return
 
-    const safeDelay = Math.min(60, Math.max(3, Number(delaySeconds) || 8))
+    const safeDelay = Math.min(60, Math.max(15, Number(delaySeconds) || 25))
     const timer = window.setTimeout(() => setOpen(true), safeDelay * 1000)
     return () => window.clearTimeout(timer)
-  }, [interacted, enabled, delaySeconds, pathname, open])
+  }, [interacted, enabled, delaySeconds, suppressed, open])
 
   const close = useCallback(() => {
     markPopupDismissed()
@@ -65,7 +76,7 @@ export function EnquiryPopup() {
   }, [])
 
   useEffect(() => {
-    if (!open || sharePromptOpen || pathname.startsWith('/admin')) return
+    if (!open || sharePromptOpen || suppressed) return
 
     const previouslyFocused = document.activeElement instanceof HTMLElement
       ? document.activeElement
@@ -115,13 +126,16 @@ export function EnquiryPopup() {
       document.body.style.overflow = previousBodyOverflow
       if (previouslyFocused?.isConnected) previouslyFocused.focus()
     }
-  }, [open, close, pathname, sharePromptOpen])
+  }, [open, close, suppressed, sharePromptOpen])
 
-  if (!open || pathname.startsWith('/admin') || interacted) return null
+  if (!open || suppressed || interacted) return null
 
   return (
     <div
       ref={dialogRef}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) close()
+      }}
       className="fixed inset-0 z-[60] grid place-items-center bg-forest-950/60 p-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
