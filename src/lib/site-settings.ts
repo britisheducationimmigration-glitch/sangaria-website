@@ -1,6 +1,6 @@
 import { faqs as fixtureFaqs } from '@/data/fixtures'
 import { site } from '@/data/site'
-import type { SiteFaq, SiteSettings, SiteTrustStat } from '@/lib/content-types'
+import type { SiteSettings, SiteTrustStat } from '@/lib/content-types'
 
 export type PublicSiteSettings = Pick<SiteSettings, 'phones' | 'emails' | 'officeHours' | 'faqs' | 'trustStats'>
 
@@ -84,14 +84,4 @@ export function readSiteSettings(row?: Record<string, unknown>): SiteSettings {
     whatsappEnabled: row ? Boolean(row.whatsapp_enabled) : defaultSiteSettings.whatsappEnabled,
     approvalsMarqueeEnabled: row ? Boolean(row.approvals_marquee_enabled) : defaultSiteSettings.approvalsMarqueeEnabled,
   }
-}
-
-export function asFaqList(value: unknown): SiteFaq[] {
-  if (!Array.isArray(value)) return []
-  return value.filter((item): item is SiteFaq => !!item && typeof item === 'object' && typeof (item as SiteFaq).q === 'string' && typeof (item as SiteFaq).a === 'string')
-}
-
-export function asTrustStatList(value: unknown): SiteTrustStat[] {
-  if (!Array.isArray(value)) return []
-  return value.filter((item): item is SiteTrustStat => !!item && typeof item === 'object' && typeof (item as SiteTrustStat).value === 'string' && typeof (item as SiteTrustStat).label === 'string')
 }

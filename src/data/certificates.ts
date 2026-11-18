@@ -1,13 +1,4 @@
 import type { CertificateCategory, CertificateSeed } from '@/lib/content-types'
-
-export const certificateCategories: CertificateCategory[] = [
-  'Partner authorisations',
-  'Training & qualifications',
-  'Recognition & events',
-  'Student visa results',
-  'IELTS & PTE results',
-]
-
 export const defaultCertificates: CertificateSeed[] = [
   {
     slug: 'unizportal-representation',

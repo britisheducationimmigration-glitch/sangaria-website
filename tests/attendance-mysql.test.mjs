@@ -366,9 +366,33 @@ test('actual MySQL schema, punches, concurrency, corrections and frozen reports'
     await api.reverseSalaryPayment({data:{id:first.id,reason:'Incorrect amount; retain original evidence'}})
     const reversed=await api.getEmployeeRangeReport({data:range});assert.equal(reversed.throughToday.paid,0);assert.equal(reversed.throughToday.pending,1000);assert.equal(reversed.payments[0].voided,true)
     await api.recordSalaryPayment({data:{...payment,amount:1200,requestKey:'test-ledger-request-0003'}})
-    const advance=await api.getEmployeeRangeReport({data:range});assert.equal(advance.throughToday.pending,0);assert.equal(advance.throughToday.advance,200)
+     const advance=await api.getEmployeeRangeReport({data:range});assert.equal(advance.throughToday.pending,0);assert.equal(advance.throughToday.advance,200)
     await api.permanentlyDeleteEmployee({data:{id:emp.id,confirmationName:emp.name}});assert.equal((await pool.query('SELECT * FROM salary_payments WHERE employee_id=?',[emp.id]))[0].length,0)
     state.now='2026-11-16T04:00:00Z'
+  })
+
+  await t.test('IST photo cleanup cutoff and idempotent missing-out flagging', async () => {
+    state.now = '2026-11-16T19:00:00Z'
+    const emp = await save({ name: 'Cleanup & MissingOut Test', joiningDate: '2026-09-01' })
+    const fakePhoto = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10])
+    await pool.query(
+      "INSERT INTO attendance_logs (employee_id, work_date, check_in_at, in_photo_data, status) VALUES (?, '2026-09-17', '2026-09-17 04:00:00', ?, 'Present'), (?, '2026-09-18', '2026-09-18 04:00:00', ?, 'Present')",
+      [emp.id, fakePhoto, emp.id, fakePhoto],
+    )
+    const preview = await api.getAttendancePhotoCleanupPreview()
+    assert.equal(preview.cutoff, '2026-09-18')
+    assert.ok(preview.records >= 1 && preview.photos >= 1)
+    const cleaned = await api.cleanOldAttendancePhotos({ data: { cutoff: preview.cutoff, confirmed: true } })
+    assert.ok(cleaned.cleared >= 1)
+    const [remaining] = await pool.query('SELECT work_date, in_photo_data IS NOT NULL AS has_photo FROM attendance_logs WHERE employee_id = ? ORDER BY work_date', [emp.id])
+    assert.equal(Number(remaining[0].has_photo), 0)
+    assert.equal(Number(remaining[1].has_photo), 1)
+    await server.autoCloseOpenCheckIns()
+    await server.autoCloseOpenCheckIns()
+    const [flagged] = await pool.query('SELECT out_flags_json FROM attendance_logs WHERE employee_id = ? ORDER BY work_date', [emp.id])
+    assert.deepEqual(JSON.parse(String(flagged[0].out_flags_json)), ['MISSING_OUT_REVIEW_REQUIRED'])
+    await api.permanentlyDeleteEmployee({ data: { id: emp.id, confirmationName: emp.name } })
+    state.now = '2026-11-16T04:00:00Z'
   })
 
 })

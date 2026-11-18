@@ -77,13 +77,6 @@ async function mutateCountryCatalogState(mutate: (state: CountryCatalogState) =>
   invalidateCountryCatalogCache()
 }
 
-export async function writeCountryCatalogState(state: CountryCatalogState) {
-  await mutateCountryCatalogState((current) => {
-    current.published = state.published
-    current.drafts = state.drafts
-  })
-}
-
 function withScheduledGuidance(entry: CountryPageContent): CountryPageContent {
   return {
     country: getCurrentCountry(entry.country),

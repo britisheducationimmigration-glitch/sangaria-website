@@ -14,16 +14,26 @@ import { isPolicyNoticeVisible } from '@/data/policy-watch'
 import { readPolicyWatchState } from './policy-watch.server'
 import { getPublicCountryBySlug, getPublicCountryCatalog } from './country-catalog.server'
 
+type PublicPolicyNotice = {
+  id: string
+  countrySlug: string
+  title: string
+  message: string
+  sourceLabel: string
+  sourceUrl: string
+}
+
 let publicContentCache: { expiresAt: number; data: PublicContent } | null = null
 let publicSettingsCache: { expiresAt: number; data: SiteSettings } | null = null
 let publicCashflowCache: { expiresAt: number; data: CountryCashflow[] } | null = null
+let publicPolicyNoticesCache: { expiresAt: number; data: PublicPolicyNotice[] } | null = null
 
 export function invalidatePublicContentCache() {
   publicContentCache = null
   publicSettingsCache = null
   publicCashflowCache = null
+  publicPolicyNoticesCache = null
 }
-
 export const getPublicSettings = createServerFn({ method: 'GET' }).handler(async (): Promise<SiteSettings> => {
   if (publicSettingsCache && publicSettingsCache.expiresAt > Date.now()) return publicSettingsCache.data
   if (publicContentCache && publicContentCache.expiresAt > Date.now()) return publicContentCache.data.settings
@@ -148,9 +158,10 @@ export const getPublicCountryPage = createServerFn({ method: 'GET' })
   })
   .handler(async ({ data }) => getPublicCountryBySlug(data.slug))
 
-export const getPublicPolicyNotices = createServerFn({ method: 'GET' }).handler(async () => {
+export const getPublicPolicyNotices = createServerFn({ method: 'GET' }).handler(async (): Promise<PublicPolicyNotice[]> => {
+  if (publicPolicyNoticesCache && publicPolicyNoticesCache.expiresAt > Date.now()) return publicPolicyNoticesCache.data
   const state = await readPolicyWatchState()
-  return state.notices
+  const data = state.notices
     .filter((notice) => isPolicyNoticeVisible(notice))
     .map((notice) => ({
       id: notice.id,
@@ -161,6 +172,8 @@ export const getPublicPolicyNotices = createServerFn({ method: 'GET' }).handler(
       sourceUrl: notice.sourceUrl,
     }))
     .sort((left, right) => left.title.localeCompare(right.title))
+  publicPolicyNoticesCache = { data, expiresAt: Date.now() + 8_000 }
+  return data
 })
 
 export const getPublicContent = createServerFn({ method: 'GET' }).handler(async (): Promise<PublicContent> => {

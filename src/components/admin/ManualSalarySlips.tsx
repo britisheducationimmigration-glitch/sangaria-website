@@ -74,7 +74,7 @@ export function ManualSalarySlips({employeeId,month,today,onPrint,onLedgerChange
       <label className="block text-sm">Create slip<select value={manual?'manual':'attendance'} disabled={busy} className={field} onChange={e=>{setManual(e.target.value==='manual');setEdit(null);setMessage('')}}>
         <option value="attendance">Generate from attendance</option><option value="manual">Enter manually</option>
       </select></label>
-      <form key={String(manual)+(edit?.id??'new')} ref={formRef} onSubmit={save}><fieldset disabled={busy} className="space-y-3">
+      <form key={String(manual)+'-'+(edit?.id??month)} ref={formRef} onSubmit={save}><fieldset disabled={busy} className="space-y-3">
         <legend className="font-bold">{edit?'Edit manual slip':manual?'Manual monthly record':'Attendance-based slip'}</legend>
         <p className="text-sm text-slate-600">{manual?'Enter days and amounts yourself. Payment details are saved on this slip only.':'Uses saved attendance. Leave amount paid blank to use recorded payments. Any additional payment is recorded in the ledger.'}</p>
         <label className="block text-sm">Salary month<input className={field} type="month" required name="month" defaultValue={edit?.selectedMonth??month}/></label>

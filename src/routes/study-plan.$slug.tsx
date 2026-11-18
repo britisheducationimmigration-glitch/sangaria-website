@@ -107,7 +107,7 @@ function StudyPlanPage() {
   const guide = country.studyGuide
   const storageKey = `study-plan-checklist:${country.slug}`
   const [checkedItems, setCheckedItems] = useState<string[]>([])
-  const [storageReady, setStorageReady] = useState(false)
+  const [loadedKey, setLoadedKey] = useState('')
   const [intakeMonth, setIntakeMonth] = useState('')
   const [planStartDate, setPlanStartDate] = useState('')
   const [notice, setNotice] = useState('')
@@ -145,28 +145,32 @@ function StudyPlanPage() {
     }
   }, [country.slug])
 
-  useEffect(() => {
+    useEffect(() => {
+    let next: string[] = []
     try {
       const saved = window.localStorage.getItem(storageKey)
       if (saved) {
         const parsed: unknown = JSON.parse(saved)
-        if (Array.isArray(parsed)) setCheckedItems(parsed.filter((item): item is string => typeof item === 'string' && plan.checklist.some((entry) => entry.id === item)))
+        if (Array.isArray(parsed)) {
+          next = parsed.filter((item): item is string => typeof item === 'string' && plan.checklist.some((entry) => entry.id === item))
+        }
       }
     } catch {
       // The planner remains usable if browser storage is unavailable.
     } finally {
-      setStorageReady(true)
+      setCheckedItems(next)
+      setLoadedKey(storageKey)
     }
-  }, [storageKey])
+  }, [storageKey, plan.checklist])
 
   useEffect(() => {
-    if (!storageReady) return
+    if (loadedKey !== storageKey) return
     try {
       window.localStorage.setItem(storageKey, JSON.stringify(checkedItems))
     } catch {
       // Keep checklist state in memory if storage is disabled or full.
     }
-  }, [checkedItems, storageKey, storageReady])
+  }, [checkedItems, storageKey, loadedKey])
 
   function toggleItem(id: string) {
     setCheckedItems((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])
