@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, lazy, Suspense } from 'react'
+import { useEffect, useState, useRef, lazy, Suspense, type CSSProperties } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { ArrowRight, Award, BadgeCheck, Headphones, MapPin, Timer, ShieldCheck, Zap, HeartHandshake } from 'lucide-react'
 import { ApprovalCard, PostCard, TestimonialCard } from '@/components/Cards'
@@ -264,6 +264,7 @@ function Home() {
     return true
   })
 
+   const [openFaq, setOpenFaq] = useState<number | null>(0)
   const visibleTestimonials = showAllTestimonials ? homepageTestimonials : homepageTestimonials.slice(0, 3)
   const selectedCountryObj = countries.find((c) => c.slug === selectedCountry)
   const selectedCountryName = selectedCountryObj?.name ?? 'Country'
@@ -280,7 +281,8 @@ function Home() {
     <div ref={pageRef} className="bg-cream text-forest-900">
       {/* HERO */}
       <section className="relative overflow-hidden bg-forest-900 bg-aurora-live text-white">
-        <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-10 px-5 pt-8 pb-16 lg:grid-cols-[1.15fr_1fr] lg:gap-14 lg:px-6 lg:pt-24 lg:pb-24">
+        <div aria-hidden="true" className="hero-grid-lines pointer-events-none absolute inset-0 z-0" />
+        <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-10 px-5 pt-8 pb-14 lg:grid-cols-[1.15fr_1fr] lg:gap-14 lg:px-6 lg:pt-24 lg:pb-20">
           <div className="relative isolate">
             <InteractiveFlightGlobe
               selectedCountry={selectedCountry}
@@ -291,40 +293,44 @@ function Home() {
                 <Eyebrow light>Sangaria · Hanumangarh · Since day one</Eyebrow>
               </div>
 
-              <h1 className="mt-5 animate-rise text-[2.6rem] font-extrabold leading-[1.03] tracking-tight sm:text-6xl lg:mt-7 lg:text-[4.2rem] lg:leading-[1.08] xl:text-[4.8rem] [animation-delay:80ms]">
-                <span className="inline-block">Pack your bags.</span>
-                <br />
-                <span className="relative inline-block">
-                  <span className="bg-gradient-to-r from-amber-300 via-amber-100 to-coral-400 bg-clip-text text-transparent [-webkit-background-clip:text] font-extrabold">
-                    We’ll handle
-                  </span>
-                  <svg viewBox="0 0 300 20" className="absolute -bottom-2 left-0 w-full overflow-visible lg:-bottom-2.5" aria-hidden>
-                    <path
-                      d="M2 15 Q 75 2 150 10 T 298 6"
-                      fill="none"
-                      stroke="#c4515d"
-                      strokeWidth="5"
-                      strokeLinecap="round"
-                      style={{ strokeDasharray: 320, strokeDashoffset: 0, animation: 'penDraw 1.3s cubic-bezier(0.2, 0.7, 0.2, 1) forwards' }}
-                    />
-                  </svg>
+              <h1 className="mt-5 text-[2.6rem] font-extrabold leading-[1.03] tracking-tight sm:text-6xl lg:mt-7 lg:text-[4.2rem] lg:leading-[1.08] xl:text-[4.8rem]">
+                <span className="block overflow-hidden pb-0.5">
+                  <span className="kinetic-line [animation-delay:40ms]">Pack your bags.</span>
                 </span>
-                <br />
+                <span className="block overflow-visible pb-2.5">
+                  <span className="kinetic-line relative inline-block [animation-delay:120ms]">
+                    <span className="bg-gradient-to-r from-amber-300 via-amber-100 to-coral-400 bg-clip-text text-transparent [-webkit-background-clip:text] font-extrabold">
+                      We’ll handle
+                    </span>
+                    <svg viewBox="0 0 300 20" className="absolute -bottom-2 left-0 w-full overflow-visible lg:-bottom-2.5" aria-hidden="true">
+                      <path
+                        d="M2 15 Q 75 2 150 10 T 298 6"
+                        fill="none"
+                        stroke="#c4515d"
+                        strokeWidth="5"
+                        strokeLinecap="round"
+                        style={{ strokeDasharray: 320, strokeDashoffset: 0, animation: 'penDraw 1.3s cubic-bezier(0.2, 0.7, 0.2, 1) forwards' }}
+                      />
+                    </svg>
+                  </span>
+                </span>
                 <span className="inline-flex min-h-[1.2em] items-center gap-2 overflow-visible pb-1 lg:whitespace-nowrap lg:gap-3">
                   <HeroRotatingWord />
                 </span>
               </h1>
 
-              <p className="mt-4 max-w-xl animate-rise text-sm leading-relaxed text-forest-100/85 lg:mt-8 lg:text-lg lg:text-forest-100/80 [animation-delay:160ms]">
+              <p className="mt-3 max-w-xl animate-rise text-sm leading-relaxed text-forest-100/85 lg:mt-6 lg:text-lg lg:text-forest-100/80 [animation-delay:180ms]">
                 Study visas, PR, work permits, tourist visas and IELTS / PTE coaching for Canada, UK, Australia, USA, New Zealand, Germany and Europe —
                 all under one roof at {site.name}.
               </p>
 
               {/* QUICK COUNTRY & VISA FINDER */}
-              <div className="mt-7 max-w-xl animate-rise overflow-hidden rounded-3xl border border-white/20 bg-forest-950/75 p-4 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.65)] ring-1 ring-white/10 backdrop-blur-xl sm:p-6 [animation-delay:220ms]">
+              <div className="mt-7 max-w-xl animate-rise overflow-hidden rounded-3xl border border-white/20 bg-forest-950/75 p-4 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.65)] ring-1 ring-white/10 backdrop-blur-xl sm:p-6 [animation-delay:240ms]">
                 <div className="mb-3 flex items-center justify-between gap-3 lg:mb-4">
                   <span className="font-mono text-[11px] font-bold uppercase tracking-wide text-coral-400 lg:text-xs">Visa & Country Finder</span>
-                  <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5 text-[9px] font-semibold text-white/85 lg:px-3 lg:py-1 lg:text-[10px]">Free Check</span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5 text-[9px] font-semibold text-white/85 lg:px-3 lg:py-1 lg:text-[10px]">
+                    <span className="size-1.5 rounded-full bg-emerald-400" aria-hidden="true" /> Free Check
+                  </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -421,15 +427,17 @@ function Home() {
           </div>
 
           <div className="relative z-10 mx-auto w-full max-w-md lg:max-w-none">
-            <div className="hidden lg:block absolute -inset-4 rotate-3 rounded-[2.5rem] bg-coral-500/90 transition-transform duration-700 hover:rotate-2" />
+            <div className="hidden lg:block absolute -inset-4 rotate-3 rounded-[2.5rem] bg-gradient-to-br from-coral-500/90 via-coral-600/80 to-amber-300/30 transition-transform duration-700 hover:rotate-2" />
             <img
               src="/img/hero.webp"
               alt="Student holding passport and university acceptance letter at the airport"
               width={720}
               height={860}
+              fetchPriority="high"
+              decoding="sync"
               className="relative aspect-[4/3] w-full rounded-2xl border border-white/15 object-cover shadow-2xl lg:aspect-[6/7] lg:rounded-[2rem] lg:border-0"
             />
-            <div className="hero-card-float absolute bottom-0 inset-x-0 border-t border-forest-900/10 bg-cream/95 p-3.5 text-forest-900 backdrop-blur-md lg:inset-x-auto lg:-bottom-10 lg:-left-4 lg:w-[80%] lg:rounded-2xl lg:border lg:border-white/60 lg:p-4 lg:shadow-2xl xl:-left-12">
+            <div className="hero-card-float absolute bottom-0 inset-x-0 border-t border-forest-900/10 bg-cream/95 p-3.5 text-forest-900 backdrop-blur-md lg:inset-x-auto lg:-bottom-10 lg:-left-4 lg:w-[82%] lg:rounded-2xl lg:border lg:border-white/70 lg:p-4 lg:shadow-2xl xl:-left-12">
               <div className="flex items-center justify-between gap-2 font-mono text-[9px] uppercase tracking-wider text-forest-900/60 lg:text-[10px] lg:tracking-widest">
                 <span className="inline-flex items-center gap-1.5">
                   <span className="size-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
@@ -448,127 +456,11 @@ function Home() {
                   <span className="ml-1 text-[10px] font-normal text-forest-900/60 lg:ml-0 lg:block lg:text-[11px]">Sangaria</span>
                 </div>
                 <div className="relative flex flex-1 items-center justify-center px-2">
-                  <div className="w-full border-b border-dashed border-coral-500/45" />
-                  <span aria-hidden="true" className="flight-glide absolute text-sm text-coral-500 lg:text-base">✈</span>
-                </div>
-                <div key={activeFlight.code} className="animate-rise text-right [animation-duration:350ms]">
-                  <span className="lg:text-3xl">{activeFlight.code}</span>
-                  <span className="ml-1 text-[10px] font-normal text-forest-900/60 lg:ml-0 lg:block lg:text-[11px]">{activeFlight.city}</span>
-                </div>
-              </div>
-            </div>
-            <div className="stamp-float absolute top-3.5 right-3.5 grid size-16 place-items-center rounded-full border-2 border-dashed border-coral-400 bg-forest-950/90 text-center font-mono text-[9px] font-bold uppercase leading-tight tracking-wider text-coral-300 backdrop-blur lg:top-6 lg:-right-3 lg:size-28 lg:animate-stamp lg:border-[3px] lg:border-coral-500 lg:bg-forest-950/85 lg:text-[11px] lg:tracking-widest lg:text-coral-400 lg:[animation-delay:600ms] xl:-right-6">
-              Visa
-              <br />
-              Approved
-              <br />✓
-            </div>
-          </div>
-        </div>
 
-        <dl className="relative z-10 mx-auto grid max-w-7xl grid-cols-2 gap-3.5 px-5 pb-12 sm:grid-cols-4 lg:mt-4 lg:gap-5 lg:px-6 lg:pb-16">
-          {settings.trustStats.map((s) => (
-            <div
-              key={s.label}
-              className="rounded-2xl border border-white/12 bg-white/[0.06] p-4 text-center backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:border-coral-400/40 hover:bg-white/[0.1] lg:p-5 lg:text-left"
-            >
-              <dt className="font-display text-2xl font-extrabold text-white lg:text-3xl">
-                <CountUpStat value={s.value} />
-              </dt>
-              <dd className="mt-1 text-[10px] uppercase tracking-wider text-forest-100/75 lg:text-xs lg:text-forest-100/70">{s.label}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-
-      {/* WHY CHOOSE US TRUST STRIP */}
-      <section className="border-b border-forest-900/10 bg-sand px-5 py-8 lg:px-6 lg:py-12">
-        <div data-reveal="" className="mx-auto flex max-w-7xl flex-col justify-between gap-5 rounded-3xl border border-forest-900/10 bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:gap-8 lg:rounded-[2.5rem] lg:p-8"> <div>
-            <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-widest text-coral-600 lg:text-xs">Why Choose Us</span>
-            <h3 className="hidden text-2xl font-extrabold text-forest-900 lg:block">Your future is safe with verified experts.</h3>
-          </div>
-          <div className="grid flex-1 grid-cols-1 gap-3.5 md:grid-cols-3 lg:max-w-4xl lg:gap-6">
-            <div className="flex items-start gap-3">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-forest-50 text-forest-900 lg:size-10 lg:rounded-2xl">
-                <ShieldCheck className="size-4 text-coral-500 lg:size-5" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-forest-900 lg:text-sm">Direct University Tie-ups</h4>
-                <p className="mt-0.5 text-[11px] text-forest-900/65 lg:text-xs">Official representation across Canada, UK &amp; Australia.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-forest-50 text-forest-900 lg:size-10 lg:rounded-2xl">
-                <Zap className="size-4 text-coral-500 lg:size-5" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-forest-900 lg:text-sm">100% Transparent Process</h4>
-                <p className="mt-0.5 text-[11px] text-forest-900/65 lg:text-xs">No hidden charges, direct fee payment to colleges.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-forest-50 text-forest-900 lg:size-10 lg:rounded-2xl">
-                <HeartHandshake className="size-4 text-coral-500 lg:size-5" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-forest-900 lg:text-sm">Pre-Visa &amp; Post-Arrival</h4>
-                <p className="mt-0.5 text-[11px] text-forest-900/65 lg:text-xs">Assistance with accommodation, forex &amp; airport pickup.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* STICKY JUMP BAR */}
-      <div ref={jumpWrapRef} style={isSticky ? { height: `${jumpHeight}px` } : undefined} className="min-h-[46px] lg:min-h-[52px]">
-        <div
-          ref={jumpBarRef}
-          style={isSticky ? { top: `${headerOffset}px` } : undefined}
-          className={`${isSticky ? 'fixed left-0 right-0 z-40 shadow-xl bg-forest-950/95 backdrop-blur-md' : 'relative bg-forest-950'} overflow-x-auto border-y border-white/10 px-4 py-2.5 text-white scrollbar-none lg:overflow-visible`}
-        >
-          <div className="mx-auto flex w-max items-center gap-2.5 lg:w-full lg:max-w-7xl lg:flex-wrap lg:justify-between lg:gap-x-4 lg:gap-y-2 lg:px-2">
-            <span className="shrink-0 font-mono text-[10px] font-bold uppercase tracking-wider text-coral-400 lg:text-[11px] lg:tracking-widest">JUMP TO:</span>
-            <div className="flex items-center gap-2.5 lg:flex-wrap lg:justify-center lg:gap-x-5 lg:gap-y-1">
-              {visibleJumpSections.map((section) => (
-                <a
-                  key={section.id}
-                  href={`#${section.id}`}
-                  className="shrink-0 whitespace-nowrap rounded-full border border-white/20 bg-forest-900 px-3.5 py-1 text-xs font-semibold text-white shadow-sm transition hover:text-coral-400 active:bg-coral-500 lg:rounded-none lg:border-0 lg:bg-transparent lg:px-0 lg:py-0 lg:shadow-none xl:text-sm"
-                >
-                  {section.icon} <span className="lg:hidden">{section.mobileLabel}</span><span className="hidden lg:inline">{section.desktopLabel}</span>
-                </a>
-              ))}
-            </div>
-            <a href="#enquiry" className="shrink-0 whitespace-nowrap rounded-full bg-coral-500 px-3.5 py-1 text-xs font-bold text-white shadow-md transition hover:bg-coral-600 lg:px-5 lg:py-2">
-              Free Enquiry →
-            </a>
-          </div>
-        </div>
-      </div>
-
-      {/* APPROVALS MARQUEE */}
-      {settings.approvalsMarqueeEnabled && homepageApprovals.length > 0 && (
-        <section className="overflow-hidden border-b border-forest-900/10 bg-coral-500 py-3.5 text-white lg:py-4">
-          <div className="flex w-max animate-marquee gap-8 whitespace-nowrap font-display text-sm font-bold lg:gap-10 lg:text-lg">
-            {[...homepageApprovals, ...homepageApprovals].map((a, i) => (
-              <span key={`${a.name}-${a.date}-${i}`} className="flex items-center gap-2 lg:gap-3">
-                <CountryFlag
-                  flag={a.flag}
-                  country={a.country}
-                  className="h-[17px] w-[26px] shrink-0 rounded-[2px] lg:h-[18px] lg:w-[28px] lg:rounded-[3px]"
-                />
-                <span>{a.name} — {a.visa} approved</span>
-                <span className="text-white/50">✦</span>
-              </span>
-            ))}
-          </div>
-        </section>
-      )}
-
-           {/* SERVICES */}
+              {/* SERVICES — ASYMMETRIC AWWWARDS BENTO GRID */}
       <section id="services" className="scroll-mt-36 lg:scroll-mt-44 border-b border-forest-900/10 bg-white px-5 py-20 lg:border-0 lg:bg-transparent lg:py-24">
-        <div data-reveal="" className="mx-auto max-w-7xl lg:px-1">
-          <div className="mb-8 flex items-end justify-between gap-4 lg:mb-12">
+        <div className="mx-auto max-w-7xl lg:px-1">
+          <div data-reveal="" className="mb-8 flex items-end justify-between gap-4 lg:mb-12">
             <div>
               <Eyebrow>What we do</Eyebrow>
               <h2 className="mt-2 max-w-2xl text-2xl font-extrabold text-forest-900 lg:mt-4 lg:text-5xl">Every kind of visa, handled by one trusted team.</h2>
@@ -577,81 +469,134 @@ function Home() {
               All visa services →
             </Link>
           </div>
-          <div className="grid grid-cols-2 gap-3.5 sm:gap-4 lg:grid-cols-3 lg:gap-6">
-            {visaServices.map((s, i) => (
-              <Link
-                key={s.slug}
-                to="/visas"
-                hash={s.slug}
-                className={
-                  'group relative overflow-hidden rounded-3xl p-4 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl active:scale-[0.98] lg:rounded-[2.5rem] lg:p-8 ' +
-                  (i === 0 ? 'bg-forest-900 text-white shadow-xl' : 'border border-forest-900/10 bg-white text-forest-900 hover:border-coral-400/50 lg:ring-1 lg:ring-forest-900/10 lg:hover:ring-coral-500/50')
-                }
-              >
-                <span className={'grid size-9 place-items-center rounded-2xl transition-transform duration-300 group-hover:scale-110 lg:size-14 ' + (i === 0 ? 'bg-coral-500 text-white' : 'bg-forest-50 text-forest-700')}>
-                  <ServiceIcon name={s.icon} className="size-4 lg:size-6" />
-                </span>
-                <h3 className={'mt-3 text-sm font-extrabold leading-snug lg:mt-6 lg:text-2xl lg:font-bold ' + (i === 0 ? '!text-white' : 'text-forest-900')}>{s.title}</h3>
-                <p className={'mt-1.5 text-[11px] leading-relaxed line-clamp-3 lg:mt-3 lg:text-base lg:line-clamp-none ' + (i === 0 ? 'text-forest-100/75' : 'text-forest-900/65')}>
-                  {s.summary}
-                </p>
-                <span className={'absolute top-4 right-4 font-mono text-xs lg:top-8 lg:right-8 ' + (i === 0 ? 'text-white/40' : 'text-forest-900/35')}>0{i + 1}</span>
-              </Link>
-            ))}
+          <div className="grid grid-cols-2 gap-3.5 sm:gap-4 lg:grid-cols-12 lg:gap-5">
+            {visaServices.map((s, i) => {
+              const spanClass =
+                i === 0
+                  ? 'col-span-2 lg:col-span-7 bg-gradient-to-br from-forest-950 via-forest-900 to-forest-800 text-white shadow-xl'
+                  : i === 1
+                    ? 'col-span-1 lg:col-span-5 border border-forest-900/10 bg-sand/70 text-forest-900 hover:border-coral-400/50'
+                    : i === 2 || i === 3
+                      ? 'col-span-1 lg:col-span-6 border border-forest-900/10 bg-white text-forest-900 hover:border-coral-400/50'
+                      : i === 4
+                        ? 'col-span-2 sm:col-span-1 lg:col-span-5 border border-forest-900/10 bg-white text-forest-900 hover:border-coral-400/50'
+                        : 'col-span-2 lg:col-span-7 border border-coral-400/35 bg-gradient-to-br from-coral-100/75 via-white to-cream text-forest-900 hover:border-coral-500/60'
+              const isDark = i === 0
+              const isSpotlight = i === 5
+              return (
+                <Link
+                  key={s.slug}
+                  to="/visas"
+                  hash={s.slug}
+                  data-reveal=""
+                  style={{ '--reveal-delay': `${i * 55}ms` } as CSSProperties}
+                  className={
+                    'group relative flex flex-col justify-between overflow-hidden rounded-3xl p-5 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl active:scale-[0.98] lg:rounded-[2.25rem] lg:p-8 ' +
+                    spanClass
+                  }
+                >
+                  <span
+                    aria-hidden="true"
+                    className={'pointer-events-none absolute -right-2 -bottom-4 font-display text-7xl font-black leading-none select-none lg:text-8xl ' + (isDark ? 'text-white/[0.05]' : 'text-forest-900/[0.04]')}
+                  >
+                    0{i + 1}
+                  </span>
+                  <div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={'grid size-10 place-items-center rounded-2xl transition-transform duration-300 group-hover:scale-110 lg:size-13 ' + (isDark ? 'bg-coral-500 text-white shadow-lg' : isSpotlight ? 'bg-coral-500/15 text-coral-600' : 'bg-forest-50 text-forest-700')}>
+                        <ServiceIcon name={s.icon} className="size-4.5 lg:size-6" />
+                      </span>
+                      <span className={'font-mono text-[11px] font-bold ' + (isDark ? 'text-white/45' : isSpotlight ? 'rounded-full bg-coral-500/15 px-2.5 py-0.5 text-[10px] uppercase tracking-wider text-coral-600' : 'text-forest-900/35')}>
+                        {isSpotlight ? 'Specialist Desk' : `0${i + 1}`}
+                      </span>
+                    </div>
+                    <h3 className={'mt-4 text-base font-extrabold leading-snug lg:mt-6 lg:text-2xl ' + (isDark ? '!text-white' : 'text-forest-900')}>{s.title}</h3>
+                    <p className={'mt-2 text-xs leading-relaxed lg:mt-3 lg:text-sm ' + (isDark ? 'text-forest-100/80' : 'text-forest-900/65')}>
+                      {s.summary}
+                    </p>
+                  </div>
+                  {isDark ? (
+                    <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
+                      <div className="flex flex-wrap gap-1.5">
+                        {['Canada', 'UK', 'Australia', 'Germany'].map((tag) => (
+                          <span key={tag} className="rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5 text-[10px] font-semibold text-white/90">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-coral-300">
+                        Explore <ArrowRight aria-hidden="true" className="size-3.5 transition-transform duration-200 group-hover:translate-x-1" />
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="mt-4 flex items-center justify-between pt-2 text-xs font-bold text-coral-600">
+                      <span>Learn more</span>
+                      <ArrowRight aria-hidden="true" className="size-3.5 transition-transform duration-200 group-hover:translate-x-1" />
+                    </div>
+                  )}
+                </Link>
+              )
+            })}
           </div>
         </div>
       </section>
 
-      {/* DESTINATIONS */}
+      {/* DESTINATIONS — SWIPE-SNAP PASSPORT CARDS ON MOBILE + EDITORIAL GRID ON PC */}
       <section id="destinations" className="scroll-mt-36 lg:scroll-mt-44 border-b border-forest-900/10 bg-sand/60 bg-dots px-5 py-20 lg:border-0 lg:py-24">
         <div data-reveal="" className="mx-auto max-w-7xl lg:px-1">
-          <div className="mb-8 lg:mb-12">
-            <Eyebrow>Destinations</Eyebrow>
-            <h2 className="mt-2 max-w-3xl text-2xl font-extrabold text-forest-900 lg:mt-4 lg:text-5xl">Choose where your next chapter begins.</h2>
-            <p className="mt-2 text-xs text-forest-900/70 lg:hidden">Explore listed study destinations or ask us about others. Europe / Schengen is visitor guidance.</p>
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-3 lg:mb-12">
+            <div>
+              <Eyebrow>Destinations</Eyebrow>
+              <h2 className="mt-2 max-w-3xl text-2xl font-extrabold text-forest-900 lg:mt-4 lg:text-5xl">Choose where your next chapter begins.</h2>
+              <p className="mt-2 text-xs text-forest-900/70 lg:hidden">Explore listed study destinations or ask us about others. Europe / Schengen is visitor guidance.</p>
+            </div>
+            <span className="inline-flex items-center gap-1 rounded-full border border-forest-900/15 bg-white px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-forest-900/70 lg:hidden">
+              Swipe cards →
+            </span>
           </div>
-          <div className="grid grid-cols-2 gap-3.5 sm:gap-4 lg:grid-cols-4 lg:gap-6">
+          <div className="mobile-snap-row -mx-5 flex snap-x snap-mandatory gap-3.5 overflow-x-auto px-5 pb-3 lg:mx-0 lg:grid lg:grid-cols-4 lg:gap-6 lg:overflow-visible lg:px-0 lg:pb-0">
             {countries.map((c) => (
               <Link
                 key={c.slug}
                 to="/countries/$slug"
                 params={{ slug: c.slug }}
-                className="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-forest-900/10 bg-white p-4 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:bg-forest-900 hover:text-white hover:shadow-xl active:scale-[0.98] lg:rounded-[2.5rem] lg:border-0 lg:bg-cream lg:p-6 lg:ring-1 lg:ring-forest-900/10"
+                className="group relative flex w-[76vw] max-w-[290px] shrink-0 snap-center flex-col justify-between overflow-hidden rounded-3xl border border-forest-900/10 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:bg-forest-900 hover:text-white hover:shadow-xl active:scale-[0.98] lg:w-auto lg:max-w-none lg:rounded-[2.25rem] lg:border-0 lg:bg-cream lg:p-6 lg:ring-1 lg:ring-forest-900/10"
               >
                 <div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <CountryFlag
                       code={c.code}
                       flag={c.flag}
                       country={c.name}
-                      className="h-6 w-9 shrink-0 rounded shadow-sm transition-transform duration-300 group-hover:scale-110 lg:h-8 lg:w-12"
+                      className="h-7 w-10 shrink-0 rounded-md shadow-sm transition-transform duration-300 group-hover:scale-110 lg:h-8 lg:w-12"
                     />
-                    <span className="font-mono text-xs font-bold text-forest-900/35 group-hover:!text-white/40 lg:text-2xl lg:text-forest-900/20">{c.code}</span>
+                    <span className="rounded-full bg-forest-50 px-2.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-forest-800/70 transition-colors group-hover:bg-white/15 group-hover:!text-white/90">
+                      {c.code}
+                    </span>
                   </div>
-                  <h3 className="mt-2.5 text-sm font-extrabold leading-tight text-forest-900 group-hover:!text-white lg:mt-6 lg:text-2xl lg:font-bold">{c.name}</h3>
-                  <p className="mt-1 line-clamp-2 text-[11px] leading-tight text-forest-900/65 group-hover:!text-white/80 lg:line-clamp-none lg:text-sm lg:text-forest-900/70">{c.headline}</p>
+                  <h3 className="mt-4 text-lg font-extrabold leading-tight text-forest-900 group-hover:!text-white lg:mt-6 lg:text-2xl">{c.name}</h3>
+                  <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-forest-900/65 group-hover:!text-white/80 lg:line-clamp-none lg:text-sm lg:text-forest-900/70">{c.headline}</p>
                 </div>
-                <div className="mt-3.5 flex items-end justify-between border-t border-forest-900/10 pt-2 text-xs group-hover:border-white/20 lg:mt-5 lg:border-t-2 lg:border-dashed lg:pt-4 lg:text-sm">
+                <div className="mt-4 flex items-end justify-between border-t border-dashed border-forest-900/15 pt-3 text-xs group-hover:border-white/20 lg:mt-5 lg:pt-4 lg:text-sm">
                   <span className="text-forest-900 group-hover:!text-white">
-                    <span className="hidden text-[10px] uppercase tracking-widest text-forest-900/60 group-hover:!text-white/60 lg:block">{c.stats[0].label}</span>
-                    <span className="font-bold text-coral-600 group-hover:!text-coral-300 lg:text-forest-900 lg:group-hover:!text-white">{c.stats[0].value}</span>
+                    <span className="block text-[10px] uppercase tracking-widest text-forest-900/55 group-hover:!text-white/60">{c.stats[0]?.label}</span>
+                    <span className="font-bold text-coral-600 group-hover:!text-amber-200 lg:text-forest-900 lg:group-hover:!text-amber-200">{c.stats[0]?.value}</span>
                   </span>
-                  <ArrowRight className="size-3.5 text-coral-500 transition-transform duration-200 group-hover:translate-x-1 lg:size-5" />
+                  <ArrowRight aria-hidden="true" className="size-4 text-coral-500 transition-transform duration-200 group-hover:translate-x-1 lg:size-5" />
                 </div>
               </Link>
             ))}
-            <Link to="/eligibility" className="cta-shimmer flex flex-col justify-between rounded-3xl bg-coral-500 p-4 text-white shadow-md transition-all duration-300 hover:-translate-y-1.5 hover:bg-coral-600 hover:shadow-xl active:scale-[0.98] lg:rounded-[2.5rem] lg:p-6">
+            <Link to="/eligibility" className="cta-shimmer flex w-[76vw] max-w-[290px] shrink-0 snap-center flex-col justify-between rounded-3xl bg-coral-500 p-5 text-white shadow-md transition-all duration-300 hover:-translate-y-1.5 hover:bg-coral-600 hover:shadow-xl active:scale-[0.98] lg:w-auto lg:max-w-none lg:rounded-[2.25rem] lg:p-6">
               <div>
-                <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-white/80 lg:text-xs lg:tracking-widest">Not sure?</span>
-                <h3 className="mt-2 text-sm font-extrabold !text-white leading-tight lg:mt-6 lg:text-2xl">
-                  <span className="lg:hidden">Find Your Fit</span>
-                  <span className="hidden lg:inline">Find the country that fits your profile in 60 seconds →</span>
+                <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-white/85">Not sure?</span>
+                <h3 className="mt-3 text-lg font-extrabold !text-white leading-tight lg:mt-6 lg:text-2xl">
+                  Find the country that fits your profile in 60 seconds →
                 </h3>
-                <p className="mt-1 text-[11px] text-white/85 lg:hidden">Free 60-second profile assessment</p>
+                <p className="mt-2 text-xs text-white/85 lg:hidden">Free 60-second profile assessment</p>
               </div>
-              <div className="mt-3.5 flex items-center justify-between border-t border-white/20 pt-2 text-xs font-bold lg:hidden">
-                <span>Check now</span>
-                <ArrowRight className="size-3.5" />
+              <div className="mt-4 flex items-center justify-between border-t border-white/20 pt-3 text-xs font-bold">
+                <span>Start free check</span>
+                <ArrowRight aria-hidden="true" className="size-4" />
               </div>
             </Link>
           </div>
@@ -691,9 +636,9 @@ function Home() {
         <BoardingPassGenerator />
       </Suspense>
 
-      {/* COACHING */}
+           {/* COACHING — DUAL FLOATING GLASS PILLS */}
       <section id="coaching" className="scroll-mt-36 lg:scroll-mt-44 mx-auto grid max-w-7xl items-center gap-8 px-5 py-20 lg:grid-cols-2 lg:gap-14 lg:px-6 lg:py-24">
-        <div className="relative">
+        <div data-reveal="" className="relative">
           <img
             src="/img/coaching.webp"
             alt="IELTS and PTE coaching classroom"
@@ -702,12 +647,21 @@ function Home() {
             loading="lazy"
             className="aspect-[16/10] w-full rounded-3xl object-cover shadow-lg lg:aspect-[19/14] lg:rounded-[2.5rem] lg:shadow-2xl"
           />
-          <div className="absolute right-3 bottom-3 rounded-2xl bg-forest-900/90 px-3.5 py-1.5 text-white shadow-md backdrop-blur-md lg:-right-4 lg:-bottom-6 lg:rounded-3xl lg:bg-forest-900 lg:p-5 lg:shadow-xl">
+          <div className="hero-card-float-slow absolute left-3 top-3 rounded-2xl border border-white/25 bg-forest-950/85 px-3.5 py-2 text-white shadow-xl backdrop-blur-md lg:-left-5 lg:top-6 lg:px-4 lg:py-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-amber-200 lg:text-[10px]">IELTS Target</span>
+              <span className="font-display text-xs font-extrabold text-white lg:text-sm">7.5+ Band</span>
+            </div>
+            <div className="mt-1.5 h-1.5 w-28 overflow-hidden rounded-full bg-white/15 lg:w-36">
+              <div className="band-meter-fill h-full w-full rounded-full bg-gradient-to-r from-amber-300 to-coral-400" />
+            </div>
+          </div>
+          <div className="hero-card-float absolute right-3 bottom-3 rounded-2xl border border-white/15 bg-forest-900/92 px-3.5 py-1.5 text-white shadow-xl backdrop-blur-md lg:-right-4 lg:-bottom-6 lg:rounded-3xl lg:bg-forest-900 lg:p-5">
             <span className="font-display text-lg font-extrabold text-coral-400 lg:block lg:text-4xl lg:text-coral-500">79+</span>
             <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wider text-forest-100/80 lg:ml-0 lg:block lg:text-xs lg:text-forest-100/70">Top PTE score</span>
           </div>
         </div>
-        <div>
+        <div data-reveal="" style={{ '--reveal-delay': '100ms' } as CSSProperties}>
           <Eyebrow>IELTS &amp; PTE Coaching</Eyebrow>
           <h2 className="mt-2 text-2xl font-extrabold text-forest-900 lg:mt-4 lg:text-5xl">Your score is your passport. Let’s raise it.</h2>
           <p className="mt-3 text-xs leading-relaxed text-forest-900/70 lg:mt-5 lg:text-lg">
@@ -720,36 +674,54 @@ function Home() {
               { icon: Award, t: 'Band feedback' },
               { icon: BadgeCheck, t: 'Free demo class' },
             ].map(({ icon: Icon, t }) => (
-              <li key={t} className="flex items-center gap-2 rounded-2xl border border-forest-900/10 bg-forest-50/70 p-3 text-xs font-semibold text-forest-900 shadow-sm lg:gap-3 lg:bg-white lg:p-4 lg:text-base">
+              <li key={t} className="flex items-center gap-2 rounded-2xl border border-forest-900/10 bg-forest-50/70 p-3 text-xs font-semibold text-forest-900 shadow-sm transition hover:-translate-y-0.5 hover:border-coral-400/40 lg:gap-3 lg:bg-white lg:p-4 lg:text-base">
                 <Icon className="size-4 shrink-0 text-coral-500 lg:size-5" />
                 <span className="truncate">{t}</span>
               </li>
             ))}
           </ul>
-          <Link to="/coaching" className="mt-8 block w-full rounded-full bg-forest-900 py-4 text-center text-xs font-bold text-white shadow-md transition hover:bg-forest-700 lg:inline-flex lg:w-auto lg:px-7 lg:text-base">
+          <Link to="/coaching" className="cta-shimmer mt-8 block w-full rounded-full bg-forest-900 py-4 text-center text-xs font-bold text-white shadow-md transition hover:bg-forest-700 active:scale-[0.98] lg:inline-flex lg:w-auto lg:px-7 lg:text-base">
             View batches &amp; timings →
           </Link>
         </div>
       </section>
 
-           {/* PROCESS */}
-      <section className="bg-forest-900 bg-grain px-5 py-20 text-white lg:px-6 lg:py-24">
-        <div data-reveal="" className="mx-auto max-w-7xl">
-          <div className="mb-8 lg:mb-14">
+      {/* PROCESS — CONNECTED FLIGHT-PATH TIMELINE */}
+      <section className="relative overflow-hidden bg-forest-900 bg-grain px-5 py-20 text-white lg:px-6 lg:py-24">
+        <div className="mx-auto max-w-7xl">
+          <div data-reveal="" className="mb-8 lg:mb-14">
             <Eyebrow light>How it works</Eyebrow>
             <h2 className="mt-2 max-w-2xl text-2xl font-extrabold !text-white lg:mt-4 lg:text-5xl">Four steps from Sangaria to your dream destination.</h2>
           </div>
-          <ol className="grid grid-cols-2 gap-3.5 sm:gap-4 md:grid-cols-4 lg:gap-6">
-            {steps.map((s) => (
-              <li key={s.n} className="flex flex-col justify-between overflow-hidden rounded-3xl border border-white/15 bg-white/5 p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-coral-400/40 hover:bg-white/10 lg:rounded-[2.5rem] lg:border-white/10 lg:p-7 lg:shadow-lg">
-                <div>
-                  <span className="font-display text-2xl font-extrabold text-coral-400 lg:text-6xl lg:text-coral-500/90">{s.n}</span>
-                  <h3 className="mt-1.5 text-sm font-bold !text-white leading-tight lg:mt-4 lg:text-xl">{s.title}</h3>
-                </div>
-                <p className="mt-2 text-[11px] leading-tight text-forest-100/70 lg:text-sm lg:leading-relaxed">{s.text}</p>
-              </li>
-            ))}
-          </ol>
+          <div className="relative">
+            <div aria-hidden="true" className="pointer-events-none hidden md:block absolute top-11 left-[12%] right-[12%] border-t-2 border-dashed border-coral-400/35" />
+            <ol className="grid grid-cols-2 gap-3.5 sm:gap-4 md:grid-cols-4 lg:gap-6">
+              {steps.map((s, i) => {
+                const checkpoints = ['SNG Office', 'Test Prep', 'Offer & File', 'Fly Abroad']
+                return (
+                  <li
+                    key={s.n}
+                    data-reveal=""
+                    style={{ '--reveal-delay': `${i * 85}ms` } as CSSProperties}
+                    className="relative flex flex-col justify-between overflow-hidden rounded-3xl border border-white/15 bg-forest-950/45 p-4 shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-coral-400/50 hover:bg-white/10 lg:rounded-[2.25rem] lg:p-7 lg:shadow-lg"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="inline-grid size-9 place-items-center rounded-full border border-coral-400/50 bg-coral-500/20 font-mono text-xs font-extrabold text-coral-300 lg:size-11 lg:text-sm">
+                          {s.n}
+                        </span>
+                        <span className="rounded-full border border-white/10 bg-white/[0.06] px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-amber-200/90 lg:px-2.5 lg:text-[10px]">
+                          {checkpoints[i]}
+                        </span>
+                      </div>
+                      <h3 className="mt-4 text-sm font-bold !text-white leading-tight lg:mt-6 lg:text-xl">{s.title}</h3>
+                    </div>
+                    <p className="mt-2 text-[11px] leading-relaxed text-forest-100/75 lg:text-sm">{s.text}</p>
+                  </li>
+                )
+              })}
+            </ol>
+          </div>
         </div>
       </section>
 
@@ -811,29 +783,50 @@ function Home() {
         </div>
       </section>
 
-      {/* FAQ + ENQUIRY */}
+           {/* FAQ + ENQUIRY — SMOOTH ACCORDION & CONCIERGE LOUNGE */}
       <section id="enquiry" className="scroll-mt-36 lg:scroll-mt-44 mx-auto grid max-w-7xl gap-10 px-5 pb-32 sm:pb-24 lg:grid-cols-[1fr_1.1fr] lg:gap-12 lg:px-6 lg:pb-28">
-        <div>
+        <div data-reveal="">
           <Eyebrow>FAQs</Eyebrow>
           <h2 className="mt-2 text-2xl font-extrabold text-forest-900 lg:mt-4 lg:text-4xl">Questions we hear every day.</h2>
           <div className="mt-6 divide-y divide-forest-900/10 rounded-3xl bg-white ring-1 ring-forest-900/10 shadow-sm lg:mt-8">
-            {settings.faqs.map((f, i) => (
-              <details key={`${f.q}-${i}`} className="group p-5 [&_summary::-webkit-details-marker]:hidden lg:p-6">
-                <summary className="flex cursor-pointer items-center justify-between gap-4 font-display text-[15px] font-bold text-forest-900 lg:text-lg">
-                  <span>{f.q}</span>
-                  <span className="grid size-8 shrink-0 place-items-center rounded-full bg-forest-50 text-coral-600 transition group-open:rotate-45">+</span>
-                </summary>
-                <p className="mt-3 text-xs leading-relaxed text-forest-900/75 lg:text-base lg:text-forest-900/70">{f.a}</p>
-              </details>
-            ))}
+            {settings.faqs.map((f, i) => {
+              const isOpen = openFaq === i
+              return (
+                <div key={`${f.q}-${i}`} className="p-5 lg:p-6">
+                  <button
+                    type="button"
+                    aria-expanded={isOpen}
+                    onClick={() => setOpenFaq(isOpen ? null : i)}
+                    className="flex w-full cursor-pointer items-center justify-between gap-4 text-left font-display text-[15px] font-bold text-forest-900 lg:text-lg"
+                  >
+                    <span>{f.q}</span>
+                    <span
+                      aria-hidden="true"
+                      className={'grid size-8 shrink-0 place-items-center rounded-full bg-forest-50 text-coral-600 transition-transform duration-300 ' + (isOpen ? 'rotate-45 bg-coral-500/15' : '')}
+                    >
+                      +
+                    </span>
+                  </button>
+                  <div className="faq-panel" data-open={isOpen ? 'true' : 'false'}>
+                    <div>
+                      <p className="pt-3 text-xs leading-relaxed text-forest-900/75 lg:text-base lg:text-forest-900/70">{f.a}</p>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
           </div>
           <p className="mt-6 flex items-center gap-2 text-xs text-forest-900/60 lg:text-sm">
             <MapPin className="size-4 shrink-0 text-coral-500" /> {site.address}
           </p>
         </div>
-        <div className="rounded-3xl bg-forest-900 bg-grain p-6 text-white shadow-xl lg:rounded-[2.5rem] lg:p-10 lg:shadow-2xl">
-          <h2 className="text-xl font-extrabold !text-white lg:text-3xl">Get a free profile evaluation</h2>
-          <p className="mt-1.5 mb-6 text-xs text-forest-100/70 lg:mt-2 lg:mb-8 lg:text-base">Share a few details — a counsellor calls you back within one working day.</p>
+        <div data-reveal="" style={{ '--reveal-delay': '100ms' } as CSSProperties} className="rounded-3xl border border-white/10 bg-forest-900 bg-grain p-6 text-white shadow-xl lg:rounded-[2.5rem] lg:p-10 lg:shadow-2xl">
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+            <span className="size-2 rounded-full bg-emerald-400 animate-pulse" aria-hidden="true" />
+            Counsellor replies within 1 working day
+          </span>
+          <h2 className="mt-4 text-xl font-extrabold !text-white lg:text-3xl">Get a free profile evaluation</h2>
+          <p className="mt-1.5 mb-6 text-xs text-forest-100/75 lg:mt-2 lg:mb-8 lg:text-base">Share a few details — honest guidance from our Sangaria desk.</p>
           <EnquiryForm source="home" dark />
         </div>
       </section>
