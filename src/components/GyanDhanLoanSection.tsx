@@ -14,6 +14,7 @@ export function GyanDhanLoanSection({ countryName }: { countryName: string }) {
     if (!widgetRequested || !widgetMountRef.current) return
 
     setWidgetStatus('loading')
+    document.querySelectorAll(`script[src="${widgetScriptUrl}"]`).forEach((node) => node.remove())
     const script = document.createElement('script')
     script.async = true
     script.src = widgetScriptUrl
@@ -24,8 +25,9 @@ export function GyanDhanLoanSection({ countryName }: { countryName: string }) {
     return () => {
       script.onload = null
       script.onerror = null
+      script.remove()
     }
-  }, [widgetRequested])
+  }, [widgetRequested, countryName])
 
   return (
     <section id="loan-eligibility" aria-labelledby="loan-eligibility-title" className="scroll-mt-28 mt-10 rounded-[2rem] bg-white p-5 ring-1 ring-forest-900/10 sm:p-8">

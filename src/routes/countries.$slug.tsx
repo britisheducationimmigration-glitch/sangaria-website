@@ -34,16 +34,18 @@ function CountryPageSkeleton() {
 export const Route = createFileRoute('/countries/$slug')({
   pendingComponent: CountryPageSkeleton,
   loader: async ({ params }) => {
-    const content = await getPublicCountryPage({ data: { slug: params.slug } })
+    const [content, notices] = await Promise.all([
+      getPublicCountryPage({ data: { slug: params.slug } }),
+      getPublicPolicyNotices(),
+    ])
     if (!content) throw notFound()
-    const notices = await getPublicPolicyNotices()
     return {
       country: content.country,
       guidance: content.guidance,
       notices: notices.filter((notice) => notice.countrySlug === 'all' || notice.countrySlug === content.country.slug),
     }
   },
- head: ({ loaderData }) => {
+  head: ({ loaderData }) => {
     if (!loaderData?.country) {
       return createPageSeo({
         title: 'Study Destinations | British Education Sangaria',
@@ -52,7 +54,7 @@ export const Route = createFileRoute('/countries/$slug')({
       })
     }
     const isEuropeGuide = loaderData.country.slug === 'europe'
-    return createPageSeo({
+    const seo = createPageSeo({
       title: isEuropeGuide
         ? 'Europe / Schengen Visitor Visa & Costs | British Education'
         : `${loaderData.country.name} Study Visa & Costs | British Education`,
@@ -61,6 +63,23 @@ export const Route = createFileRoute('/countries/$slug')({
         : `Review ${loaderData.country.name} visa fees, study costs, intakes and guidance from official sources. Get free counselling in Sangaria.`,
       path: `/countries/${loaderData.country.slug}`,
     })
+    return {
+      ...seo,
+      scripts: [
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.britisheducationandimmigration.com/' },
+              { '@type': 'ListItem', position: 2, name: 'Destinations', item: 'https://www.britisheducationandimmigration.com/countries' },
+              { '@type': 'ListItem', position: 3, name: loaderData.country.name, item: `https://www.britisheducationandimmigration.com/countries/${loaderData.country.slug}` },
+            ],
+          }),
+        },
+      ],
+    }
   },
   component: CountryPage,
 })

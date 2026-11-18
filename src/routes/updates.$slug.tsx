@@ -10,7 +10,7 @@ function PostPageSkeleton() {
       <div className="h-4 w-24 bg-slate-200 rounded" />
       <div className="mt-8 flex gap-3">
         <div className="h-6 w-20 bg-slate-200 rounded-full" />
-        <div className="h-6 w-32 bg-slate-200 rounded" />
+        <div className="h-6 w-32 bg-slate-200 rounded-full" />
       </div>
       <div className="mt-6 h-12 w-full bg-slate-200 rounded-2xl" />
       <div className="mt-6 h-16 w-full bg-slate-100 rounded-2xl" />
@@ -31,15 +31,59 @@ export const Route = createFileRoute('/updates/$slug')({
     if (!post) throw notFound()
     return { post, posts }
   },
-  head: ({ loaderData }) => createPageSeo({
-    title: loaderData?.post
-      ? `${loaderData.post.title} | British Education`
-      : 'Visa & Study Abroad Updates | British Education Sangaria',
-    description: loaderData?.post?.excerpt
-      || 'Read visa policy updates and study abroad guidance from British Education and Immigration.',
-    path: loaderData?.post?.slug ? `/updates/${loaderData.post.slug}` : '/updates',
-    type: 'article',
-  }),
+  head: ({ loaderData }) => {
+    const post = loaderData?.post
+    const path = post?.slug ? `/updates/${post.slug}` : '/updates'
+    const seo = createPageSeo({
+      title: post
+        ? `${post.title} | British Education`
+        : 'Visa & Study Abroad Updates | British Education Sangaria',
+      description: post?.excerpt
+        || 'Read visa policy updates and study abroad guidance from British Education and Immigration.',
+      path,
+      type: 'article',
+    })
+
+    const articleUrl = `https://www.britisheducationandimmigration.com${path}`
+
+    return {
+      ...seo,
+      scripts: post
+        ? [
+            {
+              type: 'application/ld+json',
+              children: JSON.stringify({
+                '@context': 'https://schema.org',
+                '@type': 'Article',
+                headline: post.title,
+                description: post.excerpt,
+                articleSection: post.category,
+                datePublished: post.date,
+                dateModified: post.lastReviewed || post.date,
+                mainEntityOfPage: {
+                  '@type': 'WebPage',
+                  '@id': articleUrl,
+                },
+                image: 'https://www.britisheducationandimmigration.com/img/hero.webp',
+                author: {
+                  '@type': 'Organization',
+                  name: 'British Education and Immigration',
+                  url: 'https://www.britisheducationandimmigration.com',
+                },
+                publisher: {
+                  '@type': 'Organization',
+                  name: 'British Education and Immigration',
+                  logo: {
+                    '@type': 'ImageObject',
+                    url: 'https://www.britisheducationandimmigration.com/img/logo.png',
+                  },
+                },
+              }),
+            },
+          ]
+        : [],
+    }
+  },
   component: PostPage,
 })
 
@@ -71,7 +115,7 @@ function PostPage() {
             <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
               {post.sources.map((source) => (
                 <li key={source.url}>
-                  <a href={source.url} target="_blank" rel="noreferrer" className="text-sm font-bold text-coral-600 hover:underline">
+                  <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-coral-600 hover:underline">
                     {source.label} ↗
                   </a>
                 </li>
