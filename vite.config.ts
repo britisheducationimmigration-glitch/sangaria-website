@@ -10,9 +10,6 @@ const verificationOutput = process.env.PREVIEW_BUILD_DIR
 
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
-  server: {
-    allowedHosts: ['.manus.computer'],
-  },
   build: {
     rollupOptions: {
       output: {

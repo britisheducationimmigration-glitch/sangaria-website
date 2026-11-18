@@ -436,24 +436,35 @@ export const saveEmployee = createServerFn({ method: 'POST' })
     if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(expectedInTime) || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(expectedOutTime)) throw new Error('Shift times must be HH:MM')
     return { id, name, designation, phone, email, pin, clearPin, cycleStartDay, monthlySalary, expectedInTime, expectedOutTime, officeOnly, active, effectiveDate, joiningDate, leavingDate, halfDayMinutes, minimumHalfDayMinutes, lateGraceMinutes, weeklyOffDays, holidayDates, policyReason }
   })
-  .handler(async ({ data, context }): Promise<EmployeeRecord> => {
+   .handler(async ({ data, context }): Promise<EmployeeRecord> => {
     await ensureAttendanceSchema()
+    await ensureAttendanceReliabilitySchema()
     return attendanceTransaction(async ({ queryRows, execute }) => {
     if (data.id > 0) {
       const previous = await queryRows('SELECT * FROM employees WHERE id = ? FOR UPDATE', [data.id])
       if (!previous.length) throw new Error('Employee not found')
+      const previousEmployee = mapEmployeeRow(previous[0])
       const policies = await queryRows('SELECT employee_id, effective_date, policy_json FROM employee_policy_history WHERE employee_id = ?', [data.id])
-      const beforePolicy = payrollPolicy(resolveEmployeePolicy(mapEmployeeRow(previous[0]), policies.map(row => ({ employeeId: Number(row.employee_id), effectiveDate: String(row.effective_date), policy: JSON.parse(String(row.policy_json)) })), data.effectiveDate))
-      const afterPolicy = payrollPolicy({ ...mapEmployeeRow(previous[0]), ...data })
-      if (JSON.stringify(beforePolicy) !== JSON.stringify(afterPolicy)) {
-        await execute('INSERT INTO employee_policy_audit (employee_id, effective_date, actor_email, reason, before_json, after_json) VALUES (?, ?, ?, ?, ?, ?)', [data.id, data.effectiveDate, context.user.email, data.policyReason || 'Employee profile updated by admin', JSON.stringify(beforePolicy), JSON.stringify(afterPolicy)])
-      }
-      if (!policies.length) {
-        await execute('INSERT INTO employee_policy_history (employee_id, effective_date, policy_json) VALUES (?, ?, ?)', [data.id, '1900-01-01', JSON.stringify(payrollPolicy(mapEmployeeRow(previous[0])))])
-      }
       const currentHistory = policies.map(row => ({ employeeId: Number(row.employee_id), effectiveDate: String(row.effective_date), policy: JSON.parse(String(row.policy_json)) }))
-      if (!currentHistory.length) currentHistory.push({ employeeId: data.id, effectiveDate: '1900-01-01', policy: payrollPolicy(mapEmployeeRow(previous[0])) })
-      const currentPolicy = resolveEmployeePolicy(mapEmployeeRow(previous[0]), [...currentHistory.filter(p => p.effectiveDate !== data.effectiveDate), { employeeId: data.id, effectiveDate: data.effectiveDate, policy: afterPolicy }], todayIstDate())
+      const beforePolicy = payrollPolicy(resolveEmployeePolicy(previousEmployee, currentHistory, data.effectiveDate))
+      const afterPolicy = payrollPolicy({ ...previousEmployee, ...data })
+      const policyChanged = JSON.stringify(beforePolicy) !== JSON.stringify(afterPolicy)
+      if (policyChanged) {
+        if (beforePolicy.cycleStartDay !== afterPolicy.cycleStartDay) {
+          const lockedCycles = await queryRows('SELECT id FROM attendance_cycle_snapshots WHERE employee_id = ? AND cycle_end_date >= ? LIMIT 1', [data.id, data.effectiveDate])
+          if (lockedCycles.length) throw new Error('Cannot change salary cycle start day on or before a finalized payroll cycle.')
+        }
+        await execute('INSERT INTO employee_policy_audit (employee_id, effective_date, actor_email, reason, before_json, after_json) VALUES (?, ?, ?, ?, ?, ?)', [data.id, data.effectiveDate, context.user.email, data.policyReason || 'Employee profile updated by admin', JSON.stringify(beforePolicy), JSON.stringify(afterPolicy)])
+        if (!currentHistory.length) {
+          await execute('INSERT INTO employee_policy_history (employee_id, effective_date, policy_json) VALUES (?, ?, ?)', [data.id, '1900-01-01', JSON.stringify(payrollPolicy(previousEmployee))])
+          currentHistory.push({ employeeId: data.id, effectiveDate: '1900-01-01', policy: payrollPolicy(previousEmployee) })
+        }
+        await execute('INSERT INTO employee_policy_history (employee_id, effective_date, policy_json) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE policy_json = VALUES(policy_json)', [data.id, data.effectiveDate, JSON.stringify(afterPolicy)])
+      }
+      const effectiveHistory = policyChanged
+        ? [...currentHistory.filter(p => p.effectiveDate !== data.effectiveDate), { employeeId: data.id, effectiveDate: data.effectiveDate, policy: afterPolicy }]
+        : currentHistory
+      const currentPolicy = resolveEmployeePolicy(previousEmployee, effectiveHistory, todayIstDate())
       const common = [data.name, data.designation, data.phone, data.email]
       const tail = [currentPolicy.cycleStartDay, currentPolicy.monthlySalary, currentPolicy.expectedInTime, currentPolicy.expectedOutTime, data.officeOnly ? 1 : 0, data.active ? 1 : 0, data.id]
       if (data.clearPin) {
@@ -463,13 +474,11 @@ export const saveEmployee = createServerFn({ method: 'POST' })
       } else {
         await execute(`UPDATE employees SET name = ?, designation = ?, phone = ?, email = ?, cycle_start_day = ?, monthly_salary = ?, expected_in_time = ?, expected_out_time = ?, office_only = ?, active = ? WHERE id = ?`, [...common, ...tail])
       }
-      await execute('INSERT INTO employee_policy_history (employee_id, effective_date, policy_json) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE policy_json = VALUES(policy_json)', [data.id, data.effectiveDate, JSON.stringify({ cycleStartDay: data.cycleStartDay, monthlySalary: data.monthlySalary, expectedInTime: data.expectedInTime, expectedOutTime: data.expectedOutTime, joiningDate: data.joiningDate, leavingDate: data.leavingDate, halfDayMinutes: data.halfDayMinutes, minimumHalfDayMinutes: data.minimumHalfDayMinutes, lateGraceMinutes: data.lateGraceMinutes, weeklyOffDays: data.weeklyOffDays, holidayDates: data.holidayDates })])
       await execute('UPDATE employees SET joining_date = ?, leaving_date = ?, half_day_minutes = ?, minimum_half_day_minutes = ?, late_grace_minutes = ?, weekly_off_days_json = ?, holiday_dates_json = ? WHERE id = ?', [currentPolicy.joiningDate || '', currentPolicy.leavingDate || '', currentPolicy.halfDayMinutes ?? 300, currentPolicy.minimumHalfDayMinutes ?? 0, currentPolicy.lateGraceMinutes ?? 0, JSON.stringify(currentPolicy.weeklyOffDays), JSON.stringify(currentPolicy.holidayDates), data.id])
       const rows = await queryRows('SELECT * FROM employees WHERE id = ? LIMIT 1', [data.id])
       if (!rows.length) throw new Error('Employee not found')
       return mapEmployeeRow(rows[0])
     }
-
     data.joiningDate ||= data.effectiveDate
     const token = generateEmployeeToken()
     const result = await execute(

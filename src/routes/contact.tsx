@@ -6,12 +6,12 @@ import { PageHero } from '@/components/Section'
 import { GoogleReviewCta } from '@/components/GoogleReviewCta'
 import { site } from '@/data/site'
 import { Route as RootRoute } from './__root'
-
 import { createPageSeo } from '@/lib/seo'
 
 export const Route = createFileRoute('/contact')({
-  validateSearch: (s: Record<string, unknown>): { interest?: string } => ({
+  validateSearch: (s: Record<string, unknown>): { interest?: string; country?: string } => ({
     interest: typeof s.interest === 'string' ? s.interest : undefined,
+    country: typeof s.country === 'string' ? s.country : undefined,
   }),
   head: () => createPageSeo({
     title: 'Contact & Free Enquiry | British Education Sangaria',
@@ -22,9 +22,9 @@ export const Route = createFileRoute('/contact')({
 })
 
 function ContactPage() {
-  const { interest } = Route.useSearch()
+  const { interest, country } = Route.useSearch()
   const { settings } = RootRoute.useLoaderData()
-  const rawWaDigits = (settings.phones[1] || settings.phones[0] || site.whatsapp)
+  const rawWaDigits = (settings.phones?.[1] || settings.phones?.[0] || site.whatsapp)
     .replace(/\D/g, '')
     .replace(/^0+/, '')
   const waPhone = rawWaDigits.length === 10 ? `91${rawWaDigits}` : rawWaDigits
@@ -43,7 +43,7 @@ function ContactPage() {
         <div className="rounded-[2rem] bg-white p-8 shadow-xl ring-1 ring-forest-900/10 md:p-10">
           <h2 className="text-3xl font-extrabold text-forest-900">Send an enquiry</h2>
           <p className="mt-1 mb-8 text-forest-900/60">We reply within one working day.</p>
-          <EnquiryForm source="contact" defaultInterest={interest} />
+          <EnquiryForm source="contact" defaultInterest={interest} defaultCountry={country} />
         </div>
         <div className="space-y-5">
           <div className="rounded-[2rem] bg-forest-900 bg-grain p-8 text-white">
@@ -80,9 +80,7 @@ function ContactPage() {
                   {settings.emails.map((email) => (
                     <a
                       key={email}
-                      href={`https://mail.google.com/mail/?view=cm&fs=1&to=${email}`}
-                      target="_blank"
-                      rel="noreferrer"
+                      href={`mailto:${email}`}
                       className="block break-all text-sm text-forest-100/75 hover:text-white"
                     >
                       {email}
@@ -92,16 +90,16 @@ function ContactPage() {
               </li>
             </ul>
             <div className="mt-8 flex flex-wrap gap-3">
-              <a href={`https://wa.me/${waPhone}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-full bg-[#25D366] px-5 py-3 text-sm font-bold">
+              <a href={`https://wa.me/${waPhone}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-full bg-[#25D366] px-5 py-3 text-sm font-bold">
                 <MessageCircle className="size-4" /> WhatsApp
               </a>
-              <a href={site.mapUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-full bg-coral-500 px-5 py-3 text-sm font-bold">
+              <a href={site.mapUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-full bg-coral-500 px-5 py-3 text-sm font-bold">
                 <MapPin className="size-4" /> Get directions
               </a>
-              <a href={site.instagram} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-full bg-white/10 px-5 py-3 text-sm font-bold hover:bg-coral-500">
+              <a href={site.instagram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-full bg-white/10 px-5 py-3 text-sm font-bold hover:bg-coral-500">
                 <Instagram className="size-4" /> Instagram
               </a>
-              <a href={site.facebook} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-full bg-white/10 px-5 py-3 text-sm font-bold hover:bg-coral-500">
+              <a href={site.facebook} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-full bg-white/10 px-5 py-3 text-sm font-bold hover:bg-coral-500">
                 <Facebook className="size-4" /> Facebook
               </a>
             </div>

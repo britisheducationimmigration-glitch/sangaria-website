@@ -1,12 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { BookOpen, Check, Headphones, Mic, PenLine } from 'lucide-react'
+import { BookOpen, Check, Clock, Headphones, Mic, PenLine } from 'lucide-react'
 import { EnquiryForm } from '@/components/EnquiryForm'
 import { Eyebrow, PageHero } from '@/components/Section'
 import { bandScoreTable, coachingCourses } from '@/data/fixtures'
 import { getCoachingContent } from '@/lib/public-functions'
-
 import { createPageSeo } from '@/lib/seo'
-
 import { formatBatchStartDate } from '@/lib/batch-dates'
 
 export const Route = createFileRoute('/coaching')({
@@ -67,7 +65,9 @@ function CoachingPage() {
               ))}
             </ul>
             <div className={'mt-8 flex flex-wrap justify-between gap-3 border-t-2 border-dashed pt-6 text-sm ' + (i === 0 ? 'border-forest-900/10' : 'border-white/15')}>
-              <span>🕘 {c.batch}</span>
+              <span className="inline-flex items-center gap-1.5">
+                <Clock aria-hidden="true" className="size-4 text-coral-500" /> {c.batch}
+              </span>
               <span className="font-bold text-coral-500">{c.target}</span>
             </div>
           </article>
@@ -95,19 +95,29 @@ function CoachingPage() {
           <Eyebrow>Upcoming batches</Eyebrow>
           <h2 className="mt-4 text-4xl font-extrabold text-forest-900">Pick a time that suits you</h2>
           <div className="mt-8 overflow-hidden rounded-3xl bg-white ring-1 ring-forest-900/10">
-            {batches.map((b) => (
-              <div key={b.id} className="flex items-center justify-between gap-4 border-b border-forest-900/10 px-6 py-5 last:border-0">
-                <div>
-                  <p className="font-display font-bold text-forest-900">{b.batch} <span className="ml-2 rounded-full bg-forest-50 px-2 py-1 text-[10px] uppercase tracking-wide text-forest-700">{b.program}</span></p>
-                  <p className="text-sm text-forest-900/60">
-                    {b.time} · starts {formatBatchStartDate(b.starts)}
-                  </p>
+            {batches.length > 0 ? (
+              batches.map((b) => (
+                <div key={b.id} className="flex items-center justify-between gap-4 border-b border-forest-900/10 px-6 py-5 last:border-0">
+                  <div>
+                    <p className="font-display font-bold text-forest-900">{b.batch} <span className="ml-2 rounded-full bg-forest-50 px-2 py-1 text-[10px] uppercase tracking-wide text-forest-700">{b.program}</span></p>
+                    <p className="text-sm text-forest-900/60">
+                      {b.time} · starts {formatBatchStartDate(b.starts)}
+                    </p>
+                  </div>
+                  <span className={'rounded-full px-3 py-1 text-xs font-bold ' + (b.seats <= 4 ? 'bg-coral-100 text-coral-600' : 'bg-forest-50 text-forest-700')}>
+                    {b.seats} seats left
+                  </span>
                 </div>
-                <span className={'rounded-full px-3 py-1 text-xs font-bold ' + (b.seats <= 4 ? 'bg-coral-100 text-coral-600' : 'bg-forest-50 text-forest-700')}>
-                  {b.seats} seats left
-                </span>
+              ))
+            ) : (
+              <div className="p-6 text-sm leading-relaxed text-forest-900/70">
+                <p className="font-display text-base font-bold text-forest-900">New IELTS &amp; PTE batches start every week.</p>
+                <p className="mt-1">Morning, afternoon, evening and weekend slots are available in Sangaria. Book a free demo below to reserve your seat.</p>
+                <a href="#demo" className="mt-4 inline-flex rounded-full bg-coral-500 px-5 py-2.5 text-xs font-bold text-white transition hover:bg-coral-600">
+                  Book a free demo →
+                </a>
               </div>
-            ))}
+            )}
           </div>
         </div>
         <div>

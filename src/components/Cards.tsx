@@ -44,6 +44,8 @@ export function ApprovalCard({ a, i = 0 }: { a: Approval; i?: number }) {
 }
 
 export function TestimonialCard({ t, featured, compact = false }: { t: Testimonial; featured?: boolean; compact?: boolean }) {
+  const stars = Math.min(5, Math.max(1, Math.round(Number(t.rating) || 5)))
+
   return (
     <figure
       className={cn(
@@ -54,9 +56,16 @@ export function TestimonialCard({ t, featured, compact = false }: { t: Testimoni
     >
       <Quote className={cn(compact ? 'size-5' : 'size-8', featured ? 'text-white/60' : 'text-coral-500')} />
       <blockquote className={cn('flex-1 leading-relaxed', compact ? 'mt-3 text-xs' : 'mt-4 text-[16.5px]')}>“{t.quote}”</blockquote>
-      <div className={cn('flex gap-0.5', compact ? 'mt-3' : 'mt-5')}>
+      <div className={cn('flex gap-0.5', compact ? 'mt-3' : 'mt-5')} aria-label={`${stars} out of 5 stars`}>
         {Array.from({ length: 5 }).map((_, i) => (
-          <Star key={i} className={cn(compact ? 'size-3' : 'size-4', 'fill-amber-400 text-amber-400')} />
+          <Star
+            key={i}
+            aria-hidden="true"
+            className={cn(
+              compact ? 'size-3' : 'size-4',
+              i < stars ? 'fill-amber-400 text-amber-400' : featured ? 'text-white/35' : 'text-forest-900/20',
+            )}
+          />
         ))}
       </div>
       <figcaption className={cn('border-t border-forest-900/10', compact ? 'mt-auto pt-3' : 'mt-5 pt-4')}>
@@ -71,20 +80,20 @@ export function TestimonialCard({ t, featured, compact = false }: { t: Testimoni
 
 export function PostCard({ p }: { p: Post }) {
   return (
-    <article className="group flex flex-col rounded-3xl bg-white p-7 ring-1 ring-forest-900/10 transition hover:-translate-y-1 hover:shadow-lg">
+    <article className="group relative flex flex-col rounded-3xl bg-white p-7 ring-1 ring-forest-900/10 transition hover:-translate-y-1 hover:shadow-lg">
       <div className="flex items-center justify-between text-xs text-forest-900/50 font-mono">
         <span className="rounded-full bg-forest-50 px-3 py-1 font-bold text-forest-700">{p.category}</span>
         <span>{p.readMins} min read</span>
       </div>
       <h3 className="mt-4 font-display text-xl font-bold text-forest-900 group-hover:text-coral-600 transition">
-        <Link to="/updates/$slug" params={{ slug: p.slug }}>
+        <Link to="/updates/$slug" params={{ slug: p.slug }} className="after:absolute after:inset-0">
           {p.title}
         </Link>
       </h3>
       <p className="mt-2 flex-1 text-sm text-forest-900/70 leading-relaxed">{p.excerpt}</p>
       <div className="mt-6 flex items-center justify-between border-t border-forest-900/10 pt-4 text-xs text-forest-900/50">
         <span>{formatDate(p.date)}</span>
-        <span className="font-bold text-coral-600 group-hover:translate-x-1 transition">Read article →</span>
+        <span aria-hidden="true" className="font-bold text-coral-600 group-hover:translate-x-1 transition">Read article →</span>
       </div>
     </article>
   )
@@ -97,18 +106,23 @@ function ApprovalVideo({ url, title }: { url: string; title: string }) {
 
   useEffect(() => {
     const container = containerRef.current
-    if (!container) return
+    if (!container || nearViewport) return
     if (!('IntersectionObserver' in window)) {
       setNearViewport(true)
       return
     }
     const observer = new IntersectionObserver(
-      ([entry]) => setNearViewport(entry.isIntersecting),
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setNearViewport(true)
+          observer.disconnect()
+        }
+      },
       { rootMargin: '180px 0px' },
     )
     observer.observe(container)
     return () => observer.disconnect()
-  }, [])
+  }, [nearViewport])
 
   if (!embedUrl) return null
   return (

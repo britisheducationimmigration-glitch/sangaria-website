@@ -1,7 +1,7 @@
 import { Logo } from '@/components/Logo'
 import { getEnquiriesPage } from '@/lib/admin-functions'
 import { createFileRoute } from '@tanstack/react-router'
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import {
   BarChart3,
   BookOpen,
@@ -27,17 +27,18 @@ import {
   X,
 } from 'lucide-react'
 import { getAdminCashflow, getAdminSnapshot, addEnquiryActivity, deleteAdminUser, deleteBatch, deleteEnquiry, deleteEnquiryActivity, deletePost, exportEnquiries, saveAdminUser, saveBatch, saveCashflow, savePost, updateEnquiry, updateEnquiryActivity, updateSettings, saveFaq, saveTrustStat, saveContactDetails } from '@/lib/admin-functions'
-import { AttendancePanel } from '@/components/admin/AttendancePanel'
-import { CertificatePanel } from '@/components/admin/CertificatePanel'
-import { StoryEditor } from '@/components/admin/StoryEditor'
 import { TailAdminDashboard } from '@/components/admin/TailAdminDashboard'
 import type { AdminPost, AdminRole, AdminSnapshot, AdminStory, AdminUser, CoachingBatch, Enquiry, EnquiryStatus } from '@/lib/content-types'
 import { defaultCashflowData, CountryCashflow } from '@/data/cashflow'
 import { formatBatchStartDate, getBatchDateStatus, isValidBatchStartDate } from '@/lib/batch-dates'
-import { PolicyWatchPanel } from '@/components/admin/PolicyWatchPanel'
-import { CountryPanel } from '@/components/admin/CountryPanel'
-import { StudyPlanPanel } from '@/components/admin/StudyPlanPanel'
 import { applyScheduledCashflowPolicy, getPolicyWatchStatus, policyWatchItems } from '@/data/policy-watch'
+
+const AttendancePanel = lazy(() => import('@/components/admin/AttendancePanel').then((m) => ({ default: m.AttendancePanel })))
+const CertificatePanel = lazy(() => import('@/components/admin/CertificatePanel').then((m) => ({ default: m.CertificatePanel })))
+const StoryEditor = lazy(() => import('@/components/admin/StoryEditor').then((m) => ({ default: m.StoryEditor })))
+const PolicyWatchPanel = lazy(() => import('@/components/admin/PolicyWatchPanel').then((m) => ({ default: m.PolicyWatchPanel })))
+const CountryPanel = lazy(() => import('@/components/admin/CountryPanel').then((m) => ({ default: m.CountryPanel })))
+const StudyPlanPanel = lazy(() => import('@/components/admin/StudyPlanPanel').then((m) => ({ default: m.StudyPlanPanel })))
 
 export const Route = createFileRoute('/admin')({
   head: () => ({
@@ -51,9 +52,9 @@ type Tab = 'dashboard' | 'enquiries' | 'attendance' | 'news' | 'stories' | 'cert
 
 const roleLabels: Record<AdminRole, string> = { super_admin: 'Super Admin', content_editor: 'Content Editor', enquiry_manager: 'Enquiry Manager' }
 
-const blankPost: Omit<AdminPost, 'id'> = { slug: '', title: '', category: 'Visa News', date: new Date().toISOString().slice(0, 10), excerpt: '', readMins: 4, body: [], published: false }
-const blankStory: Omit<AdminStory, 'id'> = { kind: 'testimonial', name: '', city: '', country: '', visa: '', quote: '', rating: 5, initials: '', flag: '', date: new Date().toISOString().slice(0, 10), note: '', mediaType: 'none', photoSrc: '', videoUrl: '', mediaAlt: '', mediaConsent: false, homepageFeatured: true, published: false }
-
+const todayIstDate = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date())
+const makeBlankPost = (): Omit<AdminPost, 'id'> => ({ slug: '', title: '', category: 'Visa News', date: todayIstDate(), excerpt: '', readMins: 4, body: [], published: false })
+const makeBlankStory = (): Omit<AdminStory, 'id'> => ({ kind: 'testimonial', name: '', city: '', country: '', visa: '', quote: '', rating: 5, initials: '', flag: '', date: todayIstDate(), note: '', mediaType: 'none', photoSrc: '', videoUrl: '', mediaAlt: '', mediaConsent: false, homepageFeatured: true, published: false })
 function AdminPage() {
   const [snapshot, setSnapshot] = useState<AdminSnapshot | null>(null)
   const [checkingSession, setCheckingSession] = useState(true)
@@ -354,29 +355,31 @@ function AdminPage() {
               {notice}
             </p>
           )}
-          {tab === 'dashboard' && snapshot.user.role !== 'content_editor' && (
-            <TailAdminDashboard
-              snapshot={snapshot}
-              onOpenEnquiries={() => selectTab('enquiries')}
-              onOpenAttendance={() => selectTab('attendance')}
-              canOpenAttendance={snapshot.user.role === 'super_admin'}
-            />
-          )}
-          {tab === 'enquiries' && <EnquiriesPanel stats={snapshot.enquiryStats} query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter} dateFrom={dateFrom} setDateFrom={setDateFrom} dateTo={dateTo} setDateTo={setDateTo} onReload={reload} onNotice={showNotice} canDelete={snapshot.user.role === 'super_admin'} canManageComments={snapshot.user.role === 'super_admin'} />}
-          {tab === 'attendance' && snapshot.user.role === 'super_admin' && <AttendancePanel onNotice={showNotice} />}
-          {tab === 'demo' && <DemoRequestsPanel totalCount={snapshot.enquiryStats.demoRequests} onReload={reload} onNotice={showNotice} canDelete={snapshot.user.role === 'super_admin'} canManageComments={snapshot.user.role === 'super_admin'} />}
-          {tab === 'review' && <ReviewQueuePanel drafts={draftQueue} onOpenEnquiries={() => { setQuery(''); setStatusFilter('New'); selectTab('enquiries') }} onOpenDraft={(post) => { setSelectedPost(post); selectTab('news') }} />}
-          {tab === 'reports' && <ReportsPanel stats={snapshot.enquiryStats} />}
-          {tab === 'policy' && <PolicyWatchPanel />}
-          {tab === 'countries' && <CountryPanel />}
-          {tab === 'studyPlans' && <StudyPlanPanel onDirtyChange={setStudyPlanDirty} />}
-          {tab === 'news' && <ContentPanel type="news" items={snapshot.posts} selected={selectedPost} onSelect={(item) => setSelectedPost(item as AdminPost | null)} onReload={reload} onNotice={showNotice} />}
-          {tab === 'stories' && <ContentPanel type="stories" items={snapshot.stories} selected={selectedStory} onSelect={(item) => setSelectedStory(item as AdminStory | null)} onReload={reload} onNotice={showNotice} />}
-          {tab === 'certificates' && <CertificatePanel items={snapshot.certificates} onReload={reload} onNotice={showNotice} />}
-          {tab === 'batches' && <BatchPanel onDirtyChange={setBatchDirty} items={snapshot.batches} selected={selectedBatch} onSelect={setSelectedBatch} onReload={reload} onNotice={showNotice} />}
-          {tab === 'budget' && <CashflowAdminPanel onDirtyChange={setCashflowDirty} onNotice={showNotice} />}
-          {tab === 'settings' && <SettingsPanel settings={snapshot.settings} onReload={reload} onNotice={showNotice} onDirtyChange={setSettingsDirty} />}
-          {tab === 'users' && <UsersPanel users={snapshot.users} currentEmail={snapshot.user.email} onReload={reload} onNotice={showNotice} />}
+                   <Suspense fallback={<p className="rounded-2xl border border-[#E4E7EC] bg-white p-6 text-sm text-[#667085]">Loading section…</p>}>
+            {tab === 'dashboard' && snapshot.user.role !== 'content_editor' && (
+              <TailAdminDashboard
+                snapshot={snapshot}
+                onOpenEnquiries={() => selectTab('enquiries')}
+                onOpenAttendance={() => selectTab('attendance')}
+                canOpenAttendance={snapshot.user.role === 'super_admin'}
+              />
+            )}
+            {tab === 'enquiries' && <EnquiriesPanel stats={snapshot.enquiryStats} query={query} setQuery={setQuery} statusFilter={statusFilter} setStatusFilter={setStatusFilter} dateFrom={dateFrom} setDateFrom={setDateFrom} dateTo={dateTo} setDateTo={setDateTo} onReload={reload} onNotice={showNotice} canDelete={snapshot.user.role === 'super_admin'} canManageComments={snapshot.user.role === 'super_admin'} />}
+            {tab === 'attendance' && snapshot.user.role === 'super_admin' && <AttendancePanel onNotice={showNotice} />}
+            {tab === 'demo' && <DemoRequestsPanel totalCount={snapshot.enquiryStats.demoRequests} onReload={reload} onNotice={showNotice} canDelete={snapshot.user.role === 'super_admin'} canManageComments={snapshot.user.role === 'super_admin'} />}
+            {tab === 'review' && <ReviewQueuePanel drafts={draftQueue} onOpenEnquiries={() => { setQuery(''); setStatusFilter('New'); selectTab('enquiries') }} onOpenDraft={(post) => { setSelectedPost(post); selectTab('news') }} />}
+            {tab === 'reports' && <ReportsPanel stats={snapshot.enquiryStats} />}
+            {tab === 'policy' && <PolicyWatchPanel />}
+            {tab === 'countries' && <CountryPanel />}
+            {tab === 'studyPlans' && <StudyPlanPanel onDirtyChange={setStudyPlanDirty} />}
+            {tab === 'news' && <ContentPanel type="news" items={snapshot.posts} selected={selectedPost} onSelect={(item) => setSelectedPost(item as AdminPost | null)} onReload={reload} onNotice={showNotice} />}
+            {tab === 'stories' && <ContentPanel type="stories" items={snapshot.stories} selected={selectedStory} onSelect={(item) => setSelectedStory(item as AdminStory | null)} onReload={reload} onNotice={showNotice} />}
+            {tab === 'certificates' && <CertificatePanel items={snapshot.certificates} onReload={reload} onNotice={showNotice} />}
+            {tab === 'batches' && <BatchPanel onDirtyChange={setBatchDirty} items={snapshot.batches} selected={selectedBatch} onSelect={setSelectedBatch} onReload={reload} onNotice={showNotice} />}
+            {tab === 'budget' && <CashflowAdminPanel onDirtyChange={setCashflowDirty} onNotice={showNotice} />}
+            {tab === 'settings' && <SettingsPanel settings={snapshot.settings} onReload={reload} onNotice={showNotice} onDirtyChange={setSettingsDirty} />}
+            {tab === 'users' && <UsersPanel users={snapshot.users} currentEmail={snapshot.user.email} onReload={reload} onNotice={showNotice} />}
+          </Suspense>
           {showChangePass && <ChangePasswordModal onClose={() => setShowChangePass(false)} onNotice={showNotice} />}
         </div>
       </div>
@@ -951,7 +954,7 @@ function ReviewQueuePanel({ drafts, onOpenEnquiries, onOpenDraft }: { drafts: Ad
   return (
     <section>
       <div className="mb-6"><p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">Needs attention</p><h2 className="mt-2 text-3xl font-extrabold">Review queue</h2><p className="mt-1 text-sm text-forest-900/60">A read-only overview of new enquiries and unpublished content, with links to the existing editing screens.</p></div>
-      <div className="mb-4 flex flex-wrap gap-4"><button type="button" onClick={() => { setQueue('new'); setPage(1) }}>New leads</button><button type="button" onClick={() => { setQueue('overdue'); setPage(1) }}>Overdue follow-ups</button><button type="button" disabled={loading || result.page <= 1} onClick={() => setPage(result.page - 1)}>Previous</button><span>{loading ? 'Loading...' : `Page ${result.page} / ${Math.max(1, Math.ceil(result.total / 50))}`}</span><button type="button" disabled={loading || result.page * 50 >= result.total} onClick={() => setPage(result.page + 1)}>Next</button></div>{error && <p role="alert">{error}</p>}
+<div className="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold"><button type="button" onClick={() => { setQueue('new'); setPage(1) }} className={`rounded-full px-4 py-2 ${queue === 'new' ? 'bg-forest-900 text-white' : 'bg-white text-forest-900 ring-1 ring-forest-900/10'}`}>New leads</button><button type="button" onClick={() => { setQueue('overdue'); setPage(1) }} className={`rounded-full px-4 py-2 ${queue === 'overdue' ? 'bg-amber-600 text-white' : 'bg-white text-forest-900 ring-1 ring-forest-900/10'}`}>Overdue follow-ups</button><div className="ml-auto flex items-center gap-2"><button type="button" disabled={loading || result.page <= 1} onClick={() => setPage(result.page - 1)} className="rounded-lg border border-[#E4E7EC] bg-white px-3 py-1.5 disabled:opacity-40">Previous</button><span className="text-[#667085]">{loading ? 'Loading...' : `Page ${result.page} / ${Math.max(1, Math.ceil(result.total / 50))}`}</span><button type="button" disabled={loading || result.page * 50 >= result.total} onClick={() => setPage(result.page + 1)} className="rounded-lg border border-[#E4E7EC] bg-white px-3 py-1.5 disabled:opacity-40">Next</button></div></div>{error && <p role="alert" className="mb-3 text-sm font-semibold text-red-700">{error}</p>}
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="rounded-3xl bg-white p-5 ring-1 ring-forest-900/10">
           <div className="mb-4 flex items-center justify-between gap-3"><h3 className="text-lg font-extrabold">{queue === 'new' ? 'New enquiries' : 'Overdue follow-ups'}</h3><span className="rounded-full bg-coral-50 px-3 py-1 text-xs font-bold text-coral-700">{result.total}</span></div>
@@ -1263,7 +1266,7 @@ function BatchEditor({ item, onReload, onNotice, onClose, onDirtyChange }: { ite
 
 function ContentPanel({ type, items, selected, onSelect, onReload, onNotice }: { type: 'news' | 'stories'; items: AdminPost[] | AdminStory[]; selected: AdminPost | AdminStory | null; onSelect: (item: AdminPost | AdminStory | null) => void; onReload: () => Promise<void>; onNotice: (message: string) => void }) {
   const news = type === 'news'
-  return <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.8fr)]"><div><div className="mb-5 flex items-end justify-between gap-4"><div><p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">{news ? 'News & updates' : 'Success stories'}</p><h2 className="mt-2 text-3xl font-extrabold">Edit without code</h2></div><button type="button" onClick={() => onSelect(news ? { id: 0, ...blankPost } : { id: 0, ...blankStory })} className="rounded-full bg-coral-500 px-4 py-2 text-sm font-bold text-white">+ New</button></div><div className="grid gap-3">{items.map((item) => <button type="button" key={item.id} onClick={() => onSelect(item)} className={`rounded-2xl bg-white p-4 text-left ring-1 ring-forest-900/10 transition hover:ring-forest-900 ${selected?.id === item.id ? 'ring-2 ring-coral-500' : ''}`}><div className="flex items-center justify-between gap-3"><strong>{news ? (item as AdminPost).title : (item as AdminStory).name}</strong><span className={`rounded-full px-2 py-1 text-[10px] font-bold ${item.published ? 'bg-emerald-100 text-emerald-800' : 'bg-forest-100 text-forest-700'}`}>{item.published ? 'Published' : 'Draft'}</span></div><span className="mt-1 block text-xs text-forest-900/50">{news ? `${(item as AdminPost).category} · ${(item as AdminPost).date}` : `${(item as AdminStory).kind} · ${(item as AdminStory).country}`}</span></button>)}</div></div>{selected ? news ? <PostEditor key={`post-${selected.id}`} item={selected as AdminPost} onReload={onReload} onNotice={onNotice} onClose={() => onSelect(null)} /> : <StoryEditor key={`story-${selected.id}`} item={selected as AdminStory} onReload={onReload} onNotice={onNotice} onClose={() => onSelect(null)} /> : <div className="grid min-h-72 place-items-center rounded-3xl border border-dashed border-forest-900/20 p-8 text-center text-forest-900/50">Select an item or create a new one.</div>}</section>
+   return <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.8fr)]"><div><div className="mb-5 flex items-end justify-between gap-4"><div><p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">{news ? 'News & updates' : 'Success stories'}</p><h2 className="mt-2 text-3xl font-extrabold">Edit without code</h2></div><button type="button" onClick={() => onSelect(news ? { id: 0, ...makeBlankPost() } : { id: 0, ...makeBlankStory() })} className="rounded-full bg-coral-500 px-4 py-2 text-sm font-bold text-white">+ New</button></div><div className="grid gap-3">{items.map((item) => <button type="button" key={item.id} onClick={() => onSelect(item)} className={`rounded-2xl bg-white p-4 text-left ring-1 ring-forest-900/10 transition hover:ring-forest-900 ${selected?.id === item.id ? 'ring-2 ring-coral-500' : ''}`}><div className="flex items-center justify-between gap-3"><strong>{news ? (item as AdminPost).title : (item as AdminStory).name}</strong><span className={`rounded-full px-2 py-1 text-[10px] font-bold ${item.published ? 'bg-emerald-100 text-emerald-800' : 'bg-forest-100 text-forest-700'}`}>{item.published ? 'Published' : 'Draft'}</span></div><span className="mt-1 block text-xs text-forest-900/50">{news ? `${(item as AdminPost).category} · ${(item as AdminPost).date}` : `${(item as AdminStory).kind} · ${(item as AdminStory).country}`}</span></button>)}</div></div>{selected ? news ? <PostEditor key={`post-${selected.id}`} item={selected as AdminPost} onReload={onReload} onNotice={onNotice} onClose={() => onSelect(null)} /> : <StoryEditor key={`story-${selected.id}`} item={selected as AdminStory} onReload={onReload} onNotice={onNotice} onClose={() => onSelect(null)} /> : <div className="grid min-h-72 place-items-center rounded-3xl border border-dashed border-forest-900/20 p-8 text-center text-forest-900/50">Select an item or create a new one.</div>}</section>
 }
 
 function EditorField({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {

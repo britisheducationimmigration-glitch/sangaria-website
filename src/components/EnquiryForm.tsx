@@ -32,21 +32,29 @@ export function EnquiryForm({
   const [state, setState] = useState<'idle' | 'sending' | 'done' | 'error'>('idle')
   const [whatsappUrl, setWhatsappUrl] = useState('')
   const [showSharePrompt, setShowSharePrompt] = useState(false)
+  const [minDemoDate, setMinDemoDate] = useState('')
   useEffect(() => { onSharePromptChange?.(showSharePrompt); return () => onSharePromptChange?.(false) }, [showSharePrompt, onSharePromptChange])
+  useEffect(() => {
+    setMinDemoDate(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date()))
+  }, [])
 
-  // Live validation states
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
+  const [selectedInterest, setSelectedInterest] = useState(defaultInterest ?? '')
   const [selectedCountry, setSelectedCountry] = useState(defaultCountry ?? '')
   const [otherCountry, setOtherCountry] = useState('')
+
+  useEffect(() => {
+    setSelectedInterest(defaultInterest ?? '')
+  }, [defaultInterest])
 
   useEffect(() => {
     setSelectedCountry(defaultCountry ?? '')
     setOtherCountry('')
   }, [defaultCountry])
 
-const cleanPhoneDigits = phone.replace(/\D/g, '').replace(/^0+/, '')
+  const cleanPhoneDigits = phone.replace(/\D/g, '').replace(/^0+/, '')
   const isPhoneValid = cleanPhoneDigits.length >= 10 && cleanPhoneDigits.length <= 13
   const isNameValid = name.trim().length >= 2
   const isEmailValid = !email || /^\S+@\S+\.\S+$/.test(email.trim())
@@ -59,6 +67,17 @@ const cleanPhoneDigits = phone.replace(/\D/g, '').replace(/^0+/, '')
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [state, showSharePrompt, onSuccess])
+
+  function resetForm() {
+    setName('')
+    setPhone('')
+    setEmail('')
+    setSelectedInterest(defaultInterest ?? '')
+    setSelectedCountry(defaultCountry ?? '')
+    setOtherCountry('')
+    setShowSharePrompt(false)
+    setState('idle')
+  }
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -96,7 +115,7 @@ const cleanPhoneDigits = phone.replace(/\D/g, '').replace(/^0+/, '')
       'Please guide me further. Thank you!',
     ].filter(Boolean).join('\n')
 
-    const rawDigits = (settings?.phones[1] || settings?.phones[0] || site.whatsapp)
+    const rawDigits = (settings?.phones?.[1] || settings?.phones?.[0] || site.whatsapp)
       .replace(/\D/g, '')
       .replace(/^0+/, '')
     const waPhone = rawDigits.length === 10 ? `91${rawDigits}` : rawDigits
@@ -135,6 +154,16 @@ const cleanPhoneDigits = phone.replace(/\D/g, '').replace(/^0+/, '')
           <p className={cn('mt-2 text-sm leading-relaxed max-w-md mx-auto', dark ? 'text-forest-100/80' : 'text-forest-900/70')}>
             Your details are saved. Our expert counsellor will contact you soon.
           </p>
+          <button
+            type="button"
+            onClick={resetForm}
+            className={cn(
+              'mt-6 inline-flex min-h-11 items-center justify-center rounded-full px-5 py-2.5 text-xs font-bold transition cursor-pointer',
+              dark ? 'border border-white/25 bg-white/10 text-white hover:bg-white/20' : 'border border-forest-900/15 bg-white text-forest-900 hover:bg-forest-100',
+            )}
+          >
+            Send another enquiry
+          </button>
         </div>
 
         {showSharePrompt && (
@@ -157,7 +186,7 @@ const cleanPhoneDigits = phone.replace(/\D/g, '').replace(/^0+/, '')
                 <a
                   href={whatsappUrl}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   onClick={() => {
                     setShowSharePrompt(false)
                     onSuccess?.()
@@ -275,7 +304,13 @@ const cleanPhoneDigits = phone.replace(/\D/g, '').replace(/^0+/, '')
       <div className={cn('grid gap-4', !compact && 'sm:grid-cols-2')}>
         <div>
           <label className={labelCls} htmlFor={`${source}-interest`}>I’m interested in</label>
-          <select id={`${source}-interest`} name="interest" defaultValue={defaultInterest ?? ''} className="field">
+          <select
+            id={`${source}-interest`}
+            name="interest"
+            value={selectedInterest}
+            onChange={(e) => setSelectedInterest(e.target.value)}
+            className="field"
+          >
             <option value="">Select a service</option>
             {visaServices.map((s) => (
               <option key={s.slug}>{s.title}</option>
@@ -320,7 +355,7 @@ const cleanPhoneDigits = phone.replace(/\D/g, '').replace(/^0+/, '')
           <div className={cn('grid gap-3', !compact && 'sm:grid-cols-2')}>
             <div>
               <label className={labelCls} htmlFor={`${source}-demo-date`}>Preferred date (optional)</label>
-              <input id={`${source}-demo-date`} name="preferredDemoDate" type="date" min={new Date().toISOString().slice(0, 10)} className="field" />
+              <input id={`${source}-demo-date`} name="preferredDemoDate" type="date" min={minDemoDate || undefined} className="field" />
             </div>
             <div>
               <label className={labelCls} htmlFor={`${source}-demo-time`}>Time window</label>

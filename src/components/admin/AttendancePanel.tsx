@@ -52,14 +52,21 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
   const refreshInFlight = useRef(false)
   const [lastUpdated, setLastUpdated] = useState('')
 
-  async function load(targetMonth = month, background = false) {
+      async function load(targetMonth = month, background = false) {
     const request = ++loadSequence.current
-    setLoading(true)
+    if (!background) setLoading(true)
     setError('')
     try {
       const next = await getAdminAttendanceSnapshot({ data: { month: targetMonth, lightweight: background } })
       if (request !== loadSequence.current) return
-      setSnapshot(next)
+      setSnapshot((current) => {
+        if (!background || !current) return next
+        const prevHistory = new Map(current.logs.map((l) => [l.id, l.editHistory]))
+        return {
+          ...next,
+          logs: next.logs.map((l) => (l.editHistory.length ? l : { ...l, editHistory: prevHistory.get(l.id) ?? [] })),
+        }
+      })
       if (!background) setSettingsDraft(next.settings)
       setLastUpdated(new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }))
       if (lastLoadedMonthRef.current !== targetMonth) {
@@ -70,7 +77,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
       if (request !== loadSequence.current) return
       setError(cause instanceof Error ? cause.message : 'Could not load attendance.')
     } finally {
-      if (request === loadSequence.current) setLoading(false)
+      if (request === loadSequence.current && !background) setLoading(false)
     }
   }
 
@@ -316,7 +323,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
   const requiresReview = (log: AttendanceLogRecord) => attendanceNeedsReview(log, todayIst)
   const dateWindow = attendanceDateWindow(datePreset,todayIst,month,filterDate)
   const visibleLogs = logs.filter((l) => (!dateWindow.from || l.workDate >= dateWindow.from) && (!dateWindow.to || l.workDate <= dateWindow.to) && (!filterEmpId || l.employeeId === filterEmpId) && (!reviewOnly || requiresReview(l)))
-  const calendarLogs = visibleLogs.filter((l) => l.workDate.startsWith(month) && (!filterEmpId || l.employeeId === filterEmpId) && (!reviewOnly || requiresReview(l)))
+   const calendarLogs = logs.filter((l) => l.workDate.startsWith(month) && (!filterEmpId || l.employeeId === filterEmpId) && (!reviewOnly || requiresReview(l)))
   const calendarStart = new Date(month + '-01T00:00:00Z')
   const calendarDays = new Date(Date.UTC(calendarStart.getUTCFullYear(), calendarStart.getUTCMonth() + 1, 0)).getUTCDate()
   const selectedEmployee = employees.find((employee) => employee.id === filterEmpId && employee.active) ?? employees.find(employee => employee.active) ?? employees[0]
@@ -339,7 +346,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#667085]">
-        <span role="status">{loading ? 'Updating attendance…' : lastUpdated ? 'Updated ' + lastUpdated + ' IST' : ''}{subTab !== 'employees' && ' · Auto-refresh every 30 seconds while visible'}</span>
+                <span role="status">{loading ? 'Updating attendance…' : lastUpdated ? 'Updated ' + lastUpdated + ' IST' : ''}{subTab !== 'employees' && subTab !== 'payments' && ' · Auto-refresh every 30 seconds while visible'}</span>
         <button type="button" disabled={loading || busy || Boolean(empDraft) || Boolean(logDraft)} onClick={() => void load(month, true)} className="inline-flex items-center gap-1 rounded-lg border border-[#E4E7EC] bg-white px-3 py-2 font-semibold text-[#465FFF] disabled:opacity-50"><RefreshCw className={loading ? 'size-3.5 animate-spin' : 'size-3.5'} />Refresh now</button>
       </div>
       {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
@@ -503,7 +510,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                   const date = month + '-' + String(i + 1).padStart(2, '0')
                   const dayLogs = calendarLogs.filter((log) => log.workDate === date)
                   const pending = dayLogs.filter(requiresReview).length
-                  return <button type="button" key={date} onClick={() => { setFilterDate(date); setLogView('timeline') }} className={`min-h-20 rounded-lg border p-1 text-left sm:p-2 ${date === filterDate ? 'border-[#465FFF] bg-[#ECF3FF]' : 'border-[#E4E7EC] hover:bg-[#F9FAFB]'}`}><span className="text-xs font-bold">{i + 1}</span><span className="mt-2 block text-[11px] text-[#667085]">{dayLogs.length} entries</span>{pending > 0 && <span className="block text-[11px] font-semibold text-[#F04438]">{pending} review</span>}</button>
+                                   return <button type="button" key={date} onClick={() => { setDatePreset('date'); setFilterDate(date); setLogView('timeline') }} className={`min-h-20 rounded-lg border p-1 text-left sm:p-2 ${date === filterDate ? 'border-[#465FFF] bg-[#ECF3FF]' : 'border-[#E4E7EC] hover:bg-[#F9FAFB]'}`}><span className="text-xs font-bold">{i + 1}</span><span className="mt-2 block text-[11px] text-[#667085]">{dayLogs.length} entries</span>{pending > 0 && <span className="block text-[11px] font-semibold text-[#F04438]">{pending} review</span>}</button>
                 })}
               </div>
             </div>

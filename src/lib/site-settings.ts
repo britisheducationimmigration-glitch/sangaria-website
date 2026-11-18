@@ -6,7 +6,7 @@ export type PublicSiteSettings = Pick<SiteSettings, 'phones' | 'emails' | 'offic
 
 export const defaultSiteSettings: SiteSettings = {
   popupEnabled: true,
-  popupDelaySeconds: 8,
+  popupDelaySeconds: 25,
   whatsappEnabled: true,
   approvalsMarqueeEnabled: true,
   phones: [...site.phones],
@@ -16,7 +16,7 @@ export const defaultSiteSettings: SiteSettings = {
   trustStats: [
     { value: '2,500+', label: 'Visas approved' },
     { value: '98%', label: 'Success ratio' },
-    { value: 'Multiple', label: 'Study destinations' },
+    { value: '7+', label: 'Study destinations' },
     { value: '7.0', label: 'Avg. IELTS band' },
   ],
 }
@@ -32,9 +32,12 @@ function cleanStrings(value: unknown, maxCount: number, maxLength: number) {
 
 function normalizeTrustStat(stat: SiteTrustStat): SiteTrustStat {
   const label = stat.label.trim().toLowerCase()
+  const value = stat.value.trim().toLowerCase()
   if (label === 'reported visa approvals') return { ...stat, label: 'Visas approved' }
   if (label === 'reported success ratio') return { ...stat, label: 'Success ratio' }
-  if (label === 'destinations' && stat.value.trim() === '7') return { ...stat, value: 'Multiple', label: 'Study destinations' }
+  if ((label === 'destinations' && value === '7') || (label === 'study destinations' && value === 'multiple')) {
+    return { ...stat, value: '7+', label: 'Study destinations' }
+  }
   if (label === 'reported ielts avg.') return { ...stat, label: 'Avg. IELTS band' }
   return stat
 }
@@ -77,7 +80,7 @@ export function readSiteSettings(row?: Record<string, unknown>): SiteSettings {
   return {
     ...publicSettings,
     popupEnabled: row ? Boolean(row.popup_enabled) : defaultSiteSettings.popupEnabled,
-    popupDelaySeconds: row ? Math.min(60, Math.max(3, Number(row.popup_delay_seconds) || 8)) : defaultSiteSettings.popupDelaySeconds,
+    popupDelaySeconds: row ? Math.min(60, Math.max(3, Number(row.popup_delay_seconds) || 25)) : defaultSiteSettings.popupDelaySeconds,
     whatsappEnabled: row ? Boolean(row.whatsapp_enabled) : defaultSiteSettings.whatsappEnabled,
     approvalsMarqueeEnabled: row ? Boolean(row.approvals_marquee_enabled) : defaultSiteSettings.approvalsMarqueeEnabled,
   }

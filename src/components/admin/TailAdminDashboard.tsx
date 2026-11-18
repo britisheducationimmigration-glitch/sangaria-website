@@ -1,7 +1,12 @@
 import { useMemo, useState } from 'react'
-import { ArrowUpRight, FileCheck2, Users } from 'lucide-react'
+import { ArrowUpRight, FileCheck2, MessageCircle, Phone, Users } from 'lucide-react'
 import { CountryFlag } from '@/components/CountryFlag'
 import type { AdminSnapshot } from '@/lib/content-types'
+
+function formatWaPhone(raw: string) {
+  const digits = raw.replace(/\D/g, '').replace(/^0+/, '')
+  return digits.length === 10 ? `91${digits}` : digits
+}
 
 export function TailAdminDashboard({
   snapshot,
@@ -103,14 +108,14 @@ export function TailAdminDashboard({
             </div>
             <div className="mt-6 grid h-48 grid-cols-6 items-end gap-3 border-b border-[#E4E7EC] pb-2">
               {monthlyCounts.map((m) => {
-                const heightPct = Math.max(8, Math.round((m.count / maxMonthly) * 100))
+                const heightPct = m.count === 0 ? 0 : Math.max(8, Math.round((m.count / maxMonthly) * 100))
                 return (
                   <div key={m.key} className="flex h-full flex-col items-center justify-end gap-2">
                     <span className="text-[11px] font-semibold text-[#667085]">{m.count}</span>
                     <div className="flex w-full max-w-10 flex-1 items-end">
                       <div
-                        className="w-full rounded-t-lg bg-[#465FFF] transition-all"
-                        style={{ height: `${heightPct}%` }}
+                        className={`w-full rounded-t-lg transition-all ${m.count === 0 ? 'h-1 bg-[#E4E7EC]' : 'bg-[#465FFF]'}`}
+                        style={m.count > 0 ? { height: `${heightPct}%` } : undefined}
                         title={`${m.label}: ${m.count} leads`}
                       />
                     </div>
@@ -160,7 +165,7 @@ export function TailAdminDashboard({
             </div>
 
             <p className="mt-6 text-center text-xs leading-relaxed text-[#667085]">
-              {stats.newCount} new enquiry(s) waiting for first response and {stats.demoRequests} IELTS/PTE demo request(s).
+              {stats.newCount} new {stats.newCount === 1 ? 'enquiry' : 'enquiries'} waiting for first response and {stats.demoRequests} IELTS/PTE demo {stats.demoRequests === 1 ? 'request' : 'requests'}.
             </p>
           </div>
 
@@ -262,40 +267,59 @@ export function TailAdminDashboard({
             </button>
           </div>
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[460px] text-left text-xs">
+            <table className="w-full min-w-[520px] text-left text-xs">
               <thead className="border-b border-[#E4E7EC] text-[#667085]">
                 <tr>
                   <th className="py-2.5 font-medium">Student / Client</th>
                   <th className="py-2.5 font-medium">Interest &amp; Country</th>
                   <th className="py-2.5 font-medium">Date (IST)</th>
-                  <th className="py-2.5 text-right font-medium">Status</th>
+                  <th className="py-2.5 text-right font-medium">Status &amp; Quick Contact</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E4E7EC]">
-                {enquiries.slice(0, 6).map((item) => (
-                  <tr key={item.id} className="hover:bg-[#F9FAFB]">
-                    <td className="py-3 pr-2">
-                      <p className="font-semibold text-[#1D2939]">{item.name}</p>
-                      <p className="text-[#667085]">{item.phone}</p>
-                    </td>
-                    <td className="py-3 pr-2 text-[#667085]">
-                      {item.interest || 'Counselling'}
-                      {item.country ? ` · ${item.country}` : ''}
-                    </td>
-                    <td className="py-3 pr-2 text-[#667085]">
-                      {new Date(item.createdAt).toLocaleDateString('en-IN', {
-                        timeZone: 'Asia/Kolkata',
-                        day: 'numeric',
-                        month: 'short',
-                      })}
-                    </td>
-                    <td className="py-3 text-right">
-                      <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${badgeTone(item.status)}`}>
-                        {item.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {enquiries.slice(0, 6).map((item) => {
+                  const waPhone = formatWaPhone(item.phone)
+                  const telHref = `tel:${item.phone.trim().startsWith('+') ? item.phone.replace(/[^\d+]/g, '') : `+${waPhone}`}`
+                  const waHref = `https://wa.me/${waPhone}?text=${encodeURIComponent(`Hello ${item.name}, this is British Education & Immigration, Sangaria following up on your ${item.interest || 'counselling'} enquiry.`)}`
+                  return (
+                    <tr key={item.id} className="hover:bg-[#F9FAFB]">
+                      <td className="py-3 pr-2">
+                        <button type="button" onClick={onOpenEnquiries} className="text-left font-semibold text-[#1D2939] hover:text-[#465FFF] hover:underline">
+                          {item.name}
+                        </button>
+                        <p className="text-[#667085]">{item.phone}</p>
+                      </td>
+                      <td className="py-3 pr-2 text-[#667085]">
+                        {item.interest || 'Counselling'}
+                        {item.country ? ` · ${item.country}` : ''}
+                      </td>
+                      <td className="py-3 pr-2 text-[#667085]">
+                        {new Date(item.createdAt).toLocaleDateString('en-IN', {
+                          timeZone: 'Asia/Kolkata',
+                          day: 'numeric',
+                          month: 'short',
+                        })}
+                      </td>
+                      <td className="py-3 text-right">
+                        <div className="inline-flex items-center justify-end gap-1.5">
+                          <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${badgeTone(item.status)}`}>
+                            {item.status}
+                          </span>
+                          {waPhone && (
+                            <>
+                              <a href={telHref} aria-label={`Call ${item.name}`} className="grid size-7 place-items-center rounded-lg border border-[#E4E7EC] text-[#1D2939] hover:bg-[#ECF3FF] hover:text-[#465FFF]">
+                                <Phone aria-hidden="true" className="size-3.5" />
+                              </a>
+                              <a href={waHref} target="_blank" rel="noopener noreferrer" aria-label={`WhatsApp ${item.name}`} className="grid size-7 place-items-center rounded-lg bg-[#25D366]/15 text-[#128C7E] hover:bg-[#25D366] hover:text-white">
+                                <MessageCircle aria-hidden="true" className="size-3.5" />
+                              </a>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
                 {enquiries.length === 0 && (
                   <tr>
                     <td colSpan={4} className="py-6 text-center text-[#667085]">

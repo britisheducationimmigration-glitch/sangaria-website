@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 
 export interface FlightDestination {
   slug: string
@@ -51,6 +51,8 @@ export function InteractiveFlightGlobe({
   className?: string
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const selectedCountryRef = useRef(selectedCountry)
+  selectedCountryRef.current = selectedCountry
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -139,13 +141,14 @@ export function InteractiveFlightGlobe({
 
       // Project Sangaria origin
       const originPt = project3D(SANGARIA.lat, SANGARIA.lng, rotY, rotX, radius, cx, cy)
+      const activeCountry = selectedCountryRef.current
 
       // Draw flight arcs from Sangaria to all destinations
       FLIGHT_DESTINATIONS.forEach((dest, idx) => {
         const destPt = project3D(dest.lat, dest.lng, rotY, rotX, radius, cx, cy)
         if (!originPt.visible && !destPt.visible) return
 
-        const isHighlighted = selectedCountry === dest.slug || (!selectedCountry && idx === 0)
+        const isHighlighted = activeCountry === dest.slug || (!activeCountry && idx === 0)
         const midX = (originPt.x + destPt.x) * 0.5
         const midY = (originPt.y + destPt.y) * 0.5
         const dist = Math.hypot(destPt.x - originPt.x, destPt.y - originPt.y)
@@ -187,7 +190,7 @@ export function InteractiveFlightGlobe({
             ctx.arc(destPt.x, destPt.y, 7 + Math.sin(tick * 0.08) * 2.5, 0, Math.PI * 2)
             ctx.stroke()
 
-            ctx.font = '700 10px "JetBrains Mono", monospace'
+            ctx.font = '700 10px ui-monospace, monospace'
             ctx.fillStyle = '#ffffff'
             ctx.fillText(`${dest.code} · ${dest.city}`, destPt.x + 8, destPt.y + 3)
           }
@@ -207,9 +210,9 @@ export function InteractiveFlightGlobe({
         ctx.arc(originPt.x, originPt.y, 9 + Math.sin(tick * 0.1) * 3, 0, Math.PI * 2)
         ctx.stroke()
 
-        ctx.font = '700 10px "JetBrains Mono", monospace'
+        ctx.font = '700 10px ui-monospace, monospace'
         ctx.fillStyle = '#fde047'
-        ctx.fillText('📍 SANGARIA (SNG)', originPt.x - 42, originPt.y - 12)
+        ctx.fillText('SANGARIA (SNG)', originPt.x - 42, originPt.y - 12)
       }
 
       if (!prefersReducedMotion && isVisible) {
@@ -259,7 +262,7 @@ export function InteractiveFlightGlobe({
       window.removeEventListener('resize', resize)
       if (animationFrameId) window.cancelAnimationFrame(animationFrameId)
     }
-  }, [selectedCountry])
+  }, [])
 
   return (
     <div
@@ -270,81 +273,3 @@ export function InteractiveFlightGlobe({
     </div>
   )
 }
-
-export function AnimatedStatValue({ value }: { value: string }) {
-  const ref = useRef<HTMLSpanElement | null>(null)
-  const [display, setDisplay] = useState(value)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-
-    const match = value.match(/^([^0-9]*)([0-9]+(?:[.,][0-9]+)?)(.*)$/)
-    if (!match) {
-      setDisplay(value)
-      return
-    }
-
-    const prefix = match[1] || ''
-    const rawNum = match[2].replace(/,/g, '')
-    const hasComma = match[2].includes(',')
-    const decimals = rawNum.includes('.') ? rawNum.split('.')[1].length : 0
-    const target = parseFloat(rawNum)
-    const suffix = match[3] || ''
-
-    if (Number.isNaN(target)) {
-      setDisplay(value)
-      return
-    }
-
-    const prefersReducedMotion =
-      typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    if (prefersReducedMotion || !('IntersectionObserver' in window)) {
-      setDisplay(value)
-      return
-    }
-
-    let frameId = 0
-    let animated = false
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !animated) {
-          animated = true
-          const duration = 1100
-          const start = performance.now()
-
-          const step = (now: number) => {
-            const progress = Math.min(1, (now - start) / duration)
-            const eased = 1 - Math.pow(1 - progress, 3)
-            const current = target * eased
-            let formatted = decimals > 0 ? current.toFixed(decimals) : Math.round(current).toString()
-            if (hasComma && decimals === 0) {
-              formatted = Math.round(current).toLocaleString('en-IN')
-            }
-            setDisplay(`${prefix}${formatted}${suffix}`)
-            if (progress < 1) {
-              frameId = window.requestAnimationFrame(step)
-            } else {
-              setDisplay(value)
-            }
-          }
-
-          frameId = window.requestAnimationFrame(step)
-          observer.disconnect()
-        }
-      },
-      { threshold: 0.25 },
-    )
-
-    observer.observe(el)
-
-    return () => {
-      observer.disconnect()
-      if (frameId) window.cancelAnimationFrame(frameId)
-    }
-  }, [value])
-
-  return <span ref={ref}>{display}</span>
-}
-

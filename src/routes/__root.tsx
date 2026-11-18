@@ -7,6 +7,7 @@ import { WhatsAppButton } from '@/components/WhatsAppButton'
 import { EnquiryPopup } from '@/components/EnquiryPopup'
 import { getPublicCountryCatalogue, getPublicSettings } from '@/lib/public-functions'
 import { countries as fixtureCountries, getCurrentCountry } from '@/data/fixtures'
+import { site } from '@/data/site'
 import { defaultSiteSettings } from '@/lib/site-settings'
 import appCss from '../styles.css?url'
 
@@ -19,8 +20,10 @@ const localBusinessSchema = {
   url: 'https://www.britisheducationandimmigration.com',
   logo: 'https://www.britisheducationandimmigration.com/img/logo.png',
   image: 'https://www.britisheducationandimmigration.com/img/hero.webp',
-  telephone: ['+919772570478', '+919658018000'],
-  email: 'admin@britisheducationandimmigration.com',
+  telephone: ['+919658018000', '+919772570478'],
+  email: 'admissions@britisheducationandimmigration.com',
+  hasMap: site.mapUrl,
+  sameAs: [site.instagram, site.facebook],
   priceRange: '₹₹',
   address: {
     '@type': 'PostalAddress',
@@ -67,7 +70,7 @@ function schemaOpeningHours(label: string) {
 }
 
 export const Route = createRootRoute({
- loader: async () => {
+  loader: async () => {
     try {
       const [settings, countryPages] = await Promise.all([getPublicSettings(), getPublicCountryCatalogue()])
       return { settings, countries: countryPages.map((entry) => entry.country) }
@@ -92,27 +95,21 @@ export const Route = createRootRoute({
       { name: 'geo.position', content: '29.798547;74.464214' },
       { name: 'ICBM', content: '29.798547, 74.464214' },
 
-      // OpenGraph for WhatsApp & Social Media Rich Previews (Fast 76KB WebP)
+      // OpenGraph for WhatsApp & Social Media Rich Previews
       { property: 'og:site_name', content: 'British Education and Immigration' },
       { property: 'og:image', content: 'https://www.britisheducationandimmigration.com/img/hero.webp' },
+      { property: 'og:image:alt', content: 'British Education and Immigration — Study Visas & IELTS/PTE Coaching in Sangaria' },
       { property: 'og:locale', content: 'en_IN' },
 
       // Twitter Card Preview
       { name: 'twitter:card', content: 'summary_large_image' },
       { name: 'twitter:image', content: 'https://www.britisheducationandimmigration.com/img/hero.webp' },
     ],
-   links: [
+    links: [
       { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
       { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
-      // ✅ Local Logo & Favicon
       { rel: 'icon', href: '/img/logo.png' },
       { rel: 'apple-touch-icon', href: '/img/logo.png' },
-      // ✅ Preload style taaki font download hone tak page block na ho
-      {
-        rel: 'preload',
-        as: 'style',
-        href: 'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=Figtree:wght@400;600;700&display=swap',
-      },
       {
         rel: 'stylesheet',
         href: 'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=Figtree:wght@400;600;700&display=swap',
@@ -126,7 +123,7 @@ export const Route = createRootRoute({
         children: JSON.stringify({
           ...localBusinessSchema,
           telephone: (loaderData?.settings.phones ?? defaultSiteSettings.phones).map((phone) => phone.startsWith('+') ? phone : '+91' + phone),
-          email: (loaderData?.settings.emails ?? defaultSiteSettings.emails)[0],
+          email: (loaderData?.settings.emails ?? defaultSiteSettings.emails)[0] ?? localBusinessSchema.email,
           openingHoursSpecification: schemaOpeningHours(loaderData?.settings.officeHours ?? defaultSiteSettings.officeHours),
         }),
       },
@@ -135,13 +132,14 @@ export const Route = createRootRoute({
   shellComponent: RootDocument,
   notFoundComponent: NotFound,
 })
+
 function RootDocument({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const isAdmin = pathname.startsWith('/admin')
   const isPortal = isAdmin || pathname.startsWith('/attendance')
   const { settings, countries } = Route.useLoaderData()
 
-  // ⚡ Non-blocking GTM: Page load hone ke turant baad background me chalega (Speed boost)
+  // Non-blocking GTM after initial paint
   useEffect(() => {
     if (isPortal || typeof window === 'undefined') return
 
@@ -162,8 +160,6 @@ function RootDocument({ children }: { children: ReactNode }) {
       globalThis.setTimeout(loadGTM, 1500)
     }
   }, [isPortal])
-
- 
 
   return (
     <html lang="en">

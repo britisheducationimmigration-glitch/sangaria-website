@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer'
 import { createFileRoute } from '@tanstack/react-router'
 import { queryRows } from '@/lib/db.server'
 import { ensureAdminRecord, getAdminRole, getSessionUser } from '@/lib/auth.server'
@@ -18,13 +19,17 @@ export const Route = createFileRoute('/certificates/image/$id')({
             if (!allowed) return new Response('Not found', { status: 404 })
           }
           const mimeType = ['image/webp', 'image/jpeg', 'image/png'].includes(String(row.image_mime_type)) ? String(row.image_mime_type) : 'application/octet-stream'
+          const hasVersion = new URL(request.url).searchParams.has('v')
+          const cacheControl = Boolean(row.published)
+            ? (hasVersion ? 'public, max-age=31536000, immutable' : 'public, max-age=300, must-revalidate')
+            : 'private, no-store'
           const bytes = Buffer.isBuffer(row.image_data) ? row.image_data : Buffer.from(row.image_data as Uint8Array)
           const body = new ArrayBuffer(bytes.byteLength)
           new Uint8Array(body).set(bytes)
           return new Response(body, {
             headers: {
               'Content-Type': mimeType,
-              'Cache-Control': Boolean(row.published) ? 'public, max-age=31536000, immutable' : 'private, no-store',
+              'Cache-Control': cacheControl,
               'X-Content-Type-Options': 'nosniff',
             },
           })

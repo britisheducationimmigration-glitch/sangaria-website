@@ -1,4 +1,4 @@
-import { MessageCircle } from 'lucide-react'
+import { MessageCircle, Phone } from 'lucide-react'
 import { useLoaderData, useRouterState } from '@tanstack/react-router'
 import { site } from '@/data/site'
 
@@ -53,25 +53,46 @@ export function WhatsAppButton() {
   const settings = rootData?.settings
   const countries = rootData?.countries ?? []
 
-  if (settings?.whatsappEnabled === false || pathname.startsWith('/admin')) return null
+  if (settings?.whatsappEnabled === false || pathname.startsWith('/admin') || pathname.startsWith('/attendance')) return null
 
-  const rawDigits = (settings?.phones[1] || settings?.phones[0] || site.whatsapp)
-    .replace(/\D/g, '')
-    .replace(/^0+/, '')
+  const rawPhone = (settings?.phones?.[1] || settings?.phones?.[0] || site.whatsapp).trim()
+  const rawDigits = rawPhone.replace(/\D/g, '').replace(/^0+/, '')
   const waPhone = rawDigits.length === 10 ? `91${rawDigits}` : rawDigits
+  const telHref = `tel:${rawPhone.startsWith('+') ? rawPhone.replace(/[^\d+]/g, '') : `+${waPhone}`}`
   const messageText = getContextualMessage(pathname, countries)
   const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(messageText)}`
 
   return (
-    <a
-      href={waUrl}
-      target="_blank"
-      rel="noreferrer"
-      aria-label="Chat on WhatsApp"
-      className="fixed right-5 bottom-20 sm:bottom-5 z-40 hidden sm:flex items-center gap-2.5 rounded-full bg-[#25D366] py-3.5 pr-5 pl-4 font-bold text-white shadow-xl shadow-black/25 transition hover:scale-105 active:scale-95 cursor-pointer"
-    >
-      <MessageCircle className="size-5 fill-current" />
-      <span className="hidden sm:inline">WhatsApp us</span>
-    </a>
+    <>
+      <a
+        href={waUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Chat on WhatsApp"
+        className="fixed right-5 bottom-5 z-40 hidden sm:flex items-center gap-2.5 rounded-full bg-[#25D366] py-3.5 pr-5 pl-4 font-bold text-white shadow-xl shadow-black/25 transition hover:scale-105 active:scale-95 cursor-pointer"
+      >
+        <MessageCircle className="size-5 fill-current" />
+        <span>WhatsApp us</span>
+      </a>
+
+      <div className="fixed right-0 bottom-0 left-0 z-40 flex items-center gap-3 border-t border-white/15 bg-forest-950/95 px-4 py-3 shadow-2xl backdrop-blur-md sm:hidden">
+        <a
+          href={telHref}
+          className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 py-2.5 text-xs font-bold text-white transition hover:bg-white/20 active:scale-95"
+        >
+          <Phone aria-hidden="true" className="size-4" />
+          <span>Call Now</span>
+        </a>
+        <a
+          href={waUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[#25D366] py-2.5 text-xs font-bold text-white shadow-md transition hover:brightness-105 active:scale-95"
+        >
+          <MessageCircle aria-hidden="true" className="size-4 fill-current" />
+          <span>WhatsApp</span>
+        </a>
+      </div>
+    </>
   )
 }
