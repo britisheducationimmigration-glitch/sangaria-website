@@ -16,10 +16,12 @@ import { getPublicCountryBySlug, getPublicCountryCatalog } from './country-catal
 
 let publicContentCache: { expiresAt: number; data: PublicContent } | null = null
 let publicSettingsCache: { expiresAt: number; data: SiteSettings } | null = null
+let publicCashflowCache: { expiresAt: number; data: CountryCashflow[] } | null = null
 
 export function invalidatePublicContentCache() {
   publicContentCache = null
   publicSettingsCache = null
+  publicCashflowCache = null
 }
 
 export const getPublicSettings = createServerFn({ method: 'GET' }).handler(async (): Promise<SiteSettings> => {
@@ -163,10 +165,12 @@ export const getPublicPolicyNotices = createServerFn({ method: 'GET' }).handler(
 
 export const getPublicContent = createServerFn({ method: 'GET' }).handler(async (): Promise<PublicContent> => {
   if (publicContentCache && publicContentCache.expiresAt > Date.now()) return publicContentCache.data
-  const postRows = await queryRows('SELECT slug, title, category, publish_date, excerpt, read_mins, body_json FROM content_posts WHERE published = 1 ORDER BY publish_date DESC, id DESC')
-  const storyRows = await queryRows('SELECT id, kind, name, city, country, visa, quote, rating, initials, flag, story_date, note, photo_data IS NOT NULL AS has_photo, video_url, media_alt, media_version, homepage_featured FROM success_stories WHERE published = 1 ORDER BY story_date DESC, id DESC')
-  const settingsRows = await queryRows('SELECT popup_enabled, popup_delay_seconds, whatsapp_enabled, approvals_marquee_enabled, public_settings_json FROM site_settings WHERE id = 1 LIMIT 1')
-  const certificateRows = await queryRows('SELECT id, title, issuer, category, credential_date, alt_text, image_path, image_data IS NOT NULL AS has_database_image, image_version, homepage_featured, published, sort_order FROM certificate_items WHERE collection = \'certificates\' AND published = 1 ORDER BY sort_order ASC, id ASC')
+  const [postRows, storyRows, settingsRows, certificateRows] = await Promise.all([
+    queryRows('SELECT slug, title, category, publish_date, excerpt, read_mins, body_json FROM content_posts WHERE published = 1 ORDER BY publish_date DESC, id DESC'),
+    queryRows('SELECT id, kind, name, city, country, visa, quote, rating, initials, flag, story_date, note, photo_data IS NOT NULL AS has_photo, video_url, media_alt, media_version, homepage_featured FROM success_stories WHERE published = 1 ORDER BY story_date DESC, id DESC'),
+    queryRows('SELECT popup_enabled, popup_delay_seconds, whatsapp_enabled, approvals_marquee_enabled, public_settings_json FROM site_settings WHERE id = 1 LIMIT 1'),
+    queryRows('SELECT id, title, issuer, category, credential_date, alt_text, image_path, image_data IS NOT NULL AS has_database_image, image_version, homepage_featured, published, sort_order FROM certificate_items WHERE collection = \'certificates\' AND published = 1 ORDER BY sort_order ASC, id ASC'),
+  ])
   const posts = postRows.length
     ? postRows.map((row) =>
         applyEditorialReview({
@@ -223,7 +227,7 @@ export const getPublicContent = createServerFn({ method: 'GET' }).handler(async 
         published: item.published,
         sortOrder: item.sortOrder,
       }))
-const data = { posts, approvals, testimonials, certificates, settings: readSiteSettings(settingsRows[0]) }
+  const data = { posts, approvals, testimonials, certificates, settings: readSiteSettings(settingsRows[0]) }
   const expiresAt = Date.now() + 8_000
   publicContentCache = { data, expiresAt }
   publicSettingsCache = { data: data.settings, expiresAt }
@@ -231,8 +235,11 @@ const data = { posts, approvals, testimonials, certificates, settings: readSiteS
 })
 
 export const getPublicCashflow = createServerFn({ method: 'GET' }).handler(async (): Promise<CountryCashflow[]> => {
+  if (publicCashflowCache && publicCashflowCache.expiresAt > Date.now()) return publicCashflowCache.data
   const rows = await queryRows('SELECT cashflow_json FROM site_settings WHERE id = 1 LIMIT 1')
-  return parseCashflowJson(rows[0]?.cashflow_json)
+  const data = parseCashflowJson(rows[0]?.cashflow_json)
+  publicCashflowCache = { data, expiresAt: Date.now() + 8_000 }
+  return data
 })
 
 let coachingCache: { expiresAt: number; data: PublicCoachingContent } | null = null

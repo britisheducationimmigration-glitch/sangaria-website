@@ -1283,17 +1283,19 @@ export const posts: Post[] = [
       'Check the current GOV.UK guidance before planning. The Graduate visa cannot be extended, though some graduates may be able to switch to another route.',
     ],
   },
-  {
+   {
     slug: 'pte-vs-ielts-which-one',
     title: 'PTE or IELTS — which test should you take in 2026?',
     category: 'IELTS & PTE',
     date: '2026-10-05',
     excerpt: 'Computer-based PTE gives faster results; IELTS is accepted everywhere. Here is a simple way to decide.',
-    readMins: 6,
+    readMins: 3,
     body: [
-      'Both tests are widely accepted for study and migration. PTE is fully computer-based with results usually in 48 hours, while IELTS is available on paper and on computer.',
-      'If you are comfortable with typing and speaking into a microphone, PTE often feels faster. If you prefer human examiners for speaking, IELTS can be the better fit.',
-      'Take a free mock test at our Sangaria centre and we will recommend the right test for you.',
+      'Both IELTS and PTE are widely accepted for international university admissions and many visa routes, so the best choice depends on your target country, course requirement, and how you perform in exam conditions.',
+      'PTE is 100% computer-based and scored with automated systems, with results typically arriving within 48 hours. Students who type comfortably, follow structured speaking practice, and want quick score turnarounds often prefer PTE.',
+      'IELTS is available on both paper and computer, and Speaking is conducted face-to-face with a human examiner. If you express yourself more naturally in conversation or your target institution or regulatory body specifically asks for IELTS, it remains the safer pick.',
+      'Before booking either exam, check the exact test and minimum module scores accepted by your chosen university and visa category — some immigration streams require a specific version such as IELTS General Training or PTE Core.',
+      'Not sure which one suits you? Take a free diagnostic mock test at our Sangaria centre and our trainers will compare your baseline score and recommend the faster path to your target band.',
     ],
   },
   {
@@ -1302,10 +1304,13 @@ export const posts: Post[] = [
     category: 'Immigration',
     date: '2026-09-28',
     excerpt: 'Planning a Europe holiday? These are the documents embassies look for — and the mistakes to avoid.',
-    readMins: 4,
+    readMins: 3,
     body: [
-      'A strong Schengen application has a clear itinerary, confirmed hotel bookings, travel insurance with €30,000 cover and bank statements that show stable income.',
-      'Apply to the embassy of the country where you will spend the most nights. Book appointments 6–8 weeks before peak summer travel.',
+      'A Schengen short-stay (Type C) tourist visa lets Indian travellers visit participating European countries for tourism or family visits, usually for up to 90 days within a 180-day period.',
+      'Always apply through the embassy or visa centre of the country where you will spend the most nights. If your nights are split equally across countries, apply to the country you will enter first.',
+      'Core documents typically include a valid passport, a realistic day-by-day itinerary, verifiable hotel and return flight reservations, Schengen-compliant travel medical insurance with at least €30,000 coverage, recent bank statements, ITRs, and proof of employment, business, or strong ties back home.',
+      'Common refusal triggers include sudden unexplained cash deposits right before applying, mismatched travel dates between flights and hotels, or weak cover letters that do not explain who is sponsoring the trip.',
+      'Appointments fill up quickly before summer and festive holidays, so start preparing your file at least 6 to 8 weeks ahead of travel and verify the exact checklist for your destination embassy.',
     ],
   },
   {
@@ -1314,10 +1319,13 @@ export const posts: Post[] = [
     category: 'Study Abroad',
     date: '2026-09-18',
     excerpt: 'Blocked account, APS certificate and English-taught masters — your step-by-step guide to Germany.',
-    readMins: 7,
+    readMins: 3,
     body: [
-      'Most German public universities charge little or no tuition, though semester contributions and programme exceptions apply. A blocked account is one common way to show living funds; check the current official amount and any accepted alternatives before applying.',
-      'Indian students need an APS certificate before applying for the student visa. Start the process at least 3 months in advance.',
+      'Most public universities in Germany do not charge standard tuition fees for many undergraduate and master’s programmes, though students still pay a modest semester contribution (which often includes local public transport) and certain states or specialised courses charge tuition.',
+      'Hundreds of master’s programmes — especially in engineering, computer science, data analytics, and management — are taught completely in English. Strong academic grades and matching prerequisite credits matter far more than flashy extracurriculars.',
+      'For Indian applicants, the APS (Academic Evaluation Centre) certificate is a mandatory early step to verify academic records before applying for a student visa. Because processing can take several weeks, start your APS application at least 3 months before your visa timeline.',
+      'To prove living funds for the visa, most students open a German blocked account (Sperrkonto) with the current official annual amount, or provide an accepted alternative such as an official scholarship or formal obligation letter.',
+      'Plan backwards from the Winter (October) or Summer (April) intake deadlines — public university portals and uni-assist close months before classes begin. Visit our Sangaria office for a realistic shortlist based on your degree and percentage.',
     ],
   },
   {
@@ -1326,13 +1334,15 @@ export const posts: Post[] = [
     category: 'Study Abroad',
     date: '2026-09-09',
     excerpt: 'Studying outside Sydney and Melbourne brings extra work rights and migration points.',
-    readMins: 5,
+    readMins: 3,
     body: [
-      'Graduates from regional campuses may receive additional years on the Temporary Graduate (485) visa and extra points for skilled migration.',
-      'Cities like Adelaide, Perth, Hobart and Gold Coast offer lower living costs too.',
+      'When Indian students think of Australia, Sydney and Melbourne usually come to mind first — yet studying at an eligible campus in a designated regional area can offer major advantages for both budget and long-term career plans.',
+      'Designated regional areas include vibrant cities such as Adelaide, Perth, Gold Coast, Canberra, Hobart, and Wollongong, not just small towns. Many of these campuses belong to respected Australian universities with strong industry placements.',
+      'Eligible graduates who complete a qualifying degree and continue living in a designated regional area may qualify for a second Temporary Graduate (Subclass 485) post-study work visa, giving extra time to gain skilled Australian work experience.',
+      'Living costs and shared accommodation outside Sydney and Melbourne are often noticeably lower, and completing eligible regional study can also contribute additional points under Australia’s skilled migration points test.',
+      'Because Australian post-study work durations, age limits, and regional definitions are updated periodically by the Department of Home Affairs, always confirm the current rules for your exact course and campus before locking your offer.',
     ],
   },
-]
 
 export const coachingCourses = [
   {
@@ -1366,11 +1376,11 @@ export const coachingCourses = [
 ]
 
 export const coachingSchedule = [
-  { batch: 'IELTS Morning', time: '8:00 – 10:00 AM', seats: 6, starts: '2026-11-03' },
-  { batch: 'PTE Morning', time: '10:00 AM – 12:00 PM', seats: 4, starts: '2026-11-03' },
-  { batch: 'IELTS Afternoon', time: '1:00 – 3:00 PM', seats: 9, starts: '2026-11-10' },
-  { batch: 'PTE Evening', time: '4:00 – 6:00 PM', seats: 3, starts: '2026-11-10' },
-  { batch: 'Weekend PTE Crash', time: 'Sat–Sun · 10 AM – 2 PM', seats: 8, starts: '2026-11-08' },
+  { batch: 'IELTS Morning', time: '8:00 – 10:00 AM', seats: 6, starts: '2026-11-24' },
+  { batch: 'PTE Morning', time: '10:00 AM – 12:00 PM', seats: 4, starts: '2026-11-24' },
+  { batch: 'IELTS Afternoon', time: '1:00 – 3:00 PM', seats: 9, starts: '2026-12-01' },
+  { batch: 'PTE Evening', time: '4:00 – 6:00 PM', seats: 3, starts: '2026-12-01' },
+  { batch: 'Weekend PTE Crash', time: 'Sat–Sun · 10 AM – 2 PM', seats: 8, starts: '2026-12-05' },
 ]
 
 export const bandScoreTable = [
