@@ -1,5 +1,6 @@
 import { buildPayrollRange } from './payroll-range'
 import { Buffer } from 'node:buffer'
+import { randomUUID } from 'node:crypto'
 import { createMiddleware, createServerFn } from '@tanstack/react-start'
 import { getRequestHeader } from '@tanstack/react-start/server'
 import { execute, queryRows } from './db.server'
@@ -926,7 +927,7 @@ async function buildEmployeeRangeReport(data: ReturnType<typeof rangeReportInput
     const start = String(row.cycle_start_date), end = String(row.cycle_end_date)
     const date = issuedOn < start ? start : issuedOn > end ? end : issuedOn
     return { slipNumber: String(row.slip_number), date, amount: Math.round((saved.netPay - saved.earnedSalary) * 100) / 100 }
-  }).filter(item => item.amount !== 0)
+  }).filter((item, index) => item.amount !== 0 && !(JSON.parse(String(slipRows[index].snapshot_json)) as SalarySlipSnapshot).manual)
   const calculate=(from:string,to:string,includeDays:boolean) => {
     const report=buildPayrollRange(employee,logs,policies,from,to,todayIstDate(),includeDays)
     let partialFinalized=false
@@ -1206,6 +1207,41 @@ export const issueSalarySlip = createServerFn({ method: 'POST' })
       )
       const inserted = await queryRows('SELECT s.*, e.name AS employee_name FROM salary_slips s JOIN employees e ON e.id = s.employee_id WHERE s.id = ? LIMIT 1', [Number(result.insertId)])
       return mapSalarySlipRow(inserted[0])
+    })
+  })
+
+export const saveManualSalarySlip = createServerFn({ method: 'POST' }).middleware([superAdminMiddleware])
+  .validator((raw: unknown) => {
+    const input = (raw ?? {}) as Record<string, unknown>
+    const employeeId = Math.floor(numberValue(input.employeeId)), id = Math.floor(numberValue(input.id))
+    const month = String(input.month ?? '')
+    if (employeeId <= 0 || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw new Error('Select an employee and month')
+    const values = Object.fromEntries(['presentDays','halfDays','paidLeaveDays','unpaidAndAbsentDays','workingDays','monthlyBaseSalary','earnedSalary','allowanceAmount','deductionAmount','paidAmount'].map(key => [key, salarySlipAmount(input[key], key)]))
+    const paidOn = input.paidOn ? validPayrollDate(input.paidOn) : ''
+    if (paidOn > todayIstDate()) throw new Error('Payment date must not be in the future')
+    return {employeeId,id,month,values,paidOn,notes:stringValue(input.notes,500)}
+  }).handler(async ({data,context}): Promise<SalarySlipRecord> => {
+    await ensureAttendanceSchema(); await ensureAttendanceReliabilitySchema()
+    return attendanceTransaction(async ({queryRows,execute}) => {
+      const employees = await queryRows('SELECT * FROM employees WHERE id = ? FOR UPDATE',[data.employeeId])
+      if (!employees.length) throw new Error('Employee not found')
+      const old = data.id ? await queryRows('SELECT * FROM salary_slips WHERE id = ? AND employee_id = ? FOR UPDATE',[data.id,data.employeeId]) : []
+      if (data.id && (!old.length || String(old[0].status) !== 'issued')) throw new Error('Active slip not found')
+      const employee = mapEmployeeRow(employees[0]), v = data.values
+      const [year,month] = data.month.split('-').map(Number)
+      const end = new Date(Date.UTC(year,month,0)).toISOString().slice(0,10)
+      const settings = readSiteSettings((await queryRows('SELECT public_settings_json FROM site_settings WHERE id = 1 LIMIT 1'))[0])
+      const netPay = Math.max(0,Math.round((v.earnedSalary + v.allowanceAmount - v.deductionAmount)*100)/100)
+      const snapshot: SalarySlipSnapshot = {manual:true,companyName:site.name,companyAddress:site.address,companyPhone:settings.phones[0]||'',companyEmail:settings.emails[0]||'',employeeCode:`BEI-EMP-${employee.id}`,employeeName:employee.name,designation:employee.designation||'Staff',employeeEmail:employee.email,employeePhone:employee.phone,joiningDate:employee.joiningDate||'',cycleStartDay:1,shiftTime:'',monthLabel:formatSlipMonthLabel(data.month),cycleStartDate:data.month+'-01',cycleEndDate:end,totalDays:Number(end.slice(-2)),workingDays:v.workingDays,weeklyOffsAndHolidays:0,presentDays:v.presentDays,halfDays:v.halfDays,paidLeaveDays:v.paidLeaveDays,unpaidAndAbsentDays:v.unpaidAndAbsentDays,payableDays:v.presentDays+v.halfDays/2+v.paidLeaveDays,totalWorkMinutes:0,monthlyBaseSalary:v.monthlyBaseSalary,earnedSalary:v.earnedSalary,allowanceLabel:'Bonus / Allowance',allowanceAmount:v.allowanceAmount,grossEarnings:v.earnedSalary+v.allowanceAmount,deductionLabel:'Other deduction',deductionAmount:v.deductionAmount,totalDeductions:v.deductionAmount,netPay,netPayWords:amountInWordsInr(netPay),paidAmount:v.paidAmount,paymentMethod:'',paymentRef:'',paidOn:data.paidOn,notes:data.notes}
+      let id = data.id
+      if (id) {
+        if (!(JSON.parse(String(old[0].snapshot_json)) as SalarySlipSnapshot).manual) throw new Error('Only manually created slips can be edited')
+        await execute('UPDATE salary_slips SET selected_month=?, cycle_start_date=?, cycle_end_date=?, net_pay_paise=?, snapshot_json=? WHERE id=?',[data.month,snapshot.cycleStartDate,end,Math.round(netPay*100),JSON.stringify(snapshot),id])
+      } else {
+        const result = await execute('INSERT INTO salary_slips (slip_number,employee_id,selected_month,cycle_start_date,cycle_end_date,net_pay_paise,status,snapshot_json,issued_by) VALUES (?,?,?,?,?,?,?,?,?)',[`BEI-M-${randomUUID()}`,employee.id,data.month,snapshot.cycleStartDate,end,Math.round(netPay*100),'issued',JSON.stringify(snapshot),context.user.email])
+        id = Number(result.insertId)
+      }
+      return mapSalarySlipRow((await queryRows('SELECT s.*, e.name AS employee_name FROM salary_slips s JOIN employees e ON e.id=s.employee_id WHERE s.id=?',[id]))[0])
     })
   })
 

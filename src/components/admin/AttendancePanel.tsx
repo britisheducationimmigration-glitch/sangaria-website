@@ -272,7 +272,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
 
   async function copyLink(emp: EmployeeRecord) {
     try {
-      await navigator.clipboard.writeText(portalUrl(emp.accessToken))
+      await navigator.clipboard.writeText(portalUrl(emp.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '~' + emp.accessToken))
       setCopiedId(emp.id)
       window.setTimeout(() => setCopiedId(null), 2000)
       onNotice(`Copied link for ${emp.name}.`)
@@ -600,7 +600,7 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 rounded-xl bg-[#F9FAFB] p-2.5 text-xs">
-                  <code className="flex-1 truncate text-[#667085]">{portalUrl(emp.accessToken)}</code>
+                  <code className="flex-1 truncate text-[#667085]">{portalUrl(emp.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '~' + emp.accessToken)}</code>
                   <button type="button" onClick={() => void copyLink(emp)} className="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 font-semibold text-[#465FFF] ring-1 ring-[#E4E7EC]">
                     {copiedId === emp.id ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
                     {copiedId === emp.id ? 'Copied' : 'Copy Link'}

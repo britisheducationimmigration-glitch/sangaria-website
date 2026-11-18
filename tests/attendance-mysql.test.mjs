@@ -330,6 +330,21 @@ test('actual MySQL schema, punches, concurrency, corrections and frozen reports'
     state.now='2026-11-16T04:00:00Z'
   })
 
+  await t.test('manual slips save and edit independently of attendance and payments',async()=>{
+    const emp=await save({name:'Manual slip employee',monthlySalary:0})
+    const input={employeeId:emp.id,month:'2026-11',presentDays:20,workingDays:26,earnedSalary:20000,allowanceAmount:500,deductionAmount:100,paidAmount:15000}
+    const first=await api.saveManualSalarySlip({data:input})
+    assert.equal(first.netPay,20400);assert.equal(first.snapshot.presentDays,20);assert.equal(first.snapshot.manual,true)
+    const second=await api.saveManualSalarySlip({data:{...input,id:first.id,presentDays:22,earnedSalary:22000}})
+    assert.equal(second.id,first.id);assert.equal(second.snapshot.presentDays,22);assert.equal(second.netPay,22400)
+    const report=await api.getEmployeeRangeReport({data:{employeeId:emp.id,from:'2026-11-01',to:'2026-11-16'}})
+    assert.equal(report.throughToday.earned,0);assert.equal(report.throughToday.paid,0)
+    assert.equal((await pool.query('SELECT * FROM attendance_logs WHERE employee_id=?',[emp.id]))[0].length,0)
+    await assert.rejects(api.saveManualSalarySlip({data:{...input,earnedSalary:-1}}),/valid/)
+    state.role='enquiry_manager';await assert.rejects(api.saveManualSalarySlip({data:input}),/Forbidden/);state.role='super_admin'
+    await api.permanentlyDeleteEmployee({data:{id:emp.id,confirmationName:emp.name}})
+  })
+
   await t.test('employee range workbook and salary ledger are isolated, idempotent and reversible',async()=>{
     state.now='2026-11-16T12:30:00Z'
     const emp=await save({name:'Payment ledger test',monthlySalary:25000,joiningDate:'2026-11-01'})
