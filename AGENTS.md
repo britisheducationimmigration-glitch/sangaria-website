@@ -1,3 +1,7 @@
+[![Architecture diagram](https://gitdiagram.com/diagram-badge.svg)](https://gitdiagram.com/britisheducationimmigration-glitch/sangaria-website?utm_source=readme&utm_medium=badge)
+<img width="9783" height="6967" alt="diagram" src="https://github.com/user-attachments/assets/c829298a-59cc-4dd7-9e19-d43fd0866a86" />
+
+
 AGENTS.md — British Education & Immigration (Sangaria) Knowledge Graph & Agent Rules
 
 Read this file completely before reading or changing any code. This file is the single source of truth for the repository (https://www.britisheducationandimmigration.com). Mandatory rule: Whenever you add, rename, delete, or materially change a route, component, server function, database table, cron job, or business rule, you MUST update this AGENTS.md in the same PR/step so it never goes stale.
