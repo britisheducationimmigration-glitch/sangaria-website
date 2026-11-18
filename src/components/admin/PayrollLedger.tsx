@@ -9,14 +9,30 @@ const money=(amount:number)=>amount.toLocaleString('en-IN',{style:'currency',cur
 const field='min-h-10 rounded-xl border border-[#E4E7EC] bg-white px-3 text-sm'
 const button='min-h-10 rounded-xl border border-[#E4E7EC] px-4 py-2 text-sm font-semibold disabled:opacity-50'
 
+function monthBounds(month: string, today: string) {
+  const [y, m] = month.split('-').map(Number)
+  const start = month + '-01' > today ? today : month + '-01'
+  const end = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10)
+  return { from: start, to: end < today ? end : today }
+}
+
 export function PayrollLedger({employees,cycles,month,today,onNotice}:{employees:EmployeeRecord[];cycles:EmployeeCycleSummary[];month:string;today:string;onNotice:(message:string)=>void}) {
   const [employeeId,setEmployeeId]=useState(()=>employees.find(e=>e.active)?.id??employees[0]?.id??0)
-  const [from,setFrom]=useState(month+'-01'>today?today:month+'-01'),[to,setTo]=useState(()=>{const [y,m]=month.split('-').map(Number);const end=new Date(Date.UTC(y,m,0)).toISOString().slice(0,10);return end<today?end:today})
+  const initialBounds = monthBounds(month, today)
+  const [from,setFrom]=useState(initialBounds.from),[to,setTo]=useState(initialBounds.to)
   const [result,setResult]=useState<Result|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[loading,setLoading]=useState(false),[revision,setRevision]=useState(0)
   const [amount,setAmount]=useState(''),[paidOn,setPaidOn]=useState(today),[method,setMethod]=useState('Cash'),[reference,setReference]=useState(''),[note,setNote]=useState('')
   const [activePrintSlip,setActivePrintSlip]=useState<SalarySlipRecord|null>(null)
   const pendingPrintRef=useRef(false)
-  const key=useRef(''),sequence=useRef(0)
+  const key=useRef(''),sequence=useRef(0),lastMonthRef=useRef(month)
+
+  useEffect(()=>{
+    if(lastMonthRef.current===month)return
+    lastMonthRef.current=month
+    const next=monthBounds(month,today)
+    setFrom(next.from)
+    setTo(next.to)
+  },[month,today])
 
   useEffect(()=>{
     const clearPrintSlip=()=>setActivePrintSlip(null)

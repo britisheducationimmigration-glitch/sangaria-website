@@ -3,7 +3,7 @@ import '@tanstack/react-start/server-only'
 import { countries, getCurrentCountry, type Country } from '@/data/fixtures'
 import { applyScheduledVisaPolicy } from '@/data/policy-watch'
 import { visaGuidance, type VisaGuidance } from '@/data/visa-guidance'
-import { execute, queryRows } from './db.server'
+import { databaseTransaction, queryRows } from './db.server'
 
 export type CountryPageContent = {
   country: Country
@@ -64,11 +64,24 @@ export async function readCountryCatalogState(): Promise<CountryCatalogState> {
   return environments[currentDeploymentEnvironment()] ?? { published: {}, drafts: {} }
 }
 
-export async function writeCountryCatalogState(state: CountryCatalogState) {
-  const environments = await readAllEnvironments()
-  environments[currentDeploymentEnvironment()] = state
-  await execute('UPDATE site_settings SET country_catalog_json = ? WHERE id = 1', [JSON.stringify({ version: 1, environments })])
+async function mutateCountryCatalogState(mutate: (state: CountryCatalogState) => void) {
+  await databaseTransaction(async (connection) => {
+    const [rows] = await connection.query('SELECT country_catalog_json FROM site_settings WHERE id = 1 FOR UPDATE')
+    const environments = parseEnvironmentStore((rows as Array<{ country_catalog_json: unknown }>)[0]?.country_catalog_json)
+    const environment = currentDeploymentEnvironment()
+    const state = environments[environment] ?? { published: {}, drafts: {} }
+    mutate(state)
+    environments[environment] = state
+    await connection.execute('UPDATE site_settings SET country_catalog_json = ? WHERE id = 1', [JSON.stringify({ version: 1, environments })])
+  })
   invalidateCountryCatalogCache()
+}
+
+export async function writeCountryCatalogState(state: CountryCatalogState) {
+  await mutateCountryCatalogState((current) => {
+    current.published = state.published
+    current.drafts = state.drafts
+  })
 }
 
 function withScheduledGuidance(entry: CountryPageContent): CountryPageContent {
@@ -130,26 +143,26 @@ export async function getAdminCountryCatalog() {
 }
 
 export async function saveCountryDraft(content: CountryPageContent, status: 'draft' | 'published') {
-  const state = await readCountryCatalogState()
-  const slug = content.country.slug
-  if (status === 'draft') {
-    state.drafts[slug] = content
-  } else {
-    state.published[slug] = content
-    delete state.drafts[slug]
-  }
-  await writeCountryCatalogState(state)
+  await mutateCountryCatalogState((state) => {
+    const slug = content.country.slug
+    if (status === 'draft') {
+      state.drafts[slug] = content
+    } else {
+      state.published[slug] = content
+      delete state.drafts[slug]
+    }
+  })
 }
 
 export async function discardCountryDraft(slug: string) {
-  const state = await readCountryCatalogState()
-  delete state.drafts[slug]
-  await writeCountryCatalogState(state)
+  await mutateCountryCatalogState((state) => {
+    delete state.drafts[slug]
+  })
 }
 
 export async function revertCountryToDefault(slug: string) {
-  const state = await readCountryCatalogState()
-  delete state.published[slug]
-  delete state.drafts[slug]
-  await writeCountryCatalogState(state)
+  await mutateCountryCatalogState((state) => {
+    delete state.published[slug]
+    delete state.drafts[slug]
+  })
 }

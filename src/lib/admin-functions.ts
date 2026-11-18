@@ -17,11 +17,12 @@ import type { VisaGuidance } from '@/data/visa-guidance'
 function stringValue(value: unknown, max = 5000) {
   return typeof value === 'string' ? value.trim().slice(0, max) : ''
 }
-
 function numberValue(value: unknown, fallback = 0) {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : fallback
 }
+
+const todayIst = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date())
 
 const adminMiddleware = createMiddleware().server(async ({ next, request }) => {
   const { ensureAdminRecord, getAdminRole, getSessionUser } = await import('./auth.server')
@@ -505,7 +506,7 @@ export const exportEnquiries = createServerFn({ method: 'GET' }).middleware([adm
   const followUps = rows.filter((row) => row.next_follow_up_at).map((row) => [String(row.next_follow_up_local ?? '').replace('T', ' '), row.name, row.phone, row.country, row.interest, row.status, row.assigned_to, row.notes])
   const baseName = data.status ? data.status.toLowerCase().replaceAll(' ', '-') : 'all'
   return {
-    filename: `bei-leads-${baseName}-${new Date().toISOString().slice(0, 10)}.xlsx`,
+    filename: `bei-leads-${baseName}-${todayIst()}.xlsx`,
     base64: createLeadsWorkbook([
       { name: 'Leads', rows: [['ID', 'Name', 'Phone', 'Email', 'City', 'Interest', 'Country', 'Status', 'Assigned to', 'Next follow-up', 'Source', 'Message', 'Notes', 'Created at'], ...leads], widths: [8, 22, 16, 28, 18, 22, 18, 20, 22, 22, 16, 42, 42, 22], headerRows: [1], filter: `A1:N${Math.max(1, leads.length + 1)}` },
       { name: 'Summary', rows: [['Lead pipeline', 'Count'], ...summary.slice(1)], widths: [28, 14], headerRows: [1] },
@@ -520,7 +521,7 @@ export const savePost = createServerFn({ method: 'POST' }).middleware([adminMidd
   const slug = stringValue(input.slug, 190).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
   if (!title || !slug) throw new Error('Title and slug are required')
   const body = Array.isArray(input.body) ? input.body.map((item) => stringValue(item, 5000)).filter(Boolean) : stringValue(input.body, 20000).split('\n').map((item) => item.trim()).filter(Boolean)
-  return { id: numberValue(input.id), slug, title, category: stringValue(input.category, 80) || 'Visa News', date: stringValue(input.date, 10) || new Date().toISOString().slice(0, 10), excerpt: stringValue(input.excerpt, 5000), readMins: Math.max(1, Math.min(60, numberValue(input.readMins, 4))), body, published: Boolean(input.published) }
+  return { id: numberValue(input.id), slug, title, category: stringValue(input.category, 80) || 'Visa News', date: stringValue(input.date, 10) || todayIst(), excerpt: stringValue(input.excerpt, 5000), readMins: Math.max(1, Math.min(60, numberValue(input.readMins, 4))), body, published: Boolean(input.published) }
 }).handler(async ({ data, context }) => {
   assertCapability(context.role, 'content')
   const duplicates = await queryRows('SELECT id FROM content_posts WHERE slug = ? AND id <> ? LIMIT 1', [data.slug, data.id || 0])
@@ -568,7 +569,7 @@ export const saveStory = createServerFn({ method: 'POST' }).middleware([adminMid
     rating: Math.max(1, Math.min(5, numberValue(input.rating, 5))),
     initials: stringValue(input.initials, 10),
     flag: stringValue(input.flag, 10),
-    date: stringValue(input.date, 10) || new Date().toISOString().slice(0, 10),
+    date: stringValue(input.date, 10) || todayIst(),
     note: stringValue(input.note, 220),
     mediaType,
     photoBase64,
@@ -882,6 +883,7 @@ export const saveCashflow = createServerFn({ method: 'POST' }).middleware([admin
 }).handler(async ({ data, context }) => {
   if (context.role !== 'super_admin') throw new Error('Only a super admin can update cashflow')
   await execute('UPDATE site_settings SET cashflow_json = ? WHERE id = 1', [data.cashflowJson])
+  invalidatePublicContentCache()
   return { ok: true }
 })
 

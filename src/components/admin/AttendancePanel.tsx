@@ -52,10 +52,12 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
   const refreshInFlight = useRef(false)
   const [lastUpdated, setLastUpdated] = useState('')
 
-  async function load(targetMonth = month, background = false) {
+    async function load(targetMonth = month, background = false) {
     const request = ++loadSequence.current
-    setLoading(true)
-    setError('')
+    if (!background) {
+      setLoading(true)
+      setError('')
+    }
     try {
       const next = await getAdminAttendanceSnapshot({ data: { month: targetMonth, lightweight: background } })
       if (request !== loadSequence.current) return
@@ -68,9 +70,9 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
       }
     } catch (cause) {
       if (request !== loadSequence.current) return
-      setError(cause instanceof Error ? cause.message : 'Could not load attendance.')
+      if (!background) setError(cause instanceof Error ? cause.message : 'Could not load attendance.')
     } finally {
-      if (request === loadSequence.current) setLoading(false)
+      if (!background && request === loadSequence.current) setLoading(false)
     }
   }
 
