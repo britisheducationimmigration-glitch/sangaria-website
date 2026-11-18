@@ -123,7 +123,7 @@ export function PayrollLedger({employees,cycles,month,today,onNotice}:{employees
               </div>
             </div>
             <div className="salary-slip-meta">
-              <p><strong>Slip No:</strong> {activePrintSlip.slipNumber}</p>
+              <p><strong>Slip No:</strong> {activePrintSlip.snapshot.manual ? `BEI-M-${String(activePrintSlip.id).padStart(5, '0')}` : activePrintSlip.slipNumber}</p>
               <p><strong>Salary period:</strong> {activePrintSlip.cycleStartDate} to {activePrintSlip.cycleEndDate}</p>
               <p><strong>Issued On:</strong> {new Date(activePrintSlip.issuedAt).toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata'})}</p>
               <p><strong>Status:</strong> {activePrintSlip.status==='voided'?'VOIDED':'ISSUED'}</p>
