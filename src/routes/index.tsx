@@ -190,12 +190,13 @@ function Home() {
   )
   const [selectedVisa, setSelectedVisa] = useState('study')
   const [showAllTestimonials, setShowAllTestimonials] = useState(false)
+  const [openFaq, setOpenFaq] = useState<number | null>(0)
 
   const [isSticky, setIsSticky] = useState(false)
   const [headerOffset, setHeaderOffset] = useState(68)
   const [jumpHeight, setJumpHeight] = useState(50)
   const jumpWrapRef = useRef<HTMLDivElement>(null)
-   const jumpBarRef = useRef<HTMLDivElement>(null)
+  const jumpBarRef = useRef<HTMLDivElement>(null)
   const pageRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -264,7 +265,6 @@ function Home() {
     return true
   })
 
-   const [openFaq, setOpenFaq] = useState<number | null>(0)
   const visibleTestimonials = showAllTestimonials ? homepageTestimonials : homepageTestimonials.slice(0, 3)
   const selectedCountryObj = countries.find((c) => c.slug === selectedCountry)
   const selectedCountryName = selectedCountryObj?.name ?? 'Country'
@@ -456,8 +456,143 @@ function Home() {
                   <span className="ml-1 text-[10px] font-normal text-forest-900/60 lg:ml-0 lg:block lg:text-[11px]">Sangaria</span>
                 </div>
                 <div className="relative flex flex-1 items-center justify-center px-2">
+                  <div className="w-full border-b border-dashed border-coral-500/45" />
+                  <span aria-hidden="true" className="flight-glide absolute text-sm text-coral-500 lg:text-base">✈</span>
+                </div>
+                <div key={activeFlight.code} className="animate-rise text-right [animation-duration:350ms]">
+                  <span className="lg:text-3xl">{activeFlight.code}</span>
+                  <span className="ml-1 text-[10px] font-normal text-forest-900/60 lg:ml-0 lg:block lg:text-[11px]">{activeFlight.city}</span>
+                </div>
+              </div>
+            </div>
+            {/* Rotating Editorial Circular Approval Seal */}
+            <div className="stamp-float absolute top-3 right-3 grid size-[74px] place-items-center rounded-full border border-coral-400/50 bg-forest-950/88 text-coral-300 shadow-2xl backdrop-blur-md lg:top-5 lg:-right-4 lg:size-[116px] xl:-right-7">
+              <svg viewBox="0 0 100 100" aria-hidden="true" className="seal-spin absolute inset-1 size-[calc(100%-8px)]">
+                <defs>
+                  <path id="hero-seal-path" d="M 50,50 m -36,0 a 36,36 0 1,1 72,0 a 36,36 0 1,1 -72,0" />
+                </defs>
+                <text fill="currentColor" fontSize="8.3" fontWeight="700" letterSpacing="2.35" className="font-mono uppercase">
+                  <textPath href="#hero-seal-path">• VISA APPROVED • SANGARIA • BEI </textPath>
+                </text>
+              </svg>
+              <span className="relative z-10 flex flex-col items-center leading-none">
+                <span className="text-base font-black text-amber-200 lg:text-2xl">✓</span>
+                <span className="mt-0.5 font-mono text-[7px] font-bold uppercase tracking-widest text-white/85 lg:text-[9px]">Verified</span>
+              </span>
+            </div>
+          </div>
+        </div>
 
-              {/* SERVICES — ASYMMETRIC AWWWARDS BENTO GRID */}
+        {/* UNIFIED DARK-GLASS BENTO STAT RIBBON */}
+        <div className="relative z-10 mx-auto max-w-7xl px-5 pb-12 lg:mt-4 lg:px-6 lg:pb-16">
+          <dl className="grid grid-cols-2 divide-x divide-y divide-white/10 overflow-hidden rounded-3xl border border-white/15 bg-white/[0.06] shadow-2xl backdrop-blur-md sm:grid-cols-4 sm:divide-y-0">
+            {settings.trustStats.map((s) => (
+              <div
+                key={s.label}
+                className="group p-4 text-center transition-colors duration-300 hover:bg-white/[0.06] sm:p-5 lg:px-7 lg:py-6 lg:text-left"
+              >
+                <dt className="font-display text-2xl font-extrabold tabular-nums text-white lg:text-4xl">
+                  <CountUpStat value={s.value} />
+                </dt>
+                <dd className="mt-1.5 flex items-center justify-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-forest-100/75 lg:justify-start lg:text-xs">
+                  <span className="size-1.5 rounded-full bg-coral-400 transition-transform duration-300 group-hover:scale-125" aria-hidden="true" />
+                  <span>{s.label}</span>
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
+
+      {/* WHY CHOOSE US TRUST STRIP */}
+      <section className="border-b border-forest-900/10 bg-sand px-5 py-8 lg:px-6 lg:py-12">
+        <div data-reveal="" className="mx-auto flex max-w-7xl flex-col justify-between gap-5 rounded-3xl border border-forest-900/10 bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:gap-8 lg:rounded-[2.5rem] lg:p-8">
+          <div>
+            <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-widest text-coral-600 lg:text-xs">Why Choose Us</span>
+            <h3 className="hidden text-2xl font-extrabold text-forest-900 lg:block">Your future is safe with verified experts.</h3>
+          </div>
+          <div className="grid flex-1 grid-cols-1 gap-3.5 md:grid-cols-3 lg:max-w-4xl lg:gap-6">
+            <div className="flex items-start gap-3">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-forest-50 text-forest-900 lg:size-10 lg:rounded-2xl">
+                <ShieldCheck className="size-4 text-coral-500 lg:size-5" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-forest-900 lg:text-sm">Direct University Tie-ups</h4>
+                <p className="mt-0.5 text-[11px] text-forest-900/65 lg:text-xs">Official representation across Canada, UK &amp; Australia.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-forest-50 text-forest-900 lg:size-10 lg:rounded-2xl">
+                <Zap className="size-4 text-coral-500 lg:size-5" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-forest-900 lg:text-sm">100% Transparent Process</h4>
+                <p className="mt-0.5 text-[11px] text-forest-900/65 lg:text-xs">No hidden charges, direct fee payment to colleges.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-forest-50 text-forest-900 lg:size-10 lg:rounded-2xl">
+                <HeartHandshake className="size-4 text-coral-500 lg:size-5" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-forest-900 lg:text-sm">Pre-Visa &amp; Post-Arrival</h4>
+                <p className="mt-0.5 text-[11px] text-forest-900/65 lg:text-xs">Assistance with accommodation, forex &amp; airport pickup.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* STICKY JUMP BAR */}
+      <div ref={jumpWrapRef} style={isSticky ? { height: `${jumpHeight}px` } : undefined} className="min-h-[46px] lg:min-h-[52px]">
+        <div
+          ref={jumpBarRef}
+          style={isSticky ? { top: `${headerOffset}px` } : undefined}
+          className={`${isSticky ? 'fixed left-0 right-0 z-40 shadow-xl bg-forest-950/95 backdrop-blur-md' : 'relative bg-forest-950'} overflow-x-auto border-y border-white/10 px-4 py-2.5 text-white scrollbar-none lg:overflow-visible`}
+        >
+          <div className="mx-auto flex w-max items-center gap-2.5 lg:w-full lg:max-w-7xl lg:flex-wrap lg:justify-between lg:gap-x-4 lg:gap-y-2 lg:px-2">
+            <span className="shrink-0 font-mono text-[10px] font-bold uppercase tracking-wider text-coral-400 lg:text-[11px] lg:tracking-widest">JUMP TO:</span>
+            <div className="flex items-center gap-2.5 lg:flex-wrap lg:justify-center lg:gap-x-5 lg:gap-y-1">
+              {visibleJumpSections.map((section) => (
+                <a
+                  key={section.id}
+                  href={`#${section.id}`}
+                  className="shrink-0 whitespace-nowrap rounded-full border border-white/20 bg-forest-900 px-3.5 py-1 text-xs font-semibold text-white shadow-sm transition hover:text-coral-400 active:bg-coral-500 lg:rounded-none lg:border-0 lg:bg-transparent lg:px-0 lg:py-0 lg:shadow-none xl:text-sm"
+                >
+                  {section.icon} <span className="lg:hidden">{section.mobileLabel}</span><span className="hidden lg:inline">{section.desktopLabel}</span>
+                </a>
+              ))}
+            </div>
+            <a href="#enquiry" className="shrink-0 whitespace-nowrap rounded-full bg-coral-500 px-3.5 py-1 text-xs font-bold text-white shadow-md transition hover:bg-coral-600 lg:px-5 lg:py-2">
+              Free Enquiry →
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* OBSIDIAN KINETIC APPROVALS MARQUEE */}
+      {settings.approvalsMarqueeEnabled && homepageApprovals.length > 0 && (
+        <section className="marquee-pause overflow-hidden border-b border-white/10 bg-forest-950 py-3.5 text-white lg:py-4">
+          <div className="flex w-max animate-marquee gap-8 whitespace-nowrap font-display text-sm font-bold lg:gap-10 lg:text-base">
+            {[...homepageApprovals, ...homepageApprovals].map((a, i) => (
+              <span key={`${a.name}-${a.date}-${i}`} className="inline-flex items-center gap-2.5 lg:gap-3">
+                <CountryFlag
+                  flag={a.flag}
+                  country={a.country}
+                  className="h-[16px] w-[24px] shrink-0 rounded-[2px] ring-1 ring-white/20 lg:h-[18px] lg:w-[27px]"
+                />
+                <span className="text-white">{a.name}</span>
+                <span className="rounded-full border border-white/15 bg-white/[0.06] px-2.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide text-amber-200 lg:text-xs">
+                  {a.visa} Approved
+                </span>
+                <span aria-hidden="true" className="text-coral-400/70">✦</span>
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* SERVICES — ASYMMETRIC AWWWARDS BENTO GRID */}
       <section id="services" className="scroll-mt-36 lg:scroll-mt-44 border-b border-forest-900/10 bg-white px-5 py-20 lg:border-0 lg:bg-transparent lg:py-24">
         <div className="mx-auto max-w-7xl lg:px-1">
           <div data-reveal="" className="mb-8 flex items-end justify-between gap-4 lg:mb-12">
@@ -636,7 +771,7 @@ function Home() {
         <BoardingPassGenerator />
       </Suspense>
 
-           {/* COACHING — DUAL FLOATING GLASS PILLS */}
+      {/* COACHING — DUAL FLOATING GLASS PILLS */}
       <section id="coaching" className="scroll-mt-36 lg:scroll-mt-44 mx-auto grid max-w-7xl items-center gap-8 px-5 py-20 lg:grid-cols-2 lg:gap-14 lg:px-6 lg:py-24">
         <div data-reveal="" className="relative">
           <img
@@ -783,7 +918,7 @@ function Home() {
         </div>
       </section>
 
-           {/* FAQ + ENQUIRY — SMOOTH ACCORDION & CONCIERGE LOUNGE */}
+      {/* FAQ + ENQUIRY — SMOOTH ACCORDION & CONCIERGE LOUNGE */}
       <section id="enquiry" className="scroll-mt-36 lg:scroll-mt-44 mx-auto grid max-w-7xl gap-10 px-5 pb-32 sm:pb-24 lg:grid-cols-[1fr_1.1fr] lg:gap-12 lg:px-6 lg:pb-28">
         <div data-reveal="">
           <Eyebrow>FAQs</Eyebrow>
