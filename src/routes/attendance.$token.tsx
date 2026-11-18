@@ -30,6 +30,17 @@ function distanceMeters(lat1: number, lng1: number, lat2: number, lng2: number) 
   return Math.round(6_371_000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)))
 }
 
+function currentIstDate(): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date())
+  const get = (type: string) => parts.find((item) => item.type === type)?.value ?? ''
+  return `${get('year')}-${get('month')}-${get('day')}`
+}
+
 const fmtIstTime = (iso: string) =>
   iso ? new Date(iso).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '—'
 
@@ -91,6 +102,11 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
   const { employee, settings, todayIst, todayLog, recentLogs, summary, missedPreviousOutDate } = portal
   const hasCheckedIn = Boolean(todayLog?.checkInAt)
   const hasCheckedOut = Boolean(todayLog?.checkOutAt)
+  const isAdminLeaveOrAbsent = Boolean(
+    todayLog && !todayLog.checkInAt && ['Paid Leave', 'Unpaid Leave', 'Leave', 'Absent'].includes(todayLog.status),
+  )
+  const shouldRunCamera = settings.requireSelfie && !hasCheckedOut && !isAdminLeaveOrAbsent && !missedPreviousOutDate
+  const hasOpenBreak = Boolean(todayLog?.breaks?.some((b) => b.outAt && !b.inAt))
 
   useEffect(() => {
     setDeviceKey(getOrCreateDeviceKey())
@@ -106,7 +122,7 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
   }, [])
 
   const startCamera = useCallback(async () => {
-    if (!settings.requireSelfie || hasCheckedOut) return
+    if (!shouldRunCamera) return
     if (!navigator.mediaDevices?.getUserMedia) {
       setCameraState('error')
       setCameraError('Live camera is not supported on this browser.')
@@ -127,7 +143,7 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
       setCameraState('error')
       setCameraError('Camera permission denied. Allow front camera access to mark attendance.')
     }
-  }, [hasCheckedOut, settings.requireSelfie, stopCamera])
+  }, [shouldRunCamera, stopCamera])
 
   useEffect(() => {
     if (cameraState === 'ready' && videoRef.current && streamRef.current) {
@@ -137,9 +153,32 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
   }, [cameraState])
 
   useEffect(() => {
-    if (settings.requireSelfie && !hasCheckedOut) void startCamera()
+    if (shouldRunCamera) void startCamera()
+    else stopCamera()
     return () => stopCamera()
-  }, [hasCheckedOut, settings.requireSelfie, startCamera, stopCamera])
+  }, [shouldRunCamera, startCamera, stopCamera])
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return
+      if (currentIstDate() !== todayIst) {
+        void getEmployeePortalData({ data: { token } })
+          .then((refreshed) => {
+            setPortal(refreshed)
+            setStatusMsg(null)
+          })
+          .catch(() => undefined)
+        return
+      }
+      if (shouldRunCamera) {
+        const tracks = streamRef.current?.getVideoTracks() ?? []
+        const trackAlive = tracks.length > 0 && tracks.every((t) => t.readyState === 'live')
+        if (!trackAlive) void startCamera()
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [shouldRunCamera, startCamera, todayIst, token])
 
   const fetchLocation = useCallback((): Promise<{ lat: number; lng: number; accuracyM: number }> => {
     return new Promise((resolve, reject) => {
@@ -180,11 +219,13 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
   async function captureLiveSelfie(): Promise<string> {
     if (!settings.requireSelfie) return ''
     const video = videoRef.current
-    if (!video || !streamRef.current || video.videoWidth < 100) {
-      throw new Error('Front camera is not ready. Tap Restart Camera and look into the frame.')
+    const tracks = streamRef.current?.getVideoTracks() ?? []
+    const trackAlive = tracks.length > 0 && tracks.every((t) => t.readyState === 'live')
+    if (!video || !streamRef.current || !trackAlive || video.videoWidth < 100) {
+      throw new Error('Front camera paused or not ready. Tap Restart Camera and look into the frame.')
     }
     await checkFaceBlink(video, setStepLabel)
-   const canvas = document.createElement('canvas')
+    const canvas = document.createElement('canvas')
     const scale = Math.min(1, 360 / Math.max(video.videoWidth, video.videoHeight))
     const w = Math.max(160, Math.round(video.videoWidth * scale))
     const h = Math.max(160, Math.round(video.videoHeight * scale))
@@ -203,9 +244,13 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
     return dataUrl.split(',')[1] ?? ''
   }
 
-  const hasOpenBreak = Boolean(todayLog?.breaks?.some((b) => b.outAt && !b.inAt))
-
   async function submitAction(action: 'in' | 'out' | 'half_out' | 'break_out' | 'break_in') {
+    if ((action === 'out' || action === 'half_out') && hasOpenBreak) {
+      const proceed = window.confirm(
+        'You are currently stepped out on a break. Are you sure you want to end your shift for today? Tap Cancel if you meant "Back in Office".',
+      )
+      if (!proceed) return
+    }
     setBusy(true)
     setStatusMsg(null)
     try {
@@ -297,7 +342,7 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
             <div className="rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-3"><p className="text-[11px] font-medium text-[#667085]">Today Check Out</p><p className="mt-1 text-lg font-bold text-[#1D2939]">{fmtIstTime(todayLog?.checkOutAt ?? '')}</p></div>
           </div>
 
-          {settings.requireSelfie && !hasCheckedOut && (
+          {shouldRunCamera && (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="inline-flex items-center gap-1.5 font-semibold text-[#1D2939]"><Camera className="size-3.5 text-[#465FFF]" /> Camera Selfie</span>
@@ -320,14 +365,18 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
             </p>
           )}
 
-          {!hasCheckedOut && employee.hasPin && (
+          {!hasCheckedOut && !isAdminLeaveOrAbsent && employee.hasPin && (
             <label className="block">
               <span className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-[#1D2939]"><Lock className="size-3.5 text-[#465FFF]" /> Enter PIN</span>
               <input type="password" inputMode="numeric" maxLength={8} value={pin} onChange={(e) => setPin(e.currentTarget.value.replace(/\D/g, ''))} placeholder="4-digit PIN" className="field" />
             </label>
           )}
 
-         {!hasCheckedIn ? (
+          {isAdminLeaveOrAbsent ? (
+            <div className={`rounded-xl p-4 text-center text-sm font-bold ${todayLog?.status === 'Paid Leave' ? 'bg-[#ECFDF3] text-[#12B76A]' : todayLog?.status === 'Absent' ? 'bg-[#FEF3F2] text-[#F04438]' : 'bg-[#FFFAEB] text-[#F79009]'}`}>
+              Today is marked as {todayLog?.status} by Admin. Contact admin if this needs to be changed.
+            </div>
+          ) : !hasCheckedIn ? (
             <button type="button" disabled={Boolean(missedPreviousOutDate) || busy || gpsState !== 'ready' || (settings.requireSelfie && cameraState !== 'ready') || (employee.hasPin && pin.length < 4)} onClick={() => void submitAction('in')} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#465FFF] px-5 py-3 text-sm font-bold text-white shadow-xs disabled:opacity-50">
               <CheckCircle2 className="size-4" /> {busy ? stepLabel || 'Marking…' : 'Mark Check In'}
             </button>
@@ -388,12 +437,24 @@ function EmployeeAttendanceView({ initial, token }: { initial: PortalSuccess; to
             <section className="rounded-2xl border border-[#E4E7EC] bg-white p-5 shadow-xs">
               <h2 className="text-sm font-bold text-[#1D2939]">Recent Days</h2>
               <div className="mt-3 divide-y divide-[#E4E7EC] text-xs">
-                {recentLogs.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between gap-3 py-2.5">
-                    <div><p className="font-semibold text-[#1D2939]">{item.workDate}</p><p className="text-[#667085]">In {fmtIstTime(item.checkInAt)} · Out {fmtIstTime(item.checkOutAt)}</p></div>
-                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${item.status === 'Present' ? 'bg-[#ECFDF3] text-[#12B76A]' : item.status === 'Half Day' ? 'bg-[#FFFAEB] text-[#F79009]' : 'bg-[#FEF3F2] text-[#F04438]'}`}>{item.status}</span>
-                  </div>
-                ))}
+                {recentLogs.map((item) => {
+                  const isMissingOut = Boolean(item.checkInAt && !item.checkOutAt && item.workDate < todayIst)
+                  const isInProgress = Boolean(item.checkInAt && !item.checkOutAt && item.workDate === todayIst)
+                  const badgeText = isMissingOut ? 'Missing OUT' : isInProgress ? 'In Progress' : item.status
+                  const badgeClass = isMissingOut
+                    ? 'bg-[#FEF3F2] text-[#F04438]'
+                    : isInProgress || item.status === 'Half Day'
+                      ? 'bg-[#FFFAEB] text-[#F79009]'
+                      : item.status === 'Present' || item.status === 'Paid Leave'
+                        ? 'bg-[#ECFDF3] text-[#12B76A]'
+                        : 'bg-[#FEF3F2] text-[#F04438]'
+                  return (
+                    <div key={item.id} className="flex items-center justify-between gap-3 py-2.5">
+                      <div><p className="font-semibold text-[#1D2939]">{item.workDate}</p><p className="text-[#667085]">In {fmtIstTime(item.checkInAt)} · Out {fmtIstTime(item.checkOutAt)}</p></div>
+                      <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${badgeClass}`}>{badgeText}</span>
+                    </div>
+                  )
+                })}
                 {recentLogs.length === 0 && <p className="py-4 text-center text-[#667085]">No logs yet.</p>}
               </div>
             </section>
