@@ -1343,7 +1343,7 @@ export const posts: Post[] = [
       'Because Australian post-study work durations, age limits, and regional definitions are updated periodically by the Department of Home Affairs, always confirm the current rules for your exact course and campus before locking your offer.',
     ],
   },
-
+]
 export const coachingCourses = [
   {
     test: 'IELTS',
