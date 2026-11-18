@@ -1,4 +1,4 @@
-import type { CertificateCategory, CertificateSeed } from '@/lib/content-types'
+import type { CertificateSeed } from '@/lib/content-types'
 export const defaultCertificates: CertificateSeed[] = [
   {
     slug: 'unizportal-representation',
