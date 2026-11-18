@@ -43,7 +43,7 @@ async function seed(poolInstance: Pool) {
   if (settingsRows.length === 0) {
     await poolInstance.query(
       `INSERT INTO site_settings (id, popup_enabled, popup_delay_seconds, whatsapp_enabled, approvals_marquee_enabled)
-       VALUES (1, 1, 8, 1, 1)`,
+       VALUES (1, 1, 25, 1, 1)`,
     )
   }
 
@@ -135,7 +135,7 @@ export async function getDb() {
         CREATE TABLE IF NOT EXISTS site_settings (
           id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
           popup_enabled BOOLEAN NOT NULL DEFAULT TRUE,
-          popup_delay_seconds INT UNSIGNED NOT NULL DEFAULT 8,
+          popup_delay_seconds INT UNSIGNED NOT NULL DEFAULT 25,
           whatsapp_enabled BOOLEAN NOT NULL DEFAULT TRUE,
           approvals_marquee_enabled BOOLEAN NOT NULL DEFAULT TRUE,
           cashflow_json LONGTEXT NULL,

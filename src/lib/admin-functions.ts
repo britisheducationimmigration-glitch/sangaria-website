@@ -3,7 +3,7 @@ import { createMiddleware, createServerFn } from '@tanstack/react-start'
 import { databaseTransaction, execute, jsonArray, queryRows } from './db.server'
 import type { AdminCertificate, AdminPost, AdminRole, AdminSnapshot, AdminStory, CoachingBatch, Enquiry, EnquiryActivity, EnquiryStatus } from './content-types'
 import { Buffer } from 'node:buffer'
-import { asFaqList, asTrustStatList, readSiteSettings } from './site-settings'
+import { readSiteSettings } from './site-settings'
 import { parseCashflowJson, type CountryCashflow } from '@/data/cashflow'
 import { policyWatchItems, type PolicyNotice } from '@/data/policy-watch'
 import { readPolicyWatchState, scanOfficialPolicySources, mutatePolicyWatchState } from './policy-watch.server'
@@ -160,40 +160,44 @@ export const savePolicyNotice = createServerFn({ method: 'POST' }).middleware([a
     const countryPages = await getPublicCountryCatalog()
     if (!countryPages.some((entry) => entry.country.slug === data.countrySlug)) throw new Error('Choose a published destination')
   }
-  return mutatePolicyWatchState(state => {
-  const id = data.id || 'notice-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8)
-  const previous = state.notices.find((item) => item.id === id)
-  const notice: PolicyNotice = {
-    ...previous,
-    ...data,
-    id,
-    status: data.status,
-    sourceVerified: data.status === 'published' && data.sourceVerified,
-    guidanceUpdatedAt: previous?.guidanceUpdatedAt,
-    guidanceUpdatedBy: previous?.guidanceUpdatedBy,
-    sourceItemId: previous?.sourceItemId,
-  }
-  const index = state.notices.findIndex((item) => item.id === id)
-  if (index < 0) state.notices.unshift(notice)
-  else state.notices[index] = notice
-  return notice
+   const saved = await mutatePolicyWatchState(state => {
+    const id = data.id || 'notice-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8)
+    const previous = state.notices.find((item) => item.id === id)
+    const notice: PolicyNotice = {
+      ...previous,
+      ...data,
+      id,
+      status: data.status,
+      sourceVerified: data.status === 'published' && data.sourceVerified,
+      guidanceUpdatedAt: previous?.guidanceUpdatedAt,
+      guidanceUpdatedBy: previous?.guidanceUpdatedBy,
+      sourceItemId: previous?.sourceItemId,
+    }
+    const index = state.notices.findIndex((item) => item.id === id)
+    if (index < 0) state.notices.unshift(notice)
+    else state.notices[index] = notice
+    return notice
   })
+  invalidatePublicContentCache()
+  return saved
 })
 
 export const deletePolicyNotice = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => ({
   id: stringValue((data as Record<string, unknown>)?.id, 120),
 })).handler(async ({ data, context }) => {
   if (context.role !== 'super_admin') throw new Error('Only a super admin can remove policy notices')
-  return mutatePolicyWatchState(state => {
-  state.notices = state.notices.filter((item) => item.id !== data.id)
-  for (const review of Object.values(state.reviews)) {
-    if (review.pendingDraftId === data.id) {
-      review.sourceChangePending = false
-      delete review.pendingDraftId
+  const result = await mutatePolicyWatchState(state => {
+    state.notices = state.notices.filter((item) => item.id !== data.id)
+    for (const review of Object.values(state.reviews)) {
+      if (review.pendingDraftId === data.id) {
+        review.sourceChangePending = false
+        delete review.pendingDraftId
+      }
     }
-  }
-  return { ok: true }
+    return { ok: true }
   })
+  invalidatePublicContentCache()
+  return result
 })
 
 export const markPolicySourceReview = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
@@ -744,24 +748,21 @@ export const deleteCertificate = createServerFn({ method: 'POST' })
 
 export const updateSettings = createServerFn({ method: 'POST' }).middleware([adminMiddleware]).validator((data: unknown) => {
   const input = (data ?? {}) as Record<string, unknown>
-  const phones = Array.isArray(input.phones) ? input.phones.map((item) => stringValue(item, 24)).filter(Boolean).slice(0, 3) : []
-  const emails = Array.isArray(input.emails) ? input.emails.map((item) => stringValue(item, 190).toLowerCase()).filter(Boolean).slice(0, 3) : []
-  const officeHours = stringValue(input.officeHours, 120)
-  const faqs = asFaqList(input.faqs).map((item) => ({ q: stringValue(item.q, 220), a: stringValue(item.a, 1200) })).filter((item) => item.q && item.a).slice(0, 20)
-  const trustStats = asTrustStatList(input.trustStats).map((item) => ({ value: stringValue(item.value, 40), label: stringValue(item.label, 80) })).filter((item) => item.value && item.label).slice(0, 6)
-  if (!phones.length || phones.some((phone) => !/^[0-9+() -]{7,24}$/.test(phone))) throw new Error('Add at least one valid phone number.')
-  if (!emails.length || emails.some((email) => !/^\S+@\S+\.\S+$/.test(email))) throw new Error('Add at least one valid email address.')
-  if (!officeHours) throw new Error('Office hours cannot be empty.')
-  if (!faqs.length || !trustStats.length) throw new Error('Keep at least one FAQ and one homepage trust statistic.')
-  const publicSettings = { phones, emails, officeHours, faqs, trustStats }
-  return { popupEnabled: Boolean(input.popupEnabled), popupDelaySeconds: Math.min(60, Math.max(3, numberValue(input.popupDelaySeconds, 8))), whatsappEnabled: Boolean(input.whatsappEnabled), approvalsMarqueeEnabled: Boolean(input.approvalsMarqueeEnabled), publicSettingsJson: JSON.stringify(publicSettings) }
+  return {
+    popupEnabled: Boolean(input.popupEnabled),
+    popupDelaySeconds: Math.min(60, Math.max(3, numberValue(input.popupDelaySeconds, 25))),
+    whatsappEnabled: Boolean(input.whatsappEnabled),
+    approvalsMarqueeEnabled: Boolean(input.approvalsMarqueeEnabled),
+  }
 }).handler(async ({ data, context }) => {
   assertCapability(context.role, 'settings')
-  await execute('UPDATE site_settings SET popup_enabled = ?, popup_delay_seconds = ?, whatsapp_enabled = ?, approvals_marquee_enabled = ?, public_settings_json = ? WHERE id = 1', [data.popupEnabled ? 1 : 0, data.popupDelaySeconds, data.whatsappEnabled ? 1 : 0, data.approvalsMarqueeEnabled ? 1 : 0, data.publicSettingsJson])
+  await execute(
+    'UPDATE site_settings SET popup_enabled = ?, popup_delay_seconds = ?, whatsapp_enabled = ?, approvals_marquee_enabled = ? WHERE id = 1',
+    [data.popupEnabled ? 1 : 0, data.popupDelaySeconds, data.whatsappEnabled ? 1 : 0, data.approvalsMarqueeEnabled ? 1 : 0],
+  )
   invalidatePublicContentCache()
   return { ok: true }
 })
-
 async function mutatePublicSiteSettings<T>(
   mutate: (current: ReturnType<typeof readSiteSettings>) => {
     next: Pick<ReturnType<typeof readSiteSettings>, 'phones' | 'emails' | 'officeHours' | 'faqs' | 'trustStats'>

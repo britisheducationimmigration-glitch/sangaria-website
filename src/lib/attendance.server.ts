@@ -342,7 +342,10 @@ export function parseBreaksJson(value: unknown): AttendanceBreakRecord[] {
 export async function autoCloseOpenCheckIns() {
   await ensureAttendanceSchema()
   const today = todayIstDate()
-  const rows = await queryRows("SELECT id, out_flags_json FROM attendance_logs WHERE check_in_at IS NOT NULL AND check_out_at IS NULL AND work_date < ?", [today])
+  const rows = await queryRows(
+    "SELECT id, out_flags_json FROM attendance_logs WHERE check_in_at IS NOT NULL AND check_out_at IS NULL AND work_date < ? AND (out_flags_json IS NULL OR out_flags_json NOT LIKE '%MISSING_OUT_REVIEW_REQUIRED%')",
+    [today],
+  )
   for (const row of rows) {
     const flags = parseFlags(row.out_flags_json)
     if (!flags.includes('MISSING_OUT_REVIEW_REQUIRED')) await execute('UPDATE attendance_logs SET out_flags_json = ?, work_minutes = 0 WHERE id = ? AND check_out_at IS NULL', [JSON.stringify([...flags, 'MISSING_OUT_REVIEW_REQUIRED']), Number(row.id)])

@@ -928,15 +928,18 @@ async function buildEmployeeRangeReport(data: ReturnType<typeof rangeReportInput
   const logs=logRows.map(row=>mapAttendanceRow(row))
   const snapshots=await queryRows('SELECT cycle_start_date, cycle_end_date, snapshot_json FROM attendance_cycle_snapshots WHERE employee_id=?',[employee.id])
   const slipRows = await queryRows("SELECT slip_number, cycle_start_date, cycle_end_date, snapshot_json, created_at FROM salary_slips WHERE employee_id = ? AND status = 'issued'", [employee.id])
-  // A slip is the audited source for its adjustments. Voiding it removes those
+   // A slip is the audited source for its adjustments. Voiding it removes those
   // adjustments; actual salary payments remain independent cash records.
-  const adjustments = slipRows.map(row => {
+  const adjustments = slipRows.flatMap((row) => {
     const saved = JSON.parse(String(row.snapshot_json)) as SalarySlipSnapshot
+    if (saved.manual) return []
+    const amount = Math.round((saved.netPay - saved.earnedSalary) * 100) / 100
+    if (amount === 0) return []
     const issuedOn = saved.adjustmentDate || new Date(String(row.created_at)).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
     const start = String(row.cycle_start_date), end = String(row.cycle_end_date)
     const date = issuedOn < start ? start : issuedOn > end ? end : issuedOn
-    return { slipNumber: String(row.slip_number), date, amount: Math.round((saved.netPay - saved.earnedSalary) * 100) / 100 }
-  }).filter((item, index) => item.amount !== 0 && !(JSON.parse(String(slipRows[index].snapshot_json)) as SalarySlipSnapshot).manual)
+    return [{ slipNumber: String(row.slip_number), date, amount }]
+  })
   const calculate=(from:string,to:string,includeDays:boolean) => {
     const report=buildPayrollRange(employee,logs,policies,from,to,todayIstDate(),includeDays)
     let partialFinalized=false
