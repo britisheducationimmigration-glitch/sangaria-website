@@ -171,14 +171,7 @@ function CountUpStat({ value }: { value: string }) {
   return <span ref={ref}>{display}</span>
 }
 
-const homeJumpSections = [
-  { id: 'services', icon: '✈️', desktopLabel: 'Services', mobileLabel: 'Services' },
-  { id: 'destinations', icon: '🌍', desktopLabel: 'Countries', mobileLabel: 'Countries' },
-  { id: 'approvals', icon: '🎉', desktopLabel: 'Recent Visas', mobileLabel: 'Visas' },
-  { id: 'certificates', icon: '🏅', desktopLabel: 'Certificates', mobileLabel: 'Certificates' },
-  { id: 'coaching', icon: '📚', desktopLabel: 'IELTS & PTE', mobileLabel: 'IELTS & PTE' },
-  { id: 'reviews', icon: '⭐', desktopLabel: 'Reviews', mobileLabel: 'Reviews' },
-] as const
+
 
 function Home() {
   const { approvals, posts, testimonials, certificates, settings, cashflow } = Route.useLoaderData()
@@ -192,44 +185,14 @@ function Home() {
   const [showAllTestimonials, setShowAllTestimonials] = useState(false)
   const [openFaq, setOpenFaq] = useState<number | null>(0)
 
-  const [isSticky, setIsSticky] = useState(false)
-  const [headerOffset, setHeaderOffset] = useState(68)
-  const [jumpHeight, setJumpHeight] = useState(50)
-  const jumpWrapRef = useRef<HTMLDivElement>(null)
-  const jumpBarRef = useRef<HTMLDivElement>(null)
+  
+  
+  
   const pageRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const headerEl = document.getElementById('site-main-header')
-      const h = headerEl ? headerEl.offsetHeight : 68
-      setHeaderOffset(h)
-      if (jumpWrapRef.current) {
-        setIsSticky(jumpWrapRef.current.getBoundingClientRect().top <= h)
-      }
-    }
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    window.addEventListener('resize', handleScroll)
-    handleScroll()
-    return () => {
-      window.removeEventListener('scroll', handleScroll)
-      window.removeEventListener('resize', handleScroll)
-    }
-  }, [])
 
-  useEffect(() => {
-    const bar = jumpBarRef.current
-    if (!bar) return
-    const measure = () => setJumpHeight(Math.max(46, Math.ceil(bar.getBoundingClientRect().height)))
-    measure()
-    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure)
-    observer?.observe(bar)
-    window.addEventListener('resize', measure)
-    return () => {
-      observer?.disconnect()
-      window.removeEventListener('resize', measure)
-    }
-  }, [])
+
+
 
   useEffect(() => {
     const root = pageRef.current
@@ -258,12 +221,7 @@ function Home() {
     return () => observer.disconnect()
   }, [])
 
-  const visibleJumpSections = homeJumpSections.filter((section) => {
-    if (section.id === 'approvals') return homepageApprovals.length > 0
-    if (section.id === 'certificates') return certificates.some((certificate) => certificate.published && certificate.homepageFeatured)
-    if (section.id === 'reviews') return homepageTestimonials.length > 0
-    return true
-  })
+
 
   const visibleTestimonials = showAllTestimonials ? homepageTestimonials : homepageTestimonials.slice(0, 3)
   const selectedCountryObj = countries.find((c) => c.slug === selectedCountry)
@@ -543,33 +501,6 @@ function Home() {
         </div>
       </section>
 
-      {/* STICKY JUMP BAR */}
-      <div ref={jumpWrapRef} style={isSticky ? { height: `${jumpHeight}px` } : undefined} className="min-h-[46px] lg:min-h-[52px]">
-        <div
-          ref={jumpBarRef}
-          style={isSticky ? { top: `${headerOffset}px` } : undefined}
-          className={`${isSticky ? 'fixed left-0 right-0 z-40 shadow-xl bg-forest-950/95 backdrop-blur-md' : 'relative bg-forest-950'} overflow-x-auto border-y border-white/10 px-4 py-2.5 text-white scrollbar-none lg:overflow-visible`}
-        >
-          <div className="mx-auto flex w-max items-center gap-2.5 lg:w-full lg:max-w-7xl lg:flex-wrap lg:justify-between lg:gap-x-4 lg:gap-y-2 lg:px-2">
-            <span className="shrink-0 font-mono text-[10px] font-bold uppercase tracking-wider text-coral-400 lg:text-[11px] lg:tracking-widest">JUMP TO:</span>
-            <div className="flex items-center gap-2.5 lg:flex-wrap lg:justify-center lg:gap-x-5 lg:gap-y-1">
-              {visibleJumpSections.map((section) => (
-                <a
-                  key={section.id}
-                  href={`#${section.id}`}
-                  className="shrink-0 whitespace-nowrap rounded-full border border-white/20 bg-forest-900 px-3.5 py-1 text-xs font-semibold text-white shadow-sm transition hover:text-coral-400 active:bg-coral-500 lg:rounded-none lg:border-0 lg:bg-transparent lg:px-0 lg:py-0 lg:shadow-none xl:text-sm"
-                >
-                  {section.icon} <span className="lg:hidden">{section.mobileLabel}</span><span className="hidden lg:inline">{section.desktopLabel}</span>
-                </a>
-              ))}
-            </div>
-            <a href="#enquiry" className="shrink-0 whitespace-nowrap rounded-full bg-coral-500 px-3.5 py-1 text-xs font-bold text-white shadow-md transition hover:bg-coral-600 lg:px-5 lg:py-2">
-              Free Enquiry →
-            </a>
-          </div>
-        </div>
-      </div>
-
       {/* OBSIDIAN KINETIC APPROVALS MARQUEE */}
       {settings.approvalsMarqueeEnabled && homepageApprovals.length > 0 && (
         <section className="marquee-pause overflow-hidden border-b border-white/10 bg-forest-950 py-3.5 text-white lg:py-4">
@@ -691,31 +622,31 @@ function Home() {
         </div>
       </section>
 
-      {/* DESTINATIONS — SWIPE-SNAP PASSPORT CARDS ON MOBILE + EDITORIAL GRID ON PC */}
-      <section id="destinations" className="scroll-mt-36 lg:scroll-mt-44 border-b border-forest-900/10 bg-sand/60 bg-dots px-5 py-20 lg:border-0 lg:py-24">
+      {/* DESTINATIONS — CLEAN 2-COL MOBILE GRID + 4-COL PC GRID */}
+      <section id="destinations" className="scroll-mt-24 border-b border-forest-900/10 bg-sand/60 bg-dots px-5 py-16 lg:border-0 lg:py-24">
         <div data-reveal="" className="mx-auto max-w-7xl lg:px-1">
           <div className="mb-6 flex flex-wrap items-end justify-between gap-3 lg:mb-12">
             <div>
               <Eyebrow>Destinations</Eyebrow>
               <h2 className="mt-2 max-w-3xl text-2xl font-extrabold text-forest-900 lg:mt-4 lg:text-5xl">Choose where your next chapter begins.</h2>
-              <p className="mt-2 text-xs text-forest-900/70 lg:hidden">Explore listed study destinations or ask us about others. Europe / Schengen is visitor guidance.</p>
+              <p className="mt-2 text-xs text-forest-900/70">Explore top study destinations or ask us for personal guidance.</p>
             </div>
-            <span className="inline-flex items-center gap-1 rounded-full border border-forest-900/15 bg-white px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-forest-900/70 lg:hidden">
-              Swipe cards →
-            </span>
+            <Link to="/countries" className="hidden text-xs font-bold text-coral-600 hover:underline lg:inline-block lg:text-base">
+              All destination guides →
+            </Link>
           </div>
-          <div className="mobile-snap-row -mx-5 flex snap-x snap-mandatory gap-3.5 overflow-x-auto px-5 pb-3 lg:mx-0 lg:grid lg:grid-cols-4 lg:gap-6 lg:overflow-visible lg:px-0 lg:pb-0">
+          <div className="grid grid-cols-2 gap-3.5 sm:gap-4 lg:grid-cols-4 lg:gap-6">
             {countries.map((c) => (
               <Link
                 key={c.slug}
                 to="/countries/$slug"
                 params={{ slug: c.slug }}
-                className="group relative flex w-[76vw] max-w-[290px] shrink-0 snap-center flex-col justify-between overflow-hidden rounded-3xl border border-forest-900/10 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:bg-forest-900 hover:text-white hover:shadow-xl active:scale-[0.98] lg:w-auto lg:max-w-none lg:rounded-[2.25rem] lg:border-0 lg:bg-cream lg:p-6 lg:ring-1 lg:ring-forest-900/10"
+                className="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-forest-900/10 bg-white p-4 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:bg-forest-900 hover:text-white hover:shadow-xl active:scale-[0.98] sm:p-5 lg:rounded-[2.25rem] lg:border-0 lg:bg-cream lg:p-6 lg:ring-1 lg:ring-forest-900/10"
               >
                 {/* Background Outline Country Code */}
                 <span
                   aria-hidden="true"
-                  className="pointer-events-none absolute top-3 right-4 font-mono text-5xl font-black text-forest-900/[0.05] transition-colors group-hover:text-white/[0.08] select-none lg:text-6xl"
+                  className="pointer-events-none absolute top-3 right-4 font-mono text-4xl font-black text-forest-900/[0.05] transition-colors group-hover:text-white/[0.08] select-none lg:text-6xl"
                 >
                   {c.code}
                 </span>
@@ -725,35 +656,35 @@ function Home() {
                       code={c.code}
                       flag={c.flag}
                       country={c.name}
-                      className="h-7 w-10 shrink-0 rounded-md shadow-sm transition-transform duration-300 group-hover:scale-110 lg:h-8 lg:w-12"
+                      className="h-6 w-9 shrink-0 rounded-md shadow-sm transition-transform duration-300 group-hover:scale-110 sm:h-7 sm:w-10 lg:h-8 lg:w-12"
                     />
-                    <span className="rounded-full bg-forest-50 px-2.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-forest-800/70 transition-colors group-hover:bg-white/15 group-hover:!text-white/90">
+                    <span className="rounded-full bg-forest-50 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-forest-800/70 transition-colors group-hover:bg-white/15 group-hover:!text-white/90 sm:px-2.5 sm:text-[10px]">
                       {c.code}
                     </span>
                   </div>
-                  <h3 className="mt-4 text-lg font-extrabold leading-tight text-forest-900 group-hover:!text-white lg:mt-6 lg:text-2xl">{c.name}</h3>
-                  <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-forest-900/65 group-hover:!text-white/80 lg:line-clamp-none lg:text-sm lg:text-forest-900/70">{c.headline}</p>
+                  <h3 className="mt-3 text-base font-extrabold leading-tight text-forest-900 group-hover:!text-white sm:text-lg lg:mt-6 lg:text-2xl">{c.name}</h3>
+                  <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-forest-900/65 group-hover:!text-white/80 lg:line-clamp-none lg:text-sm lg:text-forest-900/70">{c.headline}</p>
                 </div>
-                <div className="mt-4 flex items-end justify-between border-t border-dashed border-forest-900/15 pt-3 text-xs group-hover:border-white/20 lg:mt-5 lg:pt-4 lg:text-sm">
-                  <span className="text-forest-900 group-hover:!text-white font-mono text-[11px]">
-                    <span className="block text-[9px] uppercase tracking-widest text-forest-900/55 group-hover:!text-white/60">{c.stats[0]?.label}</span>
+                <div className="mt-3 flex items-end justify-between border-t border-dashed border-forest-900/15 pt-2.5 text-xs group-hover:border-white/20 sm:mt-4 sm:pt-3 lg:mt-5 lg:pt-4 lg:text-sm">
+                  <span className="text-forest-900 group-hover:!text-white font-mono text-[10px] sm:text-[11px]">
+                    <span className="block text-[8px] uppercase tracking-widest text-forest-900/55 group-hover:!text-white/60 sm:text-[9px]">{c.stats[0]?.label}</span>
                     <span className="font-bold text-coral-600 group-hover:!text-amber-200 lg:text-forest-900 lg:group-hover:!text-amber-200">{c.stats[0]?.value}</span>
                   </span>
-                  <ArrowRight aria-hidden="true" className="size-4 text-coral-500 transition-transform duration-200 group-hover:translate-x-1 lg:size-5" />
+                  <ArrowRight aria-hidden="true" className="size-3.5 text-coral-500 transition-transform duration-200 group-hover:translate-x-1 lg:size-5" />
                 </div>
               </Link>
             ))}
-            <Link to="/eligibility" className="cta-shimmer flex w-[76vw] max-w-[290px] shrink-0 snap-center flex-col justify-between rounded-3xl bg-coral-500 p-5 text-white shadow-md transition-all duration-300 hover:-translate-y-1.5 hover:bg-coral-600 hover:shadow-xl active:scale-[0.98] lg:w-auto lg:max-w-none lg:rounded-[2.25rem] lg:p-6">
+            <Link to="/eligibility" className="cta-shimmer flex flex-col justify-between rounded-3xl bg-coral-500 p-4 text-white shadow-md transition-all duration-300 hover:-translate-y-1.5 hover:bg-coral-600 hover:shadow-xl active:scale-[0.98] sm:p-5 lg:rounded-[2.25rem] lg:p-6">
               <div>
-                <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-white/85">Not sure?</span>
-                <h3 className="mt-3 text-lg font-extrabold !text-white leading-tight lg:mt-6 lg:text-2xl">
-                  Find the country that fits your profile in 60 seconds →
+                <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-white/85 sm:text-[10px]">Not sure?</span>
+                <h3 className="mt-2 text-base font-extrabold !text-white leading-tight sm:text-lg lg:mt-6 lg:text-2xl">
+                  Find the country that fits your profile in 60s →
                 </h3>
-                <p className="mt-2 text-xs text-white/85 lg:hidden">Free 60-second profile assessment</p>
+                <p className="mt-1 text-xs text-white/85">Free quick evaluation</p>
               </div>
-              <div className="mt-4 flex items-center justify-between border-t border-white/20 pt-3 text-xs font-bold">
-                <span>Start free check</span>
-                <ArrowRight aria-hidden="true" className="size-4" />
+              <div className="mt-3 flex items-center justify-between border-t border-white/20 pt-2.5 text-xs font-bold sm:mt-4 sm:pt-3">
+                <span>Start check</span>
+                <ArrowRight aria-hidden="true" className="size-3.5 sm:size-4" />
               </div>
             </Link>
           </div>

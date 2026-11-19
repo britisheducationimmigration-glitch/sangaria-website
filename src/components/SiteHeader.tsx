@@ -247,29 +247,11 @@ export function SiteHeader({ settings }: { settings: SiteSettings }) {
               </Link>
             </nav>
 
-            <div className="mt-6 border-t border-white/10 pt-4 flex flex-col gap-2">
-              <div className="flex items-center justify-between text-xs text-forest-100/70">
-                <span className="flex items-center gap-1">
-                  <MapPin className="size-3 text-coral-400" /> Sangaria, Rajasthan
-                </span>
-                <span className="font-mono text-[11px]">{settings.officeHours}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 mt-1">
-                <a
-                  href={`tel:${(primaryPhone.startsWith('+') ? primaryPhone : '+91' + primaryPhone).replace(/[^\d+]/g, '')}`}
-                  className="flex items-center justify-center gap-1.5 rounded-xl border border-white/15 bg-white/5 py-2.5 text-xs font-bold text-white transition active:bg-white/20"
-                >
-                  <Phone className="size-3.5 text-coral-400" /> Call Office
-                </a>
-                <a
-                  href={`https://wa.me/${waPhone}?text=${encodeURIComponent('Hello British Education, I would like to enquire about study visas.')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600/90 py-2.5 text-xs font-bold text-white transition active:bg-emerald-700"
-                >
-                  <MessageCircle className="size-3.5" /> WhatsApp
-                </a>
-              </div>
+            <div className="mt-6 border-t border-white/10 pt-4 flex items-center justify-between text-xs text-forest-100/70">
+              <span className="flex items-center gap-1">
+                <MapPin className="size-3 text-coral-400" /> Sangaria, Rajasthan
+              </span>
+              <span className="font-mono text-[11px]">{settings.officeHours}</span>
             </div>
           </div>
         )}
