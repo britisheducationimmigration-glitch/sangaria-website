@@ -722,14 +722,16 @@ function formatFollowUpLabel(value: string) {
 }
 
 function EnquiriesPanel({ stats, query, setQuery, statusFilter, setStatusFilter, dateFrom, setDateFrom, dateTo, setDateTo, onReload, onNotice, canDelete, canManageComments }: { stats: AdminSnapshot['enquiryStats']; query: string; setQuery: (value: string) => void; statusFilter: EnquiryStatus | 'All'; setStatusFilter: (value: EnquiryStatus | 'All') => void; dateFrom: string; setDateFrom: (value: string) => void; dateTo: string; setDateTo: (value: string) => void; onReload: () => Promise<void>; onNotice: (message: string) => void; canDelete: boolean; canManageComments: boolean }) {
-  const [viewMode, setViewMode] = useState<'list' | 'board'>('list')
-  const [selectedBoardLeadId, setSelectedBoardLeadId] = useState<number | null>(null)
+  const [viewMode, setViewMode] = useState<'table' | 'cards' | 'board'>('table')
+  const [selectedLeadId, setSelectedLeadId] = useState<number | null>(null)
   const [dueTodayOnly, setDueTodayOnly] = useState(false)
   const [page, setPage] = useState(1)
   const [pageResult, setPageResult] = useState<{ items: Enquiry[]; total: number; page: number }>({ items: [], total: 0, page: 1 })
   const [pageError, setPageError] = useState('')
   const [pageLoading, setPageLoading] = useState(true)
   const [revision, setRevision] = useState(0)
+  const [updatingId, setUpdatingId] = useState<number | null>(null)
+
   useEffect(() => { setPage(1) }, [query, statusFilter, dateFrom, dateTo, dueTodayOnly])
   useEffect(() => {
     let cancelled = false
@@ -742,6 +744,7 @@ function EnquiriesPanel({ stats, query, setQuery, statusFilter, setStatusFilter,
     }, 200)
     return () => { cancelled = true; window.clearTimeout(timer) }
   }, [query, statusFilter, dateFrom, dateTo, dueTodayOnly, page, revision])
+
   const visibleEnquiries = pageLoading || pageError ? [] : pageResult.items
   const refreshPage = async () => { await onReload(); setRevision(n => n + 1) }
 
@@ -759,143 +762,454 @@ function EnquiriesPanel({ stats, query, setQuery, statusFilter, setStatusFilter,
     } catch { onNotice('Could not export leads to Excel.') }
   }
 
-  const cards = [
-    ['All leads', stats.total, 'bg-white'],
-    ['New leads', stats.newCount, 'bg-coral-500 text-white'],
-    ['Active pipeline', stats.followUps, 'bg-forest-900 text-white'],
-    ['Due today', stats.dueToday, 'bg-amber-100 text-amber-900'],
-    ['Converted', stats.converted, 'bg-emerald-100 text-emerald-900'],
-  ] as const
+  async function handleQuickStatusChange(lead: Enquiry, newStatus: EnquiryStatus) {
+    setUpdatingId(lead.id)
+    try {
+      await updateEnquiry({ data: { id: lead.id, status: newStatus, assignedTo: lead.assignedTo, nextFollowUpAt: lead.nextFollowUpAt } })
+      await refreshPage()
+      onNotice('Stage updated to ' + newStatus)
+    } catch {
+      onNotice('Could not update stage')
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  const kpis = [
+    { label: 'Total Enquiries', value: stats.total, badge: 'All Time', bg: 'bg-white', active: !dueTodayOnly && statusFilter === 'All' },
+    { label: 'New Uncontacted', value: stats.newCount, badge: 'Requires Call', bg: 'bg-[#ECF3FF] text-[#465FFF]', active: statusFilter === 'New', onClick: () => setStatusFilter('New') },
+    { label: 'Active Pipeline', value: stats.followUps, badge: 'In Progress', bg: 'bg-white text-forest-900', active: statusFilter === 'Follow-up', onClick: () => setStatusFilter('Follow-up') },
+    { label: 'Due Today', value: stats.dueToday, badge: stats.dueToday > 0 ? 'Urgent Action' : 'Cleared', bg: stats.dueToday > 0 ? 'bg-amber-50 text-amber-900 ring-1 ring-amber-300' : 'bg-white', active: dueTodayOnly, onClick: () => setDueTodayOnly(!dueTodayOnly) },
+    { label: 'Converted', value: stats.converted, badge: 'Visas / Admissions', bg: 'bg-emerald-50 text-emerald-900', active: statusFilter === 'Converted', onClick: () => setStatusFilter('Converted') },
+  ]
 
   const boardStatuses: EnquiryStatus[] = ['New', 'Contacted', 'Follow-up', 'Documents Pending', 'Applied', 'Converted', 'Closed']
-  const selectedBoardLead = visibleEnquiries.find((item) => item.id === selectedBoardLeadId)
+  const selectedLead = visibleEnquiries.find((item) => item.id === selectedLeadId)
 
   return (
-    <section>
-      <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+    <section className="space-y-6">
+      {/* Top Header & Export */}
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">Lead command centre</p>
-          <h2 className="mt-2 text-3xl font-extrabold">Turn enquiries into admissions</h2>
-          <p className="mt-1 text-sm text-forest-900/60">Search, move, assign and schedule every lead from one place.</p>
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <p className="font-mono text-xs font-bold uppercase tracking-wider text-[#465FFF]">CRM & Lead Pipeline</p>
+          </div>
+          <h2 className="mt-1 text-2xl sm:text-3xl font-extrabold text-[#1D2939]">Student Enquiries & Admissions</h2>
+          <p className="mt-1 text-xs sm:text-sm text-[#667085]">Instant 1-click status updates, automated WhatsApp follow-ups, and student timelines.</p>
         </div>
-        <button type="button" onClick={() => void downloadExcel()} className="w-fit rounded-full bg-forest-900 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-forest-800">
-          Download Excel
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => void downloadExcel()}
+            className="inline-flex min-h-[42px] items-center gap-2 rounded-xl border border-[#E4E7EC] bg-white px-4 py-2 text-xs font-semibold text-[#344054] shadow-2xs hover:bg-[#F9FAFB] active:scale-[0.99]"
+          >
+            Download Excel
+          </button>
+        </div>
       </div>
 
-     <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        {cards.map(([label, value, classes]) => {
-          if (label === 'Due today') {
+      {/* KPI Stats Strip */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {kpis.map((kpi) => (
+          <button
+            key={kpi.label}
+            type="button"
+            onClick={kpi.onClick}
+            className={'group relative rounded-2xl p-4 text-left border transition-all duration-150 ' + (kpi.active ? 'border-[#465FFF] bg-white ring-2 ring-[#465FFF]/20 shadow-xs' : 'border-[#E4E7EC] bg-white hover:border-[#D0D5DD] shadow-2xs')}
+          >
+            <p className="text-[11px] font-semibold text-[#667085] truncate">{kpi.label}</p>
+            <p className="mt-1.5 font-mono text-2xl font-bold tabular-nums text-[#1D2939]">{kpi.value}</p>
+            <span className={'mt-2 inline-block rounded-md px-1.5 py-0.5 text-[10px] font-mono font-medium ' + (kpi.bg)}>
+              {kpi.badge}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Controls & Filter Bar */}
+      <div className="rounded-2xl border border-[#E4E7EC] bg-white p-4 shadow-2xs space-y-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          {/* Search box with Icon */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#98A2B3]" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search name, phone, city, program, country…"
+              className="h-10 w-full rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] pl-10 pr-9 text-xs text-[#1D2939] placeholder-[#98A2B3] outline-none transition focus:border-[#465FFF] focus:bg-white focus:ring-2 focus:ring-[#465FFF]/15"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#98A2B3] hover:text-[#1D2939]"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Date Range & View Mode Switcher */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 text-xs text-[#667085]">
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="h-10 rounded-xl border border-[#E4E7EC] bg-white px-2.5 text-xs text-[#1D2939] outline-none focus:border-[#465FFF]"
+                aria-label="Filter from date"
+              />
+              <span>to</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="h-10 rounded-xl border border-[#E4E7EC] bg-white px-2.5 text-xs text-[#1D2939] outline-none focus:border-[#465FFF]"
+                aria-label="Filter to date"
+              />
+              {(dateFrom || dateTo) && (
+                <button
+                  type="button"
+                  onClick={() => { setDateFrom(''); setDateTo('') }}
+                  className="rounded-lg p-2 text-xs font-semibold text-rose-600 hover:bg-rose-50"
+                >
+                  Clear dates
+                </button>
+              )}
+            </div>
+
+            {/* View Mode Toggle */}
+            <div role="group" aria-label="Lead display mode" className="inline-flex rounded-xl bg-[#F2F4F7] p-1">
+              <button
+                type="button"
+                onClick={() => setViewMode('table')}
+                className={'rounded-lg px-3 py-1.5 text-xs font-semibold transition ' + (viewMode === 'table' ? 'bg-white text-[#1D2939] shadow-2xs' : 'text-[#667085] hover:text-[#1D2939]')}
+              >
+                Table View
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('cards')}
+                className={'rounded-lg px-3 py-1.5 text-xs font-semibold transition ' + (viewMode === 'cards' ? 'bg-white text-[#1D2939] shadow-2xs' : 'text-[#667085] hover:text-[#1D2939]')}
+              >
+                Cards View
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('board')}
+                className={'rounded-lg px-3 py-1.5 text-xs font-semibold transition ' + (viewMode === 'board' ? 'bg-white text-[#1D2939] shadow-2xs' : 'text-[#667085] hover:text-[#1D2939]')}
+              >
+                Pipeline Board
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* 1-Tap Status Filter Badges */}
+        <div className="flex flex-wrap items-center gap-1.5 border-t border-[#F2F4F7] pt-3">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#98A2B3] mr-1">Status:</span>
+          {(['All', 'New', 'Contacted', 'Follow-up', 'Documents Pending', 'Applied', 'Converted', 'Closed'] as const).map((st) => {
+            const isActive = statusFilter === st
+            const count = st === 'All' ? stats.total : (stats.byStatus[st] ?? 0)
             return (
               <button
-                key={label}
+                key={st}
                 type="button"
-                aria-pressed={dueTodayOnly}
-                onClick={() => setDueTodayOnly((current) => !current)}
-                className={`rounded-2xl p-4 text-left ring-1 transition hover:ring-coral-500 ${classes} ${dueTodayOnly ? 'ring-2 ring-coral-600 shadow-md' : 'ring-forest-900/10'}`}
+                onClick={() => setStatusFilter(st)}
+                className={'inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition ' + (isActive ? 'bg-[#ECF3FF] font-semibold text-[#465FFF] ring-1 ring-[#465FFF]/30' : 'text-[#667085] hover:bg-[#F9FAFB] hover:text-[#1D2939]')}
               >
-                <p className="text-xs font-bold uppercase tracking-wider opacity-65">
-                  {label} {dueTodayOnly ? '· Active ✓' : '· Tap to filter'}
-                </p>
-                <p className="mt-2 text-3xl font-extrabold">{value}</p>
+                <span>{st}</span>
+                <span className={'font-mono text-[11px] tabular-nums ' + (isActive ? 'text-[#465FFF]' : 'text-[#98A2B3]')}>({count})</span>
               </button>
             )
-          }
-          return (
-            <div key={label} className={`rounded-2xl p-4 ring-1 ring-forest-900/10 ${classes}`}>
-              <p className="text-xs font-bold uppercase tracking-wider opacity-65">{label}</p>
-              <p className="mt-2 text-3xl font-extrabold">{value}</p>
-            </div>
-          )
-        })}
-      </div>
-
-      {pageError && <p role="alert" className="text-red-700">{pageError}</p>}
-      <div className="mb-4 flex items-center gap-3"><button type="button" disabled={pageLoading || pageResult.page <= 1} onClick={() => setPage(pageResult.page - 1)}>Previous</button><span>{pageLoading ? 'Loading...' : `Page ${pageResult.page} of ${Math.max(1, Math.ceil(pageResult.total / 50))}`}</span><button type="button" disabled={pageLoading || pageResult.page * 50 >= pageResult.total} onClick={() => setPage(pageResult.page + 1)}>Next</button></div>
-      {/* QUICK 1-TAP STATUS PILLS (IMPROVEMENT A) */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <span className="text-xs font-bold uppercase tracking-wider text-forest-900/50 mr-1">Quick Filters:</span>
-        {(['All', 'New', 'Follow-up', 'Documents Pending', 'Applied', 'Converted', 'Closed'] as const).map((st) => {
-          const isActive = statusFilter === st
-          const count = st === 'All' ? stats.total : (stats.byStatus[st] ?? 0)
-          return (
-            <button
-              key={st}
-              type="button"
-              onClick={() => setStatusFilter(st)}
-              className={'rounded-full px-3.5 py-1 text-xs font-bold transition shadow-xs ' + (isActive ? 'bg-coral-500 text-white' : 'bg-white text-forest-900/75 ring-1 ring-forest-900/10 hover:bg-forest-50')}
-            >
-              {st} <span className={'ml-1 text-[10px] ' + (isActive ? 'text-white/80' : 'text-forest-900/40')}>({count})</span>
-            </button>
-          )
-        })}
-      </div>
-
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm font-bold text-forest-900/65">
-          Showing {visibleEnquiries.length} of {pageResult.total} leads{dueTodayOnly ? ' (due today)' : ''}
-        </p>
-        <div role="group" aria-label="Lead display mode" className="inline-flex rounded-full bg-white p-1 ring-1 ring-forest-900/10">
-          <button type="button" aria-pressed={viewMode === 'list'} onClick={() => setViewMode('list')} className={'rounded-full px-4 py-2 text-xs font-bold ' + (viewMode === 'list' ? 'bg-forest-900 text-white' : 'text-forest-900/65')}>List</button>
-          <button type="button" aria-pressed={viewMode === 'board'} onClick={() => setViewMode('board')} className={'rounded-full px-4 py-2 text-xs font-bold ' + (viewMode === 'board' ? 'bg-forest-900 text-white' : 'text-forest-900/65')}>Pipeline board</button>
+          })}
         </div>
       </div>
 
-      <div className="mb-6 grid gap-3 rounded-2xl bg-white p-4 ring-1 ring-forest-900/10 md:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(0,1fr))]">
-        <input value={query} onChange={(event) => setQuery(event.target.value)} className="field" placeholder="Search name, phone, city, country…" />
-        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as EnquiryStatus | 'All')} className="field">
-          <option value="All">All stages</option>
-          {['New', 'Contacted', 'Follow-up', 'Documents Pending', 'Applied', 'Converted', 'Closed'].map((status) => <option key={status}>{status}</option>)}
-        </select>
-        <input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} className="field" aria-label="From date" />
-        <input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} className="field" aria-label="To date" />
+      {pageError && (
+        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-semibold text-red-700">
+          {pageError}
+        </p>
+      )}
+
+      {/* Pagination Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[#667085]">
+        <p>
+          Showing <span className="font-semibold text-[#1D2939]">{visibleEnquiries.length}</span> of <span className="font-semibold text-[#1D2939]">{pageResult.total}</span> leads
+          {dueTodayOnly && <span className="ml-1 text-amber-700 font-bold">(Due Today)</span>}
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={pageLoading || pageResult.page <= 1}
+            onClick={() => setPage(pageResult.page - 1)}
+            className="rounded-lg border border-[#E4E7EC] bg-white px-3 py-1.5 font-semibold text-[#344054] shadow-2xs disabled:opacity-40 hover:bg-[#F9FAFB]"
+          >
+            Previous
+          </button>
+          <span className="font-mono">Page {pageResult.page} of {Math.max(1, Math.ceil(pageResult.total / 50))}</span>
+          <button
+            type="button"
+            disabled={pageLoading || pageResult.page * 50 >= pageResult.total}
+            onClick={() => setPage(pageResult.page + 1)}
+            className="rounded-lg border border-[#E4E7EC] bg-white px-3 py-1.5 font-semibold text-[#344054] shadow-2xs disabled:opacity-40 hover:bg-[#F9FAFB]"
+          >
+            Next
+          </button>
+        </div>
       </div>
 
-     {viewMode === 'list' ? (
+      {/* VIEW 1: DENSE SAAS TABLE VIEW */}
+      {viewMode === 'table' && (
+        <div className="overflow-hidden rounded-2xl border border-[#E4E7EC] bg-white shadow-2xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-[#E4E7EC] bg-[#F9FAFB] text-[11px] font-semibold uppercase tracking-wider text-[#667085]">
+                  <th className="py-3 px-4">Student</th>
+                  <th className="py-3 px-4">Direct Contact</th>
+                  <th className="py-3 px-4">Interest & Country</th>
+                  <th className="py-3 px-4">Stage / Pipeline</th>
+                  <th className="py-3 px-4">Next Follow-Up</th>
+                  <th className="py-3 px-4">Counsellor</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E4E7EC]">
+                {visibleEnquiries.map((item) => {
+                  const raw = item.phone.replace(/\D/g, '').replace(/^0+/, '')
+                  const wa = raw.length === 10 ? '91' + raw : raw
+                  const isOverdue = item.nextFollowUpAt && item.nextFollowUpAt.slice(0, 16) < currentIstDateTimeMinute() && !['Converted', 'Closed'].includes(item.status)
+                  const isDueToday = item.nextFollowUpAt && item.nextFollowUpAt.slice(0, 10) === todayIstDate()
+                  const isBusy = updatingId === item.id
+
+                  return (
+                    <tr key={item.id} className="transition hover:bg-[#F9FAFB]/75">
+                      {/* Student info */}
+                      <td className="py-3.5 px-4 font-medium text-[#1D2939]">
+                        <div className="flex items-center gap-2.5">
+                          <div className="grid size-8 shrink-0 place-items-center rounded-full bg-[#ECF3FF] font-mono text-[11px] font-bold text-[#465FFF]">
+                            {item.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm text-[#1D2939] leading-tight">{item.name}</p>
+                            <p className="mt-0.5 text-[11px] text-[#667085]">{item.city || 'Sangaria'} · {formatIstDateTime(item.createdAt)}</p>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Contact & 1-tap call/whatsapp */}
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono font-medium text-[#344054] tabular-nums">{item.phone}</span>
+                          <a
+                            href={'tel:' + item.phone}
+                            aria-label={'Call ' + item.name}
+                            className="grid size-7 place-items-center rounded-lg border border-[#E4E7EC] bg-white text-[#344054] shadow-2xs hover:bg-[#F2F4F7] active:scale-95"
+                          >
+                            <Phone className="size-3 text-[#344054]" />
+                          </a>
+                          <a
+                            href={'https://wa.me/' + wa + '?text=' + encodeURIComponent('Hello ' + item.name + ', this is British Education & Immigration Sangaria following up on your ' + (item.interest || 'study visa') + (item.country ? ' (' + item.country + ')' : '') + ' enquiry. How can we assist you today?')}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={'WhatsApp ' + item.name}
+                            className="grid size-7 place-items-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 shadow-2xs hover:bg-emerald-100 active:scale-95"
+                          >
+                            <MessageCircle className="size-3 text-emerald-600" />
+                          </a>
+                        </div>
+                      </td>
+
+                      {/* Interest & Country */}
+                      <td className="py-3.5 px-4">
+                        <span className="inline-block rounded-md bg-[#F2F4F7] px-2 py-0.5 font-semibold text-[#344054]">
+                          {item.interest || 'General Visa'}
+                        </span>
+                        {item.country && (
+                          <span className="ml-1 text-[11px] text-[#667085]">
+                            · {item.country}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* 1-Click Inline Status Dropdown */}
+                      <td className="py-3.5 px-4">
+                        <select
+                          disabled={isBusy}
+                          value={item.status}
+                          onChange={(e) => void handleQuickStatusChange(item, e.target.value as EnquiryStatus)}
+                          className={'h-7 rounded-lg border px-2 text-[11px] font-bold outline-none transition cursor-pointer ' + (
+                            item.status === 'Converted' ? 'border-emerald-300 bg-emerald-50 text-emerald-800' :
+                            item.status === 'New' ? 'border-blue-300 bg-blue-50 text-blue-800' :
+                            item.status === 'Follow-up' ? 'border-amber-300 bg-amber-50 text-amber-900' :
+                            item.status === 'Closed' ? 'border-gray-200 bg-gray-50 text-gray-600' :
+                            'border-[#E4E7EC] bg-white text-[#344054]'
+                          )}
+                        >
+                          {boardStatuses.map((st) => (
+                            <option key={st} value={st}>{st}</option>
+                          ))}
+                        </select>
+                      </td>
+
+                      {/* Next Follow-up with urgency badge */}
+                      <td className="py-3.5 px-4 font-mono text-[11px] tabular-nums">
+                        {isOverdue ? (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-rose-50 border border-rose-200 px-2 py-0.5 font-bold text-rose-700">
+                            Overdue
+                          </span>
+                        ) : isDueToday ? (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200 px-2 py-0.5 font-bold text-amber-800">
+                            Due Today
+                          </span>
+                        ) : item.nextFollowUpAt ? (
+                          <span className="text-[#667085]">
+                            {formatFollowUpLabel(item.nextFollowUpAt)}
+                          </span>
+                        ) : (
+                          <span className="text-[#98A2B3] italic">None set</span>
+                        )}
+                      </td>
+
+                      {/* Counsellor */}
+                      <td className="py-3.5 px-4 text-[11px]">
+                        {item.assignedTo ? (
+                          <span className="font-semibold text-[#344054]">{item.assignedTo}</span>
+                        ) : (
+                          <span className="text-[#98A2B3] italic">Unassigned</span>
+                        )}
+                      </td>
+
+                      {/* Action: Open Timeline Drawer */}
+                      <td className="py-3.5 px-4 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedLeadId(item.id)}
+                          className="inline-flex items-center rounded-lg border border-[#E4E7EC] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#344054] shadow-2xs hover:bg-[#F2F4F7] active:scale-95"
+                        >
+                          View Details →
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {visibleEnquiries.length === 0 && (
+            <div className="p-12 text-center">
+              <p className="text-sm font-semibold text-[#667085]">No enquiries match these search filters.</p>
+              <button
+                type="button"
+                onClick={() => { setQuery(''); setStatusFilter('All'); setDateFrom(''); setDateTo('') }}
+                className="mt-2 text-xs font-bold text-[#465FFF] hover:underline"
+              >
+                Clear all filters
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* VIEW 2: DETAILED CARDS VIEW */}
+      {viewMode === 'cards' && (
         <div className="grid gap-4">
           {visibleEnquiries.map((item) => (
-            <EnquiryCard key={item.id} item={item} onReload={refreshPage} onNotice={onNotice} canDelete={canDelete} canManageComments={canManageComments} />
+            <EnquiryCard
+              key={item.id}
+              item={item}
+              onReload={refreshPage}
+              onNotice={onNotice}
+              canDelete={canDelete}
+              canManageComments={canManageComments}
+            />
           ))}
-          {visibleEnquiries.length === 0 && <p className="rounded-2xl bg-white p-8 text-center text-forest-900/60">No enquiries match these filters.</p>}
+          {visibleEnquiries.length === 0 && (
+            <p className="rounded-2xl border border-[#E4E7EC] bg-white p-8 text-center text-sm text-[#667085]">
+              No enquiries match these filters.
+            </p>
+          )}
         </div>
-      ) : (
+      )}
+
+      {/* VIEW 3: PIPELINE BOARD VIEW */}
+      {viewMode === 'board' && (
         <div className="space-y-5">
           <div className="overflow-x-auto pb-3">
             <div className="grid min-w-[1260px] grid-cols-7 gap-3">
               {boardStatuses.map((stage) => {
                 const stageItems = visibleEnquiries.filter((item) => item.status === stage)
                 return (
-                  <section key={stage} className="min-h-64 rounded-2xl bg-forest-50 p-3 ring-1 ring-forest-900/10">
-                    <header className="mb-3 flex items-center justify-between gap-2 border-b border-forest-900/10 pb-3">
-                      <h3 className="text-xs font-extrabold text-forest-900">{stage}</h3>
-                      <span className="rounded-full bg-white px-2 py-1 font-mono text-[10px] font-bold text-forest-700">{stageItems.length}</span>
+                  <section key={stage} className="min-h-72 rounded-2xl border border-[#E4E7EC] bg-[#F9FAFB] p-3">
+                    <header className="mb-3 flex items-center justify-between gap-2 border-b border-[#E4E7EC] pb-2.5">
+                      <h3 className="text-xs font-bold text-[#1D2939]">{stage}</h3>
+                      <span className="rounded-full bg-white px-2 py-0.5 font-mono text-[11px] font-bold text-[#667085] shadow-2xs">
+                        {stageItems.length}
+                      </span>
                     </header>
                     <div className="grid gap-2">
                       {stageItems.map((item) => (
-                        <button key={item.id} type="button" onClick={() => setSelectedBoardLeadId(item.id)} aria-label={'Open ' + item.name + ' lead details'} className="rounded-xl bg-white p-3 text-left shadow-sm ring-1 ring-forest-900/10 transition hover:-translate-y-0.5 hover:ring-coral-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-coral-500">
-                          <span className="block truncate text-sm font-extrabold text-forest-900">{item.name}</span>
-                          <span className="mt-1 block truncate text-xs text-forest-900/60">{item.interest || 'General counselling'}{item.country ? ' · ' + item.country : ''}</span>
-                          <span className="mt-2 block truncate font-mono text-[10px] text-forest-900/55">{item.phone}</span>
-                          {item.nextFollowUpAt && item.nextFollowUpAt.slice(0, 16) < currentIstDateTimeMinute() && !['Converted', 'Closed'].includes(item.status) && <span className="rounded-full bg-red-100 px-2 py-1 text-xs font-bold text-red-700">Overdue</span>}{item.nextFollowUpAt && <span className="mt-2 block rounded-lg bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-900">Follow-up {formatFollowUpLabel(item.nextFollowUpAt)}</span>}
-                          {item.assignedTo && <span className="mt-2 block truncate text-[10px] text-forest-900/50">Assigned: {item.assignedTo}</span>}
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setSelectedLeadId(item.id)}
+                          className="rounded-xl border border-[#E4E7EC] bg-white p-3 text-left shadow-2xs transition hover:border-[#465FFF] hover:shadow-xs active:scale-[0.99]"
+                        >
+                          <span className="block truncate text-sm font-bold text-[#1D2939]">{item.name}</span>
+                          <span className="mt-0.5 block truncate text-[11px] text-[#667085]">
+                            {item.interest || 'General counselling'}{item.country ? ' · ' + item.country : ''}
+                          </span>
+                          <span className="mt-2 block truncate font-mono text-[10px] text-[#98A2B3]">{item.phone}</span>
+                          {item.nextFollowUpAt && item.nextFollowUpAt.slice(0, 16) < currentIstDateTimeMinute() && !['Converted', 'Closed'].includes(item.status) && (
+                            <span className="mt-1.5 inline-block rounded-md bg-rose-50 border border-rose-200 px-1.5 py-0.5 text-[10px] font-bold text-rose-700">
+                              Overdue
+                            </span>
+                          )}
                         </button>
                       ))}
-                      {stageItems.length === 0 && <p className="rounded-xl border border-dashed border-forest-900/15 px-2 py-4 text-center text-[10px] text-forest-900/45">No leads here</p>}
+                      {stageItems.length === 0 && (
+                        <p className="rounded-xl border border-dashed border-[#E4E7EC] py-6 text-center text-[10px] text-[#98A2B3]">
+                          No leads
+                        </p>
+                      )}
                     </div>
                   </section>
                 )
               })}
             </div>
           </div>
-          {selectedBoardLead ? (
-            <section className="rounded-3xl bg-forest-50 p-3 sm:p-5">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <div><p className="font-mono text-[10px] font-bold uppercase tracking-widest text-coral-600">Selected lead</p><h3 className="mt-1 text-lg font-extrabold text-forest-900">{selectedBoardLead.name}</h3></div>
-                <button type="button" onClick={() => setSelectedBoardLeadId(null)} className="rounded-full bg-white px-4 py-2 text-xs font-bold text-forest-900 ring-1 ring-forest-900/10">Close details</button>
+        </div>
+      )}
+
+      {/* Slide-over / Modal Lead Details */}
+      {selectedLead && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4 backdrop-blur-xs" role="dialog" aria-modal="true">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl border border-[#E4E7EC]">
+            <div className="mb-4 flex items-center justify-between border-b border-[#E4E7EC] pb-3">
+              <div>
+                <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#465FFF]">Lead Details & Activity History</p>
+                <h3 className="mt-0.5 text-xl font-extrabold text-[#1D2939]">{selectedLead.name}</h3>
               </div>
-              <EnquiryCard key={selectedBoardLead.id} item={selectedBoardLead} onReload={refreshPage} onNotice={onNotice} canDelete={canDelete} canManageComments={canManageComments} />
-            </section>
-          ) : <p className="rounded-2xl bg-white p-6 text-center text-sm text-forest-900/55">Choose a lead card to update its stage, owner or follow-up.</p>}
+              <button
+                type="button"
+                onClick={() => setSelectedLeadId(null)}
+                className="rounded-lg p-2 text-sm font-bold text-[#667085] hover:bg-[#F2F4F7]"
+              >
+                ✕ Close
+              </button>
+            </div>
+            <EnquiryCard
+              key={selectedLead.id}
+              item={selectedLead}
+              onReload={refreshPage}
+              onNotice={onNotice}
+              canDelete={canDelete}
+              canManageComments={canManageComments}
+            />
+          </div>
         </div>
       )}
     </section>
@@ -1233,7 +1547,9 @@ function EnquiryCard({ item, onReload, onNotice, canDelete, canManageComments }:
 
 function BatchPanel({ items, selected, onSelect, onReload, onNotice, onDirtyChange }: { onDirtyChange: (dirty: boolean) => void; items: CoachingBatch[]; selected: CoachingBatch | null; onSelect: (item: CoachingBatch | null) => void; onReload: () => Promise<void>; onNotice: (message: string) => void }) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [filterProgram, setFilterProgram] = useState<string>('All')
   useEffect(() => { onDirtyChange(hasUnsavedChanges) }, [hasUnsavedChanges, onDirtyChange])
+
   function selectBatch(item: CoachingBatch | null) {
     if (item && selected && item.id !== selected.id && hasUnsavedChanges && !window.confirm('You have unsaved changes in this batch. Switch anyway and discard them?')) return
     setHasUnsavedChanges(false)
@@ -1244,76 +1560,551 @@ function BatchPanel({ items, selected, onSelect, onReload, onNotice, onDirtyChan
     setHasUnsavedChanges(false)
     onSelect(null)
   }
-  return <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.8fr)]"><div><div className="mb-5 flex items-end justify-between gap-4"><div><p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">IELTS · PTE · Languages</p><h2 className="mt-2 text-3xl font-extrabold">Manage upcoming batches</h2><p className="mt-1 text-sm text-forest-900/60">Add or update any coaching program without touching code.</p></div><button type="button" onClick={() => selectBatch({ id: 0, program: 'IELTS', batch: '', time: '', seats: 0, starts: '', published: true })} className="rounded-full bg-coral-500 px-4 py-2 text-sm font-bold text-white">+ New batch</button></div><div className="grid gap-3">{items.map((item) => {
-        const dateStatus = getBatchDateStatus(item.starts)
-        return (
-          <button type="button" key={item.id} onClick={() => selectBatch(item)} className={`rounded-2xl bg-white p-4 text-left ring-1 ring-forest-900/10 transition hover:ring-forest-900 ${selected?.id === item.id ? 'ring-2 ring-coral-500' : ''}`}>
-            <div className="flex items-center justify-between gap-3"><strong>{item.batch}</strong><span className="rounded-full bg-forest-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-forest-700">{item.program}</span></div>
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-forest-900/50">
-              <span>{item.time} · {formatBatchStartDate(item.starts)} · {item.seats} seats · {item.published ? 'Published' : 'Hidden'}</span>
-              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${dateStatus === 'expired' ? 'bg-red-100 text-red-700' : dateStatus === 'needs-date' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
-                {dateStatus === 'expired' ? 'Expired' : dateStatus === 'needs-date' ? 'Set full date' : 'Upcoming'}
+
+  const programs = ['All', 'IELTS', 'PTE', 'German', 'French', 'Spoken English']
+  const filtered = filterProgram === 'All' ? items : items.filter((b) => b.program.toLowerCase() === filterProgram.toLowerCase())
+
+  return (
+    <section className="space-y-6">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <p className="font-mono text-xs font-bold uppercase tracking-wider text-[#465FFF]">Coaching Academy</p>
+          </div>
+          <h2 className="mt-1 text-2xl sm:text-3xl font-extrabold text-[#1D2939]">Live Coaching Batches</h2>
+          <p className="mt-1 text-xs sm:text-sm text-[#667085]">Add, schedule, or update IELTS, PTE & language batches with instant live website card preview.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => selectBatch({ id: 0, program: 'IELTS', batch: '', time: '', seats: 15, starts: '', published: true })}
+          className="inline-flex min-h-[42px] items-center gap-2 rounded-xl bg-[#465FFF] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:opacity-95 active:scale-[0.99]"
+        >
+          + New Coaching Batch
+        </button>
+      </div>
+
+      {/* Program Filter Pills */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-[#E4E7EC] pb-3">
+        {programs.map((prog) => {
+          const count = prog === 'All' ? items.length : items.filter((b) => b.program.toLowerCase() === prog.toLowerCase()).length
+          return (
+            <button
+              key={prog}
+              type="button"
+              onClick={() => setFilterProgram(prog)}
+              className={'inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition ' + (filterProgram === prog ? 'bg-[#465FFF] text-white shadow-xs' : 'bg-white text-[#667085] hover:bg-[#F2F4F7] border border-[#E4E7EC]')}
+            >
+              <span>{prog}</span>
+              <span className={'rounded-full px-1.5 py-0.2 text-[10px] font-mono ' + (filterProgram === prog ? 'bg-white/20 text-white' : 'bg-[#F2F4F7] text-[#667085]')}>
+                {count}
               </span>
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,1.1fr)]">
+        {/* Batches List */}
+        <div className="space-y-3">
+          {filtered.map((item) => {
+            const dateStatus = getBatchDateStatus(item.starts)
+            const isSelected = selected?.id === item.id
+            const isFull = item.seats === 0
+            const isFastFilling = item.seats > 0 && item.seats <= 5
+
+            return (
+              <button
+                type="button"
+                key={item.id}
+                onClick={() => selectBatch(item)}
+                className={'w-full rounded-2xl p-4 text-left border transition-all duration-150 ' + (
+                  isSelected
+                    ? 'border-[#465FFF] bg-white ring-2 ring-[#465FFF]/20 shadow-xs'
+                    : 'border-[#E4E7EC] bg-white hover:border-[#D0D5DD] shadow-2xs'
+                )}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-md bg-forest-50 px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wide text-forest-700">
+                        {item.program}
+                      </span>
+                      <strong className="text-sm font-bold text-[#1D2939]">{item.batch}</strong>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[#667085]">
+                      <span>🕒 {item.time || 'Time not set'}</span>
+                      <span>·</span>
+                      <span>📅 Starts {formatBatchStartDate(item.starts)}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-end gap-1.5 shrink-0">
+                    <span className={'rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ' + (
+                      isFull ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                      isFastFilling ? 'bg-amber-50 text-amber-800 border border-amber-200' :
+                      'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                    )}>
+                      {isFull ? 'Batch Full' : isFastFilling ? `${item.seats} Seats Left` : `${item.seats} Seats`}
+                    </span>
+                    <span className={'rounded-md px-1.5 py-0.5 font-mono text-[9px] uppercase ' + (
+                      dateStatus === 'expired' ? 'bg-red-50 text-red-600' :
+                      dateStatus === 'needs-date' ? 'bg-amber-50 text-amber-700' :
+                      'bg-gray-100 text-gray-600'
+                    )}>
+                      {dateStatus === 'expired' ? 'Expired' : dateStatus === 'needs-date' ? 'Date Pending' : 'Upcoming'}
+                    </span>
+                  </div>
+                </div>
+              </button>
+            )
+          })}
+
+          {filtered.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-[#E4E7EC] bg-white p-8 text-center text-xs text-[#667085]">
+              No batches found for program "{filterProgram}".
             </div>
-          </button>
-        )
-      })}</div></div>{selected ? <BatchEditor key={`batch-${selected.id}`} item={selected} onReload={onReload} onNotice={onNotice} onClose={closeBatch} onDirtyChange={setHasUnsavedChanges} /> : <div className="grid min-h-72 place-items-center rounded-3xl border border-dashed border-forest-900/20 p-8 text-center text-forest-900/50">Select a batch or create a new one.</div>}</section>
+          )}
+        </div>
+
+        {/* Live Interactive Batch Editor */}
+        <div>
+          {selected ? (
+            <BatchEditor
+              key={`batch-${selected.id}`}
+              item={selected}
+              onReload={onReload}
+              onNotice={onNotice}
+              onClose={closeBatch}
+              onDirtyChange={setHasUnsavedChanges}
+            />
+          ) : (
+            <div className="grid min-h-[360px] place-items-center rounded-3xl border border-dashed border-[#E4E7EC] bg-white p-8 text-center text-[#667085]">
+              <div>
+                <p className="text-sm font-bold text-[#1D2939]">No Batch Selected</p>
+                <p className="mt-1 text-xs text-[#667085]">Click any batch from the list or click "+ New Coaching Batch" to edit.</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  )
 }
 
 function BatchEditor({ item, onReload, onNotice, onClose, onDirtyChange }: { item: CoachingBatch; onReload: () => Promise<void>; onNotice: (message: string) => void; onClose: (saved?: boolean) => void; onDirtyChange: (dirty: boolean) => void }) {
   const [form, setForm] = useState(item)
   const [busy, setBusy] = useState(false)
-  function update<K extends keyof CoachingBatch>(key: K, value: CoachingBatch[K]) { setForm((current) => ({ ...current, [key]: value })); onDirtyChange(true) }
-  async function submit(event: FormEvent) { event.preventDefault(); setBusy(true); try { await saveBatch({ data: form }); onDirtyChange(false); await onReload(); onNotice('Coaching batch saved.'); onClose(true) } catch (cause) { onNotice(cause instanceof Error ? cause.message : 'Could not save batch.') } finally { setBusy(false) } }
-  async function remove() { if (!form.id || !window.confirm('Delete this coaching batch?')) return; setBusy(true); try { await deleteBatch({ data: { id: form.id } }); onDirtyChange(false); await onReload(); onNotice('Coaching batch deleted.'); onClose(true) } catch { onNotice('Could not delete batch.') } finally { setBusy(false) } }
-  return <form onSubmit={submit} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-forest-900/10"><div className="mb-5 flex items-start justify-between gap-4"><div><p className="font-mono text-[10px] uppercase tracking-[0.18em] text-coral-600">Public schedule</p><h3 className="text-xl font-extrabold">Batch editor</h3><p className="mt-1 text-xs leading-relaxed text-forest-900/55">These details appear in the Upcoming batches section on the public IELTS & PTE page.</p></div><button type="button" onClick={() => onClose()} className="text-sm font-bold text-forest-900/50">Close</button></div><div className="grid gap-4"><EditorField label="Program / language" hint="Example: IELTS, PTE, German A1, French B2"><input className="field" value={form.program} onChange={(e) => update('program', e.target.value)} placeholder="IELTS / PTE / German…" required /></EditorField><EditorField label="Batch name" hint="Example: German A1 Evening Batch or IELTS Weekend Batch"><input className="field" value={form.batch} onChange={(e) => update('batch', e.target.value)} placeholder="Name visitors will recognise" required /></EditorField><EditorField label="Class timing" hint="Example: Mon–Fri · 6:00–8:00 PM"><input className="field" value={form.time} onChange={(e) => update('time', e.target.value)} placeholder="Days and time" /></EditorField><div className="grid gap-4 sm:grid-cols-2"><EditorField label="Seats left" hint="Use 0 when full"><input className="field" type="number" min="0" value={form.seats} onChange={(e) => update('seats', Number(e.target.value))} /></EditorField><EditorField label="Starts on" hint="Choose the full start date. Expired batches are hidden from the public upcoming list."><input className="field" type="date" required value={isValidBatchStartDate(form.starts) ? form.starts : ''} onChange={(e) => update('starts', e.target.value)} /></EditorField>{form.starts && !isValidBatchStartDate(form.starts) && <p className="text-xs leading-relaxed text-amber-800">Saved start value “{form.starts}” has no full year. Choose its complete date before saving so it can expire automatically.</p>}</div><label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={form.published} onChange={(e) => update('published', e.target.checked)} /> Show this batch on the public coaching page</label><div className="flex flex-wrap gap-2"><button disabled={busy} className="rounded-full bg-forest-900 px-5 py-3 text-sm font-bold text-white">Save batch</button>{form.id > 0 && <button type="button" disabled={busy} onClick={() => void remove()} className="rounded-full border border-red-200 px-5 py-3 text-sm font-bold text-red-700">Delete</button>}</div></div></form>
+  function update<K extends keyof CoachingBatch>(key: K, value: CoachingBatch[K]) {
+    setForm((current) => ({ ...current, [key]: value }))
+    onDirtyChange(true)
+  }
+
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    setBusy(true)
+    try {
+      await saveBatch({ data: form })
+      onDirtyChange(false)
+      await onReload()
+      onNotice('Coaching batch saved and live on website.')
+      onClose(true)
+    } catch (cause) {
+      onNotice(cause instanceof Error ? cause.message : 'Could not save batch.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function remove() {
+    if (!form.id || !window.confirm('Delete this coaching batch permanently?')) return
+    setBusy(true)
+    try {
+      await deleteBatch({ data: { id: form.id } })
+      onDirtyChange(false)
+      await onReload()
+      onNotice('Coaching batch deleted.')
+      onClose(true)
+    } catch {
+      onNotice('Could not delete batch.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="rounded-3xl border border-[#E4E7EC] bg-white p-6 shadow-xs space-y-5">
+      <div className="flex items-start justify-between gap-4 border-b border-[#E4E7EC] pb-4">
+        <div>
+          <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#465FFF]">Live Batch Studio</span>
+          <h3 className="mt-0.5 text-lg font-extrabold text-[#1D2939]">
+            {form.id ? 'Edit Coaching Batch' : 'Create New Coaching Batch'}
+          </h3>
+          <p className="mt-1 text-xs text-[#667085]">Changes instantly update the public Upcoming Batches timetable.</p>
+        </div>
+        <button type="button" onClick={() => onClose()} className="rounded-lg p-1.5 text-xs font-bold text-[#667085] hover:bg-[#F2F4F7]">
+          ✕ Close
+        </button>
+      </div>
+
+      {/* Live Preview Card */}
+      <div className="rounded-2xl border border-[#D0E1FD] bg-[#F4F8FF] p-4">
+        <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#465FFF] mb-2">Live Public Website Card Preview</p>
+        <div className="rounded-xl border border-[#E4E7EC] bg-white p-4 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <span className="rounded-md bg-forest-50 px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wide text-forest-700">
+              {form.program || 'IELTS'}
+            </span>
+            <span className="font-mono text-xs font-bold text-[#465FFF]">
+              {form.seats ? form.seats + ' Seats Left' : 'Batch Full'}
+            </span>
+          </div>
+          <p className="mt-2 text-base font-extrabold text-[#1D2939]">{form.batch || 'Batch Name Preview'}</p>
+          <div className="mt-1 flex items-center gap-3 text-xs text-[#667085]">
+            <span>🕒 {form.time || 'Schedule'}</span>
+            <span>📅 Starts {formatBatchStartDate(form.starts)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <EditorField label="Program / Language" hint="e.g. IELTS, PTE, German, French">
+            <input className="field" value={form.program} onChange={(e) => update('program', e.target.value)} placeholder="IELTS / PTE / German…" required />
+          </EditorField>
+          <EditorField label="Batch Name" hint="e.g. Super Intensive Morning Batch">
+            <input className="field" value={form.batch} onChange={(e) => update('batch', e.target.value)} placeholder="Batch display title" required />
+          </EditorField>
+        </div>
+
+        <EditorField label="Class Timing" hint="e.g. Mon–Fri · 7:30 AM – 9:30 AM">
+          <input className="field" value={form.time} onChange={(e) => update('time', e.target.value)} placeholder="Days and time slot" />
+        </EditorField>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <EditorField label="Seats Available" hint="Use 0 when fully booked">
+            <input className="field font-mono font-bold" type="number" min="0" value={form.seats} onChange={(e) => update('seats', Number(e.target.value))} />
+          </EditorField>
+          <EditorField label="Start Date" hint="Full year date (auto-expires when passed)">
+            <input className="field font-mono" type="date" required value={isValidBatchStartDate(form.starts) ? form.starts : ''} onChange={(e) => update('starts', e.target.value)} />
+          </EditorField>
+        </div>
+
+        <label className="flex items-center gap-2.5 rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-3 text-xs font-bold text-[#1D2939] cursor-pointer">
+          <input type="checkbox" checked={form.published} onChange={(e) => update('published', e.target.checked)} className="size-4 rounded text-[#465FFF]" />
+          <span>Show this batch publicly on IELTS & PTE coaching pages</span>
+        </label>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#E4E7EC] pt-4">
+        {form.id > 0 ? (
+          <button type="button" disabled={busy} onClick={() => void remove()} className="rounded-xl border border-red-200 px-4 py-2 text-xs font-bold text-red-700 hover:bg-red-50">
+            Delete Batch
+          </button>
+        ) : <div />}
+        <button type="submit" disabled={busy} className="rounded-xl bg-[#465FFF] px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:opacity-95 disabled:opacity-50">
+          {busy ? 'Saving…' : 'Save & Publish Batch'}
+        </button>
+      </div>
+    </form>
+  )
 }
 
 function ContentPanel({ type, items, selected, onSelect, onReload, onNotice }: { type: 'news' | 'stories'; items: AdminPost[] | AdminStory[]; selected: AdminPost | AdminStory | null; onSelect: (item: AdminPost | AdminStory | null) => void; onReload: () => Promise<void>; onNotice: (message: string) => void }) {
   const news = type === 'news'
-   return <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.8fr)]"><div><div className="mb-5 flex items-end justify-between gap-4"><div><p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">{news ? 'News & updates' : 'Success stories'}</p><h2 className="mt-2 text-3xl font-extrabold">Edit without code</h2></div><button type="button" onClick={() => onSelect(news ? { id: 0, ...makeBlankPost() } : { id: 0, ...makeBlankStory() })} className="rounded-full bg-coral-500 px-4 py-2 text-sm font-bold text-white">+ New</button></div><div className="grid gap-3">{items.map((item) => <button type="button" key={item.id} onClick={() => onSelect(item)} className={`rounded-2xl bg-white p-4 text-left ring-1 ring-forest-900/10 transition hover:ring-forest-900 ${selected?.id === item.id ? 'ring-2 ring-coral-500' : ''}`}><div className="flex items-center justify-between gap-3"><strong>{news ? (item as AdminPost).title : (item as AdminStory).name}</strong><span className={`rounded-full px-2 py-1 text-[10px] font-bold ${item.published ? 'bg-emerald-100 text-emerald-800' : 'bg-forest-100 text-forest-700'}`}>{item.published ? 'Published' : 'Draft'}</span></div><span className="mt-1 block text-xs text-forest-900/50">{news ? `${(item as AdminPost).category} · ${(item as AdminPost).date}` : `${(item as AdminStory).kind} · ${(item as AdminStory).country}`}</span></button>)}</div></div>{selected ? news ? <PostEditor key={`post-${selected.id}`} item={selected as AdminPost} onReload={onReload} onNotice={onNotice} onClose={() => onSelect(null)} /> : <StoryEditor key={`story-${selected.id}`} item={selected as AdminStory} onReload={onReload} onNotice={onNotice} onClose={() => onSelect(null)} /> : <div className="grid min-h-72 place-items-center rounded-3xl border border-dashed border-forest-900/20 p-8 text-center text-forest-900/50">Select an item or create a new one.</div>}</section>
+  const [filter, setFilter] = useState<'All' | 'Published' | 'Draft'>('All')
+  const [search, setSearch] = useState('')
+
+  const filtered = items.filter((item) => {
+    const matchesFilter = filter === 'All' ? true : filter === 'Published' ? item.published : !item.published
+    const title = news ? (item as AdminPost).title : (item as AdminStory).name
+    const matchesSearch = !search || title.toLowerCase().includes(search.toLowerCase())
+    return matchesFilter && matchesSearch
+  })
+
+  return (
+    <section className="space-y-6">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <p className="font-mono text-xs font-bold uppercase tracking-wider text-[#465FFF]">{news ? 'Website Blog' : 'Student Showcase'}</p>
+          </div>
+          <h2 className="mt-1 text-2xl sm:text-3xl font-extrabold text-[#1D2939]">{news ? 'News, Articles & Visa Updates' : 'Success Stories & Visa Approvals'}</h2>
+          <p className="mt-1 text-xs sm:text-sm text-[#667085]">{news ? 'Publish student visa news with auto-reading time and SEO links.' : 'Showcase student approvals and testimonial quotes with instant card preview.'}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => onSelect(news ? { id: 0, ...makeBlankPost() } : { id: 0, ...makeBlankStory() })}
+          className="inline-flex min-h-[42px] items-center gap-2 rounded-xl bg-[#465FFF] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:opacity-95 active:scale-[0.99]"
+        >
+          + Create {news ? 'Article' : 'Story'}
+        </button>
+      </div>
+
+      {/* Filter and Search Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#E4E7EC] bg-white p-3 shadow-2xs">
+        <div className="flex items-center gap-1.5">
+          {(['All', 'Published', 'Draft'] as const).map((st) => {
+            const count = st === 'All' ? items.length : st === 'Published' ? items.filter(i => i.published).length : items.filter(i => !i.published).length
+            return (
+              <button
+                key={st}
+                type="button"
+                onClick={() => setFilter(st)}
+                className={'inline-flex items-center gap-1 rounded-xl px-3 py-1 text-xs font-medium transition ' + (filter === st ? 'bg-[#ECF3FF] font-semibold text-[#465FFF] ring-1 ring-[#465FFF]/30' : 'text-[#667085] hover:bg-[#F9FAFB] hover:text-[#1D2939]')}
+              >
+                <span>{st}</span>
+                <span className={'font-mono text-[11px] tabular-nums ' + (filter === st ? 'text-[#465FFF]' : 'text-[#98A2B3]')}>({count})</span>
+              </button>
+            )
+          })}
+        </div>
+        <div className="relative">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={'Search ' + (news ? 'articles…' : 'stories…')}
+            className="h-8 w-56 rounded-lg border border-[#E4E7EC] bg-[#F9FAFB] px-2.5 text-xs text-[#1D2939] placeholder-[#98A2B3] outline-none focus:border-[#465FFF] focus:bg-white"
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,1.2fr)]">
+        {/* Items List */}
+        <div className="space-y-3">
+          {filtered.map((item) => {
+            const isSelected = selected?.id === item.id
+            const title = news ? (item as AdminPost).title || 'Untitled Article' : (item as AdminStory).name || 'Unnamed Client'
+            const subtitle = news ? ((item as AdminPost).category + ' · ' + (item as AdminPost).date) : ((item as AdminStory).kind + ' · ' + (item as AdminStory).country)
+
+            return (
+              <button
+                type="button"
+                key={item.id}
+                onClick={() => onSelect(item)}
+                className={'w-full rounded-2xl p-4 text-left border transition-all duration-150 ' + (
+                  isSelected
+                    ? 'border-[#465FFF] bg-white ring-2 ring-[#465FFF]/20 shadow-xs'
+                    : 'border-[#E4E7EC] bg-white hover:border-[#D0D5DD] shadow-2xs'
+                )}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <strong className="text-sm font-bold text-[#1D2939] truncate">{title}</strong>
+                  <span className={'rounded-md px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider shrink-0 ' + (item.published ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-600')}>
+                    {item.published ? 'Live' : 'Draft'}
+                  </span>
+                </div>
+                <div className="mt-1 flex items-center justify-between text-xs text-[#667085]">
+                  <span>{subtitle}</span>
+                  {news && <span className="font-mono text-[11px]">{(item as AdminPost).readMins} min read</span>}
+                </div>
+              </button>
+            )
+          })}
+
+          {filtered.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-[#E4E7EC] bg-white p-8 text-center text-xs text-[#667085]">
+              No {news ? 'articles' : 'stories'} match your filter.
+            </div>
+          )}
+        </div>
+
+        {/* Live Interactive Editor */}
+        <div>
+          {selected ? (
+            news ? (
+              <PostEditor
+                key={'post-' + selected.id}
+                item={selected as AdminPost}
+                onReload={onReload}
+                onNotice={onNotice}
+                onClose={() => onSelect(null)}
+              />
+            ) : (
+              <StoryEditor
+                key={'story-' + selected.id}
+                item={selected as AdminStory}
+                onReload={onReload}
+                onNotice={onNotice}
+                onClose={() => onSelect(null)}
+              />
+            )
+          ) : (
+            <div className="grid min-h-[360px] place-items-center rounded-3xl border border-dashed border-[#E4E7EC] bg-white p-8 text-center text-[#667085]">
+              <div>
+                <p className="text-sm font-bold text-[#1D2939]">No Item Selected</p>
+                <p className="mt-1 text-xs text-[#667085]">Select an item from the left to edit or click "+ Create".</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  )
 }
 
 function EditorField({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
-  return <label className="grid gap-1"><span className="text-xs font-bold uppercase tracking-[0.1em] text-forest-900/70">{label}</span>{children}{hint && <small className="text-xs leading-relaxed text-forest-900/50">{hint}</small>}</label>
+  return (
+    <label className="block space-y-1.5">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold text-[#1D2939]">{label}</span>
+        {hint && <span className="text-[11px] text-[#667085]">{hint}</span>}
+      </div>
+      {children}
+    </label>
+  )
 }
 
 function PostEditor({ item, onReload, onNotice, onClose }: { item: AdminPost; onReload: () => Promise<void>; onNotice: (message: string) => void; onClose: () => void }) {
   const [form, setForm] = useState(item)
   const [busy, setBusy] = useState(false)
-  const [preview, setPreview] = useState(false)
-  function update<K extends keyof AdminPost>(key: K, value: AdminPost[K]) { setForm((current) => ({ ...current, [key]: value })) }
-  async function submit(event: FormEvent) { event.preventDefault(); setBusy(true); try { await savePost({ data: form }); await onReload(); onNotice('News article saved.'); onClose() } catch { onNotice('Could not save article. Check the fields.') } finally { setBusy(false) } }
-  async function remove() { if (!form.id || !window.confirm('Delete this article?')) return; setBusy(true); try { await deletePost({ data: { id: form.id } }); await onReload(); onNotice('Article deleted.'); onClose() } catch { onNotice('Could not delete article.') } finally { setBusy(false) } }
+  const [slugCustomized, setSlugCustomized] = useState(Boolean(item.slug))
+
+  function update<K extends keyof AdminPost>(key: K, value: AdminPost[K]) {
+    setForm((current) => ({ ...current, [key]: value }))
+  }
+
+  function handleTitleChange(newTitle: string) {
+    if (!slugCustomized) {
+      const autoSlug = newTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+      setForm((current) => ({ ...current, title: newTitle, slug: autoSlug }))
+    } else {
+      update('title', newTitle)
+    }
+  }
+
+  function handleBodyChange(text: string) {
+    const paragraphs = text.split(/\n\s*\n/)
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0
+    const estMins = Math.max(1, Math.ceil(words / 180))
+    setForm((current) => ({ ...current, body: paragraphs, readMins: estMins }))
+  }
+
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    setBusy(true)
+    try {
+      await savePost({ data: form })
+      await onReload()
+      onNotice('Article saved and live on website.')
+      onClose()
+    } catch {
+      onNotice('Could not save article. Check required fields.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function remove() {
+    if (!form.id || !window.confirm('Delete this article permanently?')) return
+    setBusy(true)
+    try {
+      await deletePost({ data: { id: form.id } })
+      await onReload()
+      onNotice('Article deleted.')
+      onClose()
+    } catch {
+      onNotice('Could not delete article.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
-    <form onSubmit={submit} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-forest-900/10">
-      <div className="mb-5 flex items-start justify-between gap-4">
-        <div><p className="font-mono text-[10px] uppercase tracking-[0.18em] text-coral-600">News & updates</p><h3 className="text-xl font-extrabold">Article editor</h3><p className="mt-1 text-xs leading-relaxed text-forest-900/55">Fill the fields below. The title, summary and article paragraphs appear on the public News & Blog page.</p></div>
-        <div className="flex shrink-0 items-center gap-2"><button type="button" aria-pressed={preview} onClick={() => setPreview((value) => !value)} className={'rounded-full px-4 py-2 text-xs font-bold ring-1 ring-forest-900/15 ' + (preview ? 'bg-coral-500 text-white ring-coral-500' : 'bg-white text-forest-900')}>{preview ? 'Back to edit' : 'Preview'}</button><button type="button" onClick={onClose} className="text-sm font-bold text-forest-900/50">Close</button></div>
+    <form onSubmit={submit} className="rounded-3xl border border-[#E4E7EC] bg-white p-6 shadow-xs space-y-6">
+      <div className="flex items-start justify-between gap-4 border-b border-[#E4E7EC] pb-4">
+        <div>
+          <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#465FFF]">Article Studio</span>
+          <h3 className="mt-0.5 text-xl font-extrabold text-[#1D2939]">
+            {form.id ? 'Edit Article' : 'Write New Article'}
+          </h3>
+          <p className="mt-1 text-xs text-[#667085]">Auto-slug, auto-reading time estimation, and live public preview.</p>
+        </div>
+        <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-xs font-bold text-[#667085] hover:bg-[#F2F4F7]">
+          ✕ Close
+        </button>
       </div>
-      {preview ? (
-        <div className="rounded-2xl bg-forest-50 p-4 sm:p-5">
-          <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-coral-600">Public preview · unsaved changes</p>
-          <article className="mt-3 max-w-3xl overflow-hidden rounded-3xl bg-white p-6 ring-1 ring-forest-900/10">
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-forest-900/55"><span className="rounded-full bg-forest-50 px-3 py-1 font-bold text-forest-700">{form.category}</span><span>{form.readMins} min read · {form.date || 'Date not set'}</span></div>
-            <h4 className="mt-4 break-words font-display text-2xl font-extrabold text-forest-900">{form.title || 'Article headline'}</h4>
-            <p className="mt-2 text-sm leading-relaxed text-forest-900/70">{form.excerpt || 'Your article summary will appear here.'}</p>
-            <div className="mt-5 border-t border-forest-900/10 pt-4">{form.body.filter((paragraph) => paragraph.trim()).length ? form.body.filter((paragraph) => paragraph.trim()).map((paragraph, index) => <p key={index} className="mb-4 text-sm leading-relaxed text-forest-900/75 last:mb-0">{paragraph}</p>) : <p className="text-sm text-forest-900/50">Article paragraphs will appear here.</p>}</div>
-          </article>
-          <p className="mt-3 text-xs text-forest-900/55">Preview changes only; they reach the website after you return to edit and save.</p>
+
+      {/* Side-by-Side Live Preview Card */}
+      <div className="rounded-2xl border border-[#D0E1FD] bg-[#F4F8FF] p-4">
+        <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#465FFF] mb-2">Live Public Blog Card Preview</p>
+        <article className="overflow-hidden rounded-2xl border border-[#E4E7EC] bg-white p-5 shadow-2xs">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#667085]">
+            <span className="rounded-md bg-forest-50 px-2.5 py-0.5 font-bold text-forest-700">
+              {form.category}
+            </span>
+            <span>{form.readMins} min read · {form.date || todayIstDate()}</span>
+          </div>
+          <h4 className="mt-3 break-words text-lg font-extrabold text-[#1D2939]">
+            {form.title || 'Your Article Headline Will Appear Here'}
+          </h4>
+          <p className="mt-1.5 text-xs leading-relaxed text-[#667085]">
+            {form.excerpt || 'Write a short excerpt below to see it rendered live here...'}
+          </p>
+        </article>
+      </div>
+
+      <div className="grid gap-4">
+        <EditorField label="Headline / Title *" hint="Catchy, informative title">
+          <input className="field" value={form.title} onChange={(e) => handleTitleChange(e.target.value)} placeholder="e.g. UK Graduate Route 2026: Official Embassy Guidelines" required />
+        </EditorField>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <EditorField label="URL Slug (Auto-generated)" hint="SEO-friendly link address">
+            <input
+              className="field font-mono text-xs"
+              value={form.slug}
+              onChange={(e) => { setSlugCustomized(true); update('slug', e.target.value) }}
+              placeholder="uk-graduate-route-update"
+              required
+            />
+          </EditorField>
+          <EditorField label="Category" hint="Section grouping">
+            <select className="field font-semibold" value={form.category} onChange={(e) => update('category', e.target.value as AdminPost['category'])}>
+              <option>Visa News</option>
+              <option>Study Abroad</option>
+              <option>IELTS & PTE</option>
+              <option>Immigration</option>
+            </select>
+          </EditorField>
         </div>
-      ) : (
-        <div className="grid gap-4">
-          <EditorField label="Headline / title" hint="Example: UK Graduate Route: the latest on post-study work duration"><input className="field" value={form.title} onChange={(e) => update('title', e.target.value)} placeholder="Write the public article headline" required /></EditorField>
-          <div className="grid gap-4 sm:grid-cols-2"><EditorField label="URL slug" hint="Lowercase words with hyphens only; example: uk-graduate-route-update"><input className="field" value={form.slug} onChange={(e) => update('slug', e.target.value)} placeholder="uk-graduate-route-update" required /></EditorField><EditorField label="Category" hint="Used to group the article"><select className="field" value={form.category} onChange={(e) => update('category', e.target.value as AdminPost['category'])}><option>Visa News</option><option>Study Abroad</option><option>IELTS & PTE</option><option>Immigration</option></select></EditorField></div>
-          <div className="grid gap-4 sm:grid-cols-2"><EditorField label="Publish date" hint="Date shown on the article card"><input className="field" type="date" value={form.date} onChange={(e) => update('date', e.target.value)} /></EditorField><EditorField label="Reading time (minutes)" hint="Example: 5"><input className="field" type="number" min="1" value={form.readMins} onChange={(e) => update('readMins', Number(e.target.value))} /></EditorField></div>
-          <EditorField label="Short summary / excerpt" hint="One or two lines used on cards and SEO previews"><textarea className="field" rows={3} value={form.excerpt} onChange={(e) => update('excerpt', e.target.value)} placeholder="Summarise the main point for a visitor" /></EditorField>
-          <EditorField label="Article content" hint="Write one paragraph per blank line. Do not add headings or HTML tags."><textarea className="field" rows={10} value={form.body.join('\n\n')} onChange={(e) => update('body', e.target.value.split(/\n\s*\n/))} placeholder="First paragraph...\n\nSecond paragraph..." /></EditorField>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <EditorField label="Publish Date" hint="Date shown on public card">
+            <input className="field font-mono" type="date" value={form.date} onChange={(e) => update('date', e.target.value)} />
+          </EditorField>
+          <EditorField label="Reading Time" hint="Auto-calculated from word count">
+            <div className="flex items-center gap-2">
+              <input className="field font-mono font-bold max-w-28 text-center" type="number" min="1" value={form.readMins} onChange={(e) => update('readMins', Number(e.target.value))} />
+              <span className="text-xs font-semibold text-[#667085]">Minutes Read</span>
+            </div>
+          </EditorField>
         </div>
-      )}
-      <div className="mt-5 grid gap-4 border-t border-forest-900/10 pt-4">
-        <label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={form.published} onChange={(e) => update('published', e.target.checked)} /> Publish on website</label>
-        <div className="flex flex-wrap gap-2"><button disabled={busy || preview} className="rounded-full bg-forest-900 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">{busy ? 'Saving…' : 'Save article'}</button>{form.id > 0 && <button type="button" disabled={busy} onClick={() => void remove()} className="rounded-full border border-red-200 px-5 py-3 text-sm font-bold text-red-700 disabled:opacity-50">Delete</button>}</div>
+
+        <EditorField label="Short Excerpt (SEO Summary)" hint="1-2 lines shown on Google and social previews">
+          <textarea className="field" rows={3} value={form.excerpt} onChange={(e) => update('excerpt', e.target.value)} placeholder="Summarise the key takeaway for students..." />
+        </EditorField>
+
+        <EditorField label="Article Body Paragraphs" hint="Write one paragraph per blank line (Shift+Enter or double Enter)">
+          <textarea className="field font-mono text-xs leading-relaxed" rows={10} value={form.body.join('\n\n')} onChange={(e) => handleBodyChange(e.target.value)} placeholder="First paragraph...\n\nSecond paragraph..." />
+        </EditorField>
+
+        <label className="flex items-center gap-2.5 rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-3 text-xs font-bold text-[#1D2939] cursor-pointer">
+          <input type="checkbox" checked={form.published} onChange={(e) => update('published', e.target.checked)} className="size-4 rounded text-[#465FFF]" />
+          <span>Publish immediately on public News & Blog page</span>
+        </label>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#E4E7EC] pt-4">
+        {form.id > 0 ? (
+          <button type="button" disabled={busy} onClick={() => void remove()} className="rounded-xl border border-red-200 px-4 py-2 text-xs font-bold text-red-700 hover:bg-red-50">
+            Delete Article
+          </button>
+        ) : <div />}
+        <button type="submit" disabled={busy} className="rounded-xl bg-[#465FFF] px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:opacity-95 disabled:opacity-50">
+          {busy ? 'Saving…' : 'Save & Publish Article'}
+        </button>
       </div>
     </form>
   )
