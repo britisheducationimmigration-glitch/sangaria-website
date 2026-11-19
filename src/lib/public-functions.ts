@@ -39,7 +39,7 @@ export const getPublicSettings = createServerFn({ method: 'GET' }).handler(async
   if (publicContentCache && publicContentCache.expiresAt > Date.now()) return publicContentCache.data.settings
   const settingsRows = await queryRows('SELECT popup_enabled, popup_delay_seconds, whatsapp_enabled, approvals_marquee_enabled, public_settings_json FROM site_settings WHERE id = 1 LIMIT 1')
   const data = readSiteSettings(settingsRows[0])
-  publicSettingsCache = { data, expiresAt: Date.now() + 8_000 }
+  publicSettingsCache = { data, expiresAt: Date.now() + 300_000 }
   return data
 })
 
@@ -172,7 +172,7 @@ export const getPublicPolicyNotices = createServerFn({ method: 'GET' }).handler(
       sourceUrl: notice.sourceUrl,
     }))
     .sort((left, right) => left.title.localeCompare(right.title))
-  publicPolicyNoticesCache = { data, expiresAt: Date.now() + 8_000 }
+  publicPolicyNoticesCache = { data, expiresAt: Date.now() + 300_000 }
   return data
 })
 
@@ -241,7 +241,7 @@ export const getPublicContent = createServerFn({ method: 'GET' }).handler(async 
         sortOrder: item.sortOrder,
       }))
   const data = { posts, approvals, testimonials, certificates, settings: readSiteSettings(settingsRows[0]) }
-  const expiresAt = Date.now() + 8_000
+  const expiresAt = Date.now() + 300_000
   publicContentCache = { data, expiresAt }
   publicSettingsCache = { data: data.settings, expiresAt }
   return data
@@ -251,7 +251,7 @@ export const getPublicCashflow = createServerFn({ method: 'GET' }).handler(async
   if (publicCashflowCache && publicCashflowCache.expiresAt > Date.now()) return publicCashflowCache.data
   const rows = await queryRows('SELECT cashflow_json FROM site_settings WHERE id = 1 LIMIT 1')
   const data = parseCashflowJson(rows[0]?.cashflow_json)
-  publicCashflowCache = { data, expiresAt: Date.now() + 8_000 }
+  publicCashflowCache = { data, expiresAt: Date.now() + 300_000 }
   return data
 })
 
@@ -268,6 +268,6 @@ export const getCoachingContent = createServerFn({ method: 'GET' }).handler(asyn
     ? rows.map((row) => ({ id: Number(row.id), program: String(row.program), batch: String(row.batch_name), time: String(row.time_slot), seats: Number(row.seats), starts: String(row.starts), published: Boolean(row.published) }))
     : fixtureCoachingSchedule.map((batch, index) => ({ id: index + 1, program: batch.batch.includes('IELTS') ? 'IELTS' : 'PTE', batch: batch.batch, time: batch.time, seats: batch.seats, starts: batch.starts, published: true }))
   const data = { batches: batches.filter((batch) => !isBatchExpired(batch.starts)) }
-  coachingCache = { data, expiresAt: Date.now() + 8_000 }
+  coachingCache = { data, expiresAt: Date.now() + 300_000 }
   return data
 })
