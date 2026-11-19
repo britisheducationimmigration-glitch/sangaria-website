@@ -1,0 +1,40 @@
+name: Scheduled Automated Jobs (Crons)
+
+on:
+  schedule:
+    # 1. Daily Attendance Cleanup at 00:00 UTC (05:30 AM IST)
+    - cron: '0 0 * * *'
+    # 2. Weekly Policy Watch Scan on Mondays at 08:00 UTC (01:30 PM IST)
+    - cron: '0 8 * * 1'
+  # Manual 1-click test button in GitHub Actions tab
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Which cron to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - attendance-cleanup
+          - policy-watch
+
+jobs:
+  run-crons:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Attendance Cleanup (Daily)
+        if: ${{ github.event_name == 'schedule' && github.event.schedule == '0 0 * * *' || github.event.inputs.target == 'all' || github.event.inputs.target == 'attendance-cleanup' }}
+        run: |
+          echo "Triggering attendance cleanup..."
+          curl -f -s -S -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://www.britisheducationandimmigration.com/api/cron/attendance-cleanup"
+
+      - name: Trigger Policy Watch (Mondays)
+        if: ${{ github.event_name == 'schedule' && github.event.schedule == '0 8 * * 1' || github.event.inputs.target == 'all' || github.event.inputs.target == 'policy-watch' }}
+        run: |
+          echo "Triggering policy watch scan..."
+          curl -f -s -S -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://www.britisheducationandimmigration.com/api/cron/policy-watch"

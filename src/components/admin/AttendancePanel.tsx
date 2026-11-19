@@ -54,13 +54,13 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
   const [refreshing, setRefreshing] = useState(false)
   const [justRefreshed, setJustRefreshed] = useState(false)
 
-  async function load(targetMonth = month, background = false) {
+   async function load(targetMonth = month, background = false): Promise<boolean> {
     const request = ++loadSequence.current
     if (!background) setLoading(true)
     setError('')
     try {
       const next = await getAdminAttendanceSnapshot({ data: { month: targetMonth, lightweight: background } })
-      if (request !== loadSequence.current) return
+      if (request !== loadSequence.current) return false
       setSnapshot((current) => {
         if (!background || !current) return next
         const prevHistory = new Map(current.logs.map((l) => [l.id, l.editHistory]))
@@ -75,9 +75,11 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
         setFilterDate(previous => datePreset === 'date' && previous.startsWith(targetMonth) ? previous : next.todayIst.startsWith(targetMonth) ? next.todayIst : `${targetMonth}-01`)
         lastLoadedMonthRef.current = targetMonth
       }
+      return true
     } catch (cause) {
-      if (request !== loadSequence.current) return
+      if (request !== loadSequence.current) return false
       setError(cause instanceof Error ? cause.message : 'Could not load attendance.')
+      return false
     } finally {
       if (request === loadSequence.current && !background) setLoading(false)
     }
@@ -87,11 +89,12 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
     if (refreshing || busy) return
     setRefreshing(true)
     try {
-      const minDelay = new Promise((resolve) => window.setTimeout(resolve, 450))
-      await Promise.all([load(month, false), minDelay])
-      setJustRefreshed(true)
-      onNotice('Staff attendance data refreshed.')
-      window.setTimeout(() => setJustRefreshed(false), 2200)
+      const ok = await load(month, false)
+      if (ok) {
+        setJustRefreshed(true)
+        onNotice('Staff attendance data refreshed.')
+        window.setTimeout(() => setJustRefreshed(false), 2200)
+      }
     } finally {
       setRefreshing(false)
     }
