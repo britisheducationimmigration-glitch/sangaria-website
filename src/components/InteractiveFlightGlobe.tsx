@@ -60,18 +60,21 @@ export function InteractiveFlightGlobe({
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    let animationFrameId = 0
+       let animationFrameId = 0
+    let startTimer = 0
+    let lastFrameAt = 0
     let rotY = -55
     let tick = 0
     let isVisible = false
     let isIntersecting = false
+    const isMobileViewport = () => window.innerWidth < 768
     const prefersReducedMotion =
       typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
     const resize = () => {
       const parent = canvas.parentElement
       if (!parent) return
-      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      const dpr = isMobileViewport() ? 1 : Math.min(window.devicePixelRatio || 1, 2)
       const w = parent.clientWidth || 480
       const h = parent.clientHeight || 480
       canvas.width = w * dpr
@@ -79,7 +82,15 @@ export function InteractiveFlightGlobe({
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     }
 
-    const draw = () => {
+    const draw = (now = performance.now()) => {
+      const mobile = isMobileViewport()
+      if (mobile && lastFrameAt > 0 && now - lastFrameAt < 42) {
+        if (!prefersReducedMotion && isVisible) {
+          animationFrameId = window.requestAnimationFrame(draw)
+        }
+        return
+      }
+      lastFrameAt = now
       const parent = canvas.parentElement
       const w = parent?.clientWidth || 480
       const h = parent?.clientHeight || 480
@@ -215,9 +226,10 @@ export function InteractiveFlightGlobe({
         ctx.fillText('SANGARIA (SNG)', originPt.x - 42, originPt.y - 12)
       }
 
-      if (!prefersReducedMotion && isVisible) {
-        rotY += 0.18
-        tick += 1
+          if (!prefersReducedMotion && isVisible) {
+        const stepScale = mobile ? 2.2 : 1
+        rotY += 0.18 * stepScale
+        tick += stepScale
         animationFrameId = window.requestAnimationFrame(draw)
       }
     }
@@ -226,10 +238,14 @@ export function InteractiveFlightGlobe({
     let handleVisibilityChange: (() => void) | null = null
     const start = () => {
       isVisible = true
-      if (!animationFrameId) draw()
+      if (!animationFrameId) animationFrameId = window.requestAnimationFrame(draw)
     }
     const stop = () => {
       isVisible = false
+      if (startTimer) {
+        window.clearTimeout(startTimer)
+        startTimer = 0
+      }
       if (animationFrameId) {
         window.cancelAnimationFrame(animationFrameId)
         animationFrameId = 0
@@ -243,8 +259,18 @@ export function InteractiveFlightGlobe({
     } else if ('IntersectionObserver' in window) {
       observer = new IntersectionObserver(([entry]) => {
         isIntersecting = entry.isIntersecting
-        if (isIntersecting && document.visibilityState !== 'hidden') start()
-        else stop()
+        if (isIntersecting && document.visibilityState !== 'hidden') {
+          if (lastFrameAt === 0) {
+            startTimer = window.setTimeout(() => {
+              startTimer = 0
+              if (isIntersecting && document.visibilityState !== 'hidden') start()
+            }, 350)
+          } else {
+            start()
+          }
+        } else {
+          stop()
+        }
       }, { threshold: 0.01 })
       observer.observe(canvas)
       handleVisibilityChange = () => {
@@ -257,10 +283,10 @@ export function InteractiveFlightGlobe({
     }
 
     return () => {
+      stop()
       observer?.disconnect()
       if (handleVisibilityChange) document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('resize', resize)
-      if (animationFrameId) window.cancelAnimationFrame(animationFrameId)
     }
   }, [])
 
