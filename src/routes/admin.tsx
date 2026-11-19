@@ -1818,11 +1818,14 @@ function SettingsPanel({ settings, onReload, onNotice, onDirtyChange }: { settin
                   value={form.popupDelaySeconds}
                   onChange={(event) => setForm({ ...form, popupDelaySeconds: Number(event.target.value) })}
                 />
-                <span className="text-xs font-semibold text-forest-900/60">Seconds</span>
+                             <span className="text-xs font-semibold text-forest-900/60">Seconds</span>
               </div>
             </label>
           </div>
         </section>
+        <button type="button" disabled={busy || !isDirty || editingFaqIndex !== null || editingStatIndex !== null || isEditingContactDetails} onClick={() => void save()} className="w-fit rounded-full bg-forest-900 px-5 py-3 text-sm font-bold text-white disabled:opacity-60">{busy ? 'Saving…' : 'Save site settings'}</button>
+      </div>
+    </section>
   )
 }
 
