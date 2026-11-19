@@ -136,35 +136,40 @@ function AdminPage() {
   type NavItem = { id: Tab; label: string; icon: typeof LayoutDashboard; count?: number; badge?: string }
   type NavGroup = { group: string; items: NavItem[] }
 
-  const navGroups: NavGroup[] = snapshot.user.role === 'super_admin'
+   const navGroups: NavGroup[] = snapshot.user.role === 'super_admin'
     ? [
         {
-          group: 'MENU',
+          group: 'CRM & LEADS',
           items: [
             { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
             { id: 'enquiries', label: 'Enquiries', icon: Inbox, count: snapshot.enquiryStats.total },
             { id: 'demo', label: 'Demo Requests', icon: GraduationCap, count: snapshot.enquiryStats.demoRequests },
             { id: 'review', label: 'Review Queue', icon: Sparkles, count: snapshot.enquiryStats.newCount + draftQueue.length },
-            { id: 'reports', label: 'Reports', icon: BarChart3 },
-            { id: 'attendance', label: 'Attendance', icon: CalendarCheck2, badge: 'NEW' },
+            { id: 'reports', label: 'Reports & Analytics', icon: BarChart3 },
           ],
         },
         {
-          group: 'WEBSITE CONTENT',
+          group: 'STAFF & OPERATIONS',
           items: [
-            { id: 'countries', label: 'Countries', icon: Globe },
-            { id: 'studyPlans', label: 'Study Plans', icon: BookOpen },
-            { id: 'policy', label: 'Policy Watch', icon: ShieldAlert, count: policyWatchCount },
-            { id: 'news', label: 'News & Updates', icon: Newspaper },
+            { id: 'attendance', label: 'Staff Attendance', icon: CalendarCheck2, badge: 'GPS / LIVE' },
+          ],
+        },
+        {
+          group: 'WEBSITE STUDIO',
+          items: [
             { id: 'stories', label: 'Success Stories', icon: Trophy },
-            { id: 'certificates', label: 'Certificates', icon: FileText },
             { id: 'batches', label: 'Coaching Batches', icon: Users },
+            { id: 'certificates', label: 'Certificates & Partners', icon: FileText },
+            { id: 'news', label: 'News & Updates', icon: Newspaper },
+            { id: 'countries', label: 'Country Guides', icon: Globe },
+            { id: 'studyPlans', label: 'Study Plans', icon: BookOpen },
             { id: 'budget', label: 'Cashflow Budget', icon: Coins },
           ],
         },
         {
-          group: 'SYSTEM',
+          group: 'SYSTEM & COMPLIANCE',
           items: [
+            { id: 'policy', label: 'Policy Watch', icon: ShieldAlert, count: policyWatchCount },
             { id: 'settings', label: 'Site Settings', icon: Settings },
             { id: 'users', label: 'Users & Roles', icon: UserCog },
           ],
@@ -173,25 +178,25 @@ function AdminPage() {
     : snapshot.user.role === 'content_editor'
       ? [
           {
-            group: 'CONTENT',
+            group: 'WEBSITE STUDIO',
             items: [
               { id: 'review', label: 'Review Queue', icon: Sparkles, count: draftQueue.length },
-              { id: 'news', label: 'News & Updates', icon: Newspaper },
               { id: 'stories', label: 'Success Stories', icon: Trophy },
-              { id: 'certificates', label: 'Certificates', icon: FileText },
               { id: 'batches', label: 'Coaching Batches', icon: Users },
+              { id: 'certificates', label: 'Certificates & Partners', icon: FileText },
+              { id: 'news', label: 'News & Updates', icon: Newspaper },
             ],
           },
         ]
       : [
           {
-            group: 'MENU',
+            group: 'CRM & LEADS',
             items: [
               { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-            { id: 'enquiries', label: 'Enquiries', icon: Inbox, count: snapshot.enquiryStats.total },
+              { id: 'enquiries', label: 'Enquiries', icon: Inbox, count: snapshot.enquiryStats.total },
               { id: 'demo', label: 'Demo Requests', icon: GraduationCap, count: snapshot.enquiryStats.demoRequests },
               { id: 'review', label: 'Review Queue', icon: Sparkles, count: snapshot.enquiryStats.newCount },
-              { id: 'reports', label: 'Reports', icon: BarChart3 },
+              { id: 'reports', label: 'Reports & Analytics', icon: BarChart3 },
             ],
           },
         ]
@@ -255,28 +260,28 @@ function AdminPage() {
                   const Icon = item.icon
                   const active = tab === item.id
                   return (
-                    <li key={item.id}>
+                      <li key={item.id}>
                       <button
                         type="button"
                         onClick={() => selectTab(item.id)}
-                        className={`flex min-h-[42px] w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm font-medium transition ${
+                        className={`flex min-h-[44px] w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-150 active:scale-[0.99] ${
                           active
-                            ? 'bg-[#ECF3FF] font-semibold text-[#465FFF]'
+                            ? 'bg-[#ECF3FF] font-semibold text-[#465FFF] shadow-2xs'
                             : 'text-[#667085] hover:bg-[#F9FAFB] hover:text-[#1D2939]'
                         }`}
                       >
                         <span className="flex min-w-0 items-center gap-3">
-                          <Icon className="size-[18px] shrink-0" />
+                          <Icon className={`size-[18px] shrink-0 ${active ? 'text-[#465FFF]' : 'text-[#667085]'}`} />
                           <span className="truncate">{item.label}</span>
                         </span>
                         {item.badge ? (
-                          <span className="rounded-full bg-[#ECFDF3] px-2 py-0.5 text-[10px] font-bold text-[#12B76A]">
+                          <span className="rounded-md bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-700">
                             {item.badge}
                           </span>
                         ) : item.count !== undefined ? (
                           <span
-                            className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                              active ? 'bg-white text-[#465FFF]' : 'bg-[#F2F4F7] text-[#667085]'
+                            className={`rounded-full px-2 py-0.5 text-[11px] font-mono font-bold tabular-nums ${
+                              active ? 'bg-white text-[#465FFF] shadow-2xs' : 'bg-[#F2F4F7] text-[#667085]'
                             }`}
                           >
                             {item.count}
@@ -1105,22 +1110,22 @@ function EnquiryCard({ item, onReload, onNotice, canDelete, canManageComments }:
     <article className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-forest-900/10">
       <div className="flex flex-col justify-between gap-5 lg:flex-row">
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-xl font-extrabold">{item.name}</h3>
-            <span className="rounded-full bg-coral-50 px-3 py-1 text-xs font-bold text-coral-700">{item.status}</span>
-            {item.nextFollowUpAt && item.nextFollowUpAt.slice(0, 16) < currentIstDateTimeMinute() && !['Converted', 'Closed'].includes(item.status) && <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700">Overdue</span>}
-            {item.nextFollowUpAt && <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">Follow-up {formatFollowUpLabel(item.nextFollowUpAt)}</span>}
+                   <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-xl font-extrabold text-forest-900">{item.name}</h3>
+            <span className="rounded-full bg-coral-50 border border-coral-200/60 px-3 py-0.5 text-xs font-bold text-coral-700">{item.status}</span>
+            {item.nextFollowUpAt && item.nextFollowUpAt.slice(0, 16) < currentIstDateTimeMinute() && !['Converted', 'Closed'].includes(item.status) && <span className="rounded-full bg-rose-50 border border-rose-200 px-2.5 py-0.5 text-xs font-bold text-rose-700 animate-pulse">Overdue</span>}
+            {item.nextFollowUpAt && <span className="rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-xs font-bold text-amber-800">Follow-up {formatFollowUpLabel(item.nextFollowUpAt)}</span>}
           </div>
-          <p className="mt-1 text-sm text-forest-900/60">{formatIstDateTime(item.createdAt)} · {item.source || 'website'}{item.assignedTo && <> · Assigned to {item.assignedTo}</>}</p>
+          <p className="mt-1 text-xs text-forest-900/60">{formatIstDateTime(item.createdAt)} · Source: {item.source || 'website'}{item.assignedTo && <> · Assigned to: <b>{item.assignedTo}</b></>}</p>
           
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="font-bold text-sm text-forest-900">{item.phone}</span>
-            {/* Quick 1-tap call & WhatsApp actions */}
-            <a href={`tel:${item.phone}`} className="inline-flex items-center gap-1 rounded-full bg-forest-50 border border-forest-900/15 px-2.5 py-1 text-xs font-bold text-forest-900 hover:bg-forest-100">
+            <span className="font-mono text-sm font-bold tracking-tight text-forest-900">{item.phone}</span>
+            {/* Quick 1-tap call & Smart Dynamic WhatsApp */}
+            <a href={`tel:${item.phone}`} aria-label={`Call ${item.name}`} className="inline-flex items-center gap-1.5 rounded-full bg-forest-50 border border-forest-900/15 px-3 py-1 text-xs font-bold text-forest-900 shadow-2xs transition hover:bg-forest-100 active:scale-95">
               <Phone className="size-3 text-forest-800" /> Call
             </a>
-            <a href={`https://wa.me/${waPhone}?text=${encodeURIComponent(`Hello ${item.name}, this is British Education & Immigration Sangaria regarding your enquiry.`)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-500/20 px-2.5 py-1 text-xs font-bold text-emerald-800 hover:bg-emerald-100">
-              <MessageCircle className="size-3 text-emerald-600" /> WhatsApp
+            <a href={`https://wa.me/${waPhone}?text=${encodeURIComponent(`Hello ${item.name}, this is British Education & Immigration Sangaria following up on your ${item.interest || 'study visa'}${item.country ? ` (${item.country})` : ''} enquiry. How can we assist you today?`)}`} target="_blank" rel="noopener noreferrer" aria-label={`WhatsApp ${item.name}`} className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-500/25 px-3 py-1 text-xs font-bold text-emerald-800 shadow-2xs transition hover:bg-emerald-100 active:scale-95">
+              <MessageCircle className="size-3 text-emerald-600" /> WhatsApp Pitch
             </a>
             {item.email && <span className="text-xs text-forest-900/60 ml-1">· {item.email}</span>}
             {item.city && <span className="text-xs text-forest-900/60">· {item.city}</span>}
@@ -1758,16 +1763,66 @@ function SettingsPanel({ settings, onReload, onNotice, onDirtyChange }: { settin
           <button type="button" disabled={form.faqs.length >= 20 || faqBusy || editingFaqIndex !== null || editingStatIndex !== null || isEditingContactDetails} onClick={beginNewFaq} className="w-fit rounded-full bg-forest-50 px-4 py-2 text-xs font-bold text-forest-900 disabled:opacity-40">Add FAQ</button>
         </section>
 
-        <section className="grid gap-4">
-          <h3 className="text-lg font-extrabold">Existing controls</h3>
-          <label className="flex items-center justify-between gap-4 border-b border-forest-900/10 pb-4"><span><strong className="block">Enquiry popup</strong><small className="text-forest-900/60">Show the enquiry form after visitors stay on the site.</small></span><input type="checkbox" checked={form.popupEnabled} onChange={(event) => setForm({ ...form, popupEnabled: event.target.checked })} /></label>
-          <label className="flex items-center justify-between gap-4 border-b border-forest-900/10 pb-4"><span><strong className="block">WhatsApp button</strong><small className="text-forest-900/60">Keep the floating WhatsApp contact action visible.</small></span><input type="checkbox" checked={form.whatsappEnabled} onChange={(event) => setForm({ ...form, whatsappEnabled: event.target.checked })} /></label>
-          <label className="flex items-center justify-between gap-4 border-b border-forest-900/10 pb-4"><span><strong className="block">Approvals marquee</strong><small className="text-forest-900/60">Show the moving recent-approval strip on the home page.</small></span><input type="checkbox" checked={form.approvalsMarqueeEnabled} onChange={(event) => setForm({ ...form, approvalsMarqueeEnabled: event.target.checked })} /></label>
-          <label><span className="mb-2 block font-bold">Popup delay (seconds)</span><input className="field max-w-40" type="number" min="3" max="60" value={form.popupDelaySeconds} onChange={(event) => setForm({ ...form, popupDelaySeconds: Number(event.target.value) })} /></label>
+                <section className="grid gap-4">
+          <h3 className="text-lg font-extrabold text-forest-900">Website Features & Toggles</h3>
+          
+          <div
+            onClick={() => setForm({ ...form, popupEnabled: !form.popupEnabled })}
+            className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-forest-900/10 bg-cream/50 p-4 transition hover:bg-cream active:scale-[0.99]"
+          >
+            <div>
+              <strong className="block text-sm font-extrabold text-forest-900">Enquiry Lead Popup</strong>
+              <small className="text-xs text-forest-900/60">Automatically displays the counselling form to visitors after delay.</small>
+            </div>
+            <div className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors duration-200 ease-in-out ${form.popupEnabled ? 'bg-coral-500' : 'bg-gray-300'}`}>
+              <span className={`inline-block size-5 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out mt-0.5 ${form.popupEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
+            </div>
+          </div>
+
+          <div
+            onClick={() => setForm({ ...form, whatsappEnabled: !form.whatsappEnabled })}
+            className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-forest-900/10 bg-cream/50 p-4 transition hover:bg-cream active:scale-[0.99]"
+          >
+            <div>
+              <strong className="block text-sm font-extrabold text-forest-900">Floating WhatsApp Action</strong>
+              <small className="text-xs text-forest-900/60">Keeps the floating WhatsApp chat button visible on public pages.</small>
+            </div>
+            <div className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors duration-200 ease-in-out ${form.whatsappEnabled ? 'bg-emerald-500' : 'bg-gray-300'}`}>
+              <span className={`inline-block size-5 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out mt-0.5 ${form.whatsappEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
+            </div>
+          </div>
+
+          <div
+            onClick={() => setForm({ ...form, approvalsMarqueeEnabled: !form.approvalsMarqueeEnabled })}
+            className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-forest-900/10 bg-cream/50 p-4 transition hover:bg-cream active:scale-[0.99]"
+          >
+            <div>
+              <strong className="block text-sm font-extrabold text-forest-900">Approvals Ticker Marquee</strong>
+              <small className="text-xs text-forest-900/60">Shows the moving recent-visa-approval strip on the homepage.</small>
+            </div>
+            <div className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors duration-200 ease-in-out ${form.approvalsMarqueeEnabled ? 'bg-forest-900' : 'bg-gray-300'}`}>
+              <span className={`inline-block size-5 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out mt-0.5 ${form.approvalsMarqueeEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-forest-900/10 bg-cream/50 p-4">
+            <label className="block">
+              <span className="block text-sm font-extrabold text-forest-900">Popup Timer Delay</span>
+              <small className="mb-2 block text-xs text-forest-900/60">Number of seconds visitors browse before enquiry popup appears (3–60s).</small>
+              <div className="flex items-center gap-2">
+                <input
+                  className="field max-w-32 font-mono font-bold text-center"
+                  type="number"
+                  min="3"
+                  max="60"
+                  value={form.popupDelaySeconds}
+                  onChange={(event) => setForm({ ...form, popupDelaySeconds: Number(event.target.value) })}
+                />
+                <span className="text-xs font-semibold text-forest-900/60">Seconds</span>
+              </div>
+            </label>
+          </div>
         </section>
-        <button type="button" disabled={busy || !isDirty || editingFaqIndex !== null || editingStatIndex !== null || isEditingContactDetails} onClick={() => void save()} className="w-fit rounded-full bg-forest-900 px-5 py-3 text-sm font-bold text-white disabled:opacity-60">{busy ? 'Saving…' : 'Save site settings'}</button>
-      </div>
-    </section>
   )
 }
 

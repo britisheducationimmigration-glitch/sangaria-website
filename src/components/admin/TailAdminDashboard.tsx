@@ -62,28 +62,28 @@ export function TailAdminDashboard({
       <div className="grid gap-6 lg:grid-cols-12">
         {/* Top Left (7 columns) */}
         <div className="space-y-6 lg:col-span-7">
-          <div className="grid gap-6 sm:grid-cols-2">
-            <div className="rounded-2xl border border-[#E4E7EC] bg-white p-6">
+                   <div className="grid gap-6 sm:grid-cols-2">
+            <div className="rounded-2xl border border-[#E4E7EC] bg-white p-6 transition-all hover:border-[#D0D5DD]">
               <div className="grid size-12 place-items-center rounded-xl bg-[#F9FAFB] text-[#1D2939]">
                 <Users className="size-5" />
               </div>
-              <p className="mt-4 text-sm text-[#667085]">Total Leads</p>
+              <p className="mt-4 text-sm font-medium text-[#667085]">Total Leads</p>
               <div className="mt-2 flex items-center justify-between gap-2">
-                <p className="text-3xl font-bold text-[#1D2939]">{stats.total}</p>
+                <p className="font-mono text-3xl font-bold tracking-tight tabular-nums text-[#1D2939]">{stats.total}</p>
                 <span className="inline-flex items-center gap-1 rounded-full bg-[#ECFDF3] px-2.5 py-1 text-xs font-semibold text-[#12B76A]">
                   <ArrowUpRight className="size-3.5" />+{stats.newLast7Days} (7d)
                 </span>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-[#E4E7EC] bg-white p-6">
+            <div className={`rounded-2xl border bg-white p-6 transition-all hover:border-[#D0D5DD] ${stats.dueToday > 0 ? 'border-[#FEDF89] shadow-xs' : 'border-[#E4E7EC]'}`}>
               <div className="grid size-12 place-items-center rounded-xl bg-[#F9FAFB] text-[#1D2939]">
                 <FileCheck2 className="size-5" />
               </div>
-              <p className="mt-4 text-sm text-[#667085]">Active Pipeline</p>
+              <p className="mt-4 text-sm font-medium text-[#667085]">Active Pipeline</p>
               <div className="mt-2 flex items-center justify-between gap-2">
-                <p className="text-3xl font-bold text-[#1D2939]">{stats.followUps}</p>
-                <span className="inline-flex items-center rounded-full bg-[#FFFAEB] px-2.5 py-1 text-xs font-semibold text-[#F79009]">
+                <p className="font-mono text-3xl font-bold tracking-tight tabular-nums text-[#1D2939]">{stats.followUps}</p>
+                <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${stats.dueToday > 0 ? 'bg-[#FFFAEB] text-[#B54708] border border-[#FEDF89] animate-pulse' : 'bg-[#F2F4F7] text-[#667085]'}`}>
                   {stats.dueToday} due today
                 </span>
               </div>
@@ -283,17 +283,17 @@ export function TailAdminDashboard({
                   const waHref = `https://wa.me/${waPhone}?text=${encodeURIComponent(`Hello ${item.name}, this is British Education & Immigration, Sangaria following up on your ${item.interest || 'counselling'} enquiry.`)}`
                   return (
                     <tr key={item.id} className="hover:bg-[#F9FAFB]">
-                      <td className="py-3 pr-2">
+                                           <td className="py-3 pr-2">
                         <button type="button" onClick={onOpenEnquiries} className="text-left font-semibold text-[#1D2939] hover:text-[#465FFF] hover:underline">
                           {item.name}
                         </button>
-                        <p className="text-[#667085]">{item.phone}</p>
+                        <p className="font-mono text-[11px] tracking-tight text-[#667085]">{item.phone}</p>
                       </td>
                       <td className="py-3 pr-2 text-[#667085]">
-                        {item.interest || 'Counselling'}
+                        <span className="font-medium text-[#344054]">{item.interest || 'Counselling'}</span>
                         {item.country ? ` · ${item.country}` : ''}
                       </td>
-                      <td className="py-3 pr-2 text-[#667085]">
+                      <td className="py-3 pr-2 font-mono text-[11px] tabular-nums text-[#667085]">
                         {new Date(item.createdAt).toLocaleDateString('en-IN', {
                           timeZone: 'Asia/Kolkata',
                           day: 'numeric',
@@ -307,10 +307,10 @@ export function TailAdminDashboard({
                           </span>
                           {waPhone && (
                             <>
-                              <a href={telHref} aria-label={`Call ${item.name}`} className="grid size-7 place-items-center rounded-lg border border-[#E4E7EC] text-[#1D2939] hover:bg-[#ECF3FF] hover:text-[#465FFF]">
+                              <a href={telHref} aria-label={`Call ${item.name}`} className="grid size-8 place-items-center rounded-lg border border-[#E4E7EC] text-[#1D2939] shadow-2xs transition hover:bg-[#ECF3FF] hover:text-[#465FFF] active:scale-95">
                                 <Phone aria-hidden="true" className="size-3.5" />
                               </a>
-                              <a href={waHref} target="_blank" rel="noopener noreferrer" aria-label={`WhatsApp ${item.name}`} className="grid size-7 place-items-center rounded-lg bg-[#25D366]/15 text-[#128C7E] hover:bg-[#25D366] hover:text-white">
+                              <a href={waHref} target="_blank" rel="noopener noreferrer" aria-label={`WhatsApp ${item.name}`} className="grid size-8 place-items-center rounded-lg bg-[#25D366]/15 text-[#128C7E] shadow-2xs transition hover:bg-[#25D366] hover:text-white active:scale-95">
                                 <MessageCircle aria-hidden="true" className="size-3.5" />
                               </a>
                             </>
