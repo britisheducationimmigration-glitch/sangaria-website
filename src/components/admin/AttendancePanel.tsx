@@ -56,22 +56,30 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
 
   async function load(targetMonth = month, background = false) {
     const request = ++loadSequence.current
-    setLoading(true)
+    if (!background) setLoading(true)
     setError('')
     try {
       const next = await getAdminAttendanceSnapshot({ data: { month: targetMonth, lightweight: background } })
-      const locked = background ? null : await getAttendanceCycleFinalizations({ data: { month: targetMonth } })
       if (request !== loadSequence.current) return
-      if (locked) setFinalizations(locked)
-      setSnapshot(next)
+      setSnapshot((current) => {
+        if (!background || !current) return next
+        const prevHistory = new Map(current.logs.map((l) => [l.id, l.editHistory]))
+        return {
+          ...next,
+          logs: next.logs.map((l) => (l.editHistory.length ? l : { ...l, editHistory: prevHistory.get(l.id) ?? [] })),
+        }
+      })
       if (!background) setSettingsDraft(next.settings)
       setLastUpdated(new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }))
-      setFilterDate((prev) => prev.startsWith(targetMonth) ? prev : next.todayIst.startsWith(targetMonth) ? next.todayIst : `${targetMonth}-01`)
+      if (lastLoadedMonthRef.current !== targetMonth) {
+        setFilterDate(previous => datePreset === 'date' && previous.startsWith(targetMonth) ? previous : next.todayIst.startsWith(targetMonth) ? next.todayIst : `${targetMonth}-01`)
+        lastLoadedMonthRef.current = targetMonth
+      }
     } catch (cause) {
       if (request !== loadSequence.current) return
       setError(cause instanceof Error ? cause.message : 'Could not load attendance.')
     } finally {
-      if (request === loadSequence.current) setLoading(false)
+      if (request === loadSequence.current && !background) setLoading(false)
     }
   }
 
