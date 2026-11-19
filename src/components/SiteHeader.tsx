@@ -22,21 +22,25 @@ export function SiteHeader({ settings }: { settings: SiteSettings }) {
   const waDigits = (settings.phones?.[1] || settings.phones?.[0] || site.whatsapp).replace(/\D/g, '')
   const waPhone = waDigits.length === 10 ? `91${waDigits}` : waDigits
 
-  // Live IST Office Hours Status (Mon-Sat 9:30 AM - 7:30 PM IST)
+   // Live IST Office Hours Status with 60s boundary check
   useEffect(() => {
-    try {
-      const now = new Date()
-      const istDay = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', weekday: 'short' }).format(now)
-      const istHour = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', hour: 'numeric', hour12: false }).format(now))
-      const istMin = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', minute: 'numeric' }).format(now))
-      const minutes = istHour * 60 + istMin
-      const isSunday = istDay === 'Sun'
-      setIsOpenNow(!isSunday && minutes >= 570 && minutes <= 1170)
-    } catch {
-      setIsOpenNow(true)
+    const checkOpen = () => {
+      try {
+        const now = new Date()
+        const istDay = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', weekday: 'short' }).format(now)
+        const istHour = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', hour: 'numeric', hour12: false }).format(now))
+        const istMin = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', minute: 'numeric' }).format(now))
+        const minutes = istHour * 60 + istMin
+        const isSunday = istDay === 'Sun'
+        setIsOpenNow(!isSunday && minutes >= 570 && minutes <= 1170)
+      } catch {
+        setIsOpenNow(true)
+      }
     }
+    checkOpen()
+    const interval = window.setInterval(checkOpen, 60_000)
+    return () => window.clearInterval(interval)
   }, [])
-
   // Dynamic Height Observer
   useEffect(() => {
     const header = headerRef.current
@@ -124,7 +128,7 @@ export function SiteHeader({ settings }: { settings: SiteSettings }) {
               </Link>
               <div className="hidden 2xl:flex items-center gap-1.5 rounded-full border border-forest-900/10 bg-white/80 px-2.5 py-1 text-[11px] font-medium text-forest-900/80 shadow-xs">
                 <span className={`size-2 rounded-full ${isOpenNow ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
-                <span>{isOpenNow ? 'Open Now' : 'Closed'} · Mon–Sat 9:30–7:30</span>
+                <span>{isOpenNow ? 'Open Now' : 'Closed'} · {settings.officeHours}</span>
               </div>
             </div>
 
@@ -211,16 +215,16 @@ export function SiteHeader({ settings }: { settings: SiteSettings }) {
           </div>
         </div>
 
-        {/* Mobile Full-Screen Departure Board Menu */}
+               {/* Mobile Full-Screen Departure Board Menu */}
         {open && (
           <div
             id="mobile-site-nav"
-            className="fixed inset-x-3 top-20 z-50 overflow-hidden rounded-3xl border border-white/15 bg-forest-950/98 p-6 text-white shadow-2xl backdrop-blur-2xl lg:hidden animate-in fade-in slide-in-from-top-4 duration-200"
+            className="fixed inset-x-3 top-20 bottom-4 z-50 overflow-y-auto overscroll-contain rounded-3xl border border-white/15 bg-forest-950/98 p-5 sm:p-6 text-white shadow-2xl backdrop-blur-2xl lg:hidden animate-in fade-in slide-in-from-top-4 duration-200"
           >
             <div className="flex items-center justify-between border-b border-white/10 pb-4">
               <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-forest-100/70">
                 <span className={`size-2 rounded-full ${isOpenNow ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-                {isOpenNow ? 'Office Open Now · Sangaria' : 'Closed · Opens Mon 9:30 AM'}
+                <span>{isOpenNow ? 'Open Now · Sangaria' : 'Closed'} · {settings.officeHours}</span>
               </span>
               <span className="font-mono text-[10px] font-bold uppercase text-coral-400">BEI Terminal</span>
             </div>
