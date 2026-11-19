@@ -258,15 +258,5 @@
       "source": "/(.*)",
       "destination": "/"
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/cron/policy-watch",
-      "schedule": "0 8 * * 1"
-    },
-    {
-      "path": "/api/cron/attendance-cleanup",
-      "schedule": "0 0 * * *"
-    }
   ]
 }
