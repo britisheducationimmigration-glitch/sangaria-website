@@ -593,7 +593,7 @@ function Home() {
       )}
 
       {/* SERVICES — ASYMMETRIC AWWWARDS BENTO GRID */}
-      <section id="services" className="scroll-mt-36 lg:scroll-mt-44 border-b border-forest-900/10 bg-white px-5 py-20 lg:border-0 lg:bg-transparent lg:py-24">
+      <section id="services" className="scroll-mt-36 lg:scroll-mt-44 border-b border-forest-900/10 bg-paper px-5 py-20 lg:border-0 lg:py-24">
         <div className="mx-auto max-w-7xl lg:px-1">
           <div data-reveal="" className="mb-8 flex items-end justify-between gap-4 lg:mb-12">
             <div>
@@ -610,13 +610,13 @@ function Home() {
                 i === 0
                   ? 'col-span-2 lg:col-span-7 bg-gradient-to-br from-forest-950 via-forest-900 to-forest-800 text-white shadow-xl'
                   : i === 1
-                    ? 'col-span-1 lg:col-span-5 border border-forest-900/10 bg-sand/70 text-forest-900 hover:border-coral-400/50'
+                    ? 'col-span-1 lg:col-span-5 border border-forest-900/10 bg-white/90 text-forest-900 hover:border-coral-400/50'
                     : i === 2 || i === 3
                       ? 'col-span-1 lg:col-span-6 border border-forest-900/10 bg-white text-forest-900 hover:border-coral-400/50'
                       : i === 4
                         ? 'col-span-2 sm:col-span-1 lg:col-span-5 border border-forest-900/10 bg-white text-forest-900 hover:border-coral-400/50'
-                        : 'col-span-2 lg:col-span-7 border border-coral-400/35 bg-gradient-to-br from-coral-100/75 via-white to-cream text-forest-900 hover:border-coral-500/60'
-              const isDark = i === 0
+                        : 'col-span-2 lg:col-span-7 border border-coral-400/40 bg-gradient-to-br from-forest-950 via-forest-900 to-forest-950 text-white shadow-xl hover:border-coral-400'
+              const isDark = i === 0 || i === 5
               const isSpotlight = i === 5
               return (
                 <Link
@@ -638,12 +638,19 @@ function Home() {
                   </span>
                   <div>
                     <div className="flex items-center justify-between gap-2">
-                      <span className={'grid size-10 place-items-center rounded-2xl transition-transform duration-300 group-hover:scale-110 lg:size-13 ' + (isDark ? 'bg-coral-500 text-white shadow-lg' : isSpotlight ? 'bg-coral-500/15 text-coral-600' : 'bg-forest-50 text-forest-700')}>
+                      <span className={'grid size-10 place-items-center rounded-2xl transition-transform duration-300 group-hover:scale-110 lg:size-13 ' + (isDark ? 'bg-coral-500 text-white shadow-lg' : 'bg-forest-50 text-forest-700')}>
                         <ServiceIcon name={s.icon} className="size-4.5 lg:size-6" />
                       </span>
-                      <span className={'font-mono text-[11px] font-bold ' + (isDark ? 'text-white/45' : isSpotlight ? 'rounded-full bg-coral-500/15 px-2.5 py-0.5 text-[10px] uppercase tracking-wider text-coral-600' : 'text-forest-900/35')}>
-                        {isSpotlight ? 'Specialist Desk' : `0${i + 1}`}
-                      </span>
+                      {isSpotlight ? (
+                        <span className="flex items-center gap-1.5 rounded-full border border-amber-300/30 bg-amber-400/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-200">
+                          <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          Specialist Desk
+                        </span>
+                      ) : (
+                        <span className={'font-mono text-[11px] font-bold ' + (isDark ? 'text-white/45' : 'text-forest-900/35')}>
+                          0{i + 1}
+                        </span>
+                      )}
                     </div>
                     <h3 className={'mt-4 text-base font-extrabold leading-snug lg:mt-6 lg:text-2xl ' + (isDark ? '!text-white' : 'text-forest-900')}>{s.title}</h3>
                     <p className={'mt-2 text-xs leading-relaxed lg:mt-3 lg:text-sm ' + (isDark ? 'text-forest-100/80' : 'text-forest-900/65')}>
@@ -652,13 +659,21 @@ function Home() {
                   </div>
                   {isDark ? (
                     <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
-                      <div className="flex flex-wrap gap-1.5">
-                        {['Canada', 'UK', 'Australia', 'Germany'].map((tag) => (
-                          <span key={tag} className="rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5 text-[10px] font-semibold text-white/90">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
+                      {isSpotlight ? (
+                        <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider">
+                          <span className="rounded-md bg-rose-500/20 border border-rose-400/30 px-2 py-0.5 text-rose-200">Refused</span>
+                          <span className="text-amber-200">→</span>
+                          <span className="rounded-md bg-emerald-500/20 border border-emerald-400/30 px-2 py-0.5 text-emerald-200 font-bold">Approved</span>
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          {['Canada', 'UK', 'Australia', 'Germany'].map((tag) => (
+                            <span key={tag} className="rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5 text-[10px] font-semibold text-white/90">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       <span className="inline-flex items-center gap-1 text-xs font-bold text-coral-300">
                         Explore <ArrowRight aria-hidden="true" className="size-3.5 transition-transform duration-200 group-hover:translate-x-1" />
                       </span>
@@ -697,6 +712,13 @@ function Home() {
                 params={{ slug: c.slug }}
                 className="group relative flex w-[76vw] max-w-[290px] shrink-0 snap-center flex-col justify-between overflow-hidden rounded-3xl border border-forest-900/10 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:bg-forest-900 hover:text-white hover:shadow-xl active:scale-[0.98] lg:w-auto lg:max-w-none lg:rounded-[2.25rem] lg:border-0 lg:bg-cream lg:p-6 lg:ring-1 lg:ring-forest-900/10"
               >
+                {/* Background Outline Country Code */}
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute top-3 right-4 font-mono text-5xl font-black text-forest-900/[0.05] transition-colors group-hover:text-white/[0.08] select-none lg:text-6xl"
+                >
+                  {c.code}
+                </span>
                 <div>
                   <div className="flex items-center justify-between gap-2">
                     <CountryFlag
@@ -713,8 +735,8 @@ function Home() {
                   <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-forest-900/65 group-hover:!text-white/80 lg:line-clamp-none lg:text-sm lg:text-forest-900/70">{c.headline}</p>
                 </div>
                 <div className="mt-4 flex items-end justify-between border-t border-dashed border-forest-900/15 pt-3 text-xs group-hover:border-white/20 lg:mt-5 lg:pt-4 lg:text-sm">
-                  <span className="text-forest-900 group-hover:!text-white">
-                    <span className="block text-[10px] uppercase tracking-widest text-forest-900/55 group-hover:!text-white/60">{c.stats[0]?.label}</span>
+                  <span className="text-forest-900 group-hover:!text-white font-mono text-[11px]">
+                    <span className="block text-[9px] uppercase tracking-widest text-forest-900/55 group-hover:!text-white/60">{c.stats[0]?.label}</span>
                     <span className="font-bold text-coral-600 group-hover:!text-amber-200 lg:text-forest-900 lg:group-hover:!text-amber-200">{c.stats[0]?.value}</span>
                   </span>
                   <ArrowRight aria-hidden="true" className="size-4 text-coral-500 transition-transform duration-200 group-hover:translate-x-1 lg:size-5" />
@@ -832,7 +854,7 @@ function Home() {
             <div aria-hidden="true" className="pointer-events-none hidden md:block absolute top-11 left-[12%] right-[12%] border-t-2 border-dashed border-coral-400/35" />
             <ol className="grid grid-cols-2 gap-3.5 sm:gap-4 md:grid-cols-4 lg:gap-6">
               {steps.map((s, i) => {
-                const checkpoints = ['SNG Office', 'Test Prep', 'Offer & File', 'Fly Abroad']
+                const gates = ['GATE 01 · SNG Office', 'GATE 02 · Test Prep', 'GATE 03 · Offer & File', 'GATE 04 · Fly Abroad']
                 return (
                   <li
                     key={s.n}
@@ -846,7 +868,7 @@ function Home() {
                           {s.n}
                         </span>
                         <span className="rounded-full border border-white/10 bg-white/[0.06] px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-amber-200/90 lg:px-2.5 lg:text-[10px]">
-                          {checkpoints[i]}
+                          {gates[i]}
                         </span>
                       </div>
                       <h3 className="mt-4 text-sm font-bold !text-white leading-tight lg:mt-6 lg:text-xl">{s.title}</h3>
@@ -951,9 +973,9 @@ function Home() {
               )
             })}
           </div>
-          <p className="mt-6 flex items-center gap-2 text-xs text-forest-900/60 lg:text-sm">
-            <MapPin className="size-4 shrink-0 text-coral-500" /> {site.address}
-          </p>
+          <a href={site.mapUrl} target="_blank" rel="noopener noreferrer" className="mt-6 inline-flex items-center gap-2 text-xs text-forest-900/70 hover:text-coral-600 transition-colors lg:text-sm">
+            <MapPin className="size-4 shrink-0 text-coral-500" /> <span>{site.address} ↗</span>
+          </a>
         </div>
         <div data-reveal="" style={{ '--reveal-delay': '100ms' } as CSSProperties} className="rounded-3xl border border-white/10 bg-forest-900 bg-grain p-6 text-white shadow-xl lg:rounded-[2.5rem] lg:p-10 lg:shadow-2xl">
           <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-300">
