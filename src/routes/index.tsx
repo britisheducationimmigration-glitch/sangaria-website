@@ -393,7 +393,7 @@ function Home() {
                       <ArrowRight aria-hidden="true" className="size-3.5 shrink-0 transition-transform duration-200 group-hover:translate-x-1 lg:size-4" />
                     </Link>
                   ) : selectedVisaTitle && selectedCountry ? (
-                    <Link to="/contact" search={{ interest: selectedVisaTitle, country: selectedCountryName }} className={primaryCtaClass}>
+                    <Link to="/contact" search={{ interest: `${selectedCountryName} ${selectedVisaTitle}`.trim() }} className={primaryCtaClass}>
                       <span className="truncate">Enquire: {selectedCountryName} {selectedVisaTitle}</span>
                       <ArrowRight aria-hidden="true" className="size-3.5 shrink-0 transition-transform duration-200 group-hover:translate-x-1 lg:size-4" />
                     </Link>
