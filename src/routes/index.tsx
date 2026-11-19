@@ -523,10 +523,10 @@ function Home() {
         </section>
       )}
 
-      {/* SERVICES — ASYMMETRIC AWWWARDS BENTO GRID */}
-      <section id="services" className="scroll-mt-36 lg:scroll-mt-44 border-b border-forest-900/10 bg-paper px-5 py-20 lg:border-0 lg:py-24">
+      {/* SERVICES — CLEAN BALANCED GRID (2-COL MOBILE / 3-COL PC) */}
+      <section id="services" className="scroll-mt-24 border-b border-forest-900/10 bg-white px-5 py-16 lg:border-0 lg:bg-transparent lg:py-24">
         <div className="mx-auto max-w-7xl lg:px-1">
-          <div data-reveal="" className="mb-8 flex items-end justify-between gap-4 lg:mb-12">
+          <div data-reveal="" className="mb-6 flex items-end justify-between gap-4 lg:mb-12">
             <div>
               <Eyebrow>What we do</Eyebrow>
               <h2 className="mt-2 max-w-2xl text-2xl font-extrabold text-forest-900 lg:mt-4 lg:text-5xl">Every kind of visa, handled by one trusted team.</h2>
@@ -535,89 +535,48 @@ function Home() {
               All visa services →
             </Link>
           </div>
-          <div className="grid grid-cols-2 gap-3.5 sm:gap-4 lg:grid-cols-12 lg:gap-5">
-            {visaServices.map((s, i) => {
-              const spanClass =
-                i === 0
-                  ? 'col-span-2 lg:col-span-7 bg-gradient-to-br from-forest-950 via-forest-900 to-forest-800 text-white shadow-xl'
-                  : i === 1
-                    ? 'col-span-1 lg:col-span-5 border border-forest-900/10 bg-white/90 text-forest-900 hover:border-coral-400/50'
-                    : i === 2 || i === 3
-                      ? 'col-span-1 lg:col-span-6 border border-forest-900/10 bg-white text-forest-900 hover:border-coral-400/50'
-                      : i === 4
-                        ? 'col-span-2 sm:col-span-1 lg:col-span-5 border border-forest-900/10 bg-white text-forest-900 hover:border-coral-400/50'
-                        : 'col-span-2 lg:col-span-7 border border-coral-400/40 bg-gradient-to-br from-forest-950 via-forest-900 to-forest-950 text-white shadow-xl hover:border-coral-400'
-              const isDark = i === 0 || i === 5
-              const isSpotlight = i === 5
-              return (
-                <Link
-                  key={s.slug}
-                  to="/visas"
-                  hash={s.slug}
-                  data-reveal=""
-                  style={{ '--reveal-delay': `${i * 55}ms` } as CSSProperties}
-                  className={
-                    'group relative flex flex-col justify-between overflow-hidden rounded-3xl p-5 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl active:scale-[0.98] lg:rounded-[2.25rem] lg:p-8 ' +
-                    spanClass
-                  }
-                >
-                  <span
-                    aria-hidden="true"
-                    className={'pointer-events-none absolute -right-2 -bottom-4 font-display text-7xl font-black leading-none select-none lg:text-8xl ' + (isDark ? 'text-white/[0.05]' : 'text-forest-900/[0.04]')}
-                  >
-                    0{i + 1}
-                  </span>
-                  <div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className={'grid size-10 place-items-center rounded-2xl transition-transform duration-300 group-hover:scale-110 lg:size-13 ' + (isDark ? 'bg-coral-500 text-white shadow-lg' : 'bg-forest-50 text-forest-700')}>
-                        <ServiceIcon name={s.icon} className="size-4.5 lg:size-6" />
-                      </span>
-                      {isSpotlight ? (
-                        <span className="flex items-center gap-1.5 rounded-full border border-amber-300/30 bg-amber-400/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-200">
-                          <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                          Specialist Desk
-                        </span>
-                      ) : (
-                        <span className={'font-mono text-[11px] font-bold ' + (isDark ? 'text-white/45' : 'text-forest-900/35')}>
-                          0{i + 1}
-                        </span>
-                      )}
-                    </div>
-                    <h3 className={'mt-4 text-base font-extrabold leading-snug lg:mt-6 lg:text-2xl ' + (isDark ? '!text-white' : 'text-forest-900')}>{s.title}</h3>
-                    <p className={'mt-2 text-xs leading-relaxed lg:mt-3 lg:text-sm ' + (isDark ? 'text-forest-100/80' : 'text-forest-900/65')}>
-                      {s.summary}
-                    </p>
+          <div className="grid grid-cols-2 gap-3.5 sm:gap-4 lg:grid-cols-3 lg:gap-6">
+            {visaServices.map((s, i) => (
+              <Link
+                key={s.slug}
+                to="/visas"
+                hash={s.slug}
+                data-reveal=""
+                style={{ '--reveal-delay': `${i * 50}ms` } as CSSProperties}
+                className={
+                  'group relative flex flex-col justify-between overflow-hidden rounded-2xl border p-4 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-lg active:scale-[0.98] sm:rounded-3xl sm:p-5 lg:rounded-[2.25rem] lg:p-7 ' +
+                  (i === 0
+                    ? 'border-forest-900 bg-forest-900 text-white shadow-md'
+                    : 'border-forest-900/10 bg-white text-forest-900 hover:border-coral-400/50')
+                }
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className={
+                        'grid size-9 place-items-center rounded-xl transition-transform duration-300 group-hover:scale-110 sm:size-10 sm:rounded-2xl lg:size-13 ' +
+                        (i === 0 ? 'bg-coral-500 text-white shadow-xs' : 'bg-forest-50 text-forest-700')
+                      }
+                    >
+                      <ServiceIcon name={s.icon} className="size-4 sm:size-4.5 lg:size-6" />
+                    </span>
+                    <span className={'font-mono text-[10px] font-bold sm:text-xs ' + (i === 0 ? 'text-white/45' : 'text-forest-900/35')}>
+                      0{i + 1}
+                    </span>
                   </div>
-                  {isDark ? (
-                    <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
-                      {isSpotlight ? (
-                        <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider">
-                          <span className="rounded-md bg-rose-500/20 border border-rose-400/30 px-2 py-0.5 text-rose-200">Refused</span>
-                          <span className="text-amber-200">→</span>
-                          <span className="rounded-md bg-emerald-500/20 border border-emerald-400/30 px-2 py-0.5 text-emerald-200 font-bold">Approved</span>
-                        </div>
-                      ) : (
-                        <div className="flex flex-wrap gap-1.5">
-                          {['Canada', 'UK', 'Australia', 'Germany'].map((tag) => (
-                            <span key={tag} className="rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5 text-[10px] font-semibold text-white/90">
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      <span className="inline-flex items-center gap-1 text-xs font-bold text-coral-300">
-                        Explore <ArrowRight aria-hidden="true" className="size-3.5 transition-transform duration-200 group-hover:translate-x-1" />
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="mt-4 flex items-center justify-between pt-2 text-xs font-bold text-coral-600">
-                      <span>Learn more</span>
-                      <ArrowRight aria-hidden="true" className="size-3.5 transition-transform duration-200 group-hover:translate-x-1" />
-                    </div>
-                  )}
-                </Link>
-              )
-            })}
+                  <h3 className={'mt-3 text-sm font-extrabold leading-snug sm:text-base lg:mt-5 lg:text-2xl ' + (i === 0 ? '!text-white' : 'text-forest-900')}>
+                    {s.title}
+                  </h3>
+                  <p className={'mt-1.5 line-clamp-3 text-[11px] leading-relaxed sm:text-xs lg:mt-2.5 lg:text-sm lg:line-clamp-none ' + (i === 0 ? 'text-forest-100/80' : 'text-forest-900/65')}>
+                    {s.summary}
+                  </p>
+                </div>
+                <div className={'mt-4 flex items-center justify-between border-t pt-2.5 text-[11px] font-bold sm:text-xs lg:mt-6 lg:pt-3.5 ' + (i === 0 ? 'border-white/10 text-coral-300' : 'border-forest-900/10 text-coral-600')}>
+                  <span>Learn more</span>
+                  <ArrowRight aria-hidden="true" className="size-3.5 transition-transform duration-200 group-hover:translate-x-1 lg:size-4" />
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
