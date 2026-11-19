@@ -51,36 +51,43 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
   const loadSequence = useRef(0)
   const refreshInFlight = useRef(false)
   const [lastUpdated, setLastUpdated] = useState('')
+  const [refreshing, setRefreshing] = useState(false)
+  const [justRefreshed, setJustRefreshed] = useState(false)
 
-      async function load(targetMonth = month, background = false) {
+  async function load(targetMonth = month, background = false) {
     const request = ++loadSequence.current
-    if (!background) setLoading(true)
+    setLoading(true)
     setError('')
     try {
       const next = await getAdminAttendanceSnapshot({ data: { month: targetMonth, lightweight: background } })
+      const locked = background ? null : await getAttendanceCycleFinalizations({ data: { month: targetMonth } })
       if (request !== loadSequence.current) return
-      setSnapshot((current) => {
-        if (!background || !current) return next
-        const prevHistory = new Map(current.logs.map((l) => [l.id, l.editHistory]))
-        return {
-          ...next,
-          logs: next.logs.map((l) => (l.editHistory.length ? l : { ...l, editHistory: prevHistory.get(l.id) ?? [] })),
-        }
-      })
+      if (locked) setFinalizations(locked)
+      setSnapshot(next)
       if (!background) setSettingsDraft(next.settings)
       setLastUpdated(new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }))
-      if (lastLoadedMonthRef.current !== targetMonth) {
-        setFilterDate(previous => datePreset === 'date' && previous.startsWith(targetMonth) ? previous : next.todayIst.startsWith(targetMonth) ? next.todayIst : `${targetMonth}-01`)
-        lastLoadedMonthRef.current = targetMonth
-      }
+      setFilterDate((prev) => prev.startsWith(targetMonth) ? prev : next.todayIst.startsWith(targetMonth) ? next.todayIst : `${targetMonth}-01`)
     } catch (cause) {
       if (request !== loadSequence.current) return
       setError(cause instanceof Error ? cause.message : 'Could not load attendance.')
     } finally {
-      if (request === loadSequence.current && !background) setLoading(false)
+      if (request === loadSequence.current) setLoading(false)
     }
   }
 
+  async function handleRefreshNow() {
+    if (refreshing || busy) return
+    setRefreshing(true)
+    try {
+      const minDelay = new Promise((resolve) => window.setTimeout(resolve, 450))
+      await Promise.all([load(month, false), minDelay])
+      setJustRefreshed(true)
+      onNotice('Staff attendance data refreshed.')
+      window.setTimeout(() => setJustRefreshed(false), 2200)
+    } finally {
+      setRefreshing(false)
+    }
+  }
   useEffect(() => {
     void load(month)
     return () => { loadSequence.current++ }
@@ -345,9 +352,35 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#667085]">
-                <span role="status">{loading ? 'Updating attendance…' : lastUpdated ? 'Updated ' + lastUpdated + ' IST' : ''}{subTab !== 'employees' && subTab !== 'payments' && ' · Auto-refresh every 30 seconds while visible'}</span>
-        <button type="button" disabled={loading || busy || Boolean(empDraft) || Boolean(logDraft)} onClick={() => void load(month, true)} className="inline-flex items-center gap-1 rounded-lg border border-[#E4E7EC] bg-white px-3 py-2 font-semibold text-[#465FFF] disabled:opacity-50"><RefreshCw className={loading ? 'size-3.5 animate-spin' : 'size-3.5'} />Refresh now</button>
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#667085]">
+        <span role="status">{loading || refreshing ? 'Updating attendance…' : lastUpdated ? 'Updated ' + lastUpdated + ' IST' : ''}{subTab !== 'employees' && ' · Auto-refresh every 30 seconds while visible'}</span>
+        <button
+          type="button"
+          disabled={refreshing || loading || busy || Boolean(empDraft) || Boolean(logDraft)}
+          onClick={() => void handleRefreshNow()}
+          className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 font-semibold transition ${
+            justRefreshed
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+              : 'border-[#E4E7EC] bg-white text-[#465FFF] hover:bg-[#F9FAFB]'
+          } disabled:opacity-50`}
+        >
+          {refreshing ? (
+            <>
+              <RefreshCw className="size-3.5 animate-spin text-[#465FFF]" />
+              <span>Refreshing…</span>
+            </>
+          ) : justRefreshed ? (
+            <>
+              <Check className="size-3.5 text-emerald-600" />
+              <span>Refreshed!</span>
+            </>
+          ) : (
+            <>
+              <RefreshCw className="size-3.5" />
+              <span>Refresh now</span>
+            </>
+          )}
+        </button>
       </div>
       {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
