@@ -45,7 +45,7 @@ test('admin pagination, IST dates, aggregates and policy transactions on MySQL',
     assert.equal(snapshot.settings.popupEnabled,false)
     assert.equal(snapshot.settings.popupDelaySeconds,25)
     assert.equal(snapshot.settings.approvalsMarqueeEnabled,false)
-    assert.deepEqual(snapshot.settings.phones,['+91 9658018000'])
+    assert.deepStrictEqual(snapshot.settings.phones,['+91 9658018000'])
     assert.equal(snapshot.settings.officeHours,'Mon – Sat · 9:30 AM – 7:30 PM')
     await api.updateSettings({data:{popupEnabled:true,popupDelaySeconds:25,whatsappEnabled:true,approvalsMarqueeEnabled:true}})
   })
