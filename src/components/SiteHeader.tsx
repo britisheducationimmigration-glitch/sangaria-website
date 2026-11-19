@@ -216,11 +216,11 @@ export function SiteHeader({ settings }: { settings: SiteSettings }) {
         </div>
       </header>
 
-      {/* Mobile Full-Screen Departure Board Menu */}
+           {/* Mobile Full-Screen Departure Board Menu */}
       {open && (
         <div
           id="mobile-site-nav"
-          className="fixed inset-x-3 top-[76px] bottom-5 z-50 overflow-y-auto overscroll-contain rounded-3xl border border-white/15 bg-forest-950/98 p-5 sm:p-6 text-white shadow-2xl backdrop-blur-2xl lg:hidden animate-in fade-in slide-in-from-top-4 duration-200"
+          className="fixed inset-x-3 top-[76px] max-h-[calc(100dvh-160px)] z-50 overflow-y-auto overscroll-contain rounded-3xl border border-white/15 bg-forest-950/98 p-5 sm:p-6 text-white shadow-2xl backdrop-blur-2xl lg:hidden animate-in fade-in slide-in-from-top-4 duration-200"
         >
           <div className="flex items-center justify-between border-b border-white/10 pb-4">
             <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-forest-100/70">
