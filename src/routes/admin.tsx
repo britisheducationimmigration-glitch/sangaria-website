@@ -2,15 +2,7 @@ import { Logo } from '@/components/Logo'
 import { getEnquiriesPage } from '@/lib/admin-functions'
 import { createFileRoute } from '@tanstack/react-router'
 import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import {
-  BarChart3,
-  BookOpen,
-  CalendarCheck2,
-  Coins,
-  FileText,
-  Globe,
-  GraduationCap,
-  Inbox,
+import { BarChart3, BookOpen, CalendarCheck2, Coins, FileText, Globe, GraduationCap, Inbox,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -1235,22 +1227,59 @@ function DemoRequestsPanel({ totalCount, onReload, onNotice, canDelete, canManag
   const refreshPage = async () => { await onReload(); setRevision(n => n + 1) }
   const visible = loading || error ? [] : result.items
   return (
-    <section>
-      <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div><p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">IELTS & PTE</p><h2 className="mt-2 text-3xl font-extrabold">Free demo requests</h2><p className="mt-1 text-sm text-forest-900/60">Preferred dates are requests. Confirm the available slot with the student and schedule the next follow-up on the lead.</p></div>
-        <button type="button" aria-pressed={dueOnly} onClick={() => { setDueOnly((value) => !value); setPage(1) }} className="w-fit rounded-full bg-amber-100 px-4 py-2 text-sm font-bold text-amber-900">{dueOnly ? 'Show all requests' : 'Follow-ups overdue'}</button>
+    <section className="space-y-6">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex size-7 items-center justify-center rounded-lg bg-[#ECF3FF] text-[#465FFF]">
+              <Sparkles className="size-4" />
+            </span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#465FFF]">IELTS & PTE Coaching</span>
+          </div>
+          <h2 className="mt-1 text-2xl font-bold tracking-tight text-[#1D2939]">Free Demo Class Requests</h2>
+          <p className="mt-0.5 text-xs text-[#667085]">Review student test prep demo requests and schedule follow-up calls.</p>
+        </div>
+        <button
+          type="button"
+          aria-pressed={dueOnly}
+          onClick={() => { setDueOnly((v) => !v); setPage(1) }}
+          className={`inline-flex min-h-10 items-center gap-1.5 rounded-xl px-4 text-xs font-semibold shadow-xs transition ${
+            dueOnly ? 'bg-amber-500 text-white hover:bg-amber-600' : 'border border-[#E4E7EC] bg-white text-[#344054] hover:bg-[#F9FAFB]'
+          }`}
+        >
+          {dueOnly ? 'Showing Overdue Follow-ups' : 'Filter Overdue Follow-ups'}
+        </button>
       </div>
-      <div className="mb-5 grid gap-3 sm:grid-cols-2">
-        <div className="rounded-2xl bg-white p-4 ring-1 ring-forest-900/10"><p className="text-xs font-bold uppercase tracking-wider text-forest-900/55">Total demo requests</p><p className="mt-2 text-3xl font-extrabold">{totalCount}</p></div>
-        <div className="rounded-2xl bg-amber-100 p-4 text-amber-900"><p className="text-xs font-bold uppercase tracking-wider opacity-70">{dueOnly ? 'Overdue demo requests' : 'Showing'}</p><p className="mt-2 text-3xl font-extrabold">{result.total}</p></div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="rounded-2xl border border-[#E4E7EC] bg-white p-5">
+          <p className="text-xs font-semibold uppercase tracking-wider text-[#667085]">Total Demo Requests</p>
+          <p className="mt-1 font-mono text-3xl font-bold tabular-nums text-[#1D2939]">{totalCount}</p>
+        </div>
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-5">
+          <p className="text-xs font-semibold uppercase tracking-wider text-amber-800">{dueOnly ? 'Overdue Follow-ups' : 'Current Filter Count'}</p>
+          <p className="mt-1 font-mono text-3xl font-bold tabular-nums text-amber-900">{result.total}</p>
+        </div>
       </div>
-      {error && <p role="alert" className="mb-4 text-sm font-semibold text-red-700">{error}</p>}
-      <div className="mb-4 flex items-center gap-3 text-xs font-semibold">
-        <button type="button" disabled={loading || result.page <= 1} onClick={() => setPage(result.page - 1)} className="rounded-lg border border-[#E4E7EC] bg-white px-3 py-1.5 disabled:opacity-40">Previous</button>
-        <span>{loading ? 'Loading...' : `Page ${result.page} of ${Math.max(1, Math.ceil(result.total / 50))}`}</span>
-        <button type="button" disabled={loading || result.page * 50 >= result.total} onClick={() => setPage(result.page + 1)} className="rounded-lg border border-[#E4E7EC] bg-white px-3 py-1.5 disabled:opacity-40">Next</button>
+
+      {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs font-medium text-rose-800">{error}</div>}
+
+      <div className="flex items-center justify-between rounded-xl border border-[#E4E7EC] bg-white px-4 py-2.5 text-xs font-semibold text-[#667085]">
+        <button type="button" disabled={loading || result.page <= 1} onClick={() => setPage(result.page - 1)} className="rounded-lg border border-[#E4E7EC] bg-white px-3 py-1.5 hover:bg-[#F9FAFB] disabled:opacity-40">Previous</button>
+        <span>{loading ? 'Loading requests…' : `Page ${result.page} of ${Math.max(1, Math.ceil(result.total / 50))}`}</span>
+        <button type="button" disabled={loading || result.page * 50 >= result.total} onClick={() => setPage(result.page + 1)} className="rounded-lg border border-[#E4E7EC] bg-white px-3 py-1.5 hover:bg-[#F9FAFB] disabled:opacity-40">Next</button>
       </div>
-      <div className="grid gap-4">{visible.map((item) => <EnquiryCard key={item.id} item={item} onReload={refreshPage} onNotice={onNotice} canDelete={canDelete} canManageComments={canManageComments} />)}{!loading && visible.length === 0 && <p className="rounded-2xl bg-white p-8 text-center text-forest-900/60">{dueOnly ? 'No overdue demo follow-ups right now.' : 'No demo requests have been received yet.'}</p>}</div>
+
+      <div className="grid gap-4">
+        {visible.map((item) => (
+          <EnquiryCard key={item.id} item={item} onReload={refreshPage} onNotice={onNotice} canDelete={canDelete} canManageComments={canManageComments} />
+        ))}
+        {!loading && visible.length === 0 && (
+          <div className="rounded-2xl border border-[#E4E7EC] bg-white p-12 text-center text-xs text-[#667085]">
+            {dueOnly ? 'No overdue demo follow-ups right now.' : 'No demo requests received yet.'}
+          </div>
+        )}
+      </div>
     </section>
   )
 }
@@ -1271,20 +1300,70 @@ function ReviewQueuePanel({ drafts, onOpenEnquiries, onOpenDraft }: { drafts: Ad
     return () => { cancelled = true }
   }, [queue, page])
   return (
-    <section>
-      <div className="mb-6"><p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">Needs attention</p><h2 className="mt-2 text-3xl font-extrabold">Review queue</h2><p className="mt-1 text-sm text-forest-900/60">A read-only overview of new enquiries and unpublished content, with links to the existing editing screens.</p></div>
-<div className="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold"><button type="button" onClick={() => { setQueue('new'); setPage(1) }} className={`rounded-full px-4 py-2 ${queue === 'new' ? 'bg-forest-900 text-white' : 'bg-white text-forest-900 ring-1 ring-forest-900/10'}`}>New leads</button><button type="button" onClick={() => { setQueue('overdue'); setPage(1) }} className={`rounded-full px-4 py-2 ${queue === 'overdue' ? 'bg-amber-600 text-white' : 'bg-white text-forest-900 ring-1 ring-forest-900/10'}`}>Overdue follow-ups</button><div className="ml-auto flex items-center gap-2"><button type="button" disabled={loading || result.page <= 1} onClick={() => setPage(result.page - 1)} className="rounded-lg border border-[#E4E7EC] bg-white px-3 py-1.5 disabled:opacity-40">Previous</button><span className="text-[#667085]">{loading ? 'Loading...' : `Page ${result.page} / ${Math.max(1, Math.ceil(result.total / 50))}`}</span><button type="button" disabled={loading || result.page * 50 >= result.total} onClick={() => setPage(result.page + 1)} className="rounded-lg border border-[#E4E7EC] bg-white px-3 py-1.5 disabled:opacity-40">Next</button></div></div>{error && <p role="alert" className="mb-3 text-sm font-semibold text-red-700">{error}</p>}
+    <section className="space-y-6">
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex size-7 items-center justify-center rounded-lg bg-[#ECF3FF] text-[#465FFF]">
+            <Inbox className="size-4" />
+          </span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-[#465FFF]">Urgent Action</span>
+        </div>
+        <h2 className="mt-1 text-2xl font-bold tracking-tight text-[#1D2939]">Review Queue</h2>
+        <p className="text-xs text-[#667085]">Overview of unprocessed student enquiries and pending draft publications.</p>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => { setQueue('new'); setPage(1) }} className={`rounded-xl px-4 py-2 text-xs font-semibold transition ${queue === 'new' ? 'bg-[#465FFF] text-white shadow-2xs' : 'border border-[#E4E7EC] bg-white text-[#344054] hover:bg-[#F9FAFB]'}`}>New Leads</button>
+          <button type="button" onClick={() => { setQueue('overdue'); setPage(1) }} className={`rounded-xl px-4 py-2 text-xs font-semibold transition ${queue === 'overdue' ? 'bg-amber-500 text-white shadow-2xs' : 'border border-[#E4E7EC] bg-white text-[#344054] hover:bg-[#F9FAFB]'}`}>Overdue Follow-ups</button>
+        </div>
+        <div className="flex items-center gap-2 text-xs font-semibold text-[#667085]">
+          <button type="button" disabled={loading || result.page <= 1} onClick={() => setPage(result.page - 1)} className="rounded-lg border border-[#E4E7EC] bg-white px-3 py-1.5 hover:bg-[#F9FAFB] disabled:opacity-40">Previous</button>
+          <span>{loading ? 'Loading…' : `Page ${result.page} / ${Math.max(1, Math.ceil(result.total / 50))}`}</span>
+          <button type="button" disabled={loading || result.page * 50 >= result.total} onClick={() => setPage(result.page + 1)} className="rounded-lg border border-[#E4E7EC] bg-white px-3 py-1.5 hover:bg-[#F9FAFB] disabled:opacity-40">Next</button>
+        </div>
+      </div>
+
+      {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-medium text-rose-800">{error}</div>}
+
       <div className="grid gap-6 lg:grid-cols-2">
-        <section className="rounded-3xl bg-white p-5 ring-1 ring-forest-900/10">
-          <div className="mb-4 flex items-center justify-between gap-3"><h3 className="text-lg font-extrabold">{queue === 'new' ? 'New enquiries' : 'Overdue follow-ups'}</h3><span className="rounded-full bg-coral-50 px-3 py-1 text-xs font-bold text-coral-700">{result.total}</span></div>
-   <div className="grid gap-3">{(loading || error ? [] : result.items).map((item) => <div key={item.id} className="rounded-2xl bg-cream p-4"><p className="font-bold">{item.name}</p><p className="mt-1 text-sm text-forest-900/60">{item.interest || 'General counselling'}{item.country ? ' · ' + item.country : ''}</p><p className="mt-1 text-xs text-forest-900/50">{formatIstDateTime(item.createdAt)}</p></div>)}{!loading && !error && result.total === 0 && <p className="text-sm text-forest-900/55">No new enquiries are waiting.</p>}</div>
-          {result.total > 0 && <button type="button" onClick={onOpenEnquiries} className="mt-4 rounded-full bg-forest-900 px-4 py-2 text-sm font-bold text-white">Review new enquiries</button>}
-        </section>
-        <section className="rounded-3xl bg-white p-5 ring-1 ring-forest-900/10">
-          <div className="mb-4 flex items-center justify-between gap-3"><h3 className="text-lg font-extrabold">Unpublished content</h3><span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">{drafts.length}</span></div>
-          <div className="grid gap-3">{drafts.slice(0, 10).map((post) => <button key={post.id} type="button" onClick={() => onOpenDraft(post)} className="rounded-2xl bg-cream p-4 text-left transition hover:ring-1 hover:ring-coral-500"><span className="block font-bold">{post.title || 'Untitled draft'}</span><span className="mt-1 block text-xs text-forest-900/55">{post.category} · {post.date}</span></button>)}{drafts.length === 0 && <p className="text-sm text-forest-900/55">No unpublished articles are waiting.</p>}</div>
-          {drafts.length > 10 && <p className="mt-3 text-xs text-forest-900/55">Showing the latest 10 drafts.</p>}
-        </section>
+        <div className="rounded-2xl border border-[#E4E7EC] bg-white p-5">
+          <div className="mb-4 flex items-center justify-between border-b border-[#F2F4F7] pb-3">
+            <h3 className="text-sm font-bold text-[#1D2939]">{queue === 'new' ? 'New Enquiries Waiting' : 'Overdue Follow-ups'}</h3>
+            <span className="rounded-md bg-[#ECF3FF] px-2.5 py-0.5 font-mono text-xs font-bold text-[#465FFF]">{result.total}</span>
+          </div>
+          <div className="space-y-2.5">
+            {(loading || error ? [] : result.items).map((item) => (
+              <div key={item.id} className="rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-3 text-xs">
+                <p className="font-bold text-[#1D2939]">{item.name}</p>
+                <p className="mt-0.5 text-[#667085]">{item.interest || 'General Counselling'}{item.country ? ' · ' + item.country : ''}</p>
+                <p className="mt-1 font-mono text-[10px] text-[#98A2B3]">{formatIstDateTime(item.createdAt)}</p>
+              </div>
+            ))}
+            {!loading && !error && result.total === 0 && <p className="py-8 text-center text-xs text-[#667085]">No {queue === 'new' ? 'new leads' : 'overdue follow-ups'} waiting.</p>}
+          </div>
+          {result.total > 0 && (
+            <button type="button" onClick={onOpenEnquiries} className="mt-4 w-full rounded-xl bg-[#465FFF] py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-[#3b52d4]">
+              Open CRM to Work Leads
+            </button>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-[#E4E7EC] bg-white p-5">
+          <div className="mb-4 flex items-center justify-between border-b border-[#F2F4F7] pb-3">
+            <h3 className="text-sm font-bold text-[#1D2939]">Unpublished Content Drafts</h3>
+            <span className="rounded-md bg-amber-50 px-2.5 py-0.5 font-mono text-xs font-bold text-amber-700">{drafts.length}</span>
+          </div>
+          <div className="space-y-2.5">
+            {drafts.slice(0, 10).map((post) => (
+              <button key={post.id} type="button" onClick={() => onOpenDraft(post)} className="w-full rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-3 text-left transition hover:border-[#465FFF] hover:bg-white">
+                <span className="block text-xs font-bold text-[#1D2939]">{post.title || 'Untitled draft'}</span>
+                <span className="mt-1 block text-[11px] text-[#667085]">{post.category} · {post.date}</span>
+              </button>
+            ))}
+            {drafts.length === 0 && <p className="py-8 text-center text-xs text-[#667085]">No unpublished articles waiting.</p>}
+          </div>
+        </div>
       </div>
     </section>
   )
@@ -1295,14 +1374,58 @@ function ReportsPanel({ stats }: { stats: AdminSnapshot['enquiryStats'] }) {
   const statuses = Object.entries(stats.byStatus).sort((a, b) => b[1] - a[1])
   const sources = Object.entries(stats.bySource).sort((a, b) => b[1] - a[1])
   return (
-    <section>
-      <div className="mb-6"><p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">Live lead summary</p><h2 className="mt-2 text-3xl font-extrabold">Reports</h2><p className="mt-1 text-sm text-forest-900/60">Counts are calculated from saved enquiries. Conversion is converted leads divided by all saved leads.</p></div>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {[['New in last 7 days', stats.newLast7Days], ['Follow-ups due today', stats.dueToday], ['Demo requests', stats.demoRequests], ['Conversion rate', conversion + '%']].map(([label, value]) => <div key={String(label)} className="rounded-2xl bg-white p-5 ring-1 ring-forest-900/10"><p className="text-xs font-bold uppercase tracking-wider text-forest-900/55">{label}</p><p className="mt-2 text-3xl font-extrabold">{value}</p></div>)}
+    <section className="space-y-6">
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex size-7 items-center justify-center rounded-lg bg-[#ECF3FF] text-[#465FFF]">
+            <BarChart3 className="size-4" />
+          </span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-[#465FFF]">Analytics & Pipeline</span>
+        </div>
+        <h2 className="mt-1 text-2xl font-bold tracking-tight text-[#1D2939]">CRM Performance Reports</h2>
+        <p className="text-xs text-[#667085]">Conversion ratios, channel attribution, and lead pipeline volume.</p>
       </div>
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <div className="rounded-3xl bg-white p-5 ring-1 ring-forest-900/10"><h3 className="text-lg font-extrabold">By stage</h3><div className="mt-4 divide-y divide-forest-900/10">{statuses.map(([label, value]) => <div key={label} className="flex justify-between gap-3 py-3 text-sm"><span>{label}</span><strong>{value}</strong></div>)}{statuses.length === 0 && <p className="py-3 text-sm text-forest-900/55">No enquiry data yet.</p>}</div></div>
-        <div className="rounded-3xl bg-white p-5 ring-1 ring-forest-900/10"><h3 className="text-lg font-extrabold">By source</h3><div className="mt-4 divide-y divide-forest-900/10">{sources.map(([label, value]) => <div key={label} className="flex justify-between gap-3 py-3 text-sm"><span>{label}</span><strong>{value}</strong></div>)}{sources.length === 0 && <p className="py-3 text-sm text-forest-900/55">No enquiry data yet.</p>}</div></div>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          ['New in last 7 days', stats.newLast7Days, 'text-[#1D2939]'],
+          ['Follow-ups due today', stats.dueToday, stats.dueToday > 0 ? 'text-amber-600' : 'text-[#1D2939]'],
+          ['Demo requests', stats.demoRequests, 'text-[#1D2939]'],
+          ['Conversion rate', conversion + '%', 'text-[#465FFF]'],
+        ].map(([label, value, color]) => (
+          <div key={String(label)} className="rounded-2xl border border-[#E4E7EC] bg-white p-5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[#667085]">{label}</p>
+            <p className={`mt-1.5 font-mono text-3xl font-bold tabular-nums ${color}`}>{value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="rounded-2xl border border-[#E4E7EC] bg-white p-5">
+          <h3 className="text-sm font-bold text-[#1D2939]">Enquiries by Stage</h3>
+          <div className="mt-4 divide-y divide-[#F2F4F7]">
+            {statuses.map(([label, value]) => (
+              <div key={label} className="flex justify-between py-2.5 text-xs">
+                <span className="font-medium text-[#344054]">{label}</span>
+                <strong className="font-mono tabular-nums text-[#1D2939]">{value}</strong>
+              </div>
+            ))}
+            {statuses.length === 0 && <p className="py-4 text-center text-xs text-[#667085]">No pipeline data yet.</p>}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-[#E4E7EC] bg-white p-5">
+          <h3 className="text-sm font-bold text-[#1D2939]">Enquiries by Source Channel</h3>
+          <div className="mt-4 divide-y divide-[#F2F4F7]">
+            {sources.map(([label, value]) => (
+              <div key={label} className="flex justify-between py-2.5 text-xs">
+                <span className="font-medium text-[#344054]">{label}</span>
+                <strong className="font-mono tabular-nums text-[#1D2939]">{value}</strong>
+              </div>
+            ))}
+            {sources.length === 0 && <p className="py-4 text-center text-xs text-[#667085]">No acquisition data yet.</p>}
+          </div>
+        </div>
       </div>
     </section>
   )
@@ -2738,75 +2861,84 @@ function UsersPanel({ users, currentEmail, onReload, onNotice }: { users: AdminU
   }
 
   return (
-    <section className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+    <section className="grid gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
       <div>
-        <p className="font-mono text-xs uppercase tracking-[0.18em] text-coral-600">Access control</p>
-        <h2 className="mt-2 text-3xl font-extrabold">Add New Staff / User</h2>
-        <p className="mt-2 text-sm leading-relaxed text-forest-900/65">Create an account for counsellors or editors. They sign in with this email and password, and only see the sections allowed by their role.</p>
-        <div className="mt-6 grid gap-4 rounded-3xl bg-white p-6 ring-1 ring-forest-900/10">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex size-7 items-center justify-center rounded-lg bg-[#ECF3FF] text-[#465FFF]">
+            <UserCog className="size-4" />
+          </span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-[#465FFF]">Access Control</span>
+        </div>
+        <h2 className="mt-1 text-2xl font-bold tracking-tight text-[#1D2939]">Add Staff Member</h2>
+        <p className="mt-0.5 text-xs text-[#667085]">Create logins for counsellors or editors with role-based access.</p>
+
+        <div className="mt-5 grid gap-4 rounded-2xl border border-[#E4E7EC] bg-white p-5 shadow-sm">
           <div>
-            <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-forest-900/70">Staff Email (Login ID) *</label>
-            <input className="field" type="email" autoComplete="off" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="staff@example.com" required />
+            <label className="block text-xs font-semibold text-[#344054]">Staff Email (Login ID) *</label>
+            <input className="field mt-1.5 h-10 w-full rounded-xl border border-[#E4E7EC] bg-white px-3 text-xs text-[#1D2939] focus:border-[#465FFF] focus:outline-none" type="email" autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="staff@example.com" required />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-forest-900/70">Staff Full Name</label>
-            <input className="field" type="text" autoComplete="off" value={name} onChange={(event) => setName(event.target.value)} placeholder="Staff member's name" />
+            <label className="block text-xs font-semibold text-[#344054]">Staff Full Name</label>
+            <input className="field mt-1.5 h-10 w-full rounded-xl border border-[#E4E7EC] bg-white px-3 text-xs text-[#1D2939] focus:border-[#465FFF] focus:outline-none" type="text" autoComplete="off" value={name} onChange={(e) => setName(e.target.value)} placeholder="Staff member's full name" />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-forest-900/70">Initial Password (minimum 6 characters) *</label>
-            <PasswordInput value={password} onChange={setPassword} required minLength={6} autoComplete="new-password" ariaLabel="Initial password for new staff user" className="field" placeholder="Set an initial password" toggleClassName="text-forest-900/50 hover:text-forest-900" />
+            <label className="block text-xs font-semibold text-[#344054]">Initial Password (min 6 characters) *</label>
+            <PasswordInput value={password} onChange={setPassword} required minLength={6} autoComplete="new-password" ariaLabel="Initial password for new staff user" className="field mt-1.5 h-10 w-full rounded-xl border border-[#E4E7EC] bg-white px-3 text-xs text-[#1D2939] focus:border-[#465FFF] focus:outline-none" placeholder="Set an initial password" toggleClassName="text-[#667085] hover:text-[#1D2939]" />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-forest-900/70">Role & Permissions</label>
-            <select className="field" value={role} onChange={(event) => setRole(event.target.value as AdminRole)}>
+            <label className="block text-xs font-semibold text-[#344054]">Role & Permissions</label>
+            <select className="field mt-1.5 h-10 w-full rounded-xl border border-[#E4E7EC] bg-white px-3 text-xs text-[#1D2939] focus:border-[#465FFF] focus:outline-none" value={role} onChange={(e) => setRole(e.target.value as AdminRole)}>
               <option value="content_editor">Content Editor (News, Stories & Batches)</option>
-              <option value="enquiry_manager">Enquiry Manager (Leads & Inquiries)</option>
+              <option value="enquiry_manager">Enquiry Manager (Leads & CRM)</option>
               <option value="super_admin">Super Admin (Everything)</option>
             </select>
           </div>
-          <div className="rounded-2xl bg-cream p-4 text-xs text-forest-900/70">
-            <strong className="text-forest-900">{roleLabels[role]}</strong>
-            <p className="mt-1">{role === 'super_admin' ? 'Full control over leads, content, settings and users.' : role === 'content_editor' ? 'Can manage News, coaching batches and Success Stories.' : 'Can manage enquiries and follow-ups.'}</p>
+          <div className="rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-3 text-xs text-[#667085]">
+            <strong className="text-[#1D2939]">{roleLabels[role]}</strong>
+            <p className="mt-0.5">{role === 'super_admin' ? 'Full access to CRM leads, payroll attendance, website content, and security.' : role === 'content_editor' ? 'Can manage News, coaching batches, success stories and country pages.' : 'Can view and update enquiries, student call notes, and demo requests.'}</p>
           </div>
-          <button type="button" disabled={busy || !email.trim() || password.trim().length < 6} onClick={() => void save()} className="w-fit rounded-full bg-forest-900 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{busy ? 'Saving…' : 'Create staff user'}</button>
+          <button type="button" disabled={busy || !email.trim() || password.trim().length < 6} onClick={() => void save()} className="mt-1 inline-flex min-h-10 items-center justify-center rounded-xl bg-[#465FFF] px-4 text-xs font-semibold text-white shadow-xs hover:bg-[#3b52d4] disabled:opacity-50">
+            {busy ? 'Saving…' : 'Create Staff User'}
+          </button>
         </div>
       </div>
 
-      <div className="grid gap-3">
-        {users.map((user) => (
-          <article key={user.openId} className="flex flex-col justify-between gap-3 rounded-2xl bg-white p-5 ring-1 ring-forest-900/10 sm:flex-row sm:items-center">
+      <div className="space-y-3">
+        <h3 className="text-base font-bold text-[#1D2939]">Existing Staff Users ({users.length})</h3>
+        {users.map((u) => (
+          <article key={u.openId} className="flex flex-col justify-between gap-3 rounded-2xl border border-[#E4E7EC] bg-white p-4.5 transition hover:border-[#D0D5DD] sm:flex-row sm:items-center">
             <div>
-              <strong>{user.name || user.email}</strong>
-              <p className="text-sm text-forest-900/60">{user.email}</p>
-              <span className="mt-2 inline-flex rounded-full bg-coral-50 px-3 py-1 text-xs font-bold text-coral-700">{roleLabels[user.role]}</span>
+              <strong className="text-sm text-[#1D2939]">{u.name || u.email}</strong>
+              <p className="text-xs text-[#667085]">{u.email}</p>
+              <span className="mt-1.5 inline-flex rounded-md bg-[#ECF3FF] px-2 py-0.5 text-[10px] font-semibold text-[#465FFF]">{roleLabels[u.role]}</span>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={() => { setResetModalUser(user); setNewStaffPassword('') }} className="rounded-full border border-forest-900/20 px-3.5 py-1.5 text-xs font-bold text-forest-900 hover:bg-forest-50">Reset password</button>
-              <button type="button" disabled={busy || user.email.toLowerCase() === currentEmail.toLowerCase()} onClick={() => void remove(user.openId)} className="w-fit rounded-full border border-red-200 px-4 py-2 text-sm font-bold text-red-700 disabled:cursor-not-allowed disabled:opacity-40">{user.email.toLowerCase() === currentEmail.toLowerCase() ? 'Current account' : 'Remove'}</button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={() => { setResetModalUser(u); setNewStaffPassword('') }} className="min-h-8 rounded-lg border border-[#E4E7EC] bg-white px-3 text-xs font-semibold text-[#344054] hover:bg-[#F9FAFB]">Reset password</button>
+              <button type="button" disabled={busy || u.email.toLowerCase() === currentEmail.toLowerCase()} onClick={() => void remove(u.openId)} className="min-h-8 rounded-lg border border-rose-200 px-3 text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40">{u.email.toLowerCase() === currentEmail.toLowerCase() ? 'Current account' : 'Remove'}</button>
             </div>
           </article>
         ))}
-        {users.length === 0 && <p className="rounded-2xl bg-white p-6 text-center text-sm text-forest-900/60">No provisioned users yet.</p>}
+        {users.length === 0 && <p className="rounded-2xl border border-[#E4E7EC] bg-white p-6 text-center text-xs text-[#667085]">No staff users yet.</p>}
       </div>
 
       {resetModalUser && (
-        <div role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setResetModalUser(null) }} className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm">
-          <section role="dialog" aria-modal="true" aria-labelledby="reset-staff-password-title" className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-forest-900/10">
-            <div className="flex items-center justify-between border-b border-forest-900/10 pb-3">
+        <div role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) setResetModalUser(null) }} className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4 backdrop-blur-xs">
+          <section role="dialog" aria-modal="true" aria-labelledby="reset-staff-password-title" className="w-full max-w-md rounded-2xl border border-[#E4E7EC] bg-white p-6 shadow-xl">
+            <div className="flex items-center justify-between border-b border-[#F2F4F7] pb-3">
               <div>
-                <h3 id="reset-staff-password-title" className="text-lg font-extrabold text-forest-900">Reset staff password</h3>
-                <p className="mt-1 text-xs text-forest-900/60">{resetModalUser.email}</p>
+                <h3 id="reset-staff-password-title" className="text-sm font-bold text-[#1D2939]">Reset Staff Password</h3>
+                <p className="text-xs text-[#667085]">{resetModalUser.email}</p>
               </div>
-              <button type="button" onClick={() => setResetModalUser(null)} aria-label="Close password reset dialog" className="text-sm font-bold text-forest-900/40 hover:text-forest-900">✕</button>
+              <button type="button" onClick={() => setResetModalUser(null)} aria-label="Close" className="text-xs font-semibold text-[#667085] hover:text-[#1D2939]">✕</button>
             </div>
             <form onSubmit={handleResetStaffPassword} className="mt-4 space-y-4">
               <div>
-                <label className="mb-1 block text-xs font-bold text-forest-900/70">New Password</label>
-                <PasswordInput value={newStaffPassword} onChange={setNewStaffPassword} required minLength={6} autoComplete="new-password" ariaLabel="New password for staff user" className="field" placeholder="Enter new password" toggleClassName="text-forest-900/50 hover:text-forest-900" />
+                <label className="block text-xs font-semibold text-[#344054]">New Password (minimum 6 characters)</label>
+                <PasswordInput value={newStaffPassword} onChange={setNewStaffPassword} required minLength={6} autoComplete="new-password" ariaLabel="New password for staff user" className="field mt-1.5 h-10 w-full rounded-xl border border-[#E4E7EC] bg-white px-3 text-xs text-[#1D2939] focus:border-[#465FFF] focus:outline-none" placeholder="Enter new password" toggleClassName="text-[#667085] hover:text-[#1D2939]" />
               </div>
-              <div className="flex justify-end gap-2">
-                <button type="button" onClick={() => setResetModalUser(null)} className="rounded-full border border-forest-900/15 px-5 py-2.5 text-xs font-bold text-forest-900">Cancel</button>
-                <button type="submit" disabled={busy || newStaffPassword.trim().length < 6} className="rounded-full bg-forest-900 px-5 py-2.5 text-xs font-bold text-white disabled:opacity-50">{busy ? 'Saving…' : 'Save Password'}</button>
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setResetModalUser(null)} className="min-h-9 rounded-xl border border-[#E4E7EC] bg-white px-3 text-xs font-semibold text-[#344054] hover:bg-[#F9FAFB]">Cancel</button>
+                <button type="submit" disabled={busy || newStaffPassword.trim().length < 6} className="min-h-9 rounded-xl bg-[#465FFF] px-4 text-xs font-semibold text-white shadow-xs hover:bg-[#3b52d4] disabled:opacity-50">{busy ? 'Saving…' : 'Update Password'}</button>
               </div>
             </form>
           </section>
