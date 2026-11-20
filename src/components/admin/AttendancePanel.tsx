@@ -3,7 +3,7 @@ import { attendanceDateWindow, type AttendancePreset } from '@/lib/attendance-da
 import { SavedAbsences } from './SavedAbsences'
 import { attendanceFlagLabel, attendanceNeedsReview, isAttendanceLocationFlag } from '@/lib/attendance-flags'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { CalendarDays, Check, Copy, Download, ExternalLink, History, MapPin, Pencil, Plus, RefreshCw, Smartphone, Trash2, Users } from 'lucide-react'
+import { CalendarDays, Check, Copy, Download, ExternalLink, History, MapPin, Navigation, Pencil, Plus, RefreshCw, Smartphone, Trash2, Users } from 'lucide-react'
 import { getAttendancePhotoCleanupPreview, cleanOldAttendancePhotos, deleteEmployee, permanentlyDeleteEmployee, exportAttendanceCsv, exportAttendanceExcel, finalizeAttendanceCycle, getAdminAttendanceSnapshot, getAttendanceRecordHistory, regenerateEmployeeToken, resetEmployeeDevice, saveAttendanceSettings, saveEmployee, updateAttendanceRecord } from '@/lib/attendance-functions'
 import type { AdminAttendanceSnapshot, AttendanceLogRecord, AttendanceSettings, EmployeeRecord } from '@/lib/content-types'
 import { AttendanceEditModal, EmployeeFormModal, type EmployeeDraft, type LogDraft } from './AttendanceModals'
@@ -394,11 +394,60 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
         </button>
       </div>
       {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-[#E4E7EC] bg-white p-5"><p className="text-xs font-medium text-[#667085]">Active Staff</p><p className="mt-2 text-3xl font-bold text-[#1D2939]">{employees.filter((e) => e.active).length}</p></div>
-        <div className="rounded-2xl border border-[#E4E7EC] bg-white p-5"><p className="text-xs font-medium text-[#667085]">Checked In Today</p><p className="mt-2 text-3xl font-bold text-[#12B76A]">{todayLogs.filter((l) => l.checkInAt).length}</p></div>
-        <div className="rounded-2xl border border-[#E4E7EC] bg-white p-5"><p className="text-xs font-medium text-[#667085]">Late Today</p><p className="mt-2 text-3xl font-bold text-[#F79009]">{todayLogs.filter((l) => l.isLate).length}</p></div>
-        <div className="rounded-2xl border border-[#E4E7EC] bg-white p-5"><p className="text-xs font-medium text-[#667085]">Location checks today</p><p className="mt-2 text-3xl font-bold text-[#F04438]">{todayLogs.filter((l) => [...l.inFlags, ...l.outFlags].some(isAttendanceLocationFlag)).length}</p><p className="mt-1 text-xs text-[#667085]">GPS/network indicators; not proof of VPN use.</p></div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <button
+          type="button"
+          onClick={() => { setSubTab('employees'); try { window.sessionStorage.setItem('bei-attendance-subtab', 'employees') } catch {} }}
+          className="group rounded-2xl border border-[#E4E7EC] bg-white p-5 text-left transition hover:border-[#465FFF] hover:shadow-xs"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-[#667085]">Active Staff</p>
+            <span className="rounded-md bg-[#ECF3FF] p-1 text-[#465FFF] group-hover:scale-110 transition"><Users className="size-4" /></span>
+          </div>
+          <p className="mt-2 text-3xl font-extrabold text-[#1D2939]">{employees.filter((e) => e.active).length}</p>
+          <p className="mt-1 text-xs font-medium text-[#465FFF] group-hover:underline">Manage roster &amp; GPS geofence →</p>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => { setSubTab('logs'); setDatePreset('today'); setFilterDate(''); setReviewOnly(false) }}
+          className="group rounded-2xl border border-[#E4E7EC] bg-white p-5 text-left transition hover:border-[#465FFF] hover:shadow-xs"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-[#667085]">Today&apos;s Check-ins</p>
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+          </div>
+          <p className="mt-2 text-3xl font-extrabold text-[#12B76A]">{todayLogs.filter((l) => l.checkInAt).length}</p>
+          <div className="mt-1 flex items-center gap-2 text-xs font-medium text-[#667085]">
+            <span className="text-amber-700">{todayLogs.filter((l) => l.isLate).length} late</span>
+            <span>·</span>
+            <span className="text-[#465FFF]">{todayLogs.filter((l) => l.checkInAt && !l.checkOutAt).length} in progress</span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => { setSubTab('logs'); setReviewOnly(true); setFilterDate(''); setDatePreset('all') }}
+          className={'group rounded-2xl border p-5 text-left transition hover:shadow-xs ' + (
+            logs.filter(requiresReview).length > 0 ? 'border-rose-200 bg-rose-50/40 hover:border-rose-400' : 'border-[#E4E7EC] bg-white hover:border-[#465FFF]'
+          )}
+        >
+          <div className="flex items-center justify-between">
+            <p className={'text-xs font-semibold ' + (logs.filter(requiresReview).length > 0 ? 'text-rose-700' : 'text-[#667085]')}>Needs Correction</p>
+            <span className={'rounded-md p-1 ' + (logs.filter(requiresReview).length > 0 ? 'bg-rose-100 text-rose-700' : 'bg-gray-100 text-gray-600')}><History className="size-4" /></span>
+          </div>
+          <p className={'mt-2 text-3xl font-extrabold ' + (logs.filter(requiresReview).length > 0 ? 'text-rose-700' : 'text-[#1D2939]')}>{logs.filter(requiresReview).length}</p>
+          <p className="mt-1 text-xs text-[#667085]">Missing check-outs or flagged records</p>
+        </button>
+
+        <div className="rounded-2xl border border-[#E4E7EC] bg-white p-5">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-[#667085]">Location Checks Today</p>
+            <span className="rounded-md bg-amber-50 p-1 text-amber-700"><MapPin className="size-4" /></span>
+          </div>
+          <p className="mt-2 text-3xl font-extrabold text-amber-800">{todayLogs.filter((l) => [...l.inFlags, ...l.outFlags].some(isAttendanceLocationFlag)).length}</p>
+          <p className="mt-1 text-xs text-[#667085]">GPS outside geofence or proxy IP</p>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 border-b border-[#E4E7EC] pb-3">
@@ -667,7 +716,31 @@ export function AttendancePanel({ onNotice }: { onNotice: (msg: string) => void 
 
           {settingsDraft && (
             <form onSubmit={handleSaveSettings} className="h-fit rounded-2xl border border-[#E4E7EC] bg-white p-5 space-y-4">
-              <h3 className="text-base font-bold text-[#1D2939]">Office GPS, Camera &amp; Network Checks</h3>
+                           <div className="flex items-center justify-between">
+                <h3 className="text-base font-bold text-[#1D2939]">Office GPS, Camera &amp; Network Checks</h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!navigator.geolocation) {
+                      onNotice('Geolocation not supported on this browser.')
+                      return
+                    }
+                    navigator.geolocation.getCurrentPosition(
+                      (pos) => {
+                        const lat = Number(pos.coords.latitude.toFixed(6))
+                        const lng = Number(pos.coords.longitude.toFixed(6))
+                        setSettingsDraft((curr) => curr ? { ...curr, officeLat: lat, officeLng: lng } : curr)
+                        onNotice(`Office GPS auto-set to current device location (${lat}, ${lng}).`)
+                      },
+                      (err) => onNotice('Location error: ' + err.message),
+                      { enableHighAccuracy: true }
+                    )
+                  }}
+                  className="inline-flex items-center gap-1 rounded-lg bg-[#ECF3FF] px-2.5 py-1 text-xs font-bold text-[#465FFF] hover:bg-[#DCEBFF]"
+                >
+                  <Navigation className="size-3.5" /> Auto-set from my GPS
+                </button>
+              </div>
               <label className="block text-xs font-semibold text-[#1D2939]">Office Name<input value={settingsDraft.officeName} onChange={(e) => setSettingsDraft({ ...settingsDraft, officeName: e.target.value })} className="field mt-1" /></label>
               <div className="grid grid-cols-2 gap-3">
                 <label className="text-xs font-semibold text-[#1D2939]">Latitude<input type="number" step="any" value={settingsDraft.officeLat} onChange={(e) => setSettingsDraft({ ...settingsDraft, officeLat: Number(e.target.value) })} className="field mt-1" /></label>

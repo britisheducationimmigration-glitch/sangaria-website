@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
-import { ImagePlus, Video } from 'lucide-react'
+import { ImagePlus, Star, Video } from 'lucide-react'
 import { ApprovalCard, TestimonialCard } from '@/components/Cards'
 import { deleteStory, saveStory } from '@/lib/admin-functions'
 import type { AdminStory } from '@/lib/content-types'
@@ -33,7 +33,7 @@ async function preparePhoto(file: File) {
   context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
   bitmap.close()
   const blob = await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob((value) => value ? resolve(value) : reject(new Error('Could not prepare this image.')), 'image/webp', 0.80)
+    canvas.toBlob((value) => (value ? resolve(value) : reject(new Error('Could not prepare this image.'))), 'image/webp', 0.8)
   })
   if (blob.size > 1.2 * 1024 * 1024) throw new Error('The prepared image is still too large. Choose a smaller photo.')
   const imageSrc = URL.createObjectURL(blob)
@@ -46,7 +46,12 @@ async function preparePhoto(file: File) {
   return { imageSrc, imageBase64, imageMimeType: 'image/webp' }
 }
 
-export function StoryEditor({ item, onReload, onNotice, onClose }: {
+export function StoryEditor({
+  item,
+  onReload,
+  onNotice,
+  onClose,
+}: {
   item: AdminStory
   onReload: () => Promise<void>
   onNotice: (message: string) => void
@@ -54,11 +59,9 @@ export function StoryEditor({ item, onReload, onNotice, onClose }: {
 }) {
   const [form, setForm] = useState<StoryDraft>(() => ({ ...item, photoBase64: '', photoMimeType: '' }))
   const [busy, setBusy] = useState(false)
-  const [preview, setPreview] = useState(false)
   const [error, setError] = useState('')
   const previewUrl = useRef('')
 
-  // Check if current country is a known preset or custom
   const matchedPresetKey = Object.keys(countryPresets).find(
     (k) => countryPresets[k].name.toLowerCase() === (form.country || '').trim().toLowerCase() || k === (form.country || '').trim().toLowerCase()
   )
@@ -80,11 +83,12 @@ export function StoryEditor({ item, onReload, onNotice, onClose }: {
     setError('')
   }
 
-  // Handle dropdown country switch — ALWAYS updates flag & visa
   function handleSelectCountry(presetKey: string) {
     setSelectedPreset(presetKey)
     if (presetKey === 'CUSTOM') {
-      if (Object.values(countryPresets).some(preset => preset.name === form.country)) setForm(current => ({ ...current, country: '', flag: '', visa: '' }))
+      if (Object.values(countryPresets).some((preset) => preset.name === form.country)) {
+        setForm((current) => ({ ...current, country: '', flag: '', visa: '' }))
+      }
       setError('')
       return
     }
@@ -123,7 +127,15 @@ export function StoryEditor({ item, onReload, onNotice, onClose }: {
       const photo = await preparePhoto(file)
       releasePreview()
       previewUrl.current = photo.imageSrc
-      setForm((current) => ({ ...current, mediaType: 'photo', photoSrc: photo.imageSrc, photoBase64: photo.imageBase64, photoMimeType: photo.imageMimeType, videoUrl: '', mediaConsent: false }))
+      setForm((current) => ({
+        ...current,
+        mediaType: 'photo',
+        photoSrc: photo.imageSrc,
+        photoBase64: photo.imageBase64,
+        photoMimeType: photo.imageMimeType,
+        videoUrl: '',
+        mediaConsent: false,
+      }))
       setError('')
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not prepare this image.')
@@ -146,7 +158,7 @@ export function StoryEditor({ item, onReload, onNotice, onClose }: {
       await saveStory({ data: form })
       releasePreview()
       await onReload()
-      onNotice('Success story saved.')
+      onNotice('Success story saved and live on website.')
       onClose()
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not save the story. Check the fields.')
@@ -156,7 +168,7 @@ export function StoryEditor({ item, onReload, onNotice, onClose }: {
   }
 
   async function remove() {
-    if (!form.id || !window.confirm('Delete this story?')) return
+    if (!form.id || !window.confirm('Delete this story permanently?')) return
     setBusy(true)
     try {
       await deleteStory({ data: { id: form.id } })
@@ -174,167 +186,240 @@ export function StoryEditor({ item, onReload, onNotice, onClose }: {
   const videoEmbedUrl = form.videoUrl ? getSupportedVideoEmbedUrl(form.videoUrl) : ''
 
   return (
-    <form onSubmit={submit} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-forest-900/10">
-      <div className="mb-5 flex items-start justify-between gap-4">
+    <form onSubmit={submit} className="rounded-3xl border border-[#E4E7EC] bg-white p-6 shadow-xs space-y-6">
+      <div className="flex items-start justify-between gap-4 border-b border-[#E4E7EC] pb-4">
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-coral-600">Success stories</p>
-          <h3 className="text-xl font-extrabold">Story editor</h3>
-          <p className="mt-1 text-xs leading-relaxed text-forest-900/55">Add approval details, country, flag and student photo or hosted video.</p>
+          <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#465FFF]">Student Showcase</span>
+          <h3 className="mt-0.5 text-xl font-extrabold text-[#1D2939]">
+            {form.id ? 'Edit Success Story' : 'Create Success Story'}
+          </h3>
+          <p className="mt-1 text-xs text-[#667085]">Add visa approvals, testimonial quotes, student photos or YouTube videos.</p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <button type="button" aria-pressed={preview} onClick={() => setPreview((value) => !value)} className={'rounded-full px-4 py-2 text-xs font-bold ring-1 ring-forest-900/15 ' + (preview ? 'bg-coral-500 text-white ring-coral-500' : 'bg-white text-forest-900')}>{preview ? 'Back to edit' : 'Preview'}</button>
-          <button type="button" onClick={onClose} className="text-sm font-bold text-forest-900/50">Close</button>
+        <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-xs font-bold text-[#667085] hover:bg-[#F2F4F7]">
+          ✕ Close
+        </button>
+      </div>
+
+      {error && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-xs font-bold text-rose-800 border border-rose-200">{error}</p>}
+
+      {/* Live Public Website Card Preview */}
+      <div className="rounded-2xl border border-[#D0E1FD] bg-[#F4F8FF] p-4">
+        <div className="flex items-center justify-between mb-3">
+          <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#465FFF]">
+            Live Public Website Card Preview
+          </p>
+          <span className="font-mono text-[10px] text-[#667085]">
+            Updates live as you type
+          </span>
+        </div>
+        <div className="mx-auto max-w-md">
+          {form.kind === 'approval' ? <ApprovalCard a={form} /> : <TestimonialCard t={form} />}
         </div>
       </div>
 
-      {error && <p role="alert" className="mb-4 rounded-xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">{error}</p>}
-
-      {preview ? (
-        <div className="rounded-2xl bg-forest-50 p-4 sm:p-5">
-          <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-coral-600">Public card preview · unsaved changes</p>
-          <div className="mx-auto mt-3 max-w-md">{form.kind === 'approval' ? <ApprovalCard a={form} /> : <TestimonialCard t={form} />}</div>
-          <p className="mt-3 text-xs text-forest-900/55">Preview changes only; they reach the website after you save.</p>
-        </div>
-      ) : (
-        <div className="grid gap-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <StoryField label="Story type" hint="Use approval for a visa result or testimonial for a client quote.">
-              <select className="field" value={form.kind} onChange={(event) => {
+      <div className="grid gap-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <StoryField label="Story Type" hint="Visa result or client review quote">
+            <select
+              className="field font-semibold"
+              value={form.kind}
+              onChange={(event) => {
                 const kind = event.currentTarget.value as AdminStory['kind']
                 if (kind === 'testimonial') {
                   releasePreview()
                   setForm((current) => ({ ...current, kind, mediaType: 'none', photoSrc: '', photoBase64: '', photoMimeType: '', videoUrl: '', mediaAlt: '', mediaConsent: false }))
                 } else update('kind', kind)
-              }}>
-                <option value="testimonial">Client testimonial</option><option value="approval">Visa approval</option>
-              </select>
-            </StoryField>
-            <StoryField label="Person / family name"><input className="field" value={form.name} onChange={(event) => update('name', event.currentTarget.value)} placeholder="Client name" required /></StoryField>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <StoryField label="City"><input className="field" value={form.city} onChange={(event) => update('city', event.currentTarget.value)} placeholder="Sangaria" /></StoryField>
-            
-            {/* REAL CLICKABLE DROPDOWN MENU */}
-            <StoryField label="Destination country" hint="Selecting country auto-switches Flag & Visa">
-              <select
-                className="field font-bold"
-                value={selectedPreset}
-                onChange={(e) => handleSelectCountry(e.target.value)}
-              >
-                <option value="" disabled>-- Select Destination Country --</option>
-                <option value="canada">🇨🇦 Canada</option>
-                <option value="uk">🇬🇧 United Kingdom</option>
-                <option value="australia">🇦🇺 Australia</option>
-                <option value="usa">🇺🇸 United States</option>
-                <option value="new zealand">🇳🇿 New Zealand</option>
-                <option value="germany">🇩🇪 Germany</option>
-                <option value="europe">🇪🇺 Europe / Schengen</option>
-                <option value="france">🇫🇷 France</option>
-                <option value="CUSTOM">✏️ Other / Custom Country...</option>
-              </select>
-            </StoryField>
-          </div>
-
-          {/* Show text input only if 'Other / Custom Country' is selected */}
-          {selectedPreset === 'CUSTOM' && (
-            <StoryField label="Custom Country Name" hint="Type custom country name">
-              <input
-                className="field"
-                value={form.country}
-                onChange={(event) => update('country', event.currentTarget.value)}
-                placeholder="e.g. Ireland, Singapore, Cyprus..."
-                required
-              />
-            </StoryField>
-          )}
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <StoryField label="Visa / course" hint="Auto-filled, but you can edit freely"><input className="field font-semibold" value={form.visa} onChange={(event) => update('visa', event.currentTarget.value)} placeholder="Study Permit, Student Visa, IELTS…" /></StoryField>
-            <StoryField label="Flag code / emoji" hint="Auto-filled, or edit directly"><input className="field font-semibold text-lg" value={form.flag} onChange={(event) => update('flag', event.currentTarget.value)} placeholder="🇨🇦 or CA" /></StoryField>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <StoryField label="Initials"><input className="field" value={form.initials} onChange={(event) => update('initials', event.currentTarget.value)} placeholder="HK" /></StoryField>
-            <StoryField label="Approval / story date"><input className="field" type="date" value={form.date} onChange={(event) => update('date', event.currentTarget.value)} /></StoryField>
-          </div>
-
-          <StoryField label="Rating (1 to 5 stars)"><input className="field" type="number" min="1" max="5" value={form.rating} onChange={(event) => update('rating', Number(event.currentTarget.value))} /></StoryField>
-          
-          <StoryField label="Client quote" hint="For an approval, add a short result description.">
-            <textarea className="field" rows={4} value={form.quote} onChange={(event) => update('quote', event.currentTarget.value)} placeholder="My visa was approved…" />
-          </StoryField>
-          
-          <StoryField label="Short result note" hint="Example: September intake · Conestoga College">
-            <input className="field" value={form.note} onChange={(event) => update('note', event.currentTarget.value)} placeholder="Extra result detail shown on the card" />
+              }}
+            >
+              <option value="testimonial">Client Testimonial (Review)</option>
+              <option value="approval">Visa Approval (Result Card)</option>
+            </select>
           </StoryField>
 
-          {form.kind === 'approval' && (
-            <section className="grid gap-4 rounded-2xl border border-forest-900/10 bg-cream/70 p-4 sm:p-5" aria-label="Approval photo or video">
-              <div>
-                <h4 className="font-bold text-forest-900">Student photo or video <span className="font-normal text-forest-900/50">(optional)</span></h4>
-                <p className="mt-1 text-xs leading-relaxed text-forest-900/60">Upload photo (high clarity & lightweight WebP) or enter YouTube/Vimeo video link with instant preview.</p>
+          <StoryField label="Student / Client Name *" hint="Full name">
+            <input className="field" value={form.name} onChange={(e) => update('name', e.target.value)} placeholder="e.g. Navdeep Singh" required />
+          </StoryField>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <StoryField label="City / Hometown" hint="e.g. Sangaria, Hanumangarh">
+            <input className="field" value={form.city} onChange={(e) => update('city', e.target.value)} placeholder="Sangaria" />
+          </StoryField>
+
+          <StoryField label="Destination Country *" hint="Auto-selects flag & visa type">
+            <select
+              className="field font-bold"
+              value={selectedPreset}
+              onChange={(e) => handleSelectCountry(e.target.value)}
+            >
+              <option value="" disabled>-- Select Destination Country --</option>
+              <option value="canada">🇨🇦 Canada</option>
+              <option value="uk">🇬🇧 United Kingdom</option>
+              <option value="australia">🇦🇺 Australia</option>
+              <option value="usa">🇺🇸 United States</option>
+              <option value="new zealand">🇳🇿 New Zealand</option>
+              <option value="germany">🇩🇪 Germany</option>
+              <option value="europe">🇪🇺 Europe / Schengen</option>
+              <option value="france">🇫🇷 France</option>
+              <option value="CUSTOM">✏️ Other / Custom Country</option>
+            </select>
+          </StoryField>
+        </div>
+
+        {selectedPreset === 'CUSTOM' && (
+          <div className="grid gap-4 rounded-2xl border border-amber-200 bg-amber-50/50 p-4 sm:grid-cols-2">
+            <StoryField label="Custom Country Name" hint="e.g. Ireland">
+              <input className="field" value={form.country} onChange={(e) => update('country', e.target.value)} placeholder="Country Name" required />
+            </StoryField>
+            <StoryField label="Country Flag Emoji" hint="e.g. 🇮🇪">
+              <input className="field font-mono text-center text-lg" value={form.flag} onChange={(e) => update('flag', e.target.value)} placeholder="🇮🇪" />
+            </StoryField>
+          </div>
+        )}
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <StoryField label="Visa Category / Program" hint="e.g. Study Permit, Subclass 500">
+            <input className="field" value={form.visa} onChange={(e) => update('visa', e.target.value)} placeholder="Visa Category" required />
+          </StoryField>
+
+          <StoryField label="Date" hint="Approval or testimonial date">
+            <input className="field font-mono" type="date" value={form.date} onChange={(e) => update('date', e.target.value)} />
+          </StoryField>
+        </div>
+
+        {form.kind === 'testimonial' ? (
+          <div className="space-y-4 rounded-2xl border border-[#E4E7EC] bg-[#F9FAFB] p-4">
+            <StoryField label="Student Testimonial Quote *" hint="Student words and feedback">
+              <textarea className="field" rows={4} value={form.quote} onChange={(e) => update('quote', e.target.value)} placeholder="Describe their experience with BEI classes or visa process..." required />
+            </StoryField>
+
+            <div>
+              <span className="text-xs font-bold text-[#1D2939]">Student Rating</span>
+              <div className="mt-1.5 flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => update('rating', star)}
+                    className="p-1 hover:scale-110 transition"
+                  >
+                    <Star className={'size-6 ' + (star <= form.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300')} />
+                  </button>
+                ))}
+                <span className="ml-2 font-mono text-xs font-bold text-[#1D2939]">{form.rating} / 5 Stars</span>
               </div>
-              <StoryField label="Media type">
-                <select className="field" value={form.mediaType} onChange={(event) => selectMediaType(event.currentTarget.value as AdminStory['mediaType'])}>
-                  <option value="none">No media</option><option value="photo">Student photo</option><option value="video">Hosted video link</option>
-                </select>
-              </StoryField>
-              {form.mediaType === 'photo' && (
-                <div className="grid gap-4 sm:grid-cols-2 sm:items-center">
-                  <div>
-                    <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-forest-900/15 bg-white px-4 py-2 text-sm font-bold hover:bg-forest-50">
-                      <ImagePlus aria-hidden="true" className="size-4" /> Choose student photo
-                      <input type="file" accept="image/jpeg,image/png,image/webp" onChange={choosePhoto} className="sr-only" />
-                    </label>
-                    <p className="mt-2 text-xs text-forest-900/60">JPG, PNG or WebP · High clarity & auto-optimized.</p>
-                  </div>
-                  {form.photoSrc ? <img src={form.photoSrc} alt="Selected student approval preview" className="max-h-60 w-full rounded-xl bg-white object-contain" /> : <div className="grid aspect-[4/3] place-items-center rounded-xl border border-dashed border-forest-900/20 bg-white text-xs text-forest-900/50">Choose a student photo</div>}
-                  <div className="sm:col-span-2">
-                    <StoryField label="Photo description for accessibility">
-                      <input className="field" maxLength={500} value={form.mediaAlt} onChange={(event) => update('mediaAlt', event.currentTarget.value)} placeholder="Student receiving a study visa approval" required />
-                    </StoryField>
-                  </div>
-                </div>
-              )}
-              {form.mediaType === 'video' && (
-                <div className="space-y-3">
-                  <StoryField label="YouTube or Vimeo link" hint="Use an unlisted YouTube link when the video should not appear in YouTube search.">
-                    <input className="field" type="url" maxLength={500} value={form.videoUrl} onChange={(event) => { const videoUrl = event.currentTarget.value; setForm((current) => ({ ...current, videoUrl, mediaConsent: false })) }} placeholder="https://youtu.be/… or https://vimeo.com/…" required />
-                  </StoryField>
-                  {videoEmbedUrl && (
-                    <div className="rounded-2xl overflow-hidden border border-forest-900/15 bg-black/90 p-2.5">
-                      <p className="text-xs font-bold text-white/80 mb-2 flex items-center gap-1.5"><Video className="size-3.5 text-coral-400" /> Video Live Preview:</p>
-                      <div className="aspect-video w-full rounded-xl overflow-hidden bg-black">
-                        <iframe src={videoEmbedUrl} className="w-full h-full border-0" title="Approval video preview" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-              {form.mediaType !== 'none' && (
-                <label className="flex items-start gap-3 rounded-xl border border-forest-900/10 bg-white p-3 text-xs leading-relaxed text-forest-900/75">
-                  <input type="checkbox" checked={form.mediaConsent} onChange={(event) => update('mediaConsent', event.currentTarget.checked)} className="mt-0.5 size-4 shrink-0 accent-forest-900" />
-                  <span>I confirm the student has agreed to publish this photo or video on our website.</span>
-                </label>
-              )}
-            </section>
-          )}
-        </div>
-      )}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4 rounded-2xl border border-[#E4E7EC] bg-[#F9FAFB] p-4">
+            <div className="flex items-center justify-between border-b border-[#E4E7EC] pb-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#465FFF]">Approval Media</span>
+              <div className="flex items-center gap-1">
+                {(['none', 'photo', 'video'] as const).map((mType) => (
+                  <button
+                    key={mType}
+                    type="button"
+                    onClick={() => selectMediaType(mType)}
+                    className={'rounded-lg px-2.5 py-1 text-xs font-semibold capitalize transition ' + (form.mediaType === mType ? 'bg-[#465FFF] text-white shadow-xs' : 'bg-white text-[#667085] hover:bg-gray-100')}
+                  >
+                    {mType === 'none' ? 'No Media' : mType}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-      <div className="mt-5 grid gap-4 border-t border-forest-900/10 pt-4">
-        <label className="flex items-start gap-3 rounded-xl border border-forest-900/10 bg-forest-50 p-3 text-sm font-bold"><input type="checkbox" checked={form.homepageFeatured} onChange={(event) => update('homepageFeatured', event.currentTarget.checked)} className="mt-0.5 size-4 shrink-0 accent-forest-900" /><span>Show on homepage<span className="mt-1 block text-xs font-normal leading-relaxed text-forest-900/60">Turn off to keep this published story on the Success Stories page only.</span></span></label>
-        <label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={form.published} onChange={(event) => update('published', event.currentTarget.checked)} /> Publish on website</label>
-        <div className="flex flex-wrap gap-2">
-          <button disabled={busy || preview} className="rounded-full bg-forest-900 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">{busy ? 'Saving…' : 'Save story'}</button>
-          {form.id > 0 && <button type="button" disabled={busy} onClick={() => void remove()} className="rounded-full border border-red-200 px-5 py-3 text-sm font-bold text-red-700 disabled:opacity-50">Delete</button>}
+            {form.mediaType === 'photo' && (
+              <div className="grid gap-4 sm:grid-cols-2 items-center">
+                <div className="space-y-2">
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-[#465FFF] bg-[#ECF3FF] px-4 py-2.5 text-xs font-bold text-[#465FFF] hover:bg-[#DCEBFF]">
+                    <ImagePlus className="size-4" />
+                    <span>Upload Student Photo</span>
+                    <input type="file" accept="image/jpeg,image/png,image/webp" onChange={choosePhoto} className="sr-only" />
+                  </label>
+                  <p className="text-[11px] text-[#667085]">JPG, PNG or WebP · High clarity & auto-optimized.</p>
+                </div>
+                {form.photoSrc ? (
+                  <div className="relative overflow-hidden rounded-xl border border-[#E4E7EC] bg-white p-1">
+                    <img src={form.photoSrc} alt="Student approval preview" className="max-h-40 w-full rounded-lg object-contain" />
+                  </div>
+                ) : (
+                  <div className="grid h-32 place-items-center rounded-xl border border-dashed border-gray-300 bg-white text-xs text-[#98A2B3]">
+                    No photo uploaded
+                  </div>
+                )}
+                <div className="sm:col-span-2">
+                  <StoryField label="Photo Alt Description (Accessibility)" hint="e.g. Navdeep Singh holding Canada visa approval letter">
+                    <input className="field" maxLength={500} value={form.mediaAlt} onChange={(e) => update('mediaAlt', e.target.value)} placeholder="Student with approval letter" required />
+                  </StoryField>
+                </div>
+              </div>
+            )}
+
+            {form.mediaType === 'video' && (
+              <div className="space-y-3">
+                <StoryField label="YouTube or Vimeo Link" hint="Public or unlisted link">
+                  <input className="field font-mono text-xs" type="url" maxLength={500} value={form.videoUrl} onChange={(e) => update('videoUrl', e.target.value)} placeholder="https://youtu.be/... or https://vimeo.com/..." required />
+                </StoryField>
+                {videoEmbedUrl && (
+                  <div className="overflow-hidden rounded-2xl border border-black/10 bg-black p-2">
+                    <p className="mb-2 flex items-center gap-1.5 text-xs font-bold text-white/80">
+                      <Video className="size-3.5 text-coral-400" /> Video Live Preview:
+                    </p>
+                    <div className="aspect-video w-full overflow-hidden rounded-xl bg-black">
+                      <iframe src={videoEmbedUrl} className="h-full w-full border-0" title="Approval video preview" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {form.mediaType !== 'none' && (
+              <label className="flex items-start gap-2.5 rounded-xl border border-[#E4E7EC] bg-white p-3 text-xs text-[#1D2939] cursor-pointer">
+                <input type="checkbox" checked={form.mediaConsent} onChange={(e) => update('mediaConsent', e.target.checked)} className="mt-0.5 size-4 rounded text-[#465FFF]" />
+                <span className="font-semibold">I confirm the student has given explicit consent to publish their photo / video on our website.</span>
+              </label>
+            )}
+          </div>
+        )}
+
+        <StoryField label="Internal Staff Note" hint="Only visible inside admin panel">
+          <input className="field" value={form.note} onChange={(e) => update('note', e.target.value)} placeholder="e.g. Verified by Harpreet Sir · intake Sept 2026" />
+        </StoryField>
+
+        <div className="space-y-2 rounded-2xl border border-[#E4E7EC] bg-[#F9FAFB] p-3">
+          <label className="flex items-center gap-2.5 text-xs font-bold text-[#1D2939] cursor-pointer">
+            <input type="checkbox" checked={form.homepageFeatured} onChange={(e) => update('homepageFeatured', e.target.checked)} className="size-4 rounded text-[#465FFF]" />
+            <span>Showcase on Homepage hero/featured section</span>
+          </label>
+          <label className="flex items-center gap-2.5 text-xs font-bold text-[#1D2939] cursor-pointer">
+            <input type="checkbox" checked={form.published} onChange={(e) => update('published', e.target.checked)} className="size-4 rounded text-[#465FFF]" />
+            <span>Publish live on public Success Stories page</span>
+          </label>
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#E4E7EC] pt-4">
+        {form.id > 0 ? (
+          <button type="button" disabled={busy} onClick={() => void remove()} className="rounded-xl border border-red-200 px-4 py-2 text-xs font-bold text-red-700 hover:bg-red-50">
+            Delete Story
+          </button>
+        ) : <div />}
+        <button type="submit" disabled={busy} className="rounded-xl bg-[#465FFF] px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:opacity-95 disabled:opacity-50">
+          {busy ? 'Saving…' : 'Save & Publish Story'}
+        </button>
       </div>
     </form>
   )
 }
 
 function StoryField({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
-  return <label className="block text-xs font-bold text-forest-900/75">{label}{hint && <span className="mt-1 block font-normal leading-relaxed text-forest-900/50">{hint}</span>}<div className="mt-1">{children}</div></label>
+  return (
+    <label className="block space-y-1.5">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold text-[#1D2939]">{label}</span>
+        {hint && <span className="text-[11px] text-[#667085]">{hint}</span>}
+      </div>
+      {children}
+    </label>
+  )
 }

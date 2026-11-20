@@ -1,3 +1,4 @@
+// src/components/admin/PolicyWatchPanel.tsx
 import { useEffect, useState } from 'react'
 import {
   deletePolicyNotice,
@@ -7,6 +8,7 @@ import {
   scanPolicySourcesNow,
 } from '@/lib/admin-functions'
 import { getPolicyWatchStatus, type PolicyNotice, type PolicySourceReview, type PolicyWatchItem } from '@/data/policy-watch'
+import { AlertCircle, CheckCircle2, ExternalLink, Globe2, Plus, RefreshCw, ShieldAlert, Trash2 } from 'lucide-react'
 
 type PanelData = {
   items: PolicyWatchItem[]
@@ -137,155 +139,181 @@ export function PolicyWatchPanel() {
   })
 
   return (
-    <section className="max-w-5xl">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <section className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="font-mono text-xs font-bold uppercase tracking-wider text-coral-600">Official source tracker</p>
-          <h2 className="mt-1 text-3xl font-extrabold">Visa policy watch</h2>
-          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-forest-900/65">
-            Publish dated notices for country pages, review official changes, and mark when website guidance has been updated.
+          <div className="flex items-center gap-2">
+            <span className="inline-flex size-7 items-center justify-center rounded-lg bg-[#ECF3FF] text-[#465FFF]">
+              <ShieldAlert className="size-4" />
+            </span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#465FFF]">Compliance & Rules</span>
+          </div>
+          <h2 className="mt-1 text-2xl font-bold tracking-tight text-[#1D2939]">Visa Policy Watch</h2>
+          <p className="mt-0.5 text-xs text-[#667085]">
+            Track official immigration shifts, publish dated alert banners, and maintain website compliance.
           </p>
         </div>
-        <button type="button" onClick={() => void scanSources()} disabled={scanning || busy} className="min-h-11 rounded-xl border border-forest-900/15 bg-white px-4 py-2 text-sm font-bold text-forest-900 hover:bg-forest-50 disabled:opacity-60">
-          {scanning ? 'Checking sources…' : 'Check official sources now'}
+        <button
+          type="button"
+          onClick={() => void scanSources()}
+          disabled={scanning || busy}
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[#E4E7EC] bg-white px-4 py-2 text-xs font-semibold text-[#344054] shadow-2xs hover:bg-[#F9FAFB] disabled:opacity-60"
+        >
+          <RefreshCw className={`size-3.5 text-[#465FFF] ${scanning ? 'animate-spin' : ''}`} />
+          {scanning ? 'Checking official sources…' : 'Scan official sources now'}
         </button>
       </div>
 
-      <div className="mb-5 rounded-2xl border border-forest-900/10 bg-white p-4 text-sm leading-relaxed text-forest-900/75">
-        The weekly checker looks for changes on the official pages below. A changed page becomes a <strong>draft review alert</strong>; it does not decide what the law changed to or publish it. Verify the source, update the relevant guidance, then mark the review complete. A first scan records the baseline and may not create alerts.
-      </div>
+      {message && (
+        <div role="status" className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-medium text-emerald-800">
+          <CheckCircle2 className="size-4 shrink-0" /> {message}
+        </div>
+      )}
+      {error && (
+        <div role="alert" className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs font-medium text-rose-800">
+          <AlertCircle className="size-4 shrink-0" /> {error}
+        </div>
+      )}
 
-      {message && <p role="status" className="mb-4 rounded-xl bg-emerald-100 px-4 py-3 text-sm font-bold text-emerald-900">{message}</p>}
-      {error && <p role="alert" className="mb-4 rounded-xl bg-red-100 px-4 py-3 text-sm font-bold text-red-900">{error}</p>}
-
-      <div id="country-notices" className="mb-8 flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-xl font-extrabold">Country notices</h3>
-        <button type="button" onClick={startNewNotice} className="min-h-11 rounded-xl bg-forest-900 px-4 py-2 text-sm font-bold text-white hover:bg-forest-800">+ New notice</button>
+      {/* Country Notices Section */}
+      <div id="country-notices" className="flex flex-wrap items-center justify-between gap-3 border-b border-[#F2F4F7] pb-3">
+        <div>
+          <h3 className="text-base font-bold text-[#1D2939]">Active Country Notices</h3>
+          <p className="text-xs text-[#667085]">Published notices display on the corresponding country guidance pages.</p>
+        </div>
+        <button
+          type="button"
+          onClick={startNewNotice}
+          className="inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-[#465FFF] px-3.5 text-xs font-semibold text-white shadow-xs hover:bg-[#3b52d4]"
+        >
+          <Plus className="size-3.5" /> New notice
+        </button>
       </div>
 
       {formOpen && (
-        <form onSubmit={(event) => event.preventDefault()} className="mb-6 space-y-4 rounded-2xl border border-forest-900/15 bg-white p-4 shadow-sm sm:p-6">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h3 className="text-lg font-extrabold">{form.id ? 'Edit notice' : 'Create notice'}</h3>
-              <p className="mt-1 text-sm text-forest-900/65">Saved drafts stay private. Published notices appear on the selected country page only while the date window is active.</p>
-            </div>
-            <button type="button" onClick={() => { setFormOpen(false); setForm(blankNotice()) }} className="min-h-10 rounded-lg px-3 text-sm font-bold text-forest-900/70 hover:bg-forest-50">Close editor</button>
+        <form onSubmit={(event) => event.preventDefault()} className="rounded-2xl border border-[#E4E7EC] bg-white p-5 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-[#F2F4F7] pb-3">
+            <h3 className="text-sm font-bold text-[#1D2939]">{form.id ? 'Edit Policy Notice' : 'Create Policy Notice'}</h3>
+            <button type="button" onClick={() => { setFormOpen(false); setForm(blankNotice()) }} className="text-xs font-semibold text-[#667085] hover:text-[#1D2939]">Close</button>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="text-sm font-semibold">Show on
-              <select value={form.countrySlug} onChange={(event) => setForm({ ...form, countrySlug: event.currentTarget.value })} className="mt-1 min-h-11 w-full rounded-xl border border-forest-900/15 bg-white px-3">
+            <label className="block text-xs font-semibold text-[#344054]">Show on Country Page
+              <select value={form.countrySlug} onChange={(event) => setForm({ ...form, countrySlug: event.currentTarget.value })} className="mt-1.5 block h-10 w-full rounded-xl border border-[#E4E7EC] bg-white px-3 text-xs text-[#1D2939] focus:border-[#465FFF] focus:outline-none">
                 {(data?.countries ?? []).map((country) => <option key={country.slug} value={country.slug}>{country.name}</option>)}
                 <option value="all">All country pages</option>
               </select>
             </label>
-            <label className="text-sm font-semibold">Notice title
-              <input required maxLength={180} value={form.title} onChange={(event) => setForm({ ...form, title: event.currentTarget.value })} className="mt-1 min-h-11 w-full rounded-xl border border-forest-900/15 px-3" />
+            <label className="block text-xs font-semibold text-[#344054]">Notice Title *
+              <input required maxLength={180} value={form.title} placeholder="e.g. IRCC increases living fund requirements for 2026" onChange={(event) => setForm({ ...form, title: event.currentTarget.value })} className="mt-1.5 block h-10 w-full rounded-xl border border-[#E4E7EC] px-3 text-xs text-[#1D2939] placeholder:text-[#98A2B3] focus:border-[#465FFF] focus:outline-none" />
             </label>
           </div>
 
-          <label className="block text-sm font-semibold">Message
-            <textarea required maxLength={1400} rows={4} value={form.message} onChange={(event) => setForm({ ...form, message: event.currentTarget.value })} className="mt-1 w-full rounded-xl border border-forest-900/15 p-3" />
+          <label className="block text-xs font-semibold text-[#344054]">Detailed Advisory Message *
+            <textarea required maxLength={1400} rows={3} value={form.message} placeholder="Full advisory text for prospective students and applicants…" onChange={(event) => setForm({ ...form, message: event.currentTarget.value })} className="mt-1.5 block w-full rounded-xl border border-[#E4E7EC] p-3 text-xs leading-relaxed text-[#1D2939] placeholder:text-[#98A2B3] focus:border-[#465FFF] focus:outline-none" />
           </label>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="text-sm font-semibold">Show from
-              <input type="date" value={form.showFrom} onChange={(event) => setForm({ ...form, showFrom: event.currentTarget.value })} className="mt-1 min-h-11 w-full rounded-xl border border-forest-900/15 px-3" />
+            <label className="block text-xs font-semibold text-[#344054]">Show From Date
+              <input type="date" value={form.showFrom} onChange={(event) => setForm({ ...form, showFrom: event.currentTarget.value })} className="mt-1.5 block h-10 w-full rounded-xl border border-[#E4E7EC] px-3 text-xs text-[#1D2939] focus:border-[#465FFF] focus:outline-none" />
             </label>
-            <label className="text-sm font-semibold">Hide on/after
-              <input type="date" value={form.expiresOn} onChange={(event) => setForm({ ...form, expiresOn: event.currentTarget.value })} className="mt-1 min-h-11 w-full rounded-xl border border-forest-900/15 px-3" />
+            <label className="block text-xs font-semibold text-[#344054]">Hide On / Expiry Date
+              <input type="date" value={form.expiresOn} onChange={(event) => setForm({ ...form, expiresOn: event.currentTarget.value })} className="mt-1.5 block h-10 w-full rounded-xl border border-[#E4E7EC] px-3 text-xs text-[#1D2939] focus:border-[#465FFF] focus:outline-none" />
             </label>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="text-sm font-semibold">Official source label
-              <input maxLength={180} value={form.sourceLabel} onChange={(event) => setForm({ ...form, sourceLabel: event.currentTarget.value })} className="mt-1 min-h-11 w-full rounded-xl border border-forest-900/15 px-3" />
+            <label className="block text-xs font-semibold text-[#344054]">Official Source Label
+              <input maxLength={180} value={form.sourceLabel} placeholder="e.g. Official IRCC Gazette" onChange={(event) => setForm({ ...form, sourceLabel: event.currentTarget.value })} className="mt-1.5 block h-10 w-full rounded-xl border border-[#E4E7EC] px-3 text-xs text-[#1D2939] focus:border-[#465FFF] focus:outline-none" />
             </label>
-            <label className="text-sm font-semibold">Official source link
-              <input type="url" maxLength={500} value={form.sourceUrl} onChange={(event) => setForm({ ...form, sourceUrl: event.currentTarget.value })} className="mt-1 min-h-11 w-full rounded-xl border border-forest-900/15 px-3" />
+            <label className="block text-xs font-semibold text-[#344054]">Official Source URL
+              <input type="url" maxLength={500} value={form.sourceUrl} placeholder="https://..." onChange={(event) => setForm({ ...form, sourceUrl: event.currentTarget.value })} className="mt-1.5 block h-10 w-full rounded-xl border border-[#E4E7EC] px-3 text-xs text-[#1D2939] focus:border-[#465FFF] focus:outline-none" />
             </label>
           </div>
 
-          <label className="flex items-start gap-3 rounded-xl bg-cream p-3 text-sm leading-relaxed">
-            <input type="checkbox" checked={form.sourceVerified} onChange={(event) => setForm({ ...form, sourceVerified: event.currentTarget.checked })} className="mt-1 size-4 shrink-0" />
-            <span>I checked this notice against the linked official source. Publishing is blocked until this is checked and the source/date fields are valid.</span>
+          <label className="flex items-start gap-2.5 rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-3 text-xs text-[#344054]">
+            <input type="checkbox" checked={form.sourceVerified} onChange={(event) => setForm({ ...form, sourceVerified: event.currentTarget.checked })} className="mt-0.5 size-4 rounded border-[#D0D5DD] text-[#465FFF]" />
+            <span>I have verified this advisory against the official government portal.</span>
           </label>
 
-          {form.title && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm">
-              <p className="font-bold text-amber-900">Public notice preview</p>
-              <p className="mt-2 font-extrabold text-forest-900">{form.title}</p>
-              <p className="mt-1 leading-relaxed text-forest-900/75">{form.message}</p>
-            </div>
-          )}
-
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <button type="button" disabled={busy} onClick={() => void saveNotice('draft')} className="min-h-11 rounded-xl border border-forest-900/15 bg-white px-4 py-2 text-sm font-bold disabled:opacity-60">Save draft</button>
-            <button type="button" disabled={busy} onClick={() => void saveNotice('published')} className="min-h-11 rounded-xl bg-coral-500 px-4 py-2 text-sm font-bold text-white hover:bg-coral-600 disabled:opacity-60">{busy ? 'Saving…' : 'Save & publish'}</button>
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#F2F4F7]">
+            <button type="button" disabled={busy} onClick={() => void saveNotice('draft')} className="min-h-9 rounded-xl border border-[#E4E7EC] bg-white px-3.5 text-xs font-semibold text-[#344054] hover:bg-[#F9FAFB] disabled:opacity-50">Save draft</button>
+            <button type="button" disabled={busy} onClick={() => void saveNotice('published')} className="min-h-9 rounded-xl bg-[#465FFF] px-4 text-xs font-semibold text-white shadow-xs hover:bg-[#3b52d4] disabled:opacity-50">{busy ? 'Saving…' : 'Save & Publish Live'}</button>
           </div>
         </form>
       )}
 
-      <div className="mb-10 space-y-3">
+      {/* Notices List */}
+      <div className="space-y-3">
         {notices.map((notice) => (
-          <article key={notice.id} className="rounded-2xl bg-white p-4 ring-1 ring-forest-900/10 sm:p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <article key={notice.id} className="rounded-2xl border border-[#E4E7EC] bg-white p-4.5 transition hover:border-[#D0D5DD]">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
-                <p className="text-xs font-bold uppercase tracking-wider text-coral-600">{notice.countrySlug === 'all' ? 'All destinations' : notice.countrySlug.replace('-', ' ')}</p>
-                <h4 className="mt-1 text-lg font-extrabold">{notice.title}</h4>
-                <p className="mt-2 text-sm leading-relaxed text-forest-900/70">{notice.message}</p>
+                <span className="rounded-md bg-[#ECF3FF] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#465FFF]">
+                  {notice.countrySlug === 'all' ? 'All Destinations' : notice.countrySlug.toUpperCase()}
+                </span>
+                <h4 className="mt-1.5 text-sm font-bold text-[#1D2939]">{notice.title}</h4>
+                <p className="mt-1 text-xs leading-relaxed text-[#667085]">{notice.message}</p>
               </div>
-              <span className={`inline-flex min-h-8 shrink-0 items-center rounded-full px-3 py-1 text-xs font-bold ${notice.status === 'published' ? 'bg-emerald-100 text-emerald-900' : 'bg-amber-100 text-amber-900'}`}>{notice.status === 'published' ? 'Published' : 'Draft'}</span>
+              <span className={`inline-flex shrink-0 items-center rounded-md px-2 py-0.5 text-[10px] font-semibold ${notice.status === 'published' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                {notice.status === 'published' ? 'Live on Site' : 'Private Draft'}
+              </span>
             </div>
-            <p className="mt-3 text-xs font-semibold text-forest-900/65">Visible {notice.showFrom || 'after scheduling'} · hides on/after {notice.expiresOn || 'expiry date'}{notice.guidanceUpdatedAt ? ' · website guidance marked updated' : ''}</p>
-            {notice.sourceUrl && <a href={notice.sourceUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex min-h-10 items-center text-sm font-bold text-coral-600 underline underline-offset-2">{notice.sourceLabel || 'Open official source'} ↗</a>}
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" onClick={() => editNotice(notice)} className="min-h-10 rounded-lg border border-forest-900/15 px-3 text-sm font-bold hover:bg-forest-50">Edit</button>
-              {notice.status === 'published' && <button type="button" onClick={() => void savePolicyNotice({ data: { ...notice, status: 'draft', sourceVerified: false } }).then(() => reload()).catch((cause) => setError(cause instanceof Error ? cause.message : 'Could not unpublish notice.'))} className="min-h-10 rounded-lg border border-forest-900/15 px-3 text-sm font-bold hover:bg-forest-50">Unpublish</button>}
-              <button type="button" onClick={() => void removeNotice(notice)} disabled={busy} className="min-h-10 rounded-lg px-3 text-sm font-bold text-red-700 hover:bg-red-50 disabled:opacity-60">Delete</button>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#F2F4F7] pt-2.5 text-[11px] text-[#667085]">
+              <span>Active: {notice.showFrom || 'Immediate'} → Expires: {notice.expiresOn || 'Indefinite'}</span>
+              <div className="flex items-center gap-2">
+                {notice.sourceUrl && (
+                  <a href={notice.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-semibold text-[#465FFF] hover:underline">
+                    {notice.sourceLabel || 'Official source'} <ExternalLink className="size-3" />
+                  </a>
+                )}
+                <button type="button" onClick={() => editNotice(notice)} className="font-semibold text-[#344054] hover:text-[#1D2939]">Edit</button>
+                <button type="button" onClick={() => void removeNotice(notice)} disabled={busy} className="font-semibold text-rose-600 hover:text-rose-700">Delete</button>
+              </div>
             </div>
           </article>
         ))}
-        {!notices.length && <p className="rounded-xl bg-white p-5 text-sm text-forest-900/65">No notices yet. Create one as a draft and publish it after verifying its source.</p>}
+        {!notices.length && (
+          <p className="rounded-2xl border border-[#E4E7EC] bg-white p-8 text-center text-xs text-[#667085]">
+            No country notices right now. Click "New notice" to broadcast official embassy updates.
+          </p>
+        )}
       </div>
 
-      <h3 className="mb-3 text-xl font-extrabold">Official sources and website review</h3>
-      <div className="space-y-3">
-        {(data?.items ?? []).map((item) => {
-          const review = data?.reviews[item.id] ?? {}
-          const pendingNotice = review.pendingDraftId ? data?.notices.find((notice) => notice.id === review.pendingDraftId) : undefined
-          const status = getPolicyWatchStatus(item)
-          return (
-            <article key={item.id} className="rounded-2xl bg-white p-4 ring-1 ring-forest-900/10 sm:p-5">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0">
-                  <p className="text-xs font-bold uppercase tracking-wider text-coral-600">{item.destination}</p>
-                  <h4 className="mt-1 text-lg font-extrabold text-forest-900">{item.title}</h4>
+      {/* Official Sources Checklist */}
+      <div className="pt-4">
+        <h3 className="text-base font-bold text-[#1D2939]">Monitored Official Sources</h3>
+        <p className="mt-0.5 text-xs text-[#667085]">Verified government domains scanned for policy alterations.</p>
+        <div className="mt-3.5 space-y-3">
+          {(data?.items ?? []).map((item) => {
+            const review = data?.reviews[item.id] ?? {}
+            const status = getPolicyWatchStatus(item)
+            return (
+              <article key={item.id} className="rounded-2xl border border-[#E4E7EC] bg-white p-4 transition hover:border-[#D0D5DD]">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#465FFF]">{item.destination}</span>
+                    <h4 className="mt-0.5 text-sm font-bold text-[#1D2939]">{item.title}</h4>
+                    <p className="mt-1 text-xs leading-relaxed text-[#667085]">{item.summary}</p>
+                  </div>
+                  <span className="inline-flex shrink-0 items-center rounded-md bg-[#F2F4F7] px-2 py-0.5 text-[10px] font-semibold text-[#475467]">
+                    {review.sourceChangePending ? 'Review Required' : review.guidanceUpdatedAt ? 'Guidance Updated' : review.checkedAt ? 'Checked' : status}
+                  </span>
                 </div>
-                <span className="inline-flex min-h-8 shrink-0 items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{review.sourceChangePending ? 'Source changed · review needed' : review.guidanceUpdatedAt ? 'Website guidance updated' : review.checkedAt ? 'Source checked' : status}</span>
-              </div>
-              {item.effectiveDate && <p className="mt-2 text-xs font-semibold text-forest-900/65">Effective: {displayDate(item.effectiveDate)} · source scan: {displayDate(review.sourceCheckedAt)}</p>}
-              <p className="mt-3 text-sm leading-relaxed text-forest-900/75">{item.summary}</p>
-              <p className="mt-2 rounded-xl bg-cream p-3 text-sm leading-relaxed text-forest-900/75"><strong>Review action:</strong> {item.action}</p>
-              <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex min-h-10 items-center text-sm font-bold text-coral-600 underline underline-offset-2">{item.sourceLabel} ↗</a>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button type="button" disabled={busy} onClick={() => void markReview(item, 'checked')} className="min-h-10 rounded-lg border border-forest-900/15 px-3 text-sm font-bold hover:bg-forest-50 disabled:opacity-60">Mark source checked</button>
-                <button type="button" disabled={busy || !review.checkedAt} onClick={() => void markReview(item, 'guidance-updated')} className="min-h-10 rounded-lg bg-forest-900 px-3 text-sm font-bold text-white hover:bg-forest-800 disabled:opacity-40">Mark website updated</button>
-              </div>
-              {review.sourceChangePending && pendingNotice && (
-                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
-                  <p className="text-sm font-bold text-amber-900">A source-change draft is waiting for review.</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <button type="button" onClick={() => editNotice(pendingNotice)} className="min-h-10 rounded-lg bg-forest-900 px-3 text-sm font-bold text-white hover:bg-forest-800">Review / edit / publish</button>
-                    <button type="button" onClick={() => void removeNotice(pendingNotice)} disabled={busy} className="min-h-10 rounded-lg border border-red-300 px-3 text-sm font-bold text-red-700 hover:bg-red-50 disabled:opacity-60">Delete alert</button>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#F2F4F7] pt-2.5 text-xs">
+                  <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-[#465FFF] hover:underline">
+                    {item.sourceLabel} <ExternalLink className="size-3" />
+                  </a>
+                  <div className="flex gap-2">
+                    <button type="button" disabled={busy} onClick={() => void markReview(item, 'checked')} className="rounded-lg border border-[#E4E7EC] bg-white px-2.5 py-1 text-xs font-semibold text-[#344054] hover:bg-[#F9FAFB] disabled:opacity-50">Mark checked</button>
+                    <button type="button" disabled={busy || !review.checkedAt} onClick={() => void markReview(item, 'guidance-updated')} className="rounded-lg bg-[#465FFF] px-2.5 py-1 text-xs font-semibold text-white hover:bg-[#3b52d4] disabled:opacity-40">Mark updated</button>
                   </div>
                 </div>
-              )}
-              {review.guidanceUpdatedAt && <p className="mt-2 text-xs text-forest-900/60">Updated {displayDate(review.guidanceUpdatedAt)}{review.guidanceUpdatedBy ? ` by ${review.guidanceUpdatedBy}` : ''}</p>}
-            </article>
-          )
-        })}
+              </article>
+            )
+          })}
+        </div>
       </div>
     </section>
   )
