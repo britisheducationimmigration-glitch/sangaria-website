@@ -410,7 +410,11 @@ export function CountryPanel() {
                   <Field label="Destination name" value={form.name} required onChange={(value) => update({ name: value })} />
                   <Field label="URL slug" value={form.slug} required disabled={!!form.originalSlug} hint="e.g. canada" onChange={(value) => update({ slug: value.toLowerCase().replace(/[^a-z0-9-]/g, '') })} />
                   <Field label="ISO Country Code" value={form.code} required hint="e.g. CA, GB" onChange={(value) => update({ code: value.toUpperCase().slice(0, 2) })} />
-                  <Field label="Flag Emoji" value={form.flag} required hint="e.g. 🇨🇦 (use preset above)" onChange={(value) => update({ flag: value.slice(0, 8) })} />
+                 <Field label="Flag Emoji" value={form.flag} required hint="e.g. 🇨🇦 (auto-converts CA to 🇨🇦)" onChange={(value) => {
+  const map: Record<string, string> = { CA: '🇨🇦', GB: '🇬🇧', UK: '🇬🇧', AU: '🇦🇺', US: '🇺🇸', USA: '🇺🇸', DE: '🇩🇪', NZ: '🇳🇿', IE: '🇮🇪', FR: '🇫🇷' }
+  const upper = value.trim().toUpperCase()
+  update({ flag: map[upper] || value.slice(0, 8) })
+}} />
                 </div>
                 <Field label="Page Headline" value={form.headline} required hint="Catchy title shown in hero" onChange={(value) => update({ headline: value })} />
                 <Field label="English / Admission Target" value={form.english} required textarea rows={2} hint="e.g. IELTS 6.0 / PTE 58 overall" onChange={(value) => update({ english: value })} />
@@ -468,7 +472,7 @@ export function CountryPanel() {
                 onClick={() => void save('published')}
                 className="rounded-xl bg-[#465FFF] px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:opacity-95 disabled:opacity-50"
               >
-                {busy ? 'Saving…' : 'Save &amp; Publish Guide'}
+                {busy ? 'Saving…' : 'Save & Publish Guide'}
               </button>
             </div>
           </div>
