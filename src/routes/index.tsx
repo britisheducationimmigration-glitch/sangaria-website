@@ -387,26 +387,15 @@ function Home() {
               {/* QUICK COUNTRY & VISA FINDER */}
               <div className="mt-7 max-w-xl animate-rise overflow-hidden rounded-3xl border border-white/20 bg-forest-950/75 p-4 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.65)] ring-1 ring-white/10 backdrop-blur-xl sm:p-6 [animation-delay:240ms]">
                 <div className="mb-3 flex items-center justify-between gap-3 lg:mb-4">
-                  <span className="font-mono text-[11px] font-bold uppercase tracking-wide text-coral-400 lg:text-xs">
-                    Visa & Country Finder
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5 text-[9px] font-semibold text-white/85 lg:px-3 lg:py-1 lg:text-[10px]">
-                    <span
-                      className="size-1.5 rounded-full bg-emerald-400"
-                      aria-hidden="true"
-                    />{" "}
-                    Free Check
+                                  <span className="font-mono text-xs font-bold uppercase tracking-wide text-coral-400">Visa & Country Finder</span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5 text-xs font-semibold text-white/90 lg:px-3 lg:py-1">
+                    <span className="size-1.5 rounded-full bg-emerald-400" aria-hidden="true" /> Free Check
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="min-w-0">
-                    <label
-                      htmlFor="home-finder-country"
-                      className="mb-1 block text-[10px] font-bold text-white/80 lg:text-xs"
-                    >
-                      Country
-                    </label>
+                    <label htmlFor="home-finder-country" className="mb-1 block text-xs font-bold text-white/90">Country</label>
                     <div className="relative">
                       <span
                         aria-hidden="true"
@@ -574,21 +563,14 @@ function Home() {
               className="relative aspect-[4/3] w-full rounded-2xl border border-white/15 object-cover shadow-2xl lg:aspect-[6/7] lg:rounded-[2rem] lg:border-0"
             />
             <div className="hero-card-float absolute bottom-0 inset-x-0 border-t border-forest-900/10 bg-cream/95 p-3.5 text-forest-900 backdrop-blur-md lg:inset-x-auto lg:-bottom-10 lg:-left-4 lg:w-[82%] lg:rounded-2xl lg:border lg:border-white/70 lg:p-4 lg:shadow-2xl xl:-left-12">
-              <div className="flex items-center justify-between gap-2 font-mono text-[9px] uppercase tracking-wider text-forest-900/60 lg:text-[10px] lg:tracking-widest">
+                           <div className="flex items-center justify-between gap-2 font-mono text-xs uppercase tracking-wider text-forest-900/70 lg:tracking-widest">
                 <span className="inline-flex items-center gap-1.5">
-                  <span
-                    className="size-1.5 rounded-full bg-emerald-500"
-                    aria-hidden="true"
-                  />
+                  <span className="size-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
                   BOARDING PASS
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   {activeFlight.flagCode && (
-                    <CountryFlag
-                      code={activeFlight.flagCode}
-                      country={activeFlight.city}
-                      className="h-3 w-4.5 rounded-[2px] shadow-xs"
-                    />
+                    <CountryFlag code={activeFlight.flagCode} country={activeFlight.city} className="h-3.5 w-5 rounded-[2px] shadow-xs" />
                   )}
                   BEI · SANGARIA
                 </span>
@@ -596,27 +578,15 @@ function Home() {
               <div className="mt-1.5 flex items-center justify-between gap-2 font-display text-sm font-extrabold lg:mt-2">
                 <div>
                   <span className="lg:text-3xl">SNG</span>
-                  <span className="ml-1 text-[10px] font-normal text-forest-900/60 lg:ml-0 lg:block lg:text-[11px]">
-                    Sangaria
-                  </span>
+                  <span className="ml-1 text-xs font-normal text-forest-900/60 lg:ml-0 lg:block">Sangaria</span>
                 </div>
                 <div className="relative flex flex-1 items-center justify-center px-2">
                   <div className="w-full border-b border-dashed border-coral-500/45" />
-                  <span
-                    aria-hidden="true"
-                    className="flight-glide absolute text-sm text-coral-500 lg:text-base"
-                  >
-                    ✈
-                  </span>
+                  <span aria-hidden="true" className="flight-glide absolute text-sm text-coral-500 lg:text-base">✈</span>
                 </div>
-                <div
-                  key={activeFlight.code}
-                  className="animate-rise text-right [animation-duration:350ms]"
-                >
+                <div key={activeFlight.code} className="animate-rise text-right [animation-duration:350ms]">
                   <span className="lg:text-3xl">{activeFlight.code}</span>
-                  <span className="ml-1 text-[10px] font-normal text-forest-900/60 lg:ml-0 lg:block lg:text-[11px]">
-                    {activeFlight.city}
-                  </span>
+                  <span className="ml-1 text-xs font-normal text-forest-900/60 lg:ml-0 lg:block">{activeFlight.city}</span>
                 </div>
               </div>
             </div>
@@ -691,9 +661,9 @@ function Home() {
             <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-widest text-coral-600 lg:text-xs">
               Why Choose Us
             </span>
-            <h3 className="hidden text-2xl font-extrabold text-forest-900 lg:block">
+            <h2 className="hidden text-2xl font-extrabold text-forest-900 lg:block">
               Your future is safe with verified experts.
-            </h3>
+            </h2>
           </div>
           <div className="grid flex-1 grid-cols-1 gap-3.5 md:grid-cols-3 lg:max-w-4xl lg:gap-6">
             <div className="flex items-start gap-3">
@@ -911,25 +881,18 @@ function Home() {
                       country={c.name}
                       className="h-6 w-9 shrink-0 rounded-md shadow-sm transition-transform duration-300 group-hover:scale-110 sm:h-7 sm:w-10 lg:h-8 lg:w-12"
                     />
-                    <span className="rounded-full bg-forest-50 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-forest-800/70 transition-colors group-hover:bg-white/15 group-hover:!text-white/90 sm:px-2.5 sm:text-[10px]">
+                                       <span className="rounded-full bg-forest-50 px-2 py-0.5 font-mono text-xs font-bold uppercase tracking-wider text-forest-800/70 transition-colors group-hover:bg-white/15 group-hover:!text-white/90 sm:px-2.5">
                       {c.code}
                     </span>
                   </div>
-                  <h3 className="mt-3 text-base font-extrabold leading-tight text-forest-900 group-hover:!text-white sm:text-lg lg:mt-6 lg:text-2xl">
-                    {c.name}
-                  </h3>
-                  <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-forest-900/65 group-hover:!text-white/80 lg:line-clamp-none lg:text-sm lg:text-forest-900/70">
-                    {c.headline}
-                  </p>
+                  <h3 className="mt-3 text-base font-extrabold leading-tight text-forest-900 group-hover:!text-white sm:text-lg lg:mt-6 lg:text-2xl">{c.name}</h3>
+                  <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-forest-900/65 group-hover:!text-white/80 lg:line-clamp-none lg:text-sm lg:text-forest-900/70">{c.headline}</p>
                 </div>
                 <div className="mt-3 flex items-end justify-between border-t border-dashed border-forest-900/15 pt-2.5 text-xs group-hover:border-white/20 sm:mt-4 sm:pt-3 lg:mt-5 lg:pt-4 lg:text-sm">
-                  <span className="text-forest-900 group-hover:!text-white font-mono text-[10px] sm:text-[11px]">
-                    <span className="block text-[8px] uppercase tracking-widest text-forest-900/55 group-hover:!text-white/60 sm:text-[9px]">
-                      {c.stats[0]?.label}
-                    </span>
-                    <span className="font-bold text-coral-600 group-hover:!text-amber-200 lg:text-forest-900 lg:group-hover:!text-amber-200">
-                      {c.stats[0]?.value}
-                    </span>
+                  <span className="text-forest-900 group-hover:!text-white font-mono text-xs sm:text-[13px]">
+                    <span className="block text-xs uppercase tracking-wider text-forest-900/60 group-hover:!text-white/70">{c.stats[0]?.label}</span>
+                    <span className="font-bold text-coral-600 group-hover:!text-amber-200 lg:text-forest-900 lg:group-hover:!text-amber-200">{c.stats[0]?.value}</span>
+                  </span>
                   </span>
                   <ArrowRight
                     aria-hidden="true"
@@ -1032,24 +995,16 @@ function Home() {
           />
           <div className="hero-card-float-slow absolute left-3 top-3 rounded-2xl border border-white/25 bg-forest-950/85 px-3.5 py-2 text-white shadow-xl backdrop-blur-md lg:-left-5 lg:top-6 lg:px-4 lg:py-3">
             <div className="flex items-center justify-between gap-3">
-              <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-amber-200 lg:text-[10px]">
-                IELTS Target
-              </span>
-              <span className="font-display text-xs font-extrabold text-white lg:text-sm">
-                7.5+ Band
-              </span>
+                         <span className="font-mono text-xs font-bold uppercase tracking-wider text-amber-200">IELTS Target</span>
+              <span className="font-display text-xs font-extrabold text-white lg:text-sm">7.5+ Band</span>
             </div>
             <div className="mt-1.5 h-1.5 w-28 overflow-hidden rounded-full bg-white/15 lg:w-36">
               <div className="band-meter-fill h-full w-full rounded-full bg-gradient-to-r from-amber-300 to-coral-400" />
             </div>
           </div>
           <div className="hero-card-float absolute right-3 bottom-3 rounded-2xl border border-white/15 bg-forest-900/92 px-3.5 py-1.5 text-white shadow-xl backdrop-blur-md lg:-right-4 lg:-bottom-6 lg:rounded-3xl lg:bg-forest-900 lg:p-5">
-            <span className="font-display text-lg font-extrabold text-coral-400 lg:block lg:text-4xl lg:text-coral-500">
-              79+
-            </span>
-            <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wider text-forest-100/80 lg:ml-0 lg:block lg:text-xs lg:text-forest-100/70">
-              Top PTE score
-            </span>
+            <span className="font-display text-lg font-extrabold text-coral-400 lg:block lg:text-4xl lg:text-coral-500">79+</span>
+            <span className="ml-1.5 text-xs font-bold uppercase tracking-wider text-forest-100/90 lg:ml-0 lg:block lg:text-forest-100/80">Top PTE score</span>
           </div>
         </div>
         <div
@@ -1153,10 +1108,7 @@ function Home() {
 
       {/* TESTIMONIALS */}
       {homepageTestimonials.length > 0 && (
-        <section
-          id="reviews"
-          className="scroll-mt-36 lg:scroll-mt-44 border-b border-forest-900/10 bg-sand/60 px-5 py-12 lg:border-0 lg:px-6 lg:py-24"
-        >
+               <section id="reviews" className="scroll-mt-36 lg:scroll-mt-44 mt-4 sm:mt-8 border-b border-forest-900/10 bg-sand/60 px-5 py-14 lg:border-0 lg:px-6 lg:py-24">
           <div className="mx-auto max-w-7xl">
             <Eyebrow>Testimonials</Eyebrow>
             <h2 className="mt-2 max-w-2xl text-2xl font-extrabold text-forest-900 lg:mt-4 lg:text-5xl">
@@ -1273,22 +1225,18 @@ function Home() {
               );
             })}
           </div>
-          <a
-            href={site.mapUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-6 inline-flex items-center gap-2 text-xs text-forest-900/70 hover:text-coral-600 transition-colors lg:text-sm"
-          >
-            <MapPin className="size-4 shrink-0 text-coral-500" />{" "}
-            <span>{site.address} ↗</span>
-          </a>
+                    <div className="mt-6 flex flex-col gap-2 rounded-2xl border border-forest-900/10 bg-white/75 p-4 shadow-2xs sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2 text-xs font-semibold text-forest-900">
+              <MapPin className="size-4 shrink-0 text-coral-500" />
+              <span>Head Office · Sangaria</span>
+            </div>
+            <a href={site.mapUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-bold text-coral-600 hover:underline">
+              <span>{site.address}</span> <span>↗</span>
+            </a>
+          </div>
         </div>
-        <div
-          data-reveal=""
-          style={{ "--reveal-delay": "100ms" } as CSSProperties}
-          className="rounded-3xl border border-white/10 bg-forest-900 bg-grain p-6 text-white shadow-xl lg:rounded-[2.5rem] lg:p-10 lg:shadow-2xl"
-        >
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+        <div data-reveal="" style={{ '--reveal-delay': '100ms' } as CSSProperties} className="rounded-3xl border border-white/10 bg-forest-900 bg-grain p-6 text-white shadow-xl lg:rounded-[2.5rem] lg:p-10 lg:shadow-2xl">
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 font-mono text-xs font-bold uppercase tracking-wider text-emerald-300">
             <span
               className="size-2 rounded-full bg-emerald-400 animate-pulse"
               aria-hidden="true"
