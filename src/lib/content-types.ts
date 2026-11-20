@@ -1,352 +1,368 @@
-import type { Approval, Post, Testimonial } from '@/data/fixtures'
+import type { Approval, Post, Testimonial } from "@/data/fixtures";
 
-export type SiteFaq = { q: string; a: string }
-export type SiteTrustStat = { value: string; label: string }
+export type SiteFaq = { q: string; a: string };
+export type SiteTrustStat = { value: string; label: string };
 
-export type CertificateCategory = string
+export type CertificateCategory = string;
 
 export type PublicCertificate = {
-  id: number
-  title: string
-  issuer: string
-  category: CertificateCategory
-  credentialDate: string
-  altText: string
-  imageSrc: string
-  homepageFeatured: boolean
-  published: boolean
-  sortOrder: number
-}
+  id: number;
+  title: string;
+  issuer: string;
+  category: CertificateCategory;
+  credentialDate: string;
+  altText: string;
+  imageSrc: string;
+  homepageFeatured: boolean;
+  published: boolean;
+  sortOrder: number;
+};
 
 export type AdminCertificate = PublicCertificate & {
-  collection: string
-  hasDatabaseImage: boolean
-}
+  collection: string;
+  hasDatabaseImage: boolean;
+};
 
 export type CertificateSeed = {
-  slug: string
-  title: string
-  issuer: string
-  category: CertificateCategory
-  credentialDate: string
-  altText: string
-  imagePath: string
-  homepageFeatured: boolean
-  published: boolean
-  sortOrder: number
-}
+  slug: string;
+  title: string;
+  issuer: string;
+  category: CertificateCategory;
+  credentialDate: string;
+  altText: string;
+  imagePath: string;
+  homepageFeatured: boolean;
+  published: boolean;
+  sortOrder: number;
+};
 
 export type SiteSettings = {
-  popupEnabled: boolean
-  popupDelaySeconds: number
-  whatsappEnabled: boolean
-  approvalsMarqueeEnabled: boolean
-  phones: string[]
-  emails: string[]
-  officeHours: string
-  faqs: SiteFaq[]
-  trustStats: SiteTrustStat[]
-}
+  popupEnabled: boolean;
+  popupDelaySeconds: number;
+  whatsappEnabled: boolean;
+  approvalsMarqueeEnabled: boolean;
+  phones: string[];
+  emails: string[];
+  officeHours: string;
+  faqs: SiteFaq[];
+  trustStats: SiteTrustStat[];
+};
 
 export type PublicContent = {
-  posts: Post[]
-  approvals: Approval[]
-  testimonials: Testimonial[]
-  certificates: PublicCertificate[]
-  settings: SiteSettings
-}
+  posts: Post[];
+  approvals: Approval[];
+  testimonials: Testimonial[];
+  certificates: PublicCertificate[];
+  settings: SiteSettings;
+};
 
 export type CoachingBatch = {
-  id: number
-  program: string
-  batch: string
-  time: string
-  seats: number
-  starts: string
-  published: boolean
-}
+  id: number;
+  program: string;
+  batch: string;
+  time: string;
+  seats: number;
+  starts: string;
+  published: boolean;
+};
 
-export type PublicCoachingContent = { batches: CoachingBatch[] }
+export type PublicCoachingContent = { batches: CoachingBatch[] };
 
-export type EnquiryStatus = 'New' | 'Contacted' | 'Follow-up' | 'Documents Pending' | 'Applied' | 'Converted' | 'Closed'
+export type EnquiryStatus =
+  | "New"
+  | "Contacted"
+  | "Follow-up"
+  | "Documents Pending"
+  | "Applied"
+  | "Converted"
+  | "Closed";
 
-export type AdminRole = 'super_admin' | 'content_editor' | 'enquiry_manager'
+export type AdminRole = "super_admin" | "content_editor" | "enquiry_manager";
 
 export type EnquiryActivity = {
-  id: number
-  enquiryId: number
-  authorName: string
-  authorEmail: string
-  body: string
-  createdAt: string
-  updatedAt: string
-  editedBy: string
-}
+  id: number;
+  enquiryId: number;
+  authorName: string;
+  authorEmail: string;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+  editedBy: string;
+};
 
 export type Enquiry = {
-  id: number
-  name: string
-  phone: string
-  email: string
-  city: string
-  interest: string
-  country: string
-  message: string
-  source: string
-  summary: string
-  status: EnquiryStatus
-  notes: string
-  activities: EnquiryActivity[]
-  assignedTo: string
-  nextFollowUpAt: string
-  createdAt: string
-  updatedAt: string
-}
+  id: number;
+  name: string;
+  phone: string;
+  email: string;
+  city: string;
+  interest: string;
+  country: string;
+  message: string;
+  source: string;
+  summary: string;
+  status: EnquiryStatus;
+  notes: string;
+  activities: EnquiryActivity[];
+  assignedTo: string;
+  nextFollowUpAt: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
-export type AdminPost = Post & { id: number; published: boolean }
+export type AdminPost = Post & { id: number; published: boolean };
 
 export type AdminStory = {
-  id: number
-  kind: 'approval' | 'testimonial'
-  name: string
-  city: string
-  country: string
-  visa: string
-  quote: string
-  rating: number
-  initials: string
-  flag: string
-  date: string
-  note: string
-  mediaType: 'none' | 'photo' | 'video'
-  photoSrc: string
-  videoUrl: string
-  mediaAlt: string
-  mediaConsent: boolean
-  homepageFeatured: boolean
-  published: boolean
-}
+  id: number;
+  kind: "approval" | "testimonial";
+  name: string;
+  city: string;
+  country: string;
+  visa: string;
+  quote: string;
+  rating: number;
+  initials: string;
+  flag: string;
+  date: string;
+  note: string;
+  mediaType: "none" | "photo" | "video";
+  photoSrc: string;
+  videoUrl: string;
+  mediaAlt: string;
+  mediaConsent: boolean;
+  homepageFeatured: boolean;
+  published: boolean;
+};
 
 export type AdminSnapshot = {
-  user: { name: string; email: string; role: AdminRole }
-  enquiries: Enquiry[]
-  posts: AdminPost[]
-  stories: AdminStory[]
-  batches: CoachingBatch[]
-  certificates: AdminCertificate[]
-  settings: SiteSettings
-  users: AdminUser[]
+  user: { name: string; email: string; role: AdminRole };
+  enquiries: Enquiry[];
+  posts: AdminPost[];
+  stories: AdminStory[];
+  batches: CoachingBatch[];
+  certificates: AdminCertificate[];
+  settings: SiteSettings;
+  users: AdminUser[];
+  hasMorePosts?: boolean;
+  hasMoreStories?: boolean;
   enquiryStats: {
-    total: number
-    newCount: number
-    followUps: number
-    dueToday: number
-    converted: number
-    newLast7Days: number
-    demoRequests: number
-    byStatus: Record<string, number>
-    byMonth: Record<string, number>
-    topCountries: Array<{ country: string; count: number }>
-    bySource: Record<string, number>
-  }
-}
+    total: number;
+    newCount: number;
+    followUps: number;
+    dueToday: number;
+    converted: number;
+    newLast7Days: number;
+    demoRequests: number;
+    byStatus: Record<string, number>;
+    byMonth: Record<string, number>;
+    topCountries: Array<{ country: string; count: number }>;
+    bySource: Record<string, number>;
+  };
+};
 
 export type AdminUser = {
-  openId: string
-  email: string
-  name: string
-  role: AdminRole
-}
-export type AttendanceStatus = 'Present' | 'Half Day' | 'Review Required' | 'Leave' | 'Paid Leave' | 'Unpaid Leave' | 'Absent'
+  openId: string;
+  email: string;
+  name: string;
+  role: AdminRole;
+};
+export type AttendanceStatus =
+  | "Present"
+  | "Half Day"
+  | "Review Required"
+  | "Leave"
+  | "Paid Leave"
+  | "Unpaid Leave"
+  | "Absent";
 
 export type EmployeeRecord = {
-  id: number
-  name: string
-  designation: string
-  phone: string
-  email: string
-  accessToken: string
-  hasPin: boolean
-  deviceBound: boolean
-  cycleStartDay: number
-  monthlySalary: number
-  joiningDate?: string
-  leavingDate?: string
-  halfDayMinutes?: number
-  minimumHalfDayMinutes?: number
-  lateGraceMinutes?: number
-  weeklyOffDays?: number[]
-  holidayDates?: string[]
-  expectedInTime: string
-  expectedOutTime: string
-  officeOnly: boolean
-  active: boolean
-  createdAt: string
-}
+  id: number;
+  name: string;
+  designation: string;
+  phone: string;
+  email: string;
+  accessToken: string;
+  hasPin: boolean;
+  deviceBound: boolean;
+  cycleStartDay: number;
+  monthlySalary: number;
+  joiningDate?: string;
+  leavingDate?: string;
+  halfDayMinutes?: number;
+  minimumHalfDayMinutes?: number;
+  lateGraceMinutes?: number;
+  weeklyOffDays?: number[];
+  holidayDates?: string[];
+  expectedInTime: string;
+  expectedOutTime: string;
+  officeOnly: boolean;
+  active: boolean;
+  createdAt: string;
+};
 
 export type AttendanceEditHistoryRecord = {
-  id: number
-  attendanceLogId: number
-  employeeId: number
-  workDate: string
-  editorName: string
-  editorEmail: string
-  action: 'create' | 'edit'
-  before?: Record<string, string | number | boolean | null> | null
-  after?: Record<string, string | number | boolean | null> | null
-  changesSummary: string
-  reason: string
-  createdAt: string
-}
+  id: number;
+  attendanceLogId: number;
+  employeeId: number;
+  workDate: string;
+  editorName: string;
+  editorEmail: string;
+  action: "create" | "edit";
+  before?: Record<string, string | number | boolean | null> | null;
+  after?: Record<string, string | number | boolean | null> | null;
+  changesSummary: string;
+  reason: string;
+  createdAt: string;
+};
 export type AttendanceBreakRecord = {
-  outAt: string
-  inAt: string
-  outLat: number | null
-  outLng: number | null
-  outDistanceM: number | null
-  inLat: number | null
-  inLng: number | null
-  inDistanceM: number | null
-  note: string
-}
+  outAt: string;
+  inAt: string;
+  outLat: number | null;
+  outLng: number | null;
+  outDistanceM: number | null;
+  inLat: number | null;
+  inLng: number | null;
+  inDistanceM: number | null;
+  note: string;
+};
 export type AttendanceLogRecord = {
-  id: number
-  employeeId: number
-  employeeName: string
-  designation: string
-  workDate: string
-  checkInAt: string
-  checkOutAt: string
-  inLat: number | null
-  inLng: number | null
-  inAccuracyM: number | null
-  inDistanceM: number | null
-  inIp: string
-  inIpCity: string
-  inIpCountry: string
-  inFlags: string[]
-  outLat: number | null
-  outLng: number | null
-  outAccuracyM: number | null
-  outDistanceM: number | null
-  outIp: string
-  outIpCity: string
-  outIpCountry: string
-  outFlags: string[]
-   inPhotoSrc: string
-  outPhotoSrc: string
-  status: AttendanceStatus
-  workMinutes: number
-  breakMinutes: number
-  breaks: AttendanceBreakRecord[]
-  isLate: boolean
-  editedBy: string
-  editNote: string
-  updatedAt: string
-  editHistory: AttendanceEditHistoryRecord[]
-}
+  id: number;
+  employeeId: number;
+  employeeName: string;
+  designation: string;
+  workDate: string;
+  checkInAt: string;
+  checkOutAt: string;
+  inLat: number | null;
+  inLng: number | null;
+  inAccuracyM: number | null;
+  inDistanceM: number | null;
+  inIp: string;
+  inIpCity: string;
+  inIpCountry: string;
+  inFlags: string[];
+  outLat: number | null;
+  outLng: number | null;
+  outAccuracyM: number | null;
+  outDistanceM: number | null;
+  outIp: string;
+  outIpCity: string;
+  outIpCountry: string;
+  outFlags: string[];
+  inPhotoSrc: string;
+  outPhotoSrc: string;
+  status: AttendanceStatus;
+  workMinutes: number;
+  breakMinutes: number;
+  breaks: AttendanceBreakRecord[];
+  isLate: boolean;
+  editedBy: string;
+  editNote: string;
+  updatedAt: string;
+  editHistory: AttendanceEditHistoryRecord[];
+};
 
 export type AttendanceSettings = {
-  officeName: string
-  officeLat: number
-  officeLng: number
-  allowedRadiusM: number
-  maxAccuracyM: number
-  blockVpnOrForeignIp: boolean
-  officeWifiIp: string
-  requireOfficeWifiIp: boolean
-  requireSelfie: boolean
-}
+  officeName: string;
+  officeLat: number;
+  officeLng: number;
+  allowedRadiusM: number;
+  maxAccuracyM: number;
+  blockVpnOrForeignIp: boolean;
+  officeWifiIp: string;
+  requireOfficeWifiIp: boolean;
+  requireSelfie: boolean;
+};
 
 export type EmployeeCycleSummary = {
-  employee: EmployeeRecord
-  cycleStartDate: string
-  cycleEndDate: string
-  totalDays: number
-  sundaysCount: number
-  workingDays: number
-  presentDays: number
-  halfDays: number
-  leaveDays: number
-  absentDays: number
-  payableDays: number
-  perDaySalary: number
-  earnedSalary: number
-  lateCount: number
-  flaggedCount: number
-  missedCheckOutCount: number
-  reviewRequiredCount?: number
-  finalized?: boolean
-  offDayWorkMinutes?: number
-  totalWorkMinutes: number
-}
+  employee: EmployeeRecord;
+  cycleStartDate: string;
+  cycleEndDate: string;
+  totalDays: number;
+  sundaysCount: number;
+  workingDays: number;
+  presentDays: number;
+  halfDays: number;
+  leaveDays: number;
+  absentDays: number;
+  payableDays: number;
+  perDaySalary: number;
+  earnedSalary: number;
+  lateCount: number;
+  flaggedCount: number;
+  missedCheckOutCount: number;
+  reviewRequiredCount?: number;
+  finalized?: boolean;
+  offDayWorkMinutes?: number;
+  totalWorkMinutes: number;
+};
 export type AdminAttendanceSnapshot = {
-  settings: AttendanceSettings
-  employees: EmployeeRecord[]
-  logs: AttendanceLogRecord[]
-  summaries: EmployeeCycleSummary[]
-  selectedMonth: string
-  todayIst: string
-}
+  settings: AttendanceSettings;
+  employees: EmployeeRecord[];
+  logs: AttendanceLogRecord[];
+  summaries: EmployeeCycleSummary[];
+  selectedMonth: string;
+  todayIst: string;
+};
 
 export type SalarySlipSnapshot = {
-  manual?: boolean
-  adjustmentDate?: string
-  companyName: string
-  companyAddress: string
-  companyPhone: string
-  companyEmail: string
-  employeeCode: string
-  employeeName: string
-  designation: string
-  employeeEmail: string
-  employeePhone: string
-  joiningDate: string
-  cycleStartDay: number
-  shiftTime: string
-  monthLabel: string
-  cycleStartDate: string
-  cycleEndDate: string
-  totalDays: number
-  workingDays: number
-  weeklyOffsAndHolidays: number
-  presentDays: number
-  halfDays: number
-  paidLeaveDays: number
-  unpaidAndAbsentDays: number
-  payableDays: number
-  totalWorkMinutes: number
-  monthlyBaseSalary: number
-  earnedSalary: number
-  allowanceLabel: string
-  allowanceAmount: number
-  grossEarnings: number
-  deductionLabel: string
-  deductionAmount: number
-  totalDeductions: number
-  netPay: number
-  netPayWords: string
-  paidAmount: number
-  paymentMethod: string
-  paymentRef: string
-  paidOn: string
-  notes: string
-}
+  manual?: boolean;
+  adjustmentDate?: string;
+  companyName: string;
+  companyAddress: string;
+  companyPhone: string;
+  companyEmail: string;
+  employeeCode: string;
+  employeeName: string;
+  designation: string;
+  employeeEmail: string;
+  employeePhone: string;
+  joiningDate: string;
+  cycleStartDay: number;
+  shiftTime: string;
+  monthLabel: string;
+  cycleStartDate: string;
+  cycleEndDate: string;
+  totalDays: number;
+  workingDays: number;
+  weeklyOffsAndHolidays: number;
+  presentDays: number;
+  halfDays: number;
+  paidLeaveDays: number;
+  unpaidAndAbsentDays: number;
+  payableDays: number;
+  totalWorkMinutes: number;
+  monthlyBaseSalary: number;
+  earnedSalary: number;
+  allowanceLabel: string;
+  allowanceAmount: number;
+  grossEarnings: number;
+  deductionLabel: string;
+  deductionAmount: number;
+  totalDeductions: number;
+  netPay: number;
+  netPayWords: string;
+  paidAmount: number;
+  paymentMethod: string;
+  paymentRef: string;
+  paidOn: string;
+  notes: string;
+};
 
 export type SalarySlipRecord = {
-  id: number
-  slipNumber: string
-  employeeId: number
-  employeeName: string
-  selectedMonth: string
-  cycleStartDate: string
-  cycleEndDate: string
-  netPay: number
-  status: 'issued' | 'voided'
-  issuedBy: string
-  issuedAt: string
-  voidedBy: string
-  voidReason: string
-  voidedAt: string
-  snapshot: SalarySlipSnapshot
-}
+  id: number;
+  slipNumber: string;
+  employeeId: number;
+  employeeName: string;
+  selectedMonth: string;
+  cycleStartDate: string;
+  cycleEndDate: string;
+  netPay: number;
+  status: "issued" | "voided";
+  issuedBy: string;
+  issuedAt: string;
+  voidedBy: string;
+  voidReason: string;
+  voidedAt: string;
+  snapshot: SalarySlipSnapshot;
+};
