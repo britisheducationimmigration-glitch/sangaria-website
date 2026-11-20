@@ -1,12 +1,20 @@
-import { useState } from 'react'
-import { GraduationCap } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { useState } from "react";
+import { GraduationCap } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-export function Logo({ light = false, className }: { light?: boolean; className?: string }) {
-  const [imgError, setImgError] = useState(false)
+export function Logo({
+  light = false,
+  className,
+}: {
+  light?: boolean;
+  className?: string;
+}) {
+  const [imgError, setImgError] = useState(false);
 
   return (
-    <span className={cn('flex min-w-0 items-center gap-2 sm:gap-2.5', className)}>
+    <span
+      className={cn("flex min-w-0 items-center gap-2 sm:gap-2.5", className)}
+    >
       {!imgError ? (
         <img
           src="/img/logo.png"
@@ -20,14 +28,27 @@ export function Logo({ light = false, className }: { light?: boolean; className?
           <GraduationCap className="size-6 text-coral-400" />
         </span>
       )}
-      <span className="leading-none">
-        <span className={cn('block truncate font-display text-[14px] font-extrabold tracking-tight sm:text-[17px]', light ? 'text-white' : 'text-forest-900')}>
-          British Education
+      <span
+        className="leading-none"
+        aria-label="British Education & Immigration"
+      >
+        <span
+          className={cn(
+            "block truncate font-display text-[14px] font-extrabold tracking-tight sm:text-[17px]",
+            light ? "text-white" : "text-forest-900",
+          )}
+        >
+          British Education{" "}
         </span>
-        <span className={cn('block truncate text-[9px] font-semibold uppercase tracking-[0.18em] sm:text-[10.5px] sm:tracking-[0.22em]', light ? 'text-coral-400' : 'text-coral-600')}>
-          & Immigration
+        <span
+          className={cn(
+            "block truncate text-[9px] font-semibold uppercase tracking-[0.18em] sm:text-[10.5px] sm:tracking-[0.22em]",
+            light ? "text-coral-400" : "text-coral-600",
+          )}
+        >
+          &amp; Immigration
         </span>
       </span>
     </span>
-  )
+  );
 }

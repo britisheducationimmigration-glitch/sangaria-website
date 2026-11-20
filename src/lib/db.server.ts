@@ -108,7 +108,10 @@ async function seed(poolInstance: Pool) {
 
   if (adminRows.length === 0) {
     const initialEmail = (process.env.ADMIN_EMAIL || 'admin@britisheducationandimmigration.com').toLowerCase()
-    const initialPass = process.env.ADMIN_PASSWORD || 'Admin@Sangaria2026'
+    const initialPass = process.env.ADMIN_PASSWORD
+    if (!initialPass) {
+      throw new Error('ADMIN_PASSWORD environment variable is required to create the initial admin user')
+    }
     const passwordHash = hashPassword(initialPass)
     await poolInstance.query(
       `INSERT INTO admin_users (open_id, email, name, role, password_hash)
