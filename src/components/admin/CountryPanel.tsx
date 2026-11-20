@@ -84,6 +84,32 @@ function emptyEditor(): Editor {
   };
 }
 
+function textLines(value: string) {
+  return value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function parsePairs(value: string) {
+  return textLines(value).map((line) => {
+    const index = line.indexOf("|");
+    return index < 0
+      ? { label: line, value: "" }
+      : {
+          label: line.slice(0, index).trim(),
+          value: line.slice(index + 1).trim(),
+        };
+  });
+}
+
+function parseSources(value: string) {
+  return parsePairs(value).map((item) => ({
+    label: item.label,
+    url: item.value,
+  }));
+}
+
 function fromContent(content: CountryPageContent): Editor {
   const country = content.country;
   const guide = country.studyGuide;
