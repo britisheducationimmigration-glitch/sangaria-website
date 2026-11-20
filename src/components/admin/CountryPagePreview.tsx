@@ -1,206 +1,177 @@
-import { useEffect, useRef, useState, type SyntheticEvent } from 'react'
-import { createPortal } from 'react-dom'
-import { CountryPageView } from '@/components/CountryPageView'
-import { SiteFooter } from '@/components/SiteFooter'
-import { SiteHeader } from '@/components/SiteHeader'
-import { Route as RootRoute } from '@/routes/__root'
+import { useState } from 'react'
+import { CheckCircle2, Clock, DollarSign, ShieldCheck } from 'lucide-react'
 import type { Country } from '@/data/fixtures'
 import type { VisaGuidance } from '@/data/visa-guidance'
-
-const previewDocument = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Country page preview</title></head><body style="margin:0"><div id="country-page-preview-root"></div></body></html>'
-
-type PreviewSize = 'mobile' | 'desktop'
 
 export function CountryPagePreview({ content }: {
   content: { country: Country; guidance: VisaGuidance }
 }) {
-  const [size, setSize] = useState<PreviewSize>('mobile')
-  const [mountTarget, setMountTarget] = useState<HTMLElement | null>(null)
-  const [previewScale, setPreviewScale] = useState(1)
-  const [wide, setWide] = useState(false)
-  const wideRef = useRef(false)
-  const anchorRef = useRef<HTMLDivElement>(null)
-  const panelRef = useRef<HTMLElement>(null)
-  const frameAreaRef = useRef<HTMLDivElement>(null)
-
-  function preparePreview(event: SyntheticEvent<HTMLIFrameElement>) {
-    const frameDocument = event.currentTarget.contentDocument
-    if (!frameDocument) return
-
-    Array.from(document.head.querySelectorAll('link[rel="stylesheet"], style')).forEach((source) => {
-      if (source instanceof HTMLLinkElement) {
-        const copy = source.cloneNode(true) as HTMLLinkElement
-        copy.href = source.href
-        frameDocument.head.appendChild(copy)
-      } else {
-        frameDocument.head.appendChild(source.cloneNode(true))
-      }
-    })
-
-    frameDocument.body.style.margin = '0'
-    setMountTarget(frameDocument.getElementById('country-page-preview-root'))
-  }
-
-  useEffect(() => {
-    function updateViewportMode() {
-      const nextWide = window.matchMedia('(min-width: 1024px)').matches
-      if (nextWide === wideRef.current) return
-
-      wideRef.current = nextWide
-      setWide(nextWide)
-    }
-
-    updateViewportMode()
-    window.addEventListener('resize', updateViewportMode)
-    return () => window.removeEventListener('resize', updateViewportMode)
-  }, [])
-
-  useEffect(() => {
-    const panel = panelRef.current
-    if (!panel) return
-
-    if (!wide) {
-      panel.style.removeProperty('position')
-      panel.style.removeProperty('top')
-      panel.style.removeProperty('right')
-      panel.style.removeProperty('width')
-      panel.style.removeProperty('z-index')
-      panel.style.removeProperty('max-height')
-      panel.style.removeProperty('overflow-y')
-      return
-    }
-
-    function keepPreviewBesideEditor() {
-      if (!panel) return
-      const anchorTop = anchorRef.current?.getBoundingClientRect().top ?? 180
-      const top = Math.min(Math.max(16, anchorTop), Math.max(16, window.innerHeight - 320))
-      const width = Math.min(520, (window.innerWidth - 64) / 2)
-      const right = Math.max(16, (window.innerWidth - 1152) / 2)
-
-      panel.style.position = 'fixed'
-      panel.style.top = top + 'px'
-      panel.style.right = right + 'px'
-      panel.style.width = width + 'px'
-      panel.style.zIndex = '40'
-      panel.style.maxHeight = Math.max(260, window.innerHeight - top - 16) + 'px'
-      panel.style.overflowY = 'auto'
-
-      const frameArea = frameAreaRef.current
-      if (frameArea) {
-        const viewportWidth = size === 'mobile' ? 390 : 1024
-        const viewportHeight = size === 'mobile' ? 844 : 900
-        const scale = Math.min(1, frameArea.clientWidth / viewportWidth)
-        const pageHeight = viewportHeight * scale
-        const availableHeight = Math.max(220, window.innerHeight - top - 220)
-        frameArea.style.height = Math.min(pageHeight, availableHeight) + 'px'
-      }
-    }
-
-    keepPreviewBesideEditor()
-    window.addEventListener('scroll', keepPreviewBesideEditor, { passive: true })
-    window.addEventListener('resize', keepPreviewBesideEditor)
-    return () => {
-      window.removeEventListener('scroll', keepPreviewBesideEditor)
-      window.removeEventListener('resize', keepPreviewBesideEditor)
-    }
-  }, [wide, size, previewScale])
-
-  useEffect(() => {
-    const frameArea = frameAreaRef.current
-    if (!frameArea || typeof ResizeObserver === 'undefined') return
-    const viewportWidth = size === 'mobile' ? 390 : 1024
-    const updateScale = () => setPreviewScale(Math.min(1, frameArea.clientWidth / viewportWidth))
-    const resizeObserver = new ResizeObserver(updateScale)
-    resizeObserver.observe(frameArea)
-    updateScale()
-    return () => resizeObserver.disconnect()
-  }, [size])
-
-  const mobile = size === 'mobile'
-  const viewportWidth = mobile ? 390 : 1024
-  const viewportHeight = mobile ? 844 : 900
-  const renderedWidth = Math.round(viewportWidth * previewScale)
-  const renderedHeight = Math.round(viewportHeight * previewScale)
-  const previewCard = (
-    <section
-      ref={panelRef}
-      className={'w-full min-w-0 max-w-full rounded-2xl border border-forest-900/15 bg-white p-4 shadow-sm sm:p-5 ' + (wide ? 'fixed z-40' : '')}
-    >
-      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0 flex-1">
-          <p className="font-mono text-xs font-bold uppercase tracking-wider text-coral-600">Page preview</p>
-          <h4 className="mt-1 font-extrabold text-forest-900">Check the country page before publishing</h4>
-        </div>
-        <div role="group" aria-label="Preview screen size" className="inline-flex w-fit shrink-0 rounded-xl border border-forest-900/15 bg-forest-50 p-1">
-          <button
-            type="button"
-            aria-pressed={mobile}
-            onClick={() => setSize('mobile')}
-            className={'min-h-10 rounded-lg whitespace-nowrap px-3 text-sm font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500 ' + (mobile ? 'bg-forest-900 text-white' : 'text-forest-900 hover:bg-white')}
-          >
-            Mobile
-          </button>
-          <button
-            type="button"
-            aria-pressed={!mobile}
-            onClick={() => setSize('desktop')}
-            className={'min-h-10 rounded-lg px-3 text-sm font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500 ' + (!mobile ? 'bg-forest-900 text-white' : 'text-forest-900 hover:bg-white')}
-          >
-            Desktop
-          </button>
-        </div>
-      </div>
-      <p className="mt-3 text-xs leading-relaxed text-forest-900/60">
-        This uses the same country page layout and updates as you edit. The preview links and enquiry form are inactive.
-      </p>
-      <div
-        ref={frameAreaRef}
-        className="mt-4 w-full min-w-0 overflow-auto overscroll-contain rounded-xl border border-forest-900/10 bg-forest-50"
-        style={{ height: mobile ? `min(${renderedHeight}px, 70vh)` : String(renderedHeight) + 'px' }}
-      >
-        <div className="relative mx-auto" style={{ width: renderedWidth + 'px', height: renderedHeight + 'px' }}>
-          <iframe
-            title={(mobile ? 'Mobile' : 'Desktop') + ' preview of ' + (content.country.name || 'country') + ' page'}
-            srcDoc={previewDocument}
-            sandbox="allow-same-origin"
-            onLoad={preparePreview}
-            style={{
-              width: viewportWidth + 'px',
-              height: viewportHeight + 'px',
-              transform: `scale(${previewScale})`,
-              transformOrigin: 'top left',
-            }}
-            className="absolute left-0 top-0 block border-0 bg-white"
-          />
-        </div>
-        {mountTarget && createPortal(
-          <CountryPreviewShell content={content} />,
-          mountTarget,
-        )}
-      </div>
-    </section>
-  )
-
-  return wide ? (
-    <>
-      <div ref={anchorRef} aria-hidden="true" className="hidden lg:block" />
-      {createPortal(previewCard, document.body)}
-    </>
-  ) : previewCard
-}
-
-function CountryPreviewShell({ content }: {
-  content: { country: Country; guidance: VisaGuidance }
-}) {
-  const { settings, countries } = RootRoute.useLoaderData()
+  const [activeTab, setActiveTab] = useState<'hero' | 'guide' | 'visa'>('hero')
+  const { country, guidance } = content
 
   return (
-    <div inert>
-      <SiteHeader settings={settings} />
-      <main className="public-main">
-        <CountryPageView country={content.country} guidance={content.guidance} preview />
-      </main>
-      <SiteFooter settings={settings} countries={countries} />
-    </div>
+    <section className="sticky top-6 rounded-3xl border border-[#E4E7EC] bg-white p-5 shadow-xs space-y-4">
+      {/* Header Bar */}
+      <div className="flex items-center justify-between border-b border-[#E4E7EC] pb-3">
+        <div>
+          <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#465FFF]">
+            Live Website Preview
+          </span>
+          <h4 className="mt-0.5 text-base font-extrabold text-[#1D2939]">
+            {country.flag || '🌐'} {country.name || 'Country Preview'}
+          </h4>
+        </div>
+        <div className="flex items-center gap-1 rounded-lg border border-[#E4E7EC] bg-[#F9FAFB] p-1 text-[11px] font-semibold">
+          <button
+            type="button"
+            onClick={() => setActiveTab('hero')}
+            className={'rounded px-2.5 py-1 transition ' + (activeTab === 'hero' ? 'bg-white text-[#465FFF] shadow-2xs font-bold' : 'text-[#667085] hover:text-[#1D2939]')}
+          >
+            Overview
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('guide')}
+            className={'rounded px-2.5 py-1 transition ' + (activeTab === 'guide' ? 'bg-white text-[#465FFF] shadow-2xs font-bold' : 'text-[#667085] hover:text-[#1D2939]')}
+          >
+            Study
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('visa')}
+            className={'rounded px-2.5 py-1 transition ' + (activeTab === 'visa' ? 'bg-white text-[#465FFF] shadow-2xs font-bold' : 'text-[#667085] hover:text-[#1D2939]')}
+          >
+            Visa
+          </button>
+        </div>
+      </div>
+
+      {/* Tab 1: Hero & Overview Preview */}
+      {activeTab === 'hero' && (
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-[#D0E1FD] bg-[#F4F8FF] p-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">{country.flag || '🌐'}</span>
+              <span className="rounded-md bg-white px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-[#465FFF] border border-[#D0E1FD]">
+                {country.code || 'ISO'} · Study Destination
+              </span>
+            </div>
+            <h5 className="text-base font-extrabold text-[#1D2939] leading-snug">
+              {country.headline || 'Headline will appear here…'}
+            </h5>
+            <p className="text-xs text-[#475467] leading-relaxed line-clamp-3">
+              {country.intro || 'Country introduction summary will appear here…'}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-2.5">
+              <p className="text-[10px] font-semibold text-[#667085]">English Requirement</p>
+              <p className="mt-0.5 font-bold text-[#1D2939] line-clamp-2">
+                {country.english || 'IELTS / PTE indicative score'}
+              </p>
+            </div>
+            <div className="rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-2.5">
+              <p className="text-[10px] font-semibold text-[#667085]">Main Intakes</p>
+              <p className="mt-0.5 font-bold text-[#1D2939] line-clamp-2">
+                {country.intakes.length ? country.intakes.join(', ') : 'Fall / Winter'}
+              </p>
+            </div>
+          </div>
+
+          {country.highlights.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[#667085]">Key Highlights</p>
+              <div className="flex flex-wrap gap-1.5">
+                {country.highlights.map((h, i) => (
+                  <span key={i} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-800 border border-emerald-200">
+                    <CheckCircle2 className="size-3 text-emerald-600" /> {h}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab 2: Study Guide Preview */}
+      {activeTab === 'guide' && (
+        <div className="space-y-3">
+          <div className="rounded-2xl border border-[#E4E7EC] bg-[#F9FAFB] p-3.5 space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-[#1D2939]">
+              <DollarSign className="size-3.5 text-[#465FFF]" />
+              <span>Tuition &amp; Living Costs</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="rounded-lg bg-white p-2 border border-[#E4E7EC]">
+                <span className="block text-[10px] text-[#667085]">Annual Tuition</span>
+                <strong className="text-xs text-[#1D2939]">{country.studyGuide.annualTuition || 'Not specified'}</strong>
+              </div>
+              <div className="rounded-lg bg-white p-2 border border-[#E4E7EC]">
+                <span className="block text-[10px] text-[#667085]">Living Funds / GIC</span>
+                <strong className="text-xs text-[#1D2939]">{country.studyGuide.livingCost || 'Not specified'}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-[#E4E7EC] bg-[#F9FAFB] p-3.5 space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-[#1D2939]">
+              <Clock className="size-3.5 text-[#465FFF]" />
+              <span>Work Rights &amp; Post-Study</span>
+            </div>
+            <div className="text-xs space-y-1 text-[#475467]">
+              <p><strong className="text-[#1D2939]">Part-time Work:</strong> {country.studyGuide.workWhileStudying || 'Standard on-campus/off-campus'}</p>
+              <p><strong className="text-[#1D2939]">Post-Study Visa:</strong> {country.studyGuide.postStudyOption || 'Post-graduate work permit'}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 3: Visa Guidance Preview */}
+      {activeTab === 'visa' && (
+        <div className="space-y-3">
+          <div className="rounded-2xl border border-[#E4E7EC] bg-[#F9FAFB] p-3.5 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-xs font-bold text-[#1D2939]">
+                <ShieldCheck className="size-3.5 text-[#465FFF]" /> Official Visa Rules
+              </span>
+              {guidance.lastVerified && (
+                <span className="font-mono text-[10px] text-[#667085]">
+                  Verified {guidance.lastVerified}
+                </span>
+              )}
+            </div>
+            <p className="text-xs font-semibold text-[#1D2939]">{guidance.feeSummary || 'Visa application fee guidelines'}</p>
+            {guidance.caveat && (
+              <p className="rounded-lg bg-amber-50 p-2 text-[11px] leading-relaxed text-amber-800 border border-amber-200">
+                ⚠️ {guidance.caveat}
+              </p>
+            )}
+          </div>
+
+          {guidance.requirements.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[#667085]">Embassy Requirements ({guidance.requirements.length})</p>
+              <ul className="space-y-1 text-xs text-[#475467]">
+                {guidance.requirements.slice(0, 3).map((req, i) => (
+                  <li key={i} className="flex items-start gap-1.5">
+                    <span className="text-[#465FFF]">•</span>
+                    <span>{req}</span>
+                  </li>
+                ))}
+                {guidance.requirements.length > 3 && (
+                  <li className="text-[11px] text-[#667085] pl-3">+ {guidance.requirements.length - 3} more requirements</li>
+                )}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between border-t border-[#E4E7EC] pt-3 text-[11px] text-[#667085]">
+        <span>Public URL: <strong className="text-[#1D2939]">/countries/{country.slug || 'slug'}</strong></span>
+        <span>Updates live as you type</span>
+      </div>
+    </section>
   )
 }
