@@ -2178,96 +2178,152 @@ function CashflowAdminPanel({ onNotice, onDirtyChange }: { onDirtyChange: (dirty
   }
 
   return (
-    <section className="max-w-4xl">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+       <section className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <p className="font-mono text-xs uppercase tracking-wider text-coral-600 font-bold">Financial Configuration</p>
-          <h2 className="text-3xl font-extrabold mt-1">Country Budget & Cashflow Stages</h2>
-          <p className="text-xs text-forest-900/60 mt-1">Edit embassy fees, GIC living costs, and stage-by-stage expenses. Updates reflect instantly on the public website.</p>
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <p className="font-mono text-xs font-bold uppercase tracking-wider text-[#465FFF]">Financial Configuration</p>
+          </div>
+          <h2 className="mt-1 text-2xl sm:text-3xl font-extrabold text-[#1D2939]">Country Budget &amp; Cashflow Stages</h2>
+          <p className="mt-1 text-xs sm:text-sm text-[#667085]">Edit embassy fees, GIC living costs, and stage-by-stage expenses. Updates reflect instantly on public calculators.</p>
         </div>
-        <div className="flex gap-2">
-          <button type="button" disabled={busy} onClick={resetToOfficial} className="rounded-xl border border-forest-900/20 px-4 py-2 text-xs font-bold text-forest-900 hover:bg-forest-50 disabled:opacity-50">Reset Defaults</button>
-          <button type="button" disabled={busy} onClick={save} className="rounded-xl bg-forest-900 px-5 py-2 text-xs font-bold text-white hover:bg-forest-800 shadow-md disabled:opacity-50">{busy ? 'Saving to DB…' : 'Save Changes'}</button>
+        <div className="flex flex-wrap items-center gap-2">
+          {dirty && (
+            <span className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 font-mono text-xs font-semibold text-amber-800 animate-pulse">
+              ● Unsaved Changes
+            </span>
+          )}
+          <button
+            type="button"
+            disabled={busy}
+            onClick={resetToOfficial}
+            className="rounded-xl border border-[#E4E7EC] bg-white px-4 py-2 text-xs font-semibold text-[#667085] hover:bg-[#F9FAFB] disabled:opacity-50"
+          >
+            Reset Defaults
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={save}
+            className="rounded-xl bg-[#465FFF] px-5 py-2 text-xs font-semibold text-white shadow-xs hover:opacity-95 disabled:opacity-50"
+          >
+            {busy ? 'Saving…' : 'Save Changes'}
+          </button>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-6">
+      {/* Country Filter Bar */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-[#E4E7EC] pb-3">
         {data.map((c) => (
           <button
             key={c.slug}
             type="button"
             onClick={() => setSelectedSlug(c.slug)}
-            className={'rounded-xl px-4 py-2 text-xs font-bold transition ' + (selectedSlug === c.slug ? 'bg-coral-500 text-white shadow-sm' : 'bg-white ring-1 ring-forest-900/10 text-forest-900 hover:bg-sand/30')}
+            className={'inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition ' + (
+              selectedSlug === c.slug
+                ? 'bg-[#465FFF] text-white shadow-xs'
+                : 'border border-[#E4E7EC] bg-white text-[#667085] hover:bg-[#F9FAFB]'
+            )}
           >
-            {c.flag} {c.name}
+            <span>{c.flag}</span>
+            <span>{c.name}</span>
           </button>
         ))}
       </div>
 
-      <div className="rounded-3xl bg-white p-6 ring-1 ring-forest-900/10 shadow-sm space-y-5 mb-8">
-        <h3 className="text-base font-extrabold text-forest-900 border-b border-forest-900/10 pb-3">{country.flag} {country.name} Overview Settings</h3>
+      {/* Country Overview Card */}
+      <div className="rounded-3xl border border-[#E4E7EC] bg-white p-6 shadow-xs space-y-4">
+        <div className="flex items-center justify-between border-b border-[#E4E7EC] pb-3">
+          <h3 className="text-base font-extrabold text-[#1D2939]">{country.flag} {country.name} Overview Settings</h3>
+          <span className="font-mono text-xs font-bold text-[#465FFF] bg-[#ECF3FF] px-2.5 py-1 rounded-lg">
+            {country.headline || 'Active Policy'}
+          </span>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <label className="block">
-            <span className="block text-xs font-bold text-forest-900/80 mb-1">Total Estimated Outflow (INR)</span>
-            <input className="w-full rounded-xl border border-forest-900/15 p-2.5 text-xs font-semibold" value={country.totalEstimateINR} onChange={(e) => updateCountryField('totalEstimateINR', e.target.value)} />
+          <label className="block space-y-1.5">
+            <span className="text-xs font-bold text-[#1D2939]">Total Estimated Outflow (INR)</span>
+            <input
+              className="field font-mono font-bold"
+              value={country.totalEstimateINR}
+              onChange={(e) => updateCountryField('totalEstimateINR', e.target.value)}
+            />
           </label>
-          <label className="block">
-            <span className="block text-xs font-bold text-forest-900/80 mb-1">Headline Badge</span>
-            <input className="w-full rounded-xl border border-forest-900/15 p-2.5 text-xs font-semibold" value={country.headline} onChange={(e) => updateCountryField('headline', e.target.value)} />
+          <label className="block space-y-1.5">
+            <span className="text-xs font-bold text-[#1D2939]">Headline Badge</span>
+            <input
+              className="field"
+              value={country.headline}
+              onChange={(e) => updateCountryField('headline', e.target.value)}
+            />
           </label>
         </div>
-        <label className="block">
-          <span className="block text-xs font-bold text-forest-900/80 mb-1">Official Embassy Rule Note</span>
-          <textarea rows={2} className="w-full rounded-xl border border-forest-900/15 p-2.5 text-xs" value={country.officialRuleNote} onChange={(e) => updateCountryField('officialRuleNote', e.target.value)} />
+        <label className="block space-y-1.5">
+          <span className="text-xs font-bold text-[#1D2939]">Official Embassy Rule Note</span>
+          <textarea
+            rows={2}
+            className="field text-xs"
+            value={country.officialRuleNote}
+            onChange={(e) => updateCountryField('officialRuleNote', e.target.value)}
+          />
         </label>
       </div>
 
-      <div className="space-y-4 mb-8">
-        <h3 className="text-base font-extrabold text-forest-900">Stage-by-Stage Expense Details (4 Stages)</h3>
+      {/* Stage-by-Stage Cards */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-extrabold text-[#1D2939]">Stage-by-Stage Expense Details (4 Stages)</h3>
+          <span className="text-xs text-[#667085]">Sequential Student Journey</span>
+        </div>
         {country.stages.map((st) => (
-          <div key={st.stageNumber} className="rounded-2xl bg-white p-5 ring-1 ring-forest-900/10 shadow-sm space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-forest-900/10">
-              <span className="font-bold text-sm text-coral-600">Stage 0{st.stageNumber}: {st.title}</span>
-              <span className="text-xs text-forest-900/60 font-mono">Stage ID: {st.stageNumber}</span>
+          <div key={st.stageNumber} className="rounded-2xl border border-[#E4E7EC] bg-white p-5 shadow-2xs space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-[#E4E7EC]">
+              <span className="font-bold text-sm text-[#465FFF]">Stage 0{st.stageNumber}: {st.title}</span>
+              <span className="text-xs text-[#667085] font-mono">Stage ID: {st.stageNumber}</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <label>
-                <span className="block text-[11px] font-bold text-forest-900/70 mb-1">Stage Title</span>
-                <input className="w-full rounded-lg border border-forest-900/15 p-2 text-xs" value={st.title} onChange={(e) => updateStageField(st.stageNumber, 'title', e.target.value)} />
+              <label className="block space-y-1">
+                <span className="text-[11px] font-bold text-[#667085]">Stage Title</span>
+                <input className="field text-xs" value={st.title} onChange={(e) => updateStageField(st.stageNumber, 'title', e.target.value)} />
               </label>
-              <label>
-                <span className="block text-[11px] font-bold text-forest-900/70 mb-1">Timeline / When to Pay</span>
-                <input className="w-full rounded-lg border border-forest-900/15 p-2 text-xs" value={st.timeline} onChange={(e) => updateStageField(st.stageNumber, 'timeline', e.target.value)} />
+              <label className="block space-y-1">
+                <span className="text-[11px] font-bold text-[#667085]">Timeline / When to Pay</span>
+                <input className="field text-xs" value={st.timeline} onChange={(e) => updateStageField(st.stageNumber, 'timeline', e.target.value)} />
               </label>
-              <label>
-                <span className="block text-[11px] font-bold text-forest-900/70 mb-1">Approx INR Outflow</span>
-                <input className="w-full rounded-lg border border-forest-900/15 p-2 text-xs font-bold" value={st.inrEstimate} onChange={(e) => updateStageField(st.stageNumber, 'inrEstimate', e.target.value)} />
+              <label className="block space-y-1">
+                <span className="text-[11px] font-bold text-[#667085]">Approx INR Outflow</span>
+                <input className="field font-mono text-xs font-bold" value={st.inrEstimate} onChange={(e) => updateStageField(st.stageNumber, 'inrEstimate', e.target.value)} />
               </label>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <label>
-                <span className="block text-[11px] font-bold text-forest-900/70 mb-1">Official Currency Cost</span>
-                <input className="w-full rounded-lg border border-forest-900/15 p-2 text-xs" value={st.officialCost} onChange={(e) => updateStageField(st.stageNumber, 'officialCost', e.target.value)} />
+              <label className="block space-y-1">
+                <span className="text-[11px] font-bold text-[#667085]">Official Currency Cost</span>
+                <input className="field text-xs font-mono" value={st.officialCost} onChange={(e) => updateStageField(st.stageNumber, 'officialCost', e.target.value)} />
               </label>
-              <label>
-                <span className="block text-[11px] font-bold text-forest-900/70 mb-1">Paid Directly To</span>
-                <input className="w-full rounded-lg border border-forest-900/15 p-2 text-xs" value={st.paidTo} onChange={(e) => updateStageField(st.stageNumber, 'paidTo', e.target.value)} />
+              <label className="block space-y-1">
+                <span className="text-[11px] font-bold text-[#667085]">Paid Directly To</span>
+                <input className="field text-xs" value={st.paidTo} onChange={(e) => updateStageField(st.stageNumber, 'paidTo', e.target.value)} />
               </label>
             </div>
-            <label className="block">
-              <span className="block text-[11px] font-bold text-forest-900/70 mb-1">Description</span>
-              <input className="w-full rounded-lg border border-forest-900/15 p-2 text-xs" value={st.description} onChange={(e) => updateStageField(st.stageNumber, 'description', e.target.value)} />
+            <label className="block space-y-1">
+              <span className="text-[11px] font-bold text-[#667085]">Description</span>
+              <input className="field text-xs" value={st.description} onChange={(e) => updateStageField(st.stageNumber, 'description', e.target.value)} />
             </label>
-            <label className="block">
-              <span className="block text-[11px] font-bold text-emerald-800 mb-1">Refund / Protection Guarantee</span>
-              <input className="w-full rounded-lg border border-emerald-600/30 bg-emerald-50/40 p-2 text-xs text-emerald-900" value={st.refundableInfo} onChange={(e) => updateStageField(st.stageNumber, 'refundableInfo', e.target.value)} />
+            <label className="block space-y-1">
+              <span className="text-[11px] font-bold text-emerald-800">Refund / Protection Guarantee</span>
+              <input className="field text-xs border-emerald-200 bg-emerald-50/50 text-emerald-900" value={st.refundableInfo} onChange={(e) => updateStageField(st.stageNumber, 'refundableInfo', e.target.value)} />
             </label>
           </div>
         ))}
       </div>
 
-      <div className="flex justify-end gap-3">
-        <button type="button" disabled={busy} onClick={save} className="rounded-2xl bg-forest-900 px-8 py-3 text-sm font-bold text-white hover:bg-forest-800 shadow-md disabled:opacity-50">
+      <div className="flex justify-end gap-3 border-t border-[#E4E7EC] pt-4">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={save}
+          className="rounded-xl bg-[#465FFF] px-8 py-2.5 text-xs font-bold text-white shadow-xs hover:opacity-95 disabled:opacity-50"
+        >
           {busy ? 'Saving…' : 'Save All Budget Changes'}
         </button>
       </div>
