@@ -271,7 +271,12 @@ export function EnquiryForm({
     );
   }
 
-  const labelCls = cn("label", dark && "!text-forest-100/70");
+  const labelCls = cn(
+    "label",
+    dark
+      ? "!text-forest-100/90 font-semibold"
+      : "!text-forest-900/85 font-semibold",
+  );
 
   return (
     <form onSubmit={onSubmit} className="grid gap-4">
@@ -290,7 +295,7 @@ export function EnquiryForm({
               Full name *
             </label>
             {isNameValid && (
-              <span className="text-[11px] font-bold text-emerald-500 flex items-center gap-0.5">
+              <span className="text-xs font-bold text-emerald-500 flex items-center gap-0.5">
                 ✓ Ready
               </span>
             )}
@@ -320,7 +325,7 @@ export function EnquiryForm({
               Phone / WhatsApp *
             </label>
             {isPhoneValid && (
-              <span className="text-[11px] font-bold text-emerald-500 flex items-center gap-0.5">
+              <span className="text-xs font-bold text-emerald-500 flex items-center gap-0.5">
                 ✓ Valid
               </span>
             )}
@@ -360,7 +365,7 @@ export function EnquiryForm({
                 Email
               </label>
               {email && isEmailValid && (
-                <span className="text-[11px] font-bold text-emerald-500">
+                <span className="text-xs font-bold text-emerald-500">
                   ✓ Valid
                 </span>
               )}
