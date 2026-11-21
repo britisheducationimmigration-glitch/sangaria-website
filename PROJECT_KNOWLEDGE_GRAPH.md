@@ -91,6 +91,17 @@ Every code change must immediately be logged into the "Chronological Module Ledg
 | `public/ai-catalog.json`                 | `2026-11-21 14:50 IST` | **v2.3 (AI Catalog)**         | Created structured JSON catalog with country visa offerings, coaching schedules, and Sangaria office coordinates.                             |
 | `src/routes/__root.tsx`                  | `2026-11-21 14:50 IST` | **v2.3 (Rich Schema)**        | Upgraded Schema.org to `@graph` (`LocalBusiness` + 4.9⭐ aggregateRating + Study Visa `Service` + IELTS/PTE `Course`) + `staleTime: 300_000`. |
 | `src/routes/index.tsx`                   | `2026-11-21 14:50 IST` | **v2.3 (Heading Fix)**        | Upgraded Why Choose Us cards from `<h4>` to `<h3>` to eliminate H2 ➔ H4 heading hierarchy skip.                                               |
+| vercel.json | 2026-11-21 16:15 IST | v2.4 (MediaPipe & Vimeo) | Added cdn.jsdelivr.net, 'wasm-unsafe-eval', storage.googleapis.com & player.vimeo.com to CSP. |
+| src/lib/country-catalog.server.ts | 2026-11-21 16:15 IST | v2.4 (Outage Fallback) | Wrapped public country catalog in try/catch with static fallback so country pages never throw 500. |
+| src/lib/public-functions.ts | 2026-11-21 16:15 IST | v2.4 (Outage & Ghost Fix) | DB outage fallback for coaching/posts + fixed unpublish bug so empty DB rows don't revive mock fixtures. |
+| src/lib/attendance-functions.ts | 2026-11-21 16:15 IST | v2.4 (Payroll Guard) | Prevented modifying employee cycleStartDay after attendance logs have been recorded. |
+| src/components/SiteHeader.tsx | 2026-11-21 16:15 IST | v2.4 (Hours & Touch) | Fixed Sunday/nighttime IST hours boundary (< 1170) and enlarged mobile hamburger button to 44x44px. |
+| public/ai-catalog.json | 2026-11-21 16:15 IST | v2.4 (WhatsApp Sync) | Aligned AI catalog WhatsApp line to +919772570478 matching site.ts. |
+| src/components/CountryPageView.tsx| 2026-11-21 16:15 IST | v2.4 (A11y Hierarchy) | Added <h2 className="sr-only"> to eliminate H1 ➔ H3 heading skip for screen readers. |
+| src/routes/updates.index.tsx | 2026-11-21 16:15 IST | v2.4 (A11y Hierarchy) | Added <h2 className="sr-only"> to eliminate H1 ➔ H3 heading skip on updates page. |
+| src/styles.css | 2026-11-21 16:15 IST | v2.4 (WCAG Contrast) | Raised .field::placeholder contrast to rgba(18, 55, 82, 0.75) meeting WCAG AA 4.5:1+. |
+| src/routes/__root.tsx | 2026-11-21 16:15 IST | v2.4 (GTM Lifecycle) | Added cancelIdleCallback/clearTimeout cleanup for GTM script loader on portal navigation. |
+| src/lib/db.server.ts | 2026-11-21 16:15 IST | v2.4 (Configurable TLS) | Supported configurable DATABASE_SSL_REJECT_UNAUTHORIZED and DATABASE_CA certificate options. |
 
 ---
 

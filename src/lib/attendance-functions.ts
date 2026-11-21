@@ -451,8 +451,12 @@ export const saveEmployee = createServerFn({ method: 'POST' })
       const policyChanged = JSON.stringify(beforePolicy) !== JSON.stringify(afterPolicy)
       if (policyChanged) {
         if (beforePolicy.cycleStartDay !== afterPolicy.cycleStartDay) {
-          const lockedCycles = await queryRows('SELECT id FROM attendance_cycle_snapshots WHERE employee_id = ? AND cycle_end_date >= ? LIMIT 1', [data.id, data.effectiveDate])
+          const [lockedCycles, existingLogs] = await Promise.all([
+            queryRows('SELECT id FROM attendance_cycle_snapshots WHERE employee_id = ? AND cycle_end_date >= ? LIMIT 1', [data.id, data.effectiveDate]),
+            queryRows('SELECT id FROM attendance_logs WHERE employee_id = ? LIMIT 1', [data.id]),
+          ])
           if (lockedCycles.length) throw new Error('Cannot change salary cycle start day on or before a finalized payroll cycle.')
+          if (existingLogs.length) throw new Error('Salary cycle start day cannot be changed after attendance logs have been recorded for this employee.')
         }
         await execute('INSERT INTO employee_policy_audit (employee_id, effective_date, actor_email, reason, before_json, after_json) VALUES (?, ?, ?, ?, ?, ?)', [data.id, data.effectiveDate, context.user.email, data.policyReason || 'Employee profile updated by admin', JSON.stringify(beforePolicy), JSON.stringify(afterPolicy)])
         if (!currentHistory.length) {

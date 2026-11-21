@@ -140,35 +140,40 @@ export async function getPublicCountryCatalog(): Promise<CountryPageContent[]> {
   const environment = currentDeploymentEnvironment();
   const cached = countryCatalogCache.get(environment);
   if (cached && cached.expiresAt > Date.now()) return cached.data;
-  const state = await readCountryCatalogState();
-  const defaults = defaultCountryContent();
-  const baseSlugs = new Set(defaults.map((entry) => entry.country.slug));
-  const merged = defaults.map((entry) => {
-    const override = state.published[entry.country.slug];
-    if (!override) return entry;
-    return withScheduledGuidance({
-      ...override,
-      country: {
-        ...override.country,
-        // Existing database entries predate the planner. Inherit its default only
-        // when no value was saved; admins can intentionally hide the plan with null.
-        studyPlan:
-          override.country.studyPlan === undefined
-            ? entry.country.studyPlan
-            : override.country.studyPlan,
-      },
+  try {
+    const state = await readCountryCatalogState();
+    const defaults = defaultCountryContent();
+    const baseSlugs = new Set(defaults.map((entry) => entry.country.slug));
+    const merged = defaults.map((entry) => {
+      const override = state.published[entry.country.slug];
+      if (!override) return entry;
+      return withScheduledGuidance({
+        ...override,
+        country: {
+          ...override.country,
+          // Existing database entries predate the planner. Inherit its default only
+          // when no value was saved; admins can intentionally hide the plan with null.
+          studyPlan:
+            override.country.studyPlan === undefined
+              ? entry.country.studyPlan
+              : override.country.studyPlan,
+        },
+      });
     });
-  });
-  const added = Object.entries(state.published)
-    .filter(([slug]) => !baseSlugs.has(slug))
-    .map(([, entry]) => withScheduledGuidance(entry))
-    .sort((left, right) => left.country.name.localeCompare(right.country.name));
-  const data = [...merged, ...added];
-  countryCatalogCache.set(environment, {
-    expiresAt: Date.now() + 60_000,
-    data,
-  });
-  return data;
+    const added = Object.entries(state.published)
+      .filter(([slug]) => !baseSlugs.has(slug))
+      .map(([, entry]) => withScheduledGuidance(entry))
+      .sort((left, right) => left.country.name.localeCompare(right.country.name));
+    const data = [...merged, ...added];
+    countryCatalogCache.set(environment, {
+      expiresAt: Date.now() + 60_000,
+      data,
+    });
+    return data;
+  } catch {
+    // Database connection outage resilience: serve cached catalog or fallback static defaults
+    return cached?.data ?? defaultCountryContent();
+  }
 }
 
 export async function getPublicCountryBySlug(slug: string) {

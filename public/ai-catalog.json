@@ -4,8 +4,11 @@
   "tagline": "Premier Study Visa Consultant & IELTS/PTE Coaching in Sangaria, Rajasthan",
   "url": "https://www.britisheducationandimmigration.com",
   "contact": {
-    "phones": ["+919658018000", "+919772570478"],
-    "whatsapp": "+919658018000",
+    "phones": [
+      "+919658018000",
+      "+919772570478"
+    ],
+    "whatsapp": "+919772570478",
     "email": "admissions@britisheducationandimmigration.com",
     "address": {
       "street": "Near Open Book Library, Bhagatpura Road",
@@ -32,92 +35,43 @@
   "studyVisaDestinations": [
     {
       "country": "Canada",
-      "programs": [
-        "Undergraduate Diploma",
-        "Bachelor's Degree",
-        "Postgraduate Certificate",
-        "Master's Degree"
-      ],
-      "features": [
-        "PAL (Provincial Attestation Letter) assistance",
-        "GIC account setup guidance",
-        "Public college admission"
-      ]
+      "programs": ["Undergraduate Diploma", "Bachelor's Degree", "Postgraduate Certificate", "Master's Degree"],
+      "features": ["PAL (Provincial Attestation Letter) assistance", "GIC account setup guidance", "Public college admission"]
     },
     {
       "country": "United Kingdom",
-      "programs": [
-        "Bachelor's Degree",
-        "Master's Degree (1 year)",
-        "Placement Year Programs"
-      ],
-      "features": [
-        "CAS letter processing",
-        "Graduate Route post-study work visa planning",
-        "IELTS waiver assistance"
-      ]
+      "programs": ["Bachelor's Degree", "Master's Degree (1 year)", "Placement Year Programs"],
+      "features": ["CAS letter processing", "Graduate Route post-study work visa planning", "IELTS waiver assistance"]
     },
     {
       "country": "Australia",
-      "programs": [
-        "Higher Education Diploma",
-        "Bachelor's",
-        "Master's by Coursework"
-      ],
-      "features": [
-        "Genuine Student (GS) assessment",
-        "Subclass 500 processing",
-        "CRICOS course alignment"
-      ]
+      "programs": ["Higher Education Diploma", "Bachelor's", "Master's by Coursework"],
+      "features": ["Genuine Student (GS) assessment", "Subclass 500 processing", "CRICOS course alignment"]
     },
     {
       "country": "United States",
-      "programs": [
-        "Associate Degree",
-        "Bachelor of Science/Arts",
-        "STEM Master's"
-      ],
-      "features": [
-        "DS-160 filing assistance",
-        "I-20 issuance coordination",
-        "F-1 visa mock interview coaching"
-      ]
+      "programs": ["Associate Degree", "Bachelor of Science/Arts", "STEM Master's"],
+      "features": ["DS-160 filing assistance", "I-20 issuance coordination", "F-1 visa mock interview coaching"]
     },
     {
       "country": "New Zealand & Europe",
       "programs": ["Vocational Diplomas", "University Degrees"],
-      "features": [
-        "Post-study work rights",
-        "Schengen study visa guidance",
-        "Low/no tuition public universities"
-      ]
+      "features": ["Post-study work rights", "Schengen study visa guidance", "Low/no tuition public universities"]
     }
   ],
   "coachingPrograms": [
     {
       "name": "IELTS Academic & General Training",
       "target": "Band 7.5+",
-      "modules": [
-        "Listening",
-        "Reading",
-        "Writing Task 1 & 2",
-        "Daily 1-on-1 Speaking"
-      ],
+      "modules": ["Listening", "Reading", "Writing Task 1 & 2", "Daily 1-on-1 Speaking"],
       "batches": ["Morning 07:30 AM – 10:00 AM", "Evening 04:00 PM – 06:30 PM"],
-      "materials": [
-        "Official Cambridge Practice Tests",
-        "Weekly Mock Examinations"
-      ]
+      "materials": ["Official Cambridge Practice Tests", "Weekly Mock Examinations"]
     },
     {
       "name": "PTE Academic Preparation",
       "target": "65+ to 79+ Overall Score",
       "modules": ["Speaking & Writing", "Reading", "Listening"],
-      "features": [
-        "Dedicated computer terminal per student",
-        "Pearson-aligned AI automated scoring feedback",
-        "Template mastery"
-      ]
+      "features": ["Dedicated computer terminal per student", "Pearson-aligned AI automated scoring feedback", "Template mastery"]
     }
   ]
 }

@@ -22,7 +22,13 @@ function getPool() {
     maxIdle: 5,
     idleTimeout: 60000,
     enableKeepAlive: true,
-    ssl: process.env.DATABASE_SSL === 'false' ? undefined : { rejectUnauthorized: false },
+    ssl:
+      process.env.DATABASE_SSL === 'false'
+        ? undefined
+        : {
+            rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === 'true',
+            ...(process.env.DATABASE_CA ? { ca: process.env.DATABASE_CA } : {}),
+          },
   })
   return pool
 }

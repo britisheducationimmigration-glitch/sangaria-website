@@ -11,7 +11,7 @@ import type {
 } from "./content-types";
 import { getSupportedVideoEmbedUrl } from "./video";
 import { defaultCertificates } from "@/data/certificates";
-import { readSiteSettings } from "./site-settings";
+import { defaultSiteSettings, readSiteSettings } from "./site-settings";
 import {
   approvals as fixtureApprovals,
   coachingSchedule as fixtureCoachingSchedule,
@@ -254,7 +254,28 @@ export const getPublicContent = createServerFn({ method: "GET" }).handler(
       return publicContentCache.data;
     if (pendingContent) return pendingContent;
     const generation = contentGeneration;
-    pendingContent = loadPublicContent(generation).finally(() => {
+    pendingContent = loadPublicContent(generation).catch(() => {
+      return (
+        publicContentCache?.data ?? {
+          posts: fixturePosts,
+          approvals: fixtureApprovals,
+          testimonials: fixtureTestimonials,
+          certificates: defaultCertificates.map((c, i) => ({
+            id: i + 1,
+            title: c.title,
+            issuer: c.issuer,
+            category: c.category,
+            credentialDate: c.credentialDate,
+            altText: c.altText,
+            imageSrc: c.imagePath,
+            homepageFeatured: c.homepageFeatured,
+            published: c.published,
+            sortOrder: c.sortOrder,
+          })),
+          settings: defaultSiteSettings,
+        }
+      );
+    }).finally(() => {
       if (generation === contentGeneration) pendingContent = null;
     });
     return pendingContent;
@@ -277,6 +298,7 @@ async function loadPublicContent(generation: number): Promise<PublicContent> {
           "SELECT id, title, issuer, category, credential_date, alt_text, image_path, image_data IS NOT NULL AS has_database_image, image_version, homepage_featured, published, sort_order FROM certificate_items WHERE collection = 'certificates' AND published = 1 ORDER BY sort_order ASC, id ASC",
         ),
       ]);
+    const hasDb = settingsRows.length > 0;
     const posts = postRows.length
       ? postRows.map((row) =>
           applyEditorialReview({
@@ -291,7 +313,7 @@ async function loadPublicContent(generation: number): Promise<PublicContent> {
             body: jsonArray(row.body_json).map(String),
           }),
         )
-      : fixturePosts;
+      : hasDb ? [] : fixturePosts;
     const approvals = storyRows.length
       ? storyRows
           .filter((row) => row.kind === "approval")
@@ -314,7 +336,7 @@ async function loadPublicContent(generation: number): Promise<PublicContent> {
             mediaAlt: String(row.media_alt ?? "") || undefined,
             homepageFeatured: Boolean(row.homepage_featured),
           }))
-      : fixtureApprovals;
+      : hasDb ? [] : fixtureApprovals;
     const testimonials = storyRows.length
       ? storyRows
           .filter((row) => row.kind === "testimonial")
@@ -328,7 +350,7 @@ async function loadPublicContent(generation: number): Promise<PublicContent> {
             initials: String(row.initials),
             homepageFeatured: Boolean(row.homepage_featured),
           }))
-      : fixtureTestimonials;
+      : hasDb ? [] : fixtureTestimonials;
     const certificates: PublicCertificate[] = certificateRows.length
       ? certificateRows.map((row) => {
           const id = Number(row.id);
@@ -404,32 +426,56 @@ export const getCoachingContent = createServerFn({ method: "GET" }).handler(
   async (): Promise<PublicCoachingContent> => {
     if (coachingCache && coachingCache.expiresAt > Date.now())
       return coachingCache.data;
-    const rows = await queryRows(
-      "SELECT id, program, batch_name, time_slot, seats, starts, published FROM coaching_batches WHERE published = 1 ORDER BY id ASC",
-    );
-    const batches = rows.length
-      ? rows.map((row) => ({
-          id: Number(row.id),
-          program: String(row.program),
-          batch: String(row.batch_name),
-          time: String(row.time_slot),
-          seats: Number(row.seats),
-          starts: String(row.starts),
-          published: Boolean(row.published),
-        }))
-      : fixtureCoachingSchedule.map((batch, index) => ({
-          id: index + 1,
-          program: batch.batch.includes("IELTS") ? "IELTS" : "PTE",
-          batch: batch.batch,
-          time: batch.time,
-          seats: batch.seats,
-          starts: batch.starts,
-          published: true,
-        }));
-    const data = {
-      batches: batches.filter((batch) => !isBatchExpired(batch.starts)),
-    };
-    coachingCache = { data, expiresAt: Date.now() + 300_000 };
-    return data;
+    try {
+      const [rows, settingsRows] = await Promise.all([
+        queryRows(
+          "SELECT id, program, batch_name, time_slot, seats, starts, published FROM coaching_batches WHERE published = 1 ORDER BY id ASC",
+        ),
+        queryRows("SELECT id FROM site_settings WHERE id = 1 LIMIT 1"),
+      ]);
+      const hasDb = settingsRows.length > 0;
+      const batches = rows.length
+        ? rows.map((row) => ({
+            id: Number(row.id),
+            program: String(row.program),
+            batch: String(row.batch_name),
+            time: String(row.time_slot),
+            seats: Number(row.seats),
+            starts: String(row.starts),
+            published: Boolean(row.published),
+          }))
+        : hasDb
+          ? []
+          : fixtureCoachingSchedule.map((batch, index) => ({
+              id: index + 1,
+              program: batch.batch.includes("IELTS") ? "IELTS" : "PTE",
+              batch: batch.batch,
+              time: batch.time,
+              seats: batch.seats,
+              starts: batch.starts,
+              published: true,
+            }));
+      const data = {
+        batches: batches.filter((batch) => !isBatchExpired(batch.starts)),
+      };
+      coachingCache = { data, expiresAt: Date.now() + 300_000 };
+      return data;
+    } catch {
+      return (
+        coachingCache?.data ?? {
+          batches: fixtureCoachingSchedule
+            .map((batch, index) => ({
+              id: index + 1,
+              program: batch.batch.includes("IELTS") ? "IELTS" : "PTE",
+              batch: batch.batch,
+              time: batch.time,
+              seats: batch.seats,
+              starts: batch.starts,
+              published: true,
+            }))
+            .filter((batch) => !isBatchExpired(batch.starts)),
+        }
+      );
+    }
   },
 );

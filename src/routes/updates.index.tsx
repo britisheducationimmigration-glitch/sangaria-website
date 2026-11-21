@@ -50,6 +50,7 @@ function UpdatesPage() {
             </button>
           ))}
         </div>
+        <h2 className="sr-only">Latest immigration updates & coaching insights</h2>
         <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {shown.map((p) => (
             <PostCard key={p.slug} p={p} />
