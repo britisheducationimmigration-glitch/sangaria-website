@@ -45,6 +45,7 @@ export function CountryPageView({
           <h1 className="mt-4 animate-rise text-5xl font-extrabold md:text-7xl">{c.name}</h1>
           <p className="mt-3 animate-rise text-2xl font-display text-coral-400">{c.headline}</p>
           <p className="mt-6 max-w-2xl text-lg text-forest-100/80">{c.intro}</p>
+          <h2 className="sr-only">Country facts & admission overview</h2>
           <dl className="mt-12 grid max-w-3xl grid-cols-1 gap-4 sm:grid-cols-3">
             {c.stats.map((s) => (
               <div key={s.label} className="rounded-2xl border border-white/10 bg-white/5 p-5">

@@ -22,7 +22,7 @@ export function SiteHeader({ settings }: { settings: SiteSettings }) {
   const [phoneMenuOpen, setPhoneMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [hidden, setHidden] = useState(false);
-  const [isOpenNow, setIsOpenNow] = useState(true);
+  const [isOpenNow, setIsOpenNow] = useState<boolean | null>(null);
   const [headerHeight, setHeaderHeight] = useState(76);
   const headerRef = useRef<HTMLElement>(null);
   const phoneRef = useRef<HTMLDivElement>(null);
@@ -60,9 +60,9 @@ export function SiteHeader({ settings }: { settings: SiteSettings }) {
         );
         const minutes = istHour * 60 + istMin;
         const isSunday = istDay === "Sun";
-        setIsOpenNow(!isSunday && minutes >= 570 && minutes <= 1170);
+        setIsOpenNow(!isSunday && minutes >= 570 && minutes < 1170);
       } catch {
-        setIsOpenNow(true);
+        setIsOpenNow(null);
       }
     };
     checkOpen();
@@ -167,10 +167,10 @@ export function SiteHeader({ settings }: { settings: SiteSettings }) {
               </Link>
               <div className="hidden 2xl:flex items-center gap-1.5 rounded-full border border-forest-900/10 bg-white/80 px-2.5 py-1 text-xs font-semibold text-forest-900/80 shadow-xs">
                 <span
-                  className={`size-2 rounded-full ${isOpenNow ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`}
+                  className={`size-2 rounded-full ${isOpenNow === null ? "bg-forest-900/40" : isOpenNow ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`}
                 />
                 <span>
-                  {isOpenNow ? "Open Now" : "Closed"} · {settings.officeHours}
+                  {isOpenNow === null ? "Hours" : isOpenNow ? "Open Now" : "Closed"} · {settings.officeHours}
                 </span>
               </div>
             </div>
@@ -257,7 +257,7 @@ export function SiteHeader({ settings }: { settings: SiteSettings }) {
               {/* Free Enquiry Magnetic Shimmer CTA */}
               <Link
                 to="/contact"
-                className="cta-shimmer relative shrink-0 whitespace-nowrap rounded-full bg-coral-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-coral-600 hover:shadow-md active:scale-95 sm:px-4 sm:py-2 sm:text-xs"
+                className="cta-shimmer relative inline-flex min-h-11 items-center shrink-0 whitespace-nowrap rounded-full bg-coral-500 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-coral-600 hover:shadow-md active:scale-95"
               >
                 Free Enquiry
               </Link>
@@ -265,16 +265,16 @@ export function SiteHeader({ settings }: { settings: SiteSettings }) {
               {/* Mobile Drawer Toggle */}
               <button
                 type="button"
-                className="grid size-9 shrink-0 place-items-center rounded-full bg-forest-900 text-white lg:hidden sm:size-10 transition active:scale-90"
+                className="grid size-11 shrink-0 place-items-center rounded-full bg-forest-900 text-white lg:hidden transition active:scale-95"
                 onClick={() => setOpen((v) => !v)}
                 aria-label="Toggle navigation menu"
                 aria-expanded={open}
                 aria-controls="mobile-site-nav"
               >
                 {open ? (
-                  <X className="size-4 sm:size-5" />
+                  <X className="size-5" />
                 ) : (
-                  <Menu className="size-4 sm:size-5" />
+                  <Menu className="size-5" />
                 )}
               </button>
             </div>
@@ -291,10 +291,10 @@ export function SiteHeader({ settings }: { settings: SiteSettings }) {
           <div className="flex items-center justify-between border-b border-white/10 pb-4">
             <span className="flex items-center gap-2 font-mono text-xs uppercase tracking-wider text-forest-100/75">
               <span
-                className={`size-2 rounded-full ${isOpenNow ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`}
+                className={`size-2 rounded-full ${isOpenNow === null ? "bg-forest-900/40" : isOpenNow ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`}
               />
               <span>
-                {isOpenNow ? "Open Now · Sangaria" : "Closed"} ·{" "}
+                {isOpenNow === null ? "Hours" : isOpenNow ? "Open Now · Sangaria" : "Closed"} ·{" "}
                 {settings.officeHours}
               </span>
             </span>

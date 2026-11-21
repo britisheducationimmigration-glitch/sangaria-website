@@ -176,7 +176,7 @@ div {
   transition: all 0.2s ease;
 }
 .field::placeholder {
-  color: rgba(18, 55, 82, 0.45);
+  color: rgba(18, 55, 82, 0.75);
 }
 .field:focus {
   border-color: #3c7d96;

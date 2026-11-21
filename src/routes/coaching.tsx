@@ -1,3 +1,4 @@
+import { coachingSrcSet } from "@/lib/public-images"
 import { createFileRoute } from '@tanstack/react-router'
 import { BookOpen, Check, Clock, Headphones, Mic, PenLine } from 'lucide-react'
 import { EnquiryForm } from '@/components/EnquiryForm'
@@ -148,7 +149,7 @@ function CoachingPage() {
       <section id="demo" className="mx-auto max-w-7xl scroll-mt-28 px-6 pb-24">
         <div className="grid overflow-hidden rounded-[2rem] bg-forest-900 text-white ring-1 ring-forest-900/10 lg:grid-cols-2">
           <div className="group relative min-h-72 overflow-hidden sm:min-h-80 lg:min-h-[30rem]">
-            <img src="/img/coaching.webp" alt="Students in coaching class" loading="lazy" className="absolute inset-0 size-full object-cover transition-transform duration-700 motion-reduce:transition-none md:group-hover:scale-[1.03]" />
+            <img src="/img/coaching.webp" srcSet={coachingSrcSet} sizes="(min-width: 1024px) 50vw, 100vw" alt="Students in coaching class" loading="lazy" className="absolute inset-0 size-full object-cover transition-transform duration-700 motion-reduce:transition-none md:group-hover:scale-[1.03]" />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-forest-950/40 via-transparent to-transparent" />
           </div>
           <div className="relative overflow-hidden bg-forest-900 bg-grain p-8 md:p-12">

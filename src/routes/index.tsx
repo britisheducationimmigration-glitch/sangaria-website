@@ -1,3 +1,4 @@
+import { coachingSrcSet, heroSrcSet, heroSizes } from "@/lib/public-images";
 import {
   useEffect,
   useState,
@@ -99,6 +100,8 @@ export const Route = createFileRoute("/")({
           rel: "preload",
           as: "image",
           href: "/img/hero.webp",
+          imageSrcSet: heroSrcSet,
+          imageSizes: heroSizes,
           type: "image/webp",
         },
       ],
@@ -568,7 +571,8 @@ function Home() {
               alt="Student holding passport and university acceptance letter at the airport"
               width={720}
               height={860}
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 720px"
+              srcSet={heroSrcSet}
+              sizes={heroSizes}
               fetchPriority="high"
               decoding="sync"
               className="relative aspect-[4/3] w-full rounded-2xl border border-white/15 object-cover shadow-2xl lg:aspect-[6/7] lg:rounded-[2rem] lg:border-0"
@@ -1024,6 +1028,8 @@ function Home() {
         <div data-reveal="" className="relative">
           <img
             src="/img/coaching.webp"
+            srcSet={coachingSrcSet}
+            sizes="(min-width: 1024px) 50vw, 100vw"
             alt="IELTS and PTE coaching classroom"
             width={760}
             height={560}

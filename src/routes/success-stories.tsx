@@ -1,3 +1,4 @@
+import { familySrcSet } from "@/lib/public-images"
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import { ApprovalCard, TestimonialCard } from '@/components/Cards'
@@ -64,7 +65,7 @@ function SuccessPage() {
       </section>
 
       <section className="relative overflow-hidden">
-        <img src="/img/family.webp" alt="Family travelling abroad" loading="lazy" className="h-[28rem] w-full object-cover" />
+        <img src="/img/family.webp" srcSet={familySrcSet} sizes="100vw" alt="Family travelling abroad" loading="lazy" className="h-[28rem] w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-r from-forest-950/90 via-forest-950/50 to-transparent" />
         <div className="absolute inset-0 mx-auto flex max-w-7xl items-center px-6">
           <p className="max-w-lg font-display text-4xl font-extrabold text-white md:text-5xl">

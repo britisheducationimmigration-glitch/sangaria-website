@@ -1,3 +1,4 @@
+import { certificateThumbnail } from "@/lib/public-images"
 import { useState } from 'react'
 import { ExternalLink } from 'lucide-react'
 import { createFileRoute } from '@tanstack/react-router'
@@ -45,7 +46,7 @@ function CertificatesPage() {
             <article key={item.id} className="overflow-hidden rounded-3xl bg-white p-4 ring-1 ring-forest-900/10 transition hover:shadow-lg">
               <a href={item.imageSrc} target="_blank" rel="noreferrer" aria-label={'Open full size image: ' + item.title} className="group block rounded-2xl bg-cream p-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500">
                 <div className="grid aspect-[3/4] w-full min-h-0 place-items-center overflow-hidden rounded-xl bg-white sm:aspect-[4/3]">
-                  <img src={item.imageSrc} alt={item.altText} loading="lazy" decoding="async" className="certificate-image-enhanced block h-full w-full min-h-0 min-w-0 object-contain" />
+                  <img src={certificateThumbnail(item.imageSrc)} alt={item.altText} loading="lazy" decoding="async" className="certificate-image-enhanced block h-full w-full min-h-0 min-w-0 object-contain" />
                 </div>
               </a>
               <div className="flex min-h-32 flex-col px-1 pb-1 pt-4">

@@ -256,11 +256,13 @@ function RootDocument({ children }: { children: ReactNode }) {
   const isPortal = isAdmin || pathname.startsWith("/attendance");
   const { settings, countries } = Route.useLoaderData();
 
-  // Non-blocking GTM after initial paint
+  // Non-blocking GTM after initial paint with portal boundary cleanup
   useEffect(() => {
     if (isPortal || typeof window === "undefined") return;
-
+    let idleId: number | null = null;
+    let timerId: ReturnType<typeof setTimeout> | null = null;
     const loadGTM = () => {
+      if (window.location.pathname.startsWith("/admin") || window.location.pathname.startsWith("/attendance")) return;
       if ((window as any).__gtmLoaded) return;
       (window as any).__gtmLoaded = true;
       const script = document.createElement("script");
@@ -273,12 +275,15 @@ function RootDocument({ children }: { children: ReactNode }) {
         event: "gtm.js",
       });
     };
-
     if ("requestIdleCallback" in window) {
-      window.requestIdleCallback(loadGTM, { timeout: 2000 });
+      idleId = window.requestIdleCallback(loadGTM, { timeout: 2000 });
     } else {
-      globalThis.setTimeout(loadGTM, 1500);
+      timerId = setTimeout(loadGTM, 1500);
     }
+    return () => {
+      if (idleId !== null && "cancelIdleCallback" in window) window.cancelIdleCallback(idleId);
+      if (timerId !== null) clearTimeout(timerId);
+    };
   }, [isPortal]);
 
   return (
