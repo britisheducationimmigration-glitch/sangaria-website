@@ -231,7 +231,8 @@ export const getPublicPolicyNotices = createServerFn({ method: "GET" }).handler(
       publicPolicyNoticesCache.expiresAt > Date.now()
     )
       return publicPolicyNoticesCache.data;
-    const state = await readPolicyWatchState();
+    const state = await readPolicyWatchState().catch(() => null);
+    if (!state) return publicPolicyNoticesCache?.data ?? [];
     const data = state.notices
       .filter((notice) => isPolicyNoticeVisible(notice))
       .map((notice) => ({
@@ -408,7 +409,8 @@ export const getPublicCashflow = createServerFn({ method: "GET" }).handler(
       return publicCashflowCache.data;
     const rows = await queryRows(
       "SELECT cashflow_json FROM site_settings WHERE id = 1 LIMIT 1",
-    );
+    ).catch(() => null);
+    if (!rows) return publicCashflowCache?.data ?? [];
     const data = parseCashflowJson(rows[0]?.cashflow_json);
     publicCashflowCache = { data, expiresAt: Date.now() + 300_000 };
     return data;
