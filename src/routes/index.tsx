@@ -701,9 +701,9 @@ function Home() {
                 <ShieldCheck className="size-4 text-coral-500 lg:size-5" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-forest-900 lg:text-sm">
+                <h3 className="text-xs font-bold text-forest-900 lg:text-sm">
                   Direct University Tie-ups
-                </h4>
+                </h3>
                 <p className="mt-0.5 text-[11px] text-forest-900/65 lg:text-xs">
                   Official representation across Canada, UK &amp; Australia.
                 </p>
@@ -714,9 +714,9 @@ function Home() {
                 <Zap className="size-4 text-coral-500 lg:size-5" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-forest-900 lg:text-sm">
+                <h3 className="text-xs font-bold text-forest-900 lg:text-sm">
                   100% Transparent Process
-                </h4>
+                </h3>
                 <p className="mt-0.5 text-[11px] text-forest-900/65 lg:text-xs">
                   No hidden charges, direct fee payment to colleges.
                 </p>
@@ -727,9 +727,9 @@ function Home() {
                 <HeartHandshake className="size-4 text-coral-500 lg:size-5" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-forest-900 lg:text-sm">
+                <h3 className="text-xs font-bold text-forest-900 lg:text-sm">
                   Pre-Visa &amp; Post-Arrival
-                </h4>
+                </h3>
                 <p className="mt-0.5 text-[11px] text-forest-900/65 lg:text-xs">
                   Assistance with accommodation, forex &amp; airport pickup.
                 </p>
