@@ -1,3 +1,4 @@
+import { certificateThumbnail } from "@/lib/public-images"
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Pause, Play } from "lucide-react";
 import { Link } from "@tanstack/react-router";
@@ -115,7 +116,7 @@ export function CertificateCarousel({
             >
               <div className="grid aspect-[4/3] min-h-0 w-full place-items-center overflow-hidden rounded-xl bg-cream p-3">
                 <img
-                  src={item.imageSrc}
+                  src={certificateThumbnail(item.imageSrc)}
                   alt={item.altText}
                   width={400}
                   height={300}

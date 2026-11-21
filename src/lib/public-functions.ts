@@ -37,6 +37,8 @@ type PublicPolicyNotice = {
   sourceUrl: string;
 };
 
+let pendingContent: Promise<PublicContent> | null = null;
+let contentGeneration = 0;
 let publicContentCache: { expiresAt: number; data: PublicContent } | null =
   null;
 let publicSettingsCache: { expiresAt: number; data: SiteSettings } | null =
@@ -49,6 +51,8 @@ let publicPolicyNoticesCache: {
 } | null = null;
 
 export function invalidatePublicContentCache() {
+  contentGeneration++;
+  pendingContent = null;
   publicContentCache = null;
   publicSettingsCache = null;
   publicCashflowCache = null;
@@ -248,6 +252,16 @@ export const getPublicContent = createServerFn({ method: "GET" }).handler(
   async (): Promise<PublicContent> => {
     if (publicContentCache && publicContentCache.expiresAt > Date.now())
       return publicContentCache.data;
+    if (pendingContent) return pendingContent;
+    const generation = contentGeneration;
+    pendingContent = loadPublicContent(generation).finally(() => {
+      if (generation === contentGeneration) pendingContent = null;
+    });
+    return pendingContent;
+  },
+);
+
+async function loadPublicContent(generation: number): Promise<PublicContent> {
     const [postRows, storyRows, settingsRows, certificateRows] =
       await Promise.all([
         queryRows(
@@ -359,11 +373,12 @@ export const getPublicContent = createServerFn({ method: "GET" }).handler(
       settings: readSiteSettings(settingsRows[0]),
     };
     const expiresAt = Date.now() + 300_000;
-    publicContentCache = { data, expiresAt };
-    publicSettingsCache = { data: data.settings, expiresAt };
+    if (generation === contentGeneration) {
+      publicContentCache = { data, expiresAt };
+      publicSettingsCache = { data: data.settings, expiresAt };
+    }
     return data;
-  },
-);
+}
 
 export const getPublicCashflow = createServerFn({ method: "GET" }).handler(
   async (): Promise<CountryCashflow[]> => {
