@@ -62,8 +62,6 @@ export const getPublicSettings = createServerFn({ method: "GET" }).handler(
   async (): Promise<SiteSettings> => {
     if (publicSettingsCache && publicSettingsCache.expiresAt > Date.now())
       return publicSettingsCache.data;
-    if (publicContentCache && publicContentCache.expiresAt > Date.now())
-      return publicContentCache.data.settings;
     const settingsRows = await queryRows(
       "SELECT popup_enabled, popup_delay_seconds, whatsapp_enabled, approvals_marquee_enabled, public_settings_json FROM site_settings WHERE id = 1 LIMIT 1",
     );
@@ -106,7 +104,13 @@ export const submitEnquiry = createServerFn({ method: "POST" })
       getRequestHeader("x-forwarded-for")?.split(",")[0] ??
       ""
     ).trim();
-    const phoneKey = data.phone.replace(/\D/g, "");
+    const rawDigits = data.phone.replace(/\D/g, "");
+    const phoneKey =
+      rawDigits.length === 10
+        ? `91${rawDigits}`
+        : rawDigits.length === 11 && rawDigits.startsWith("0")
+          ? `91${rawDigits.slice(1)}`
+          : rawDigits;
     if (clientIp && !(await checkRateLimit("enquiry-ip", clientIp, 60, 900))) {
       throw new Error("Please wait before sending another enquiry.");
     }
