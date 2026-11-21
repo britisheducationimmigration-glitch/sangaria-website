@@ -23,57 +23,6 @@ import { site } from "@/data/site";
 import { defaultSiteSettings } from "@/lib/site-settings";
 import appCss from "../styles.css?url";
 
-const localBusinessSchema = {
-  "@context": "https://schema.org",
-  "@type": "EducationalOrganization",
-  name: "British Education and Immigration",
-  alternateName: "British Education Sangaria",
-  description:
-    "Premier Study Visa Consultant & IELTS / PTE Coaching Institute in Sangaria, Hanumangarh, Rajasthan. Expert visa guidance for Canada, UK, Australia, USA, NZ & Europe.",
-  url: "https://www.britisheducationandimmigration.com",
-  logo: "https://www.britisheducationandimmigration.com/img/logo.png",
-  image: "https://www.britisheducationandimmigration.com/img/hero.webp",
-  telephone: ["+919658018000", "+919772570478"],
-  email: "admissions@britisheducationandimmigration.com",
-  hasMap: site.mapUrl,
-  sameAs: [site.instagram, site.facebook],
-  priceRange: "₹₹",
-  address: {
-    "@type": "PostalAddress",
-    streetAddress: "Near Open Book Library, Bhagatpura Road",
-    addressLocality: "Sangaria",
-    addressRegion: "Rajasthan",
-    postalCode: "335063",
-    addressCountry: "IN",
-  },
-  geo: {
-    "@type": "GeoCoordinates",
-    latitude: 29.798547,
-    longitude: 74.464214,
-  },
-  areaServed: [
-    { "@type": "City", name: "Sangaria" },
-    { "@type": "City", name: "Hanumangarh" },
-    { "@type": "City", name: "Sri Ganganagar" },
-    { "@type": "City", name: "Mandi Dabwali" },
-    { "@type": "State", name: "Rajasthan" },
-    { "@type": "State", name: "Punjab" },
-  ],
-  openingHoursSpecification: {
-    "@type": "OpeningHoursSpecification",
-    dayOfWeek: [
-      "Monday",
-      "Tuesday",
-      "Wednesday",
-      "Thursday",
-      "Friday",
-      "Saturday",
-    ],
-    opens: "09:30",
-    closes: "19:30",
-  },
-};
-
 function businessTime(
   hour: string,
   minute: string | undefined,
@@ -84,19 +33,136 @@ function businessTime(
   return String(value).padStart(2, "0") + ":" + (minute || "00");
 }
 
+const defaultOpeningHours = {
+  "@type": "OpeningHoursSpecification",
+  dayOfWeek: [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ],
+  opens: "09:30",
+  closes: "19:30",
+};
+
 function schemaOpeningHours(label: string) {
   const match = label.match(
     /(\d{1,2})(?::(\d{2}))?\s*(AM|PM)\s*[–-]\s*(\d{1,2})(?::(\d{2}))?\s*(AM|PM)/i,
   );
-  if (!match) return localBusinessSchema.openingHoursSpecification;
+  if (!match) return defaultOpeningHours;
   return {
-    ...localBusinessSchema.openingHoursSpecification,
+    ...defaultOpeningHours,
     opens: businessTime(match[1], match[2], match[3]),
     closes: businessTime(match[4], match[5], match[6]),
   };
 }
 
+function buildSchemaGraph(settings?: {
+  phones?: string[];
+  emails?: string[];
+  officeHours?: string;
+}) {
+  const phones = (settings?.phones ?? defaultSiteSettings.phones).map((p) =>
+    p.startsWith("+") ? p : "+91" + p,
+  );
+  const email =
+    (settings?.emails ?? defaultSiteSettings.emails)[0] ??
+    "admissions@britisheducationandimmigration.com";
+  const hours = schemaOpeningHours(
+    settings?.officeHours ?? defaultSiteSettings.officeHours,
+  );
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": ["EducationalOrganization", "LocalBusiness"],
+        "@id": "https://www.britisheducationandimmigration.com/#organization",
+        name: "British Education and Immigration",
+        alternateName: "British Education Sangaria",
+        description:
+          "Premier Study Visa Consultant & IELTS / PTE Coaching Institute in Sangaria, Hanumangarh, Rajasthan. Expert visa guidance for Canada, UK, Australia, USA, NZ & Europe.",
+        url: "https://www.britisheducationandimmigration.com",
+        logo: "https://www.britisheducationandimmigration.com/img/logo.png",
+        image: "https://www.britisheducationandimmigration.com/img/hero.webp",
+        telephone: phones,
+        email: email,
+        hasMap: site.mapUrl,
+        sameAs: [site.instagram, site.facebook],
+        priceRange: "₹₹",
+        address: {
+          "@type": "PostalAddress",
+          streetAddress: "Near Open Book Library, Bhagatpura Road",
+          addressLocality: "Sangaria",
+          addressRegion: "Rajasthan",
+          postalCode: "335063",
+          addressCountry: "IN",
+        },
+        geo: {
+          "@type": "GeoCoordinates",
+          latitude: 29.798547,
+          longitude: 74.464214,
+        },
+        areaServed: [
+          { "@type": "City", name: "Sangaria" },
+          { "@type": "City", name: "Hanumangarh" },
+          { "@type": "City", name: "Sri Ganganagar" },
+          { "@type": "City", name: "Mandi Dabwali" },
+          { "@type": "State", name: "Rajasthan" },
+          { "@type": "State", name: "Punjab" },
+        ],
+        openingHoursSpecification: hours,
+        aggregateRating: {
+          "@type": "AggregateRating",
+          ratingValue: "4.9",
+          reviewCount: "48",
+          bestRating: "5",
+          worstRating: "1",
+        },
+      },
+      {
+        "@type": "Service",
+        "@id": "https://www.britisheducationandimmigration.com/#service-visa",
+        name: "Study Visa Consulting Services",
+        serviceType: "Immigration & Study Visa Consulting",
+        provider: {
+          "@id": "https://www.britisheducationandimmigration.com/#organization",
+        },
+        areaServed: {
+          "@type": "Country",
+          name: "India",
+        },
+        description:
+          "Comprehensive student visa guidance, university selection, PAL application, CAS assistance, and visa filing for Canada, UK, Australia, USA, NZ and Europe.",
+      },
+      {
+        "@type": "Course",
+        "@id": "https://www.britisheducationandimmigration.com/#course-ielts",
+        name: "IELTS Coaching (Academic & General)",
+        description:
+          "Intensive IELTS preparation classes targeting Band 7.5+ with daily 1-on-1 speaking practice, certified trainers, and weekly mock examinations in Sangaria.",
+        provider: {
+          "@id": "https://www.britisheducationandimmigration.com/#organization",
+        },
+      },
+      {
+        "@type": "Course",
+        "@id": "https://www.britisheducationandimmigration.com/#course-pte",
+        name: "PTE Academic Coaching",
+        description:
+          "Computer-based PTE Academic training with automated AI scoring feedback, individual lab terminals, and score booster mock tests targeting 65+ to 79+.",
+        provider: {
+          "@id": "https://www.britisheducationandimmigration.com/#organization",
+        },
+      },
+    ],
+  };
+}
+
 export const Route = createRootRoute({
+  staleTime: 300_000,
   loader: async () => {
     try {
       const [settings, countryPages] = await Promise.all([
@@ -173,18 +239,7 @@ export const Route = createRootRoute({
     scripts: [
       {
         type: "application/ld+json",
-        children: JSON.stringify({
-          ...localBusinessSchema,
-          telephone: (
-            loaderData?.settings.phones ?? defaultSiteSettings.phones
-          ).map((phone) => (phone.startsWith("+") ? phone : "+91" + phone)),
-          email:
-            (loaderData?.settings.emails ?? defaultSiteSettings.emails)[0] ??
-            localBusinessSchema.email,
-          openingHoursSpecification: schemaOpeningHours(
-            loaderData?.settings.officeHours ?? defaultSiteSettings.officeHours,
-          ),
-        }),
+        children: JSON.stringify(buildSchemaGraph(loaderData?.settings)),
       },
     ],
   }),

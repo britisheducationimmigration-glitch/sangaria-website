@@ -1,63 +1,71 @@
-import { useState, useEffect } from 'react'
-import { Printer, Share2 } from 'lucide-react'
-import { defaultCashflowData, CountryCashflow } from '@/data/cashflow'
-import { getPublicCashflow } from '@/lib/public-functions'
-import { applyScheduledCashflowPolicy } from '@/data/policy-watch'
-import { useLoaderData } from '@tanstack/react-router'
+import { useState, useEffect } from "react";
+import { Printer, Share2 } from "lucide-react";
+import { defaultCashflowData, CountryCashflow } from "@/data/cashflow";
+import { getPublicCashflow } from "@/lib/public-functions";
+import { applyScheduledCashflowPolicy } from "@/data/policy-watch";
+import { useLoaderData } from "@tanstack/react-router";
 
 function escapeHtml(value: string) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;')
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
-export function FamilyCashflowPlanner({ initialData }: { initialData?: CountryCashflow[] } = {}) {
-  const rootData = useLoaderData({ from: '__root__' })
-  const rawPhone = (rootData?.settings.phones?.[1] || rootData?.settings.phones?.[0] || '9772570478').trim()
-  const displayPhone = rawPhone.startsWith('+') ? rawPhone : `+91 ${rawPhone}`
+export function FamilyCashflowPlanner({
+  initialData,
+}: { initialData?: CountryCashflow[] } = {}) {
+  const rootData = useLoaderData({ from: "__root__" });
+  const rawPhone = (
+    rootData?.settings.phones?.[1] ||
+    rootData?.settings.phones?.[0] ||
+    "9772570478"
+  ).trim();
+  const displayPhone = rawPhone.startsWith("+") ? rawPhone : `+91 ${rawPhone}`;
   const [data, setData] = useState<CountryCashflow[]>(() =>
     initialData && initialData.length > 0
       ? initialData
-      : defaultCashflowData.map((country) => applyScheduledCashflowPolicy(country)),
-  )
-  const [selectedSlug, setSelectedSlug] = useState('canada')
+      : defaultCashflowData.map((country) =>
+          applyScheduledCashflowPolicy(country),
+        ),
+  );
+  const [selectedSlug, setSelectedSlug] = useState("canada");
 
   useEffect(() => {
     if (initialData && initialData.length > 0) {
-      setData(initialData)
-      return
+      setData(initialData);
+      return;
     }
-    let active = true
+    let active = true;
     void getPublicCashflow()
       .then((saved) => {
-        if (active && Array.isArray(saved) && saved.length > 0) setData(saved)
+        if (active && Array.isArray(saved) && saved.length > 0) setData(saved);
       })
       .catch(() => {
         // Keep the bundled cashflow.ts defaults when the database is unavailable.
-      })
+      });
     return () => {
-      active = false
-    }
-  }, [initialData])
+      active = false;
+    };
+  }, [initialData]);
 
-  const country = data.find((c) => c.slug === selectedSlug) || data[0]
+  const country = data.find((c) => c.slug === selectedSlug) || data[0];
 
   const handleDownloadPDF = () => {
-    const printWindow = window.open('', '_blank', 'width=850,height=900')
+    const printWindow = window.open("", "_blank", "width=850,height=900");
     if (!printWindow) {
-      alert('Please allow popups to print/download the summary.')
-      return
+      alert("Please allow popups to print/download the summary.");
+      return;
     }
 
-    printWindow.opener = null
-    const safeName = escapeHtml(country.name)
-    const safeFlag = escapeHtml(country.flag)
-    const safeTotal = escapeHtml(country.totalEstimateINR)
-    const safeRuleNote = escapeHtml(country.officialRuleNote)
-    const safePhone = escapeHtml(displayPhone)
+    printWindow.opener = null;
+    const safeName = escapeHtml(country.name);
+    const safeFlag = escapeHtml(country.flag);
+    const safeTotal = escapeHtml(country.totalEstimateINR);
+    const safeRuleNote = escapeHtml(country.officialRuleNote);
+    const safePhone = escapeHtml(displayPhone);
     const htmlContent = `
       <!DOCTYPE html>
       <html lang="en">
@@ -92,7 +100,7 @@ export function FamilyCashflowPlanner({ initialData }: { initialData?: CountryCa
             </div>
             <div style="text-align: right; font-size: 11px; color: #666;">
               Official Session 2026/2027<br>
-              Date: ${escapeHtml(new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }))}
+              Date: ${escapeHtml(new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }))}
             </div>
           </div>
 
@@ -114,14 +122,18 @@ export function FamilyCashflowPlanner({ initialData }: { initialData?: CountryCa
               </tr>
             </thead>
             <tbody>
-              ${country.stages.map((st) => `
+              ${country.stages
+                .map(
+                  (st) => `
                 <tr>
                   <td><span class="stage-badge">Stage 0${escapeHtml(String(st.stageNumber))}</span><br><span style="color:#666; font-size:10px;">${escapeHtml(st.timeline)}</span></td>
                   <td><strong>${escapeHtml(st.title)}</strong><br><span style="color:#555; font-size:10.5px;">${escapeHtml(st.description)}</span></td>
                   <td><span class="amount">${escapeHtml(st.inrEstimate)}</span><br><span style="color:#e11d48; font-size:10px; font-weight:700;">${escapeHtml(st.officialCost)}</span></td>
                   <td><strong>${escapeHtml(st.paidTo)}</strong><br><span class="refund">✓ ${escapeHtml(st.refundableInfo)}</span></td>
                 </tr>
-              `).join('')}
+              `,
+                )
+                .join("")}
             </tbody>
           </table>
 
@@ -136,46 +148,51 @@ export function FamilyCashflowPlanner({ initialData }: { initialData?: CountryCa
           </script>
         </body>
       </html>
-    `
-    printWindow.document.open()
-    printWindow.document.write(htmlContent)
-    printWindow.document.close()
-  }
+    `;
+    printWindow.document.open();
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
 
   const handleWhatsAppShare = () => {
-    let msg = `✈️ *British Education & Immigration, Sangaria*\n`
-    msg += `📋 *Family Visa Budget & Cashflow Planner*\n\n`
-    msg += `🌍 *Destination Country:* ${country.name} ${country.flag}\n`
-    msg += `💰 *Estimated planning total:* ${country.totalEstimateINR}\n`
-    msg += `📌 *Visa and budget guidance:* ${country.officialRuleNote}\n\n`
-    msg += `--- *STAGE-BY-STAGE EXPENSES* ---\n`
+    let msg = `✈️ *British Education & Immigration, Sangaria*\n`;
+    msg += `📋 *Family Visa Budget & Cashflow Planner*\n\n`;
+    msg += `🌍 *Destination Country:* ${country.name} ${country.flag}\n`;
+    msg += `💰 *Estimated planning total:* ${country.totalEstimateINR}\n`;
+    msg += `📌 *Visa and budget guidance:* ${country.officialRuleNote}\n\n`;
+    msg += `--- *STAGE-BY-STAGE EXPENSES* ---\n`;
     country.stages.forEach((st) => {
-      msg += `\n*Stage 0${st.stageNumber}: ${st.title}*\n`
-      msg += `⏱️ When: ${st.timeline}\n`
-      msg += `💵 Approx: ${st.inrEstimate} (${st.officialCost})\n`
-      msg += `🏛️ Paid to: ${st.paidTo}\n`
-      msg += `🛡️ Refund: ${st.refundableInfo}\n`
-    })
-    msg += `\n📞 *Office Contact / WhatsApp:* ${displayPhone}\n`
-    msg += `📍 Near Open Book Library, Bhagatpura Road, Sangaria (Raj.)\n`
-    msg += `👉 Website: https://www.britisheducationandimmigration.com`
+      msg += `\n*Stage 0${st.stageNumber}: ${st.title}*\n`;
+      msg += `⏱️ When: ${st.timeline}\n`;
+      msg += `💵 Approx: ${st.inrEstimate} (${st.officialCost})\n`;
+      msg += `🏛️ Paid to: ${st.paidTo}\n`;
+      msg += `🛡️ Refund: ${st.refundableInfo}\n`;
+    });
+    msg += `\n📞 *Office Contact / WhatsApp:* ${displayPhone}\n`;
+    msg += `📍 Near Open Book Library, Bhagatpura Road, Sangaria (Raj.)\n`;
+    msg += `👉 Website: https://www.britisheducationandimmigration.com`;
 
-    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer')
-  }
+    window.open(
+      `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+  };
 
   return (
     <section className="mx-auto mt-8 w-full rounded-3xl bg-forest-900 p-5 text-white sm:p-8 md:w-[calc(100%-3rem)] max-w-7xl">
       {/* Header */}
       <div className="flex flex-col justify-between gap-3 border-b border-white/10 pb-5 md:flex-row md:items-end">
         <div className="min-w-0 flex-1">
-          <span className="font-mono text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-coral-400">
+          <span className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-coral-400">
             Transparent Financial Roadmap
           </span>
           <h2 className="text-xl sm:text-3xl font-extrabold tracking-tight mt-1">
             Family Cashflow Planner
           </h2>
           <p className="text-xs sm:text-sm text-forest-100/70 mt-1 max-w-xl">
-            Estimated payment stages plus any funds you may need to show. Totals are planning estimates.
+            Estimated payment stages plus any funds you may need to show. Totals
+            are planning estimates.
           </p>
         </div>
 
@@ -203,7 +220,7 @@ export function FamilyCashflowPlanner({ initialData }: { initialData?: CountryCa
       {/* Country Select Pills */}
       <div className="flex items-center gap-2 overflow-x-auto py-4 scrollbar-none">
         {data.map((c) => {
-          const isActive = c.slug === selectedSlug
+          const isActive = c.slug === selectedSlug;
           return (
             <button
               key={c.slug}
@@ -211,22 +228,26 @@ export function FamilyCashflowPlanner({ initialData }: { initialData?: CountryCa
               onClick={() => setSelectedSlug(c.slug)}
               className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-xs font-bold transition cursor-pointer ${
                 isActive
-                  ? 'bg-coral-500 text-white shadow-md'
-                  : 'bg-white/10 text-white/80 ring-1 ring-white/10 hover:bg-white/20'
+                  ? "bg-coral-500 text-white shadow-md"
+                  : "bg-white/10 text-white/80 ring-1 ring-white/10 hover:bg-white/20"
               }`}
             >
               <span>{c.flag}</span>
               <span>{c.name}</span>
             </button>
-          )
+          );
         })}
       </div>
 
       {/* Country Summary Bar */}
       <div className="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <div>
-          <p className="text-[11px] uppercase tracking-wider text-coral-400 font-bold">Estimated First-year Budget</p>
-          <p className="text-xl sm:text-2xl font-black text-white">{country.totalEstimateINR}</p>
+          <p className="text-xs uppercase tracking-wider text-coral-400 font-bold">
+            Estimated First-year Budget
+          </p>
+          <p className="text-xl sm:text-2xl font-black text-white">
+            {country.totalEstimateINR}
+          </p>
         </div>
         <p className="text-xs text-forest-100/80 sm:max-w-md leading-relaxed border-t sm:border-t-0 sm:border-l border-white/10 sm:pl-4 pt-2 sm:pt-0">
           💡 {country.officialRuleNote}
@@ -234,10 +255,16 @@ export function FamilyCashflowPlanner({ initialData }: { initialData?: CountryCa
       </div>
 
       {country.officialSources?.length ? (
-        <div className="-mt-2 mb-5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]">
+        <div className="-mt-2 mb-5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
           <span className="font-bold text-coral-300">Official sources:</span>
           {country.officialSources.map((source) => (
-            <a key={source.url} href={source.url} target="_blank" rel="noopener noreferrer" className="text-white/75 underline decoration-white/30 underline-offset-2 hover:text-white">
+            <a
+              key={source.url}
+              href={source.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white/75 underline decoration-white/30 underline-offset-2 hover:text-white"
+            >
               {source.label}
             </a>
           ))}
@@ -256,14 +283,14 @@ export function FamilyCashflowPlanner({ initialData }: { initialData?: CountryCa
                 <span className="font-mono text-xs font-extrabold text-coral-400">
                   0{st.stageNumber}
                 </span>
-                <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/80">
+                <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-semibold text-white/80">
                   {st.timeline}
                 </span>
               </div>
               <h3 className="font-extrabold text-xs sm:text-sm text-white line-clamp-2 leading-tight">
                 {st.title}
               </h3>
-              <p className="text-[11px] text-forest-100/60 mt-1 line-clamp-2">
+              <p className="text-xs text-forest-100/70 mt-1 line-clamp-2">
                 Paid to: {st.paidTo}
               </p>
             </div>
@@ -272,10 +299,10 @@ export function FamilyCashflowPlanner({ initialData }: { initialData?: CountryCa
               <p className="text-xs sm:text-sm font-black text-coral-300">
                 {st.inrEstimate}
               </p>
-              <p className="text-[10px] text-white/50 font-mono mt-0.5">
+              <p className="text-xs text-white/60 font-mono mt-0.5">
                 {st.officialCost}
               </p>
-              <p className="text-[9px] text-emerald-400 mt-1 line-clamp-1">
+              <p className="text-xs text-emerald-400 mt-1 line-clamp-2">
                 ✓ {st.refundableInfo}
               </p>
             </div>
@@ -285,20 +312,36 @@ export function FamilyCashflowPlanner({ initialData }: { initialData?: CountryCa
 
       <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
         <div className="min-w-0">
-          <p className="text-sm font-extrabold text-white">Need help funding your study plan?</p>
-          <p className="mt-1 text-xs leading-relaxed text-forest-100/70">Explore education-loan eligibility or scholarships through GyanDhan.</p>
+          <p className="text-sm font-extrabold text-white">
+            Need help funding your study plan?
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-forest-100/70">
+            Explore education-loan eligibility or scholarships through GyanDhan.
+          </p>
         </div>
         <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
-          <a href="https://www.gyandhan.com/loaneligs?campaign_partner=British+Education+Immigration" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-coral-500 px-4 py-2 text-xs font-bold text-white transition hover:bg-coral-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+          <a
+            href="https://www.gyandhan.com/loaneligs?campaign_partner=British+Education+Immigration"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Check education loan eligibility on GyanDhan (opens in a new tab)"
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-coral-500 px-4 py-2 text-xs font-bold text-white transition hover:bg-coral-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          >
             Check loan eligibility ↗
           </a>
-          <a href="https://www.gyandhan.com/scholarships/apply/new?scholarship_id=gd-scholarship&campaign_partner=British+Education+Immigration" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-bold text-white ring-1 ring-white/15 transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+          <a
+            href="https://www.gyandhan.com/scholarships/apply/new?scholarship_id=gd-scholarship&campaign_partner=British+Education+Immigration"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Explore scholarships on GyanDhan (opens in a new tab)"
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-bold text-white ring-1 ring-white/15 transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          >
             Explore scholarships ↗
           </a>
         </div>
       </div>
     </section>
-  )
+  );
 }
 
-export default FamilyCashflowPlanner
+export default FamilyCashflowPlanner;

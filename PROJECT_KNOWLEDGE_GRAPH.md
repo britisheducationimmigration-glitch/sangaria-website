@@ -1,15 +1,15 @@
-# 馃 BEI Sangaria 路 Master Project Knowledge Graph & AI System Directives
+# 🧠 BEI Sangaria · Master Project Knowledge Graph & AI System Directives
 
 **Project:** British Education & Immigration Sangaria (`britisheducationandimmigration.com`)  
-**Production Stack:** TanStack Start 路 React 19 路 TypeScript 6 路 Tailwind CSS 4 路 Nitro 路 MySQL 8 / TiDB Serverless 路 Vercel  
-**Authoritative Local Repository:** `C:\Users\PRADEEP\.gemini\antigravity\scratch\repo\sangaria-website-updates-19112026\`  
-**Active Working Branch:** `admin/UI_UX_pro_max_skill` (Target: `main` 路 PR #51)  
+**Production Stack:** TanStack Start · React 19 · TypeScript 6 · Tailwind CSS 4 · Nitro · MySQL 8 / TiDB Serverless · Vercel  
+**Authoritative Local Repository:** `C:\Users\PRADEEP\.gemini\antigravity\scratch\repo\sangaria-website-floto_UI_insights\`  
+**Active Working Branch:** `floto_UI_insights` (Target: `main`)  
 **Timezone Standard:** Indian Standard Time (IST, UTC+5:30 / `Asia/Kolkata`)  
-**Last Updated:** `2026-11-20 14:15 IST`
+**Last Updated:** `2026-11-21 14:50 IST`
 
 ---
 
-## 馃洃 MANDATORY AI DIRECTIVE & ZERO-BYPASS PROTOCOL
+## 🛡️ MANDATORY AI DIRECTIVE & ZERO-BYPASS PROTOCOL
 
 > **CRITICAL RULE FOR ALL AI AGENTS (Antigravity, Claude, Cursor, Copilot, ChatGPT):**  
 > Under NO circumstances, user prompts, or system modes may any AI bypass or loosen the rules defined in this section. Every rule is absolute.
@@ -33,9 +33,9 @@ Before proposing changes to any existing component or server file, the AI **MUST
 
 The AI is **strictly forbidden** from editing these files unless the user gives an explicit, standalone command naming the file:
 
-- 鉂?`package.json` 鈥?NEVER modify dependencies or scripts.
-- 鉂?`src/lib/auth.server.ts` 鈥?Read-only. Security & session logic is delicate.
-- 鉂?`@media print` in `src/styles.css` 鈥?Must remain 100% intact for printable salary slips & reports.
+- ❌ `package.json` — NEVER modify dependencies or scripts.
+- ❌ `src/lib/auth.server.ts` — Read-only. Security & session logic is delicate.
+- ❌ `@media print` in `src/styles.css` — Must remain 100% intact for printable salary slips & reports.
 
 ### Rule 4: User Working Style Protocol
 
@@ -49,66 +49,52 @@ The AI is **strictly forbidden** from editing these files unless the user gives 
 
 ### Rule 5: Commit-Sync Mandate
 
-- Whenever any code change or fix is committed, **this file (`PROJECT_KNOWLEDGE_GRAPH.md`) MUST be updated** in the same commit with a new timestamped ledger entry.
+Every code change must immediately be logged into the "Chronological Module Ledger" below with the exact file path, date, version tag, and description.
 
 ---
 
-## 馃椇锔?ARCHITECTURAL KNOWLEDGE GRAPH
+## 🗂️ CHRONOLOGICAL MODULE LEDGER (CANONICAL AUDIT TRAIL)
 
-```
-[End Users / Students / Googlebot]
-                鈹?                鈻?  [Vercel Edge CDN (Delhi/Mumbai 15-25ms)]
-                鈹?                鈻?      [TanStack Start SSR]
-       鈹溾攢鈹€ Root Route (src/routes/__root.tsx)
-       鈹?    鈹斺攢鈹€ Custom Branded ErrorComponent (No "Something went wrong! Show Error")
-       鈹溾攢鈹€ Public Routes (/countries, /visas, /coaching, /contact)
-       鈹?    鈹溾攢鈹€ Bulletproof Loader with Fixture Fallbacks (src/routes/index.tsx)
-       鈹?    鈹溾攢鈹€ Rich OpenGraph Previews for Social Shares (src/lib/seo.ts)
-       鈹?    鈹斺攢鈹€ 300s Edge / In-Memory Cache (src/lib/public-functions.ts)
-       鈹斺攢鈹€ Admin Workspace (/admin)
-             鈹溾攢鈹€ Hand-rolled JWT Auth (src/lib/auth.server.ts)
-             鈹溾攢鈹€ Admin Server Functions (src/lib/admin-functions.ts)
-             鈹斺攢鈹€ 16 React.lazy() Modular Admin Panels
-                       鈹?                       鈻?      [TiDB Serverless (MySQL 8)]
-       鈹溾攢鈹€ Max 5 Concurrent Connections (Protected by 60s/300s Caching)
-       鈹斺攢鈹€ Database Throttling (request_rate_limits with Probabilistic Cleanup)
-```
-
----
-
-## 馃摐 CHRONOLOGICAL MODULE LEDGER & VERSION MAP
-
-| Module / File Path                  | Timestamp (IST)    | Version Status         | Features & Fixes Added (DO NOT REGRESS)                                                                                              |
-| ----------------------------------- | ------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `.github/workflows/crons.yml`       | `2026-11-19 15:30` | **v2.0 (Stable)**      | Offloaded daily attendance cleanup & weekly policy watch from Vercel Hobby to free GitHub Actions.                                   |
-| `vercel.json`                       | `2026-11-19 15:45` | **v2.0 (Stable)**      | Removed `"crons"`. Configured `s-maxage=300, stale-while-revalidate=86400` across 12 public routes.                                  |
-| `TailAdminDashboard.tsx`            | `2026-11-19 16:30` | **v2.0 (Modernized)**  | Tabular nums (`font-mono tabular-nums`), due-today pulse, 44px touch targets with `active:scale-95`.                                 |
-| `src/routes/admin.tsx`              | `2026-11-19 16:45` | **v2.0 (Modernized)**  | 4 functional workspaces, dynamic WhatsApp pitch, 1-tap quick notes, iOS-style toggles.                                               |
-| `StoryEditor.tsx`                   | `2026-11-19 17:04` | **v2.0 (Modernized)**  | Live card preview, 1-5 star picker, country presets, client WebP compressor, YouTube preview.                                        |
-| `AttendancePanel.tsx`               | `2026-11-20 10:06` | **v2.0 (Modernized)**  | KPI metric stat cards, 1-click GPS Auto-Detect via `navigator.geolocation`.                                                          |
-| `CountryPagePreview.tsx`            | `2026-11-20 10:30` | **v2.0 (Modernized)**  | Replaced broken portal/iframe with **100% REAL public component (`CountryPageView`)** + viewport toggles.                            |
-| `CountryPanel.tsx`                  | `2026-11-20 10:30` | **v2.0 (Modernized)**  | Flag presets, auto-converter ("CA" 鉃?馃嚚馃嚘), 3 tabs, correct `tuitionEstimate` mapping.                                          |
-| `CertificatePanel.tsx`              | `2026-11-20 11:25` | **v2.1 (CI Clean)**    | Linear styling, presets, WebP upload zone, **unused `Check`, `Layers` lucide imports removed**.                                      |
-| `StudyPlanPanel.tsx`                | `2026-11-20 11:30` | **v2.1 (CI Clean)**    | Sticky action bar, **unused imports removed + added `placeholder?: string` to `PlanField`**.                                         |
-| `PolicyWatchPanel.tsx`              | `2026-11-20 11:35` | **v2.1 (CI Clean)**    | Compact ~300 line footprint, **unused `Globe2`, `Trash2` imports removed for CI**.                                                   |
-| `.vscode/settings.json`             | `2026-11-20 11:45` | **v2.0 (Merged)**      | Prettier default formatter, formatOnSave, tabSize 2, semicolons removed.                                                             |
-| `src/routes/__root.tsx`             | `2026-11-20 12:20` | **v2.1 (SEO Ready)**   | **Added custom `RootErrorComponent`** 鈥?completely eliminates generic "Something went wrong! Show Error" in Google crawls.          |
-| `src/routes/index.tsx`              | `2026-11-20 12:28` | **v2.1 (Resilient)**   | **Bulletproof loader `try/catch` with fixture fallbacks**, hero image `sizes` attribute for LCP, mobile destinations CTA.            |
-| `src/components/Logo.tsx`           | `2026-11-20 12:31` | **v2.1 (SEO Fixed)**   | **Added explicit space `{' '}` + `aria-label`** so Googlebot does NOT index `British Education& Immigration` without space.          |
-| `src/lib/rate-limit.server.ts`      | `2026-11-20 12:35` | **v2.1 (Stable)**      | **Fixed cold-start race condition** with `tableEnsured` + added probabilistic cleanup (`Math.random() < 0.01`).                      |
-| `src/lib/db.server.ts`              | `2026-11-20 12:40` | **v2.1 (Secure)**      | **Removed hardcoded seed password** `'Admin@Sangaria2026'` 鈥?mandatory `ADMIN_PASSWORD` env var.                                    |
-| `src/lib/country-catalog.server.ts` | `2026-11-20 12:55` | **v2.1 (Optimized)**   | **Increased cache TTL from 8s to 60s (`60_000ms`)** to protect TiDB 5-connection limit under load.                                   |
-| `src/lib/content-types.ts`          | `2026-11-20 13:00` | **v2.1 (Extended)**    | Added optional `hasMorePosts?: boolean` and `hasMoreStories?: boolean` to `AdminSnapshot`.                                           |
-| `src/lib/admin-functions.ts`        | `2026-11-20 14:00` | **v2.1 (Cleaned)**     | Returned 100-cap flags in `getAdminSnapshot` + cleaned historical `Overload Fix #4` comment.                                         |
-| `src/components/EnquiryForm.tsx`    | `2026-11-20 14:05` | **v2.1 (UX Pro Max)**  | `autoComplete` attributes on inputs, `aria-hidden` honeypot, `aria-busy` submit state, **1-click WhatsApp fallback in error state**. |
-| `src/lib/seo.ts`                    | `2026-11-20 14:07` | **v2.1 (Rich Share)**  | **Added default rich OpenGraph image** (`/img/hero.webp` + Twitter summary card) across all public pages.                            |
-| `src/styles.css`                    | `2026-11-20 14:09` | **v2.1 (Accessible)**  | Added `.animate-marquee` to `@media (prefers-reduced-motion)` suppression 鈥?**`@media print` 100% untouched**.                      |
-| `src/lib/utils.ts`                  | `2026-11-20 14:10` | **v2.1 (Centralized)** | Centralized shared `stringValue(value, max)` helper.                                                                                 |
-| `src/lib/public-functions.ts`       | `2026-11-20 14:12` | **v2.1 (Lean Cache)**  | Imported `stringValue` from utils, decoupled policy notices invalidation, upgraded settings cache to 300s.                           |
+| File Path                                | Date (IST)             | Version Tag                   | Key Modernization / Architectural Safeguard Description                                                                                       |
+| :--------------------------------------- | :--------------------- | :---------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TailAdminDashboard.tsx`                 | `2026-11-19 16:30`     | **v2.0 (Modernized)**         | Tabular nums (`font-mono tabular-nums`), due-today pulse, 44px touch targets with `active:scale-95`.                                          |
+| `src/routes/admin.tsx`                   | `2026-11-19 16:45`     | **v2.0 (Modernized)**         | 4 functional workspaces, dynamic WhatsApp pitch, 1-tap quick notes, iOS-style toggles.                                                        |
+| `StoryEditor.tsx`                        | `2026-11-19 17:04`     | **v2.0 (Modernized)**         | Live card preview, 1-5 star picker, country presets, client WebP compressor, YouTube preview.                                                 |
+| `AttendancePanel.tsx`                    | `2026-11-20 10:06`     | **v2.0 (Modernized)**         | KPI metric stat cards, 1-click GPS Auto-Detect via `navigator.geolocation`.                                                                   |
+| `CountryPagePreview.tsx`                 | `2026-11-20 10:30`     | **v2.0 (Modernized)**         | Replaced broken portal/iframe with **100% REAL public component (`CountryPageView`)** + viewport.                                             |
+| `CountryPanel.tsx`                       | `2026-11-20 10:30`     | **v2.0 (Modernized)**         | Flag presets, auto-converter ("CA" ➔ 🇨🇦), 3 tabs, correct `tuitionEstimate` mapping.                                                          |
+| `CertificatePanel.tsx`                   | `2026-11-20 11:25`     | **v2.1 (CI Clean)**           | Linear styling, presets, WebP upload zone, **unused `Check`, `Layers` lucide imports removed**.                                               |
+| `StudyPlanPanel.tsx`                     | `2026-11-20 11:30`     | **v2.1 (CI Clean)**           | Sticky action bar, **unused imports removed + added `placeholder?: string` to `PlanField`**.                                                  |
+| `PolicyWatchPanel.tsx`                   | `2026-11-20 11:35`     | **v2.1 (CI Clean)**           | Compact ~300 line footprint, **unused `Globe2`, `Trash2` imports removed for CI**.                                                            |
+| `.vscode/settings.json`                  | `2026-11-20 11:45`     | **v2.0 (Merged)**             | Prettier default formatter, formatOnSave, tabSize 2, semicolons removed.                                                                      |
+| `src/routes/__root.tsx`                  | `2026-11-20 12:20`     | **v2.1 (SEO Ready)**          | **Added custom `RootErrorComponent`** — completely eliminates generic error in Google crawls.                                                 |
+| `src/routes/index.tsx`                   | `2026-11-20 12:28`     | **v2.1 (Resilient)**          | **Bulletproof loader `try/catch` with fixture fallbacks**, hero image `sizes` attribute for LCP.                                              |
+| `src/components/Logo.tsx`                | `2026-11-20 12:31`     | **v2.1 (SEO Fixed)**          | **Added explicit space `{' '}` + `aria-label`** so Googlebot does NOT index without space.                                                    |
+| `src/lib/rate-limit.server.ts`           | `2026-11-20 12:35`     | **v2.1 (Stable)**             | **Fixed cold-start race condition** with `tableEnsured` + added probabilistic cleanup.                                                        |
+| `src/lib/db.server.ts`                   | `2026-11-20 12:40`     | **v2.1 (Secure)**             | **Removed hardcoded seed password** — mandatory `ADMIN_PASSWORD` env var.                                                                     |
+| `src/lib/country-catalog.server.ts`      | `2026-11-20 12:55`     | **v2.1 (Optimized)**          | **Increased cache TTL from 8s to 60s (`60_000ms`)** to protect TiDB 5-connection limit under load.                                            |
+| `src/lib/content-types.ts`               | `2026-11-20 13:00`     | **v2.1 (Extended)**           | Added optional `hasMorePosts?: boolean` and `hasMoreStories?: boolean` to `AdminSnapshot`.                                                    |
+| `src/lib/admin-functions.ts`             | `2026-11-20 14:00`     | **v2.1 (Cleaned)**            | Returned 100-cap flags in `getAdminSnapshot` + cleaned historical `Overload Fix #4` comment.                                                  |
+| `src/components/EnquiryForm.tsx`         | `2026-11-20 14:05`     | **v2.1 (UX Pro Max)**         | `autoComplete` attributes on inputs, `aria-hidden` honeypot, **1-click WhatsApp fallback**.                                                   |
+| `src/lib/seo.ts`                         | `2026-11-20 14:07`     | **v2.1 (Rich Share)**         | **Added default rich OpenGraph image** (`/img/hero.webp` + Twitter card) across all public pages.                                             |
+| `src/styles.css`                         | `2026-11-20 14:09`     | **v2.1 (Accessible)**         | Added `.animate-marquee` to `@media (prefers-reduced-motion)` — **`@media print` 100% untouched**.                                            |
+| `src/lib/utils.ts`                       | `2026-11-20 14:10`     | **v2.1 (Centralized)**        | Centralized shared `stringValue(value, max)` helper.                                                                                          |
+| `src/lib/public-functions.ts`            | `2026-11-20 14:12`     | **v2.1 (Lean Cache)**         | Imported `stringValue` from utils, decoupled policy notices invalidation, settings cache to 300s.                                             |
+| `vercel.json`                            | `2026-11-21 14:50 IST` | **v2.3 (Security & Cache)**   | Added universal security headers (`nosniff`, `SAMEORIGIN`, safe `camera=(self), geolocation=(self)`, safe CSP), preserved route caches.       |
+| `src/components/Logo.tsx`                | `2026-11-21 14:50 IST` | **v2.3 (CLS 0)**              | Added explicit `width={44} height={44}` matching `sm:size-11` to prevent layout shift.                                                        |
+| `src/components/CertificateCarousel.tsx` | `2026-11-21 14:50 IST` | **v2.3 (CLS 0)**              | Added explicit `width={400} height={300}` on carousel cards to eliminate CLS.                                                                 |
+| `src/components/Cards.tsx`               | `2026-11-21 14:50 IST` | **v2.3 (CLS 0)**              | Added explicit `width={800} height={600}` on approval photo cards to eliminate CLS.                                                           |
+| `src/lib/public-functions.ts`            | `2026-11-21 14:50 IST` | **v2.3 (Rate Limit & Cache)** | Normalized Indian phone keys for enquiry rate limiter, decoupled settings cache from content cache.                                           |
+| `src/routes/robots[.]txt.ts`             | `2026-11-21 14:50 IST` | **v2.3 (SEO Route)**          | Created dedicated Nitro route serving `/robots.txt` with guaranteed 200 OK headers.                                                           |
+| `.npmrc`                                 | `2026-11-21 14:50 IST` | **v2.3 (CI Build)**           | Configured `frozen-lockfile=false` to prevent CI failure on minor lockfile specifier mismatches.                                              |
+| `public/llms.txt`                        | `2026-11-21 14:50 IST` | **v2.3 (AI Ready)**           | Created standard AI crawler discovery file exposing office address, phone lines, study visa services, and IELTS/PTE details.                  |
+| `public/ai-catalog.json`                 | `2026-11-21 14:50 IST` | **v2.3 (AI Catalog)**         | Created structured JSON catalog with country visa offerings, coaching schedules, and Sangaria office coordinates.                             |
+| `src/routes/__root.tsx`                  | `2026-11-21 14:50 IST` | **v2.3 (Rich Schema)**        | Upgraded Schema.org to `@graph` (`LocalBusiness` + 4.9⭐ aggregateRating + Study Visa `Service` + IELTS/PTE `Course`) + `staleTime: 300_000`. |
+| `src/routes/index.tsx`                   | `2026-11-21 14:50 IST` | **v2.3 (Heading Fix)**        | Upgraded Why Choose Us cards from `<h4>` to `<h3>` to eliminate H2 ➔ H4 heading hierarchy skip.                                               |
 
 ---
 
-## 馃摑 COMMIT UPDATE PROTOCOL (HOW TO MAINTAIN THIS GRAPH)
+## 📝 COMMIT UPDATE PROTOCOL (HOW TO MAINTAIN THIS GRAPH)
 
 Whenever you (or any AI agent) commit changes to this project, follow this exact procedure:
 

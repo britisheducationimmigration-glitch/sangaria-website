@@ -18,6 +18,8 @@ export function Logo({
       {!imgError ? (
         <img
           src="/img/logo.png"
+          width={44}
+          height={44}
           fetchPriority="high"
           onError={() => setImgError(true)}
           alt="British Education & Immigration"
